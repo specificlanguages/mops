@@ -2,6 +2,7 @@
 
 ## 0.2.0 - Unreleased
 
+- Added `mops generate-ids`, which generates unused regular node IDs for standalone `.mps` files or file-per-root model folders, defaulting to short Java-friendly base64 output with a `--long` decimal mode.
 - Added `mops list-models`, which discovers `.mps` files and file-per-root `.model` metadata files and emits a model-ID-to-location JSON map.
 - Renamed the CLI entry point from `mps-decompress` to `mops decompress`.
 - Changed XML output to use `<empty />` syntax for empty elements to improve readability and reduce token usage.

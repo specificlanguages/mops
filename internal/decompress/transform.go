@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"mps-decompress/internal/nodeids"
 )
 
 type registryMaps struct {
@@ -269,7 +271,7 @@ func lookupOrOriginal(m map[string]string, value string) string {
 }
 
 func decodeOrOriginal(value string) string {
-	if decoded, ok := decodeRegularNodeID(value); ok {
+	if decoded, ok := nodeids.DecodeRegularString(value); ok {
 		return decoded
 	}
 	return value

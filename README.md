@@ -22,6 +22,8 @@ There is no in-place mode. Output always goes to stdout.
 ```sh
 mops decompress < input.mps > output.mps
 mops decompress input.mps > output.mps
+mops generate-ids model.mps 10
+mops generate-ids --long model-folder 10
 mops list-models
 mops --version
 ```
@@ -35,6 +37,14 @@ mops decompress [input.mps]
 ```
 
 Reads from stdin when `input.mps` is omitted. Writes transformed XML to stdout.
+
+```sh
+mops generate-ids [--long] <model.mps|model-folder> <count>
+```
+
+Generates regular node IDs that are not already used by `node@id` attributes in the model. For standalone persistence, pass a `.mps` file. For file-per-root persistence, pass the model folder; direct `*.mpsr` files in that folder are scanned.
+
+IDs are printed one per line. By default they use MPS Java-friendly base64 format. With `--long`, they are printed as decimal `int64` values. Command flags must appear before positional arguments.
 
 ```sh
 mops list-models [root]

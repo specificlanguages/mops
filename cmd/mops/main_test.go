@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -83,6 +84,20 @@ func TestRunPrintsListModelsHelp(t *testing.T) {
 	}
 }
 
+func TestRunPrintsGenerateIDsHelp(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+
+	exit := run([]string{"generate-ids", "--help"}, strings.NewReader(""), &stdout, &stderr)
+
+	if exit != 0 {
+		t.Fatalf("exit = %d, want 0", exit)
+	}
+	assertContains(t, stdout.String(), "Usage: mops generate-ids [--long] <model.mps|model-folder> <count>")
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+}
+
 func TestRunDecompressesFromStdin(t *testing.T) {
 	input := `<?xml version="1.0" encoding="UTF-8"?>
 <model ref="r:sample">
@@ -111,6 +126,76 @@ func TestRunDecompressesFromStdin(t *testing.T) {
 	assertContains(t, stdout.String(), `<property role="title" value="hello" />`)
 	if stderr.Len() != 0 {
 		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+}
+
+func TestRunGenerateIDsPrintsShortIDs(t *testing.T) {
+	root := t.TempDir()
+	modelPath := filepath.Join(root, "model.mps")
+	if err := os.WriteFile(modelPath, []byte(`<model />`), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	var stdout, stderr bytes.Buffer
+
+	exit := run([]string{"generate-ids", modelPath, "3"}, strings.NewReader(""), &stdout, &stderr)
+
+	if exit != 0 {
+		t.Fatalf("exit = %d, want 0; stderr = %q", exit, stderr.String())
+	}
+	lines := nonEmptyLines(stdout.String())
+	if len(lines) != 3 {
+		t.Fatalf("lines = %#v, want 3 lines", lines)
+	}
+	for _, line := range lines {
+		if strings.Contains(line, "-") {
+			t.Fatalf("short ID %q contains decimal minus sign", line)
+		}
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+}
+
+func TestRunGenerateIDsPrintsDecompressedIDs(t *testing.T) {
+	root := t.TempDir()
+	modelPath := filepath.Join(root, "model.mps")
+	if err := os.WriteFile(modelPath, []byte(`<model />`), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	var stdout, stderr bytes.Buffer
+
+	exit := run([]string{"generate-ids", "--long", modelPath, "2"}, strings.NewReader(""), &stdout, &stderr)
+
+	if exit != 0 {
+		t.Fatalf("exit = %d, want 0; stderr = %q", exit, stderr.String())
+	}
+	lines := nonEmptyLines(stdout.String())
+	if len(lines) != 2 {
+		t.Fatalf("lines = %#v, want 2 lines", lines)
+	}
+	for _, line := range lines {
+		if _, err := strconv.ParseInt(line, 10, 64); err != nil {
+			t.Fatalf("ParseInt(%q) error = %v", line, err)
+		}
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+}
+
+func TestRunGenerateIDsRejectsInvalidCount(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+
+	exit := run([]string{"generate-ids", "model.mps", "-1"}, strings.NewReader(""), &stdout, &stderr)
+
+	if exit != 2 {
+		t.Fatalf("exit = %d, want 2", exit)
+	}
+	assertContains(t, stderr.String(), "count must be a non-negative integer")
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q, want empty", stdout.String())
 	}
 }
 
@@ -145,4 +230,14 @@ func assertContains(t *testing.T, s, substr string) {
 	if !strings.Contains(s, substr) {
 		t.Fatalf("%q does not contain %q", s, substr)
 	}
+}
+
+func nonEmptyLines(s string) []string {
+	var lines []string
+	for _, line := range strings.Split(s, "\n") {
+		if line != "" {
+			lines = append(lines, line)
+		}
+	}
+	return lines
 }

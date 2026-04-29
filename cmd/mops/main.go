@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 
 	"mps-decompress/internal/decompress"
+	"mps-decompress/internal/generateids"
 	"mps-decompress/internal/listmodels"
 )
 
 const version = "0.1.0"
+const maxGenerateIDCount = 1_000_000
 
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
@@ -56,6 +59,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return runDecompress(commandArgs, stdin, stdout, stderr)
 	case "list-models":
 		return runListModels(commandArgs, stdout, stderr)
+	case "generate-ids":
+		return runGenerateIDs(commandArgs, stdout, stderr)
 	default:
 		fmt.Fprintf(stderr, "unknown command: %s\n", command)
 		printUsage(stderr)
@@ -108,6 +113,59 @@ func runDecompress(args []string, stdin io.Reader, stdout, stderr io.Writer) int
 		return 1
 	}
 
+	return 0
+}
+
+func runGenerateIDs(args []string, stdout, stderr io.Writer) int {
+	var showHelp, long bool
+
+	flags := flag.NewFlagSet("mops generate-ids", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	flags.BoolVar(&showHelp, "h", false, "print help and exit")
+	flags.BoolVar(&showHelp, "help", false, "print help and exit")
+	flags.BoolVar(&long, "long", false, "print decimal IDs instead of Java-friendly base64 IDs")
+
+	if err := flags.Parse(args); err != nil {
+		fmt.Fprintln(stderr, err)
+		return 2
+	}
+
+	if showHelp {
+		printGenerateIDsUsage(stdout)
+		return 0
+	}
+
+	if flags.NArg() != 2 {
+		fmt.Fprintln(stderr, "expected model path and count")
+		return 2
+	}
+
+	count, err := strconv.Atoi(flags.Arg(1))
+	if err != nil || count < 0 {
+		fmt.Fprintln(stderr, "count must be a non-negative integer")
+		return 2
+	}
+	if count > maxGenerateIDCount {
+		fmt.Fprintf(stderr, "count must be at most %d\n", maxGenerateIDCount)
+		return 2
+	}
+
+	ids, err := generateids.Generate(flags.Arg(0), count, nil)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+
+	if long {
+		for _, id := range ids {
+			fmt.Fprintln(stdout, id)
+		}
+		return 0
+	}
+
+	for _, id := range generateids.Encoded(ids) {
+		fmt.Fprintln(stdout, id)
+	}
 	return 0
 }
 
@@ -172,6 +230,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Commands:")
 	fmt.Fprintln(w, "  decompress    Expand compressed MPS model XML for inspection")
+	fmt.Fprintln(w, "  generate-ids  Generate unused regular node IDs for an MPS model")
 	fmt.Fprintln(w, "  list-models   List MPS model IDs and locations as JSON")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Run \"mops <command> --help\" for command-specific help.")
@@ -181,6 +240,13 @@ func printDecompressUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage: mops decompress [input.mps]")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Reads from stdin when input.mps is omitted. Writes transformed XML to stdout.")
+}
+
+func printGenerateIDsUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage: mops generate-ids [--long] <model.mps|model-folder> <count>")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Scans node@id values in a standalone .mps file or direct .mpsr files in a file-per-root model folder.")
+	fmt.Fprintln(w, "Prints one generated regular node ID per line. Defaults to Java-friendly base64; --long prints decimal IDs.")
 }
 
 func printListModelsUsage(w io.Writer) {
