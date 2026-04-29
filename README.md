@@ -22,6 +22,7 @@ There is no in-place mode. Output always goes to stdout.
 ```sh
 mops decompress < input.mps > output.mps
 mops decompress input.mps > output.mps
+mops list-models
 mops --version
 ```
 
@@ -34,6 +35,16 @@ mops decompress [input.mps]
 ```
 
 Reads from stdin when `input.mps` is omitted. Writes transformed XML to stdout.
+
+```sh
+mops list-models [root]
+```
+
+Scans `root`, or the current directory when omitted, for standalone `.mps` model files and file-per-root `.model` metadata files. Prints a pretty JSON object mapping model IDs to absolute paths. When multiple locations have the same model ID, the value is an array of paths instead of a string.
+
+File-per-root models are reported as the parent folder of the `.model` file with a trailing `/`. Paths are normalized to `/` separators.
+
+When possible, `list-models` uses `git ls-files -co --exclude-standard` so Git-ignored files are skipped. If Git is unavailable or the root is not in a Git worktree, it falls back to a filesystem walk and only skips `.git`.
 
 ## Build And Test
 

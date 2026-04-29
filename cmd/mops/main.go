@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"os"
 
 	"mps-decompress/internal/decompress"
+	"mps-decompress/internal/listmodels"
 )
 
 const version = "0.1.0"
@@ -52,6 +54,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	switch command {
 	case "decompress":
 		return runDecompress(commandArgs, stdin, stdout, stderr)
+	case "list-models":
+		return runListModels(commandArgs, stdout, stderr)
 	default:
 		fmt.Fprintf(stderr, "unknown command: %s\n", command)
 		printUsage(stderr)
@@ -107,11 +111,68 @@ func runDecompress(args []string, stdin io.Reader, stdout, stderr io.Writer) int
 	return 0
 }
 
+func runListModels(args []string, stdout, stderr io.Writer) int {
+	var showHelp bool
+
+	flags := flag.NewFlagSet("mops list-models", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	flags.BoolVar(&showHelp, "h", false, "print help and exit")
+	flags.BoolVar(&showHelp, "help", false, "print help and exit")
+
+	if err := flags.Parse(args); err != nil {
+		fmt.Fprintln(stderr, err)
+		return 2
+	}
+
+	if showHelp {
+		printListModelsUsage(stdout)
+		return 0
+	}
+
+	if flags.NArg() > 1 {
+		fmt.Fprintln(stderr, "expected zero or one root path")
+		return 2
+	}
+
+	root := "."
+	if flags.NArg() == 1 {
+		root = flags.Arg(0)
+	}
+
+	locations, err := listmodels.Find(root)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+
+	encoder := json.NewEncoder(stdout)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(jsonLocations(locations)); err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+
+	return 0
+}
+
+func jsonLocations(locations listmodels.LocationMap) map[string]any {
+	result := make(map[string]any, len(locations))
+	for ref, paths := range locations {
+		if len(paths) == 1 {
+			result[ref] = paths[0]
+			continue
+		}
+		result[ref] = paths
+	}
+	return result
+}
+
 func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage: mops [--version] <command> [args]")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Commands:")
-	fmt.Fprintln(w, "  decompress   Expand compressed MPS model XML for inspection")
+	fmt.Fprintln(w, "  decompress    Expand compressed MPS model XML for inspection")
+	fmt.Fprintln(w, "  list-models   List MPS model IDs and locations as JSON")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Run \"mops <command> --help\" for command-specific help.")
 }
@@ -120,4 +181,11 @@ func printDecompressUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage: mops decompress [input.mps]")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Reads from stdin when input.mps is omitted. Writes transformed XML to stdout.")
+}
+
+func printListModelsUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage: mops list-models [root]")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Scans root, or the current directory when omitted, for .mps files and file-per-root .model metadata files.")
+	fmt.Fprintln(w, "Prints a JSON object mapping model IDs to absolute paths. Duplicate model locations are arrays.")
 }
