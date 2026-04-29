@@ -18,7 +18,7 @@ func TestRunPrintsVersion(t *testing.T) {
 	if exit != 0 {
 		t.Fatalf("exit = %d, want 0", exit)
 	}
-	if got, want := stdout.String(), "mops 0.1.0\n"; got != want {
+	if got, want := stdout.String(), "mops 0.2.0\n"; got != want {
 		t.Fatalf("stdout = %q, want %q", got, want)
 	}
 	if stderr.Len() != 0 {
