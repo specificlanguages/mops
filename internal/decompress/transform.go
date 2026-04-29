@@ -155,8 +155,7 @@ func addMapping(target map[string]string, key, value, label string, dec *xml.Dec
 
 func transformXML(input []byte, w io.Writer, maps *registryMaps) error {
 	dec := xml.NewDecoder(bytes.NewReader(input))
-	enc := xml.NewEncoder(w)
-	enc.Indent("", "  ")
+	enc := newPrettyXMLEncoder(w)
 
 	var registryDepth int
 
@@ -181,12 +180,12 @@ func transformXML(input []byte, w io.Writer, maps *registryMaps) error {
 				t = rewriteStartElement(t, maps)
 			}
 
-			if err := enc.EncodeToken(t); err != nil {
+			if err := enc.Start(t); err != nil {
 				return fmt.Errorf("write stdout: %w", err)
 			}
 
 		case xml.EndElement:
-			if err := enc.EncodeToken(t); err != nil {
+			if err := enc.End(t); err != nil {
 				return fmt.Errorf("write stdout: %w", err)
 			}
 			if registryDepth > 0 {
@@ -197,12 +196,12 @@ func transformXML(input []byte, w io.Writer, maps *registryMaps) error {
 			if strings.TrimSpace(string(t)) == "" {
 				continue
 			}
-			if err := enc.EncodeToken(t); err != nil {
+			if err := enc.CharData(t); err != nil {
 				return fmt.Errorf("write stdout: %w", err)
 			}
 
 		default:
-			if err := enc.EncodeToken(tok); err != nil {
+			if err := enc.Token(tok); err != nil {
 				return fmt.Errorf("write stdout: %w", err)
 			}
 		}

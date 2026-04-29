@@ -49,6 +49,9 @@ func TestTransformExpandsRegistryIndicesImportsAndNodeIDs(t *testing.T) {
 	assertContains(t, output, `to=":64"`)
 	assertContains(t, output, `to="model:with:colon:~Foreign"`)
 	assertContains(t, output, `value="keep-me"`)
+	assertContains(t, output, `<property role="propRole" value="keep-me" />`)
+	assertContains(t, output, `<ref role="refRole" node="64" resolve="localTarget" />`)
+	assertContains(t, output, `<node concept="example.structure.Child" id="0001" role="childRole" />`)
 }
 
 func TestTransformLeavesRegistryValuesUnchanged(t *testing.T) {
@@ -106,6 +109,26 @@ func TestTransformAllowsMissingImports(t *testing.T) {
 
 	output := transformString(t, input)
 	assertContains(t, output, `concept="example.structure.Root"`)
+}
+
+func TestTransformUsesEmptyElementSyntax(t *testing.T) {
+	input := `<model>
+  <persistence version="9" />
+  <registry>
+    <language id="lang-id" name="example">
+      <concept id="100" name="example.structure.Root" flags="ng" index="C1" />
+    </language>
+  </registry>
+  <node concept="C1" id="1" />
+</model>`
+
+	output := transformString(t, input)
+	assertContains(t, output, `<persistence version="9" />`)
+	assertContains(t, output, `<concept id="100" name="example.structure.Root" flags="ng" index="C1" />`)
+	assertContains(t, output, `<node concept="example.structure.Root" id="1" />`)
+	if strings.Contains(output, `></persistence>`) || strings.Contains(output, `></node>`) {
+		t.Fatalf("output uses expanded empty element syntax:\n%s", output)
+	}
 }
 
 func TestTransformRejectsUnsupportedPersistenceVersion(t *testing.T) {
