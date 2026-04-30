@@ -2,21 +2,6 @@
 
 `mops` is a small helper CLI for inspecting JetBrains MPS artifacts.
 
-The current command is `mops decompress`, which expands compressed MPS persistence v9 model XML so the model is easier to inspect with humans or LLMs. It rewrites selected node-graph attributes using the model's own `<registry>` and `<imports>` sections:
-
-- `node@concept` becomes the full concept name.
-- `node@role`, `property@role`, and `ref@role` become unqualified role names.
-- regular MPS node IDs in `node@id`, `ref@node`, and `ref@to` become signed decimal Java `long` values.
-- import aliases in `ref@to` become the full imported model reference.
-
-The `<registry>` subtree is left semantically unchanged.
-
-## Non-goals
-
-The output is for inspection only. It is well-formed XML, but it is not intended to be loaded back into MPS or round-tripped as normal MPS persistence.
-
-There is no in-place mode. Output always goes to stdout.
-
 ## Usage
 
 ```sh
@@ -35,6 +20,15 @@ Diagnostics are written to stderr. Unsupported persistence versions, missing reg
 ```sh
 mops decompress [input.mps]
 ```
+
+Expands compressed MPS persistence v9 model XML so the model is easier to inspect with humans or LLMs. It rewrites selected node-graph attributes using the model's own `<registry>` and `<imports>` sections:
+
+- `node@concept` becomes the full concept name.
+- `node@role`, `property@role`, and `ref@role` become unqualified role names.
+- regular MPS node IDs in `node@id`, `ref@node`, and `ref@to` become signed decimal Java `long` values.
+- import aliases in `ref@to` become the full imported model reference.
+
+The `<registry>` subtree is left semantically unchanged.
 
 Reads from stdin when `input.mps` is omitted. Writes transformed XML to stdout.
 
