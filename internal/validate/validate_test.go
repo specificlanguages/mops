@@ -165,6 +165,18 @@ func TestRunReportsInvalidRootFileRootElement(t *testing.T) {
 	assertFinding(t, report, "error", "invalid-document-root", filepath.ToSlash(rootPath))
 }
 
+func TestRunReportsUnsupportedPersistenceVersionInRootFile(t *testing.T) {
+	rootPath := filepath.Join(t.TempDir(), "root.mpsr")
+	writeFile(t, rootPath, `<model ref="r:sample" content="root">
+  <persistence version="8" />
+  <node concept="1" id="1" />
+</model>`)
+
+	report := Run([]string{rootPath})
+
+	assertFinding(t, report, "error", "unsupported-persistence-version", filepath.ToSlash(rootPath))
+}
+
 func TestRunReportsNodeOutsideValidRootOrChildPosition(t *testing.T) {
 	modelPath := writeModel(t, `<model ref="r:sample">
   <persistence version="9">
@@ -175,6 +187,29 @@ func TestRunReportsNodeOutsideValidRootOrChildPosition(t *testing.T) {
 	report := Run([]string{modelPath})
 
 	assertFinding(t, report, "error", "misplaced-node", filepath.ToSlash(modelPath))
+}
+
+func TestRunReportsInvalidPersistenceGrammar(t *testing.T) {
+	modelPath := writeModel(t, `<model ref="r:sample">
+  <persistence version="9" />
+  <unexpected />
+  <node concept="1" id="1" />
+</model>`)
+
+	report := Run([]string{modelPath})
+
+	assertFinding(t, report, "error", "invalid-persistence-grammar", filepath.ToSlash(modelPath))
+}
+
+func TestRunReportsUnsupportedXMLNamespace(t *testing.T) {
+	modelPath := writeModel(t, `<x:model xmlns:x="urn:test" ref="r:sample">
+  <persistence version="9" />
+  <node concept="1" id="1" />
+</x:model>`)
+
+	report := Run([]string{modelPath})
+
+	assertFinding(t, report, "error", "unsupported-xml-namespace", filepath.ToSlash(modelPath))
 }
 
 func TestRunAcceptsValidContainmentShape(t *testing.T) {
@@ -197,10 +232,18 @@ func TestRunAcceptsValidContainmentShape(t *testing.T) {
 func TestRunAcceptsRegistryPropertyDeclarations(t *testing.T) {
 	modelPath := writeModel(t, `<model ref="r:sample">
   <persistence version="9" />
+  <imports>
+    <import index="i" ref="r:imported" implicit="true" />
+  </imports>
+  <languages>
+    <use id="sample-language" name="sample" version="0" />
+  </languages>
   <registry>
     <language namespace="sample" id="sample-language">
       <concept index="1" name="sample.Concept">
+        <child index="3" name="child" />
         <property index="2" name="name" />
+        <reference index="4" name="target" />
       </concept>
     </language>
   </registry>

@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"mops/internal/nodeids"
+	"mops/internal/xmlschema"
 )
 
 type Report struct {
@@ -160,6 +161,7 @@ func validateXMLFile(path string, target *TargetReport, seenNodeIDs map[string]s
 				))
 				return
 			}
+			validateNoXMLNamespace(target, token, file)
 			depth++
 			validateContainmentShape(target, token, elementStack, requirePersistence, file)
 			switch token.Name.Local {
@@ -192,13 +194,50 @@ func validateXMLFile(path string, target *TargetReport, seenNodeIDs map[string]s
 		}
 	}
 
-	if requirePersistence && persistenceVersion != "9" {
+	if err := xmlschema.ValidateMPSPersistence(data); err != nil {
+		target.Findings = append(target.Findings, target.findingInFile(
+			"error",
+			"invalid-persistence-grammar",
+			err.Error(),
+			nil,
+			"relax-ng",
+			file,
+		))
+	}
+
+	if persistenceVersion != "9" {
 		target.Findings = append(target.Findings, target.findingInFile(
 			"error",
 			"unsupported-persistence-version",
 			fmt.Sprintf("unsupported persistence version %q", persistenceVersion),
 			nil,
 			"persistence",
+			file,
+		))
+	}
+}
+
+func validateNoXMLNamespace(target *TargetReport, start xml.StartElement, file string) {
+	if start.Name.Space != "" {
+		target.Findings = append(target.Findings, target.findingInFile(
+			"error",
+			"unsupported-xml-namespace",
+			fmt.Sprintf("unsupported XML namespace %q on <%s>", start.Name.Space, start.Name.Local),
+			nil,
+			"persistence-grammar",
+			file,
+		))
+	}
+	for _, attr := range start.Attr {
+		if attr.Name.Space == "" {
+			continue
+		}
+		target.Findings = append(target.Findings, target.findingInFile(
+			"error",
+			"unsupported-xml-namespace",
+			fmt.Sprintf("unsupported XML namespace %q on attribute %s", attr.Name.Space, attr.Name.Local),
+			nil,
+			"persistence-grammar",
 			file,
 		))
 	}

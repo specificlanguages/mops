@@ -12,7 +12,6 @@ import (
 	"mops/internal/generateids"
 	"mops/internal/listmodels"
 	"mops/internal/validate"
-	"mops/internal/xmlschema"
 )
 
 const version = "0.2.0"
@@ -23,8 +22,6 @@ func main() {
 }
 
 func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-	_ = xmlschema.LinkedVersion()
-
 	var showHelp, showVersion bool
 
 	flags := flag.NewFlagSet("mops", flag.ContinueOnError)
