@@ -137,6 +137,7 @@ func validateXMLFile(path string, target *TargetReport, seenNodeIDs map[string]s
 	decoder := xml.NewDecoder(bytes.NewReader(data))
 	depth := 0
 	rootClosed := false
+	var elementStack []string
 	for {
 		token, err := decoder.Token()
 		if err != nil {
@@ -160,15 +161,20 @@ func validateXMLFile(path string, target *TargetReport, seenNodeIDs map[string]s
 				return
 			}
 			depth++
+			validateContainmentShape(target, token, elementStack, requirePersistence, file)
 			switch token.Name.Local {
 			case "persistence":
 				persistenceVersion = attr(token, "version")
 			case "node":
 				validateNodeID(target, seenNodeIDs, attr(token, "id"), file)
 			}
+			elementStack = append(elementStack, token.Name.Local)
 		case xml.EndElement:
 			if depth > 0 {
 				depth--
+			}
+			if len(elementStack) > 0 {
+				elementStack = elementStack[:len(elementStack)-1]
 			}
 			if depth == 0 {
 				rootClosed = true
@@ -193,6 +199,131 @@ func validateXMLFile(path string, target *TargetReport, seenNodeIDs map[string]s
 			fmt.Sprintf("unsupported persistence version %q", persistenceVersion),
 			nil,
 			"persistence",
+			file,
+		))
+	}
+}
+
+func validateContainmentShape(target *TargetReport, start xml.StartElement, elementStack []string, requireModelRoot bool, file string) {
+	parent := ""
+	if len(elementStack) > 0 {
+		parent = elementStack[len(elementStack)-1]
+	}
+	isDocumentRoot := len(elementStack) == 0
+	inNodeGraph := parent == "node" || parent == "model" || (isDocumentRoot && !requireModelRoot)
+
+	if isDocumentRoot {
+		if requireModelRoot && start.Name.Local != "model" {
+			target.Findings = append(target.Findings, target.findingInFile(
+				"error",
+				"invalid-document-root",
+				fmt.Sprintf("document root must be <model>, got <%s>", start.Name.Local),
+				nil,
+				"persistence-grammar",
+				file,
+			))
+		}
+		if !requireModelRoot && start.Name.Local != "node" {
+			target.Findings = append(target.Findings, target.findingInFile(
+				"error",
+				"invalid-document-root",
+				fmt.Sprintf("root file document root must be <node>, got <%s>", start.Name.Local),
+				nil,
+				"persistence-grammar",
+				file,
+			))
+		}
+	}
+
+	switch start.Name.Local {
+	case "node":
+		validateNodeContainmentShape(target, start, parent, isDocumentRoot, requireModelRoot, file)
+	case "property":
+		if !inNodeGraph {
+			return
+		}
+		if parent != "node" {
+			target.Findings = append(target.Findings, target.findingInFile(
+				"error",
+				"misplaced-property",
+				"property element must appear under a node",
+				nil,
+				"persistence-grammar",
+				file,
+			))
+		}
+		if parent == "node" && attr(start, "role") == "" {
+			target.Findings = append(target.Findings, target.findingInFile(
+				"error",
+				"missing-property-role",
+				"property must have a property role",
+				nil,
+				"persistence-grammar",
+				file,
+			))
+		}
+	case "ref":
+		if !inNodeGraph {
+			return
+		}
+		if parent != "node" {
+			target.Findings = append(target.Findings, target.findingInFile(
+				"error",
+				"misplaced-reference",
+				"ref element must appear under a node",
+				nil,
+				"persistence-grammar",
+				file,
+			))
+		}
+		if parent == "node" && attr(start, "role") == "" {
+			target.Findings = append(target.Findings, target.findingInFile(
+				"error",
+				"missing-reference-role",
+				"ref must have a reference role",
+				nil,
+				"persistence-grammar",
+				file,
+			))
+		}
+	}
+}
+
+func validateNodeContainmentShape(target *TargetReport, start xml.StartElement, parent string, isDocumentRoot, requireModelRoot bool, file string) {
+	role := attr(start, "role")
+	isRootNode := parent == "model" || (isDocumentRoot && !requireModelRoot)
+	isChildNode := parent == "node"
+
+	switch {
+	case isRootNode:
+		if role != "" {
+			target.Findings = append(target.Findings, target.findingInFile(
+				"error",
+				"unexpected-root-role",
+				"root node must not have a child role",
+				nil,
+				"persistence-grammar",
+				file,
+			))
+		}
+	case isChildNode:
+		if role == "" {
+			target.Findings = append(target.Findings, target.findingInFile(
+				"error",
+				"missing-child-role",
+				"child node must have a child role",
+				nil,
+				"persistence-grammar",
+				file,
+			))
+		}
+	default:
+		target.Findings = append(target.Findings, target.findingInFile(
+			"error",
+			"misplaced-node",
+			"node element must appear as a model root or under another node",
+			nil,
+			"persistence-grammar",
 			file,
 		))
 	}

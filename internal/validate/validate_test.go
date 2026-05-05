@@ -95,6 +95,116 @@ func TestRunReportsDuplicateNodeIDsInStandaloneTarget(t *testing.T) {
 	assertFinding(t, report, "error", "duplicate-node-id", filepath.ToSlash(modelPath))
 }
 
+func TestRunReportsChildNodeWithoutRole(t *testing.T) {
+	modelPath := writeModel(t, `<model ref="r:sample">
+  <persistence version="9" />
+  <node concept="1" id="1">
+    <node concept="2" id="2" />
+  </node>
+</model>`)
+
+	report := Run([]string{modelPath})
+
+	assertFinding(t, report, "error", "missing-child-role", filepath.ToSlash(modelPath))
+}
+
+func TestRunReportsRootNodeWithRole(t *testing.T) {
+	modelPath := writeModel(t, `<model ref="r:sample">
+  <persistence version="9" />
+  <node concept="1" id="1" role="2" />
+</model>`)
+
+	report := Run([]string{modelPath})
+
+	assertFinding(t, report, "error", "unexpected-root-role", filepath.ToSlash(modelPath))
+}
+
+func TestRunReportsMisplacedPropertyAndReference(t *testing.T) {
+	modelPath := writeModel(t, `<model ref="r:sample">
+  <persistence version="9" />
+  <property role="1" value="name" />
+  <ref role="2" node="1" />
+  <node concept="1" id="1" />
+</model>`)
+
+	report := Run([]string{modelPath})
+
+	assertFinding(t, report, "error", "misplaced-property", filepath.ToSlash(modelPath))
+	assertFinding(t, report, "error", "misplaced-reference", filepath.ToSlash(modelPath))
+}
+
+func TestRunReportsPropertyAndReferenceWithoutRole(t *testing.T) {
+	modelPath := writeModel(t, `<model ref="r:sample">
+  <persistence version="9" />
+  <node concept="1" id="1">
+    <property value="name" />
+    <ref node="1" />
+  </node>
+</model>`)
+
+	report := Run([]string{modelPath})
+
+	assertFinding(t, report, "error", "missing-property-role", filepath.ToSlash(modelPath))
+	assertFinding(t, report, "error", "missing-reference-role", filepath.ToSlash(modelPath))
+}
+
+func TestRunReportsInvalidStandaloneModelRootElement(t *testing.T) {
+	modelPath := writeModel(t, `<node concept="1" id="1" />`)
+
+	report := Run([]string{modelPath})
+
+	assertFinding(t, report, "error", "invalid-document-root", filepath.ToSlash(modelPath))
+}
+
+func TestRunReportsNodeOutsideValidRootOrChildPosition(t *testing.T) {
+	modelPath := writeModel(t, `<model ref="r:sample">
+  <persistence version="9">
+    <node concept="1" id="1" />
+  </persistence>
+</model>`)
+
+	report := Run([]string{modelPath})
+
+	assertFinding(t, report, "error", "misplaced-node", filepath.ToSlash(modelPath))
+}
+
+func TestRunAcceptsValidContainmentShape(t *testing.T) {
+	modelPath := writeModel(t, `<model ref="r:sample">
+  <persistence version="9" />
+  <node concept="1" id="1">
+    <property role="2" value="name" />
+    <ref role="3" node="1" />
+    <node concept="4" id="2" role="5" />
+  </node>
+</model>`)
+
+	report := Run([]string{modelPath})
+
+	if report.HasErrors() {
+		t.Fatalf("HasErrors() = true, findings = %#v", report.Findings)
+	}
+}
+
+func TestRunAcceptsRegistryPropertyDeclarations(t *testing.T) {
+	modelPath := writeModel(t, `<model ref="r:sample">
+  <persistence version="9" />
+  <registry>
+    <language namespace="sample" id="sample-language">
+      <concept index="1" name="sample.Concept">
+        <property index="2" name="name" />
+      </concept>
+    </language>
+  </registry>
+  <node concept="1" id="1" />
+</model>`)
+
+	report := Run([]string{modelPath})
+
+	if report.HasErrors() {
+		t.Fatalf("HasErrors() = true, findings = %#v", report.Findings)
+	}
+}
+
 func TestRunReportsDuplicateNodeIDsAcrossDirectRootFilesInFilePerRootFolder(t *testing.T) {
 	root := t.TempDir()
 	modelFolder := filepath.Join(root, "models", "sample")

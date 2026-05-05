@@ -14,7 +14,7 @@ mops validate [--json] <model.mps|model-folder|root.mpsr> [other-targets...]
 mops --version
 ```
 
-Diagnostics are written to stderr. Unsupported persistence versions, missing registries, malformed XML, and duplicate registry/import indices fail with a non-zero exit code.
+Diagnostics are written to stderr. Malformed XML, unsupported persistence versions, invalid persistence containment shape, missing registries, and duplicate registry/import indices fail with a non-zero exit code.
 
 ## Commands
 
