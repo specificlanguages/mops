@@ -309,6 +309,48 @@ func TestRunValidateJSONReportsSuccess(t *testing.T) {
 	}
 }
 
+func TestRunValidateStandaloneRootFileExitsZeroForIncompleteValidation(t *testing.T) {
+	root := t.TempDir()
+	rootPath := filepath.Join(root, "sample.mpsr")
+	writeFile(t, rootPath, `<node concept="1" id="1" />`)
+
+	var stdout, stderr bytes.Buffer
+
+	exit := run([]string{"validate", "--json", rootPath}, strings.NewReader(""), &stdout, &stderr)
+
+	if exit != 0 {
+		t.Fatalf("exit = %d, want 0; stderr = %q; stdout = %q", exit, stderr.String(), stdout.String())
+	}
+	assertContains(t, stdout.String(), `"status": "ok"`)
+	assertContains(t, stdout.String(), `"code": "incomplete-validation"`)
+	assertContains(t, stdout.String(), "for complete structural validation")
+	assertContains(t, stdout.String(), "mops validate "+filepath.ToSlash(root))
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+}
+
+func TestRunValidateHumanOutputReportsRootFileFindingLocation(t *testing.T) {
+	root := t.TempDir()
+	modelFolder := filepath.Join(root, "models", "sample")
+	brokenRoot := filepath.Join(modelFolder, "broken.mpsr")
+	writeFile(t, filepath.Join(modelFolder, ".model"), `<model ref="r:sample"><persistence version="9" /></model>`)
+	writeFile(t, brokenRoot, `<node concept="1" id="not-supported" />`)
+
+	var stdout, stderr bytes.Buffer
+
+	exit := run([]string{"validate", modelFolder}, strings.NewReader(""), &stdout, &stderr)
+
+	if exit != 1 {
+		t.Fatalf("exit = %d, want 1; stderr = %q; stdout = %q", exit, stderr.String(), stdout.String())
+	}
+	assertContains(t, stdout.String(), filepath.ToSlash(brokenRoot))
+	assertContains(t, stdout.String(), "invalid MPS node ID")
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+}
+
 func TestRunValidateChecksEveryTargetBeforeFailing(t *testing.T) {
 	root := t.TempDir()
 	validPath := filepath.Join(root, "valid.mps")
@@ -373,6 +415,9 @@ func TestRunListModelsPrintsJSON(t *testing.T) {
 
 func writeFile(t *testing.T, path string, content string) {
 	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}

@@ -29,6 +29,7 @@ type Finding struct {
 	Code     string    `json:"code"`
 	Message  string    `json:"message"`
 	Target   string    `json:"target"`
+	File     string    `json:"file,omitempty"`
 	Location *Location `json:"location,omitempty"`
 	Layer    string    `json:"layer"`
 	Source   string    `json:"source"`
@@ -68,14 +69,71 @@ func (r Report) HasErrors() bool {
 
 func validateTarget(path string) TargetReport {
 	target := TargetReport{Target: filepath.ToSlash(path)}
-	data, err := os.ReadFile(path)
+	info, err := os.Stat(path)
 	if err != nil {
 		target.Findings = append(target.Findings, target.finding("error", "target-read-failed", fmt.Sprintf("read target: %v", err), nil, "filesystem"))
 		return target
 	}
+	if info.IsDir() {
+		validateFilePerRootFolder(path, &target)
+		return target
+	}
+	if filepath.Ext(path) == ".mpsr" {
+		validateStandaloneRootFile(path, &target)
+		return target
+	}
+
+	validateStandaloneFile(path, &target)
+	return target
+}
+
+func validateFilePerRootFolder(path string, target *TargetReport) {
+	seenNodeIDs := map[string]struct{}{}
+	validateXMLFile(filepath.Join(path, ".model"), target, seenNodeIDs, true, true)
+
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		target.Findings = append(target.Findings, target.finding("error", "target-read-failed", fmt.Sprintf("read target: %v", err), nil, "filesystem"))
+		return
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".mpsr" {
+			continue
+		}
+		validateXMLFile(filepath.Join(path, entry.Name()), target, seenNodeIDs, false, true)
+	}
+}
+
+func validateStandaloneFile(path string, target *TargetReport) {
+	seenNodeIDs := map[string]struct{}{}
+	validateXMLFile(path, target, seenNodeIDs, true, false)
+}
+
+func validateStandaloneRootFile(path string, target *TargetReport) {
+	modelFolder := filepath.ToSlash(filepath.Dir(path))
+	target.Findings = append(target.Findings, target.finding(
+		"info",
+		"incomplete-validation",
+		fmt.Sprintf("standalone root file validated without model-wide context; for complete structural validation, run mops validate %s", modelFolder),
+		nil,
+		"validation-target",
+	))
+	seenNodeIDs := map[string]struct{}{}
+	validateXMLFile(path, target, seenNodeIDs, false, false)
+}
+
+func validateXMLFile(path string, target *TargetReport, seenNodeIDs map[string]struct{}, requirePersistence, reportFile bool) {
+	file := ""
+	if reportFile {
+		file = filepath.ToSlash(path)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		target.Findings = append(target.Findings, target.findingInFile("error", "target-read-failed", fmt.Sprintf("read target: %v", err), nil, "filesystem", file))
+		return
+	}
 
 	persistenceVersion := ""
-	seenNodeIDs := map[string]struct{}{}
 	decoder := xml.NewDecoder(bytes.NewReader(data))
 	depth := 0
 	rootClosed := false
@@ -86,8 +144,8 @@ func validateTarget(path string) TargetReport {
 				break
 			}
 			line, column := decoder.InputPos()
-			target.Findings = append(target.Findings, target.malformedXMLFinding(err, &Location{Line: line, Column: column}))
-			return target
+			target.Findings = append(target.Findings, target.malformedXMLFinding(err, &Location{Line: line, Column: column}, file))
+			return
 		}
 
 		switch token := token.(type) {
@@ -97,15 +155,16 @@ func validateTarget(path string) TargetReport {
 				target.Findings = append(target.Findings, target.malformedXMLFinding(
 					fmt.Errorf("trailing content after document element"),
 					&Location{Line: line, Column: column},
+					file,
 				))
-				return target
+				return
 			}
 			depth++
 			switch token.Name.Local {
 			case "persistence":
 				persistenceVersion = attr(token, "version")
 			case "node":
-				validateNodeID(&target, seenNodeIDs, attr(token, "id"))
+				validateNodeID(target, seenNodeIDs, attr(token, "id"), file)
 			}
 		case xml.EndElement:
 			if depth > 0 {
@@ -120,53 +179,56 @@ func validateTarget(path string) TargetReport {
 				target.Findings = append(target.Findings, target.malformedXMLFinding(
 					fmt.Errorf("trailing content after document element"),
 					&Location{Line: line, Column: column},
+					file,
 				))
-				return target
+				return
 			}
 		}
 	}
 
-	if persistenceVersion != "9" {
-		target.Findings = append(target.Findings, target.finding(
+	if requirePersistence && persistenceVersion != "9" {
+		target.Findings = append(target.Findings, target.findingInFile(
 			"error",
 			"unsupported-persistence-version",
 			fmt.Sprintf("unsupported persistence version %q", persistenceVersion),
 			nil,
 			"persistence",
+			file,
 		))
 	}
-
-	return target
 }
 
-func validateNodeID(target *TargetReport, seenNodeIDs map[string]struct{}, id string) {
+func validateNodeID(target *TargetReport, seenNodeIDs map[string]struct{}, id, file string) {
 	if id == "^" {
-		target.Findings = append(target.Findings, target.finding(
+		target.Findings = append(target.Findings, target.findingInFile(
 			"error",
 			"forbidden-dynamic-node-id",
 			"dynamic reference marker ^ is not a valid MPS node ID",
 			nil,
 			"node-id",
+			file,
 		))
 		return
 	}
 	if !supportedNodeID(id) {
-		target.Findings = append(target.Findings, target.finding(
+		target.Findings = append(target.Findings, target.findingInFile(
 			"error",
 			"invalid-node-id",
 			fmt.Sprintf("invalid MPS node ID %q", id),
 			nil,
 			"node-id",
+			file,
 		))
 		return
 	}
 	if _, exists := seenNodeIDs[id]; exists {
-		target.Findings = append(target.Findings, target.finding(
+		target.Findings = append(target.Findings, target.findingInFile(
 			"error",
 			"duplicate-node-id",
 			fmt.Sprintf("duplicate MPS node ID %q", id),
 			nil,
 			"node-id",
+			file,
 		))
 		return
 	}
@@ -190,22 +252,28 @@ func supportedNodeID(id string) bool {
 	return ok
 }
 
-func (t TargetReport) malformedXMLFinding(err error, location *Location) Finding {
-	return t.finding(
+func (t TargetReport) malformedXMLFinding(err error, location *Location, file string) Finding {
+	return t.findingInFile(
 		"error",
 		"malformed-xml",
 		fmt.Sprintf("malformed XML: %v", err),
 		location,
 		"xml-parser",
+		file,
 	)
 }
 
 func (t TargetReport) finding(severity, code, message string, location *Location, source string) Finding {
+	return t.findingInFile(severity, code, message, location, source, "")
+}
+
+func (t TargetReport) findingInFile(severity, code, message string, location *Location, source, file string) Finding {
 	return Finding{
 		Severity: severity,
 		Code:     code,
 		Message:  message,
 		Target:   t.Target,
+		File:     file,
 		Location: location,
 		Layer:    "structural",
 		Source:   source,

@@ -260,7 +260,11 @@ func runValidate(args []string, stdout, stderr io.Writer) int {
 			continue
 		}
 		for _, finding := range target.Findings {
-			fmt.Fprintf(stdout, "%s %s: %s\n", finding.Severity, target.Target, finding.Message)
+			location := target.Target
+			if finding.File != "" {
+				location = finding.File
+			}
+			fmt.Fprintf(stdout, "%s %s: %s\n", finding.Severity, location, finding.Message)
 		}
 	}
 
@@ -316,7 +320,7 @@ func printListModelsUsage(w io.Writer) {
 }
 
 func printValidateUsage(w io.Writer) {
-	fmt.Fprintln(w, "Usage: mops validate [--json] <target> [target...]")
+	fmt.Fprintln(w, "Usage: mops validate [--json] <model.mps|model-folder|root.mpsr> [other-targets...]")
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Validates explicit standalone MPS model XML targets.")
+	fmt.Fprintln(w, "Validates explicit MPS model XML targets.")
 }
