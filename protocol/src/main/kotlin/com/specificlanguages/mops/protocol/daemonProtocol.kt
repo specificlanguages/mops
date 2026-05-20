@@ -7,17 +7,55 @@ import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParseException
+import com.google.gson.JsonPrimitive
+import com.google.gson.JsonSerializationContext
+import com.google.gson.JsonSerializer
 import java.lang.reflect.Type
+import java.nio.file.Path
+import kotlin.io.path.invariantSeparatorsPathString
+import kotlin.io.path.pathString
 
-const val ProtocolVersion = 1
 val GsonCodec: Gson = GsonBuilder()
     .registerTypeAdapter(DaemonRequest::class.java, DaemonRequestJsonAdapter)
     .registerTypeAdapter(DaemonResponse::class.java, DaemonResponseJsonAdapter)
+    .registerTypeAdapter(DaemonContext::class.java, DaemonContextJsonAdapter)
+    .registerTypeHierarchyAdapter(Path::class.java, PathJsonAdapter)
     .create()
 
-private object DaemonRequestJsonAdapter : JsonDeserializer<DaemonRequest> {
+/**
+ * Serialize and deserialize [Path] as a JSON string.
+ */
+private object PathJsonAdapter : JsonSerializer<Path>, JsonDeserializer<Path> {
+
+    override fun serialize(src: Path, typeOfSrc: Type?, context: JsonSerializationContext?): JsonElement =
+        JsonPrimitive(src.invariantSeparatorsPathString)
+
+    override fun deserialize(json: JsonElement, typeOfT: Type?, context: JsonDeserializationContext): Path =
+        Path.of(json.asJsonPrimitive.asString)
+}
+
+private object DaemonContextJsonAdapter : JsonSerializer<DaemonContext>, JsonDeserializer<DaemonContext> {
+    override fun serialize(src: DaemonContext, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
+        val result = JsonObject()
+        result.addProperty("projectPath", src.realProjectPath.toString())
+        result.addProperty("mpsHome", src.realMpsHome.toString())
+        result.addProperty("javaHome", src.realJavaHome.toString())
+        return result
+    }
+
+    override fun deserialize(json: JsonElement?, typeOfT: Type, context: JsonDeserializationContext): DaemonContext {
+        val result = requireObject(json, "a JSON object expected")
+        return DaemonContext(
+            realProjectPath = Path.of(requireNotNull(result.stringField("projectPath"))),
+            realMpsHome = Path.of(requireNotNull(result.stringField("mpsHome"))),
+            realJavaHome = Path.of(requireNotNull(result.stringField("javaHome")))
+        )
+    }
+}
+
+private object DaemonRequestJsonAdapter : JsonSerializer<DaemonRequest>, JsonDeserializer<DaemonRequest> {
     override fun deserialize(json: JsonElement?, typeOfT: Type, context: JsonDeserializationContext): DaemonRequest {
-        val message = messageObject(json)
+        val message = requireObject(json, "message must be one JSON object, got: $json")
         val targetType = when (val type = message.messageType("request")) {
             "ping" -> PingRequest::class.java
             "stop" -> StopRequest::class.java
@@ -26,29 +64,35 @@ private object DaemonRequestJsonAdapter : JsonDeserializer<DaemonRequest> {
         }
         return context.deserialize(message, targetType)
     }
+
+    override fun serialize(src: DaemonRequest, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
+        return context.serialize(src, src.javaClass)
+    }
 }
 
-private object DaemonResponseJsonAdapter : JsonDeserializer<DaemonResponse> {
+private object DaemonResponseJsonAdapter : JsonSerializer<DaemonResponse>, JsonDeserializer<DaemonResponse> {
+    override fun serialize(src: DaemonResponse, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
+        return context.serialize(src, src.javaClass)
+    }
+
     override fun deserialize(json: JsonElement?, typeOfT: Type, context: JsonDeserializationContext): DaemonResponse {
-        val message = messageObject(json)
-        val targetType = if (message.stringField("status") == "error") {
-            DaemonErrorResponse::class.java
-        } else {
+        val message = requireObject(json, "message must be one JSON object: $json")
+        val targetType =
             when (val type = message.messageType("response")) {
-                "ping" -> PingResponse::class.java
-                "stop" -> StopResponse::class.java
+                "error" -> DaemonErrorResponse::class.java
+                "pong" -> PongResponse::class.java
+                "stop" -> StoppedResponse::class.java
                 "model-resave" -> ModelResaveResponse::class.java
                 "ready" -> ReadyMessage::class.java
                 else -> throw JsonParseException("unsupported response type $type")
             }
-        }
         return context.deserialize(message.withDefaultStatus(), targetType)
     }
 }
 
-private fun messageObject(json: JsonElement?): JsonObject {
+private fun requireObject(json: JsonElement?, message: String): JsonObject {
     if (json == null || json.isJsonNull || !json.isJsonObject) {
-        throw JsonParseException("message must be one JSON object")
+        throw JsonParseException(message)
     }
     return json.asJsonObject
 }

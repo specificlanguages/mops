@@ -5,28 +5,23 @@ package com.specificlanguages.mops.protocol
  */
 sealed interface DaemonRequest {
     val type: String
-    val protocolVersion: Int
     val token: String
 }
 
-data class PingRequest(
-    override val type: String = "ping",
-    override val protocolVersion: Int,
-    override val token: String,
-) : DaemonRequest
+data class PingRequest(override val token: String) : DaemonRequest {
+    override val type: String = "ping"
+}
 
-data class StopRequest(
-    override val type: String = "stop",
-    override val protocolVersion: Int,
-    override val token: String,
-) : DaemonRequest
+data class StopRequest(override val token: String) : DaemonRequest {
+    override val type: String = "stop"
+}
 
 /**
  * Request to resave one model target inside the already loaded project daemon.
  */
 data class ModelResaveRequest(
-    override val type: String = "model-resave",
-    override val protocolVersion: Int,
     override val token: String,
     val modelTarget: String?,
-) : DaemonRequest
+) : DaemonRequest {
+    override val type: String = "model-resave"
+}

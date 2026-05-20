@@ -9,23 +9,23 @@ class DaemonProtocolJsonTest {
     @Test
     fun `request JSON decodes to concrete daemon request messages`() {
         assertEquals(
-            PingRequest(protocolVersion = 1, token = "secret"),
+            PingRequest(token = "secret"),
             GsonCodec.fromJson(
-                """{"type":"ping","protocolVersion":1,"token":"secret"}""",
+                """{"type":"ping","token":"secret"}""",
                 DaemonRequest::class.java,
             ),
         )
         assertEquals(
-            StopRequest(protocolVersion = 1, token = "secret"),
+            StopRequest(token = "secret"),
             GsonCodec.fromJson(
-                """{"type":"stop","protocolVersion":1,"token":"secret"}""",
+                """{"type":"stop","token":"secret"}""",
                 DaemonRequest::class.java,
             ),
         )
         assertEquals(
-            ModelResaveRequest(protocolVersion = 1, token = "secret", modelTarget = "/project/models/main.mps"),
+            ModelResaveRequest(token = "secret", modelTarget = "/project/models/main.mps"),
             GsonCodec.fromJson(
-                """{"type":"model-resave","protocolVersion":1,"token":"secret","modelTarget":"/project/models/main.mps"}""",
+                """{"type":"model-resave","token":"secret","modelTarget":"/project/models/main.mps"}""",
                 DaemonRequest::class.java,
             ),
         )
@@ -34,22 +34,20 @@ class DaemonProtocolJsonTest {
     @Test
     fun `response JSON decodes to concrete daemon response messages`() {
         assertEquals(
-            ReadyMessage(protocolVersion = 999, port = 3210),
+            ReadyMessage(port = 3210),
             GsonCodec.fromJson(
-                """{"type":"ready","protocolVersion":999,"port":3210}""",
+                """{"type":"ready","port":3210}""",
                 DaemonResponse::class.java,
             ),
         )
         assertEquals(
             DaemonErrorResponse(
-                type = "model-resave",
-                protocolVersion = 1,
                 errorCode = "NOT_IMPLEMENTED",
                 message = "not wired yet",
-                logPath = "/state/daemon.log",
+                workspacePath = "/state",
             ),
             GsonCodec.fromJson(
-                """{"type":"model-resave","status":"error","protocolVersion":1,"errorCode":"NOT_IMPLEMENTED","message":"not wired yet","logPath":"/state/daemon.log"}""",
+                """{"type":"error","errorCode":"NOT_IMPLEMENTED","message":"not wired yet","workspacePath":"/state"}""",
                 DaemonResponse::class.java,
             ),
         )
@@ -58,7 +56,7 @@ class DaemonProtocolJsonTest {
     @Test
     fun `message adapters require a type discriminator`() {
         val exception = assertFailsWith<JsonParseException> {
-            GsonCodec.fromJson("""{"protocolVersion":1,"token":"secret"}""", DaemonRequest::class.java)
+            GsonCodec.fromJson("""{"token":"secret"}""", DaemonRequest::class.java)
         }
 
         assertEquals("request type is required", exception.message)

@@ -1,13 +1,11 @@
 package com.specificlanguages.mops.cli
 
 import picocli.CommandLine
-import picocli.CommandLine.Command
-import picocli.CommandLine.ParentCommand
 
 /**
  * Picocli command group for daemon lifecycle operations.
  */
-@Command(
+@CommandLine.Command(
     name = "daemon",
     description = ["Inspect or control mops daemon processes."],
     subcommands = [
@@ -16,8 +14,8 @@ import picocli.CommandLine.ParentCommand
         DaemonStopCommand::class,
     ],
 )
-class DaemonCommand : Runnable {
-    @ParentCommand
+class DaemonOperations : Runnable {
+    @CommandLine.ParentCommand
     lateinit var root: MopsCommand
 
     override fun run() {

@@ -19,4 +19,12 @@ public record MpsVersion(int major, int minor) implements Comparable<MpsVersion>
     public boolean isAtLeast(int major, int minor) {
         return compareTo(new MpsVersion(major, minor)) >= 0;
     }
+
+    public int requiredJavaMajor() {
+        if (major >= 2026) return 25;
+        if (major >= 2025) return 21;
+        if (major >= 2022) return 17;
+
+        return 11;
+    }
 }

@@ -15,8 +15,11 @@ configurations {
 
 dependencies {
     implementation(project(":protocol"))
+    implementation(project(":launcher"))
     implementation("info.picocli:picocli:4.7.7")
     implementation("de.itemis.mps.build-backends:project-loader:5.0.1.180.8e0fd7e")
+
+    testImplementation("com.github.stefanbirkner:system-lambda:1.2.1")
 
     mpsRuntime(zipTree({ mpsZip.singleFile }).matching {
         include("lib/mps-core.jar")

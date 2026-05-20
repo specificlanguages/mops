@@ -4,7 +4,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
-import kotlin.io.path.absolute
 import kotlin.io.path.createDirectories
 import kotlin.io.path.pathString
 
@@ -14,11 +13,55 @@ import kotlin.io.path.pathString
  * Records live outside the MPS project under the daemon state directory. The project path is hashed into the directory
  * name so the CLI can find, reuse, stop, or discard project-specific daemons without scanning process tables.
  */
-class DaemonRecordStore(
-    private val environment: Map<String, String> = System.getenv(),
-) {
+class DaemonRecordStore(val paths: DaemonPaths) {
     fun write(record: DaemonRecord) {
-        val path = recordPath(Path.of(record.projectPath))
+        val projectPath = record.context.realProjectPath
+        paths.workspace(projectPath).recordWriter().write(record)
+    }
+
+    fun read(projectPath: Path): StoredDaemonRecord? = paths.workspace(projectPath).readDaemonRecord()
+
+    fun readAll(): List<StoredDaemonRecord> {
+        val projectsDir = paths.projects
+        if (!Files.isDirectory(projectsDir)) {
+            return emptyList()
+        }
+        return Files.list(projectsDir).use { projects ->
+            projects
+                .map { it.resolve("daemon.json") }
+                .filter { Files.isRegularFile(it) }
+                .map {
+                    StoredDaemonRecord(
+                        it,
+                        GsonCodec.fromJson(Files.readString(it), DaemonRecord::class.java)
+                    )
+                }
+                .toList()
+        }
+    }
+
+    fun deleteRecord(recordPath: Path) {
+        Files.deleteIfExists(recordPath)
+    }
+
+    fun recordPath(projectPath: Path): Path =
+        paths.workspace(projectPath).recordPath()
+
+    fun workspacePath(projectPath: Path): Path =
+        paths.workspace(projectPath).path
+
+    fun checkRecordWasWrittenForProject(realProjectPath: Path) {
+        read(realProjectPath)
+            ?: throw IllegalStateException("daemon did not write its project record under ${recordPath(realProjectPath)}")
+    }
+
+    companion object {
+        fun forDaemonHome(path: Path) = DaemonRecordStore(DaemonPaths(path))
+    }
+}
+
+class DaemonRecordWriter(val path: Path) {
+    fun write(record: DaemonRecord) {
         path.parent.createDirectories()
         val temporary = path.resolveSibling("${path.fileName}.tmp")
         Files.writeString(temporary, GsonCodec.toJson(record))
@@ -29,54 +72,49 @@ class DaemonRecordStore(
             StandardCopyOption.REPLACE_EXISTING,
         )
     }
+}
 
-    fun read(projectPath: Path): DaemonRecord? {
-        val path = recordPath(projectPath)
+class DaemonPaths(root: Path) {
+    val projects: Path = root.resolve("projects")
+
+    fun workspace(projectPath: Path): DaemonWorkspace =
+        DaemonWorkspace(workspacePath(projectPath))
+
+    fun workspacePath(projectPath: Path): Path =
+        projects.resolve(projectKey(projectPath))
+
+    fun projectKey(projectPath: Path): String =
+        sha256(projectPath.toRealPath().pathString)
+
+    private fun sha256(value: String): String {
+        val digest = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
+        return digest.joinToString("") { "%02x".format(it) }.take(24)
+    }
+}
+
+class DaemonWorkspace(val path: Path) {
+    fun recordPath(): Path = path.resolve("daemon.json")
+
+    fun recordWriter(): DaemonRecordWriter = DaemonRecordWriter(recordPath())
+
+    fun readDaemonRecord(): StoredDaemonRecord? {
+        val path = recordPath()
         if (!Files.isRegularFile(path)) {
             return null
         }
-        return GsonCodec.fromJson(Files.readString(path), DaemonRecord::class.java)
+        return StoredDaemonRecord(path, GsonCodec.fromJson(Files.readString(path), DaemonRecord::class.java))
     }
 
-    fun readAll(): List<DaemonRecord> {
-        val projectsDir = daemonBaseDir(environment).resolve("projects")
-        if (!Files.isDirectory(projectsDir)) {
-            return emptyList()
-        }
-        return Files.list(projectsDir).use { projects ->
-            projects
-                .map { it.resolve("daemon.json") }
-                .filter { Files.isRegularFile(it) }
-                .map { GsonCodec.fromJson(Files.readString(it), DaemonRecord::class.java) }
-                .toList()
-        }
-    }
+    fun daemonWorkingDir(): Path = path.resolve("daemon")
+    fun ideaConfigDir(): Path = daemonWorkingDir().resolve("config")
+    fun ideaSystemDir(): Path = daemonWorkingDir().resolve("system")
+    fun logDir(): Path = path.resolve("logs")
+    fun logFile(): Path = logDir().resolve("daemon.log")
 
-    fun delete(projectPath: Path) {
-        Files.deleteIfExists(recordPath(projectPath))
-    }
-
-    fun recordPath(projectPath: Path): Path =
-        projectStateDir(projectPath).resolve("daemon.json")
-
-    fun projectStateDir(projectPath: Path): Path =
-        daemonBaseDir(environment)
-            .resolve("projects")
-            .resolve(projectKey(projectPath))
-
-    companion object {
-        fun daemonBaseDir(environment: Map<String, String>): Path =
-            environment["MOPS_DAEMON_HOME"]
-                ?.takeIf { it.isNotBlank() }
-                ?.let { Path.of(it).absolute().normalize() }
-                ?: Path.of(System.getProperty("user.home"), ".mops", "daemon")
-
-        fun projectKey(projectPath: Path): String =
-            sha256(projectPath.toRealPath().pathString)
-
-        private fun sha256(value: String): String {
-            val digest = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
-            return digest.joinToString("") { "%02x".format(it) }.take(24)
-        }
+    fun createDirectories() {
+        daemonWorkingDir().createDirectories()
+        ideaConfigDir().createDirectories()
+        ideaSystemDir().createDirectories()
+        logDir().createDirectories()
     }
 }

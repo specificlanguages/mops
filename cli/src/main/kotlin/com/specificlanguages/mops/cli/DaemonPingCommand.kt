@@ -12,17 +12,14 @@ import picocli.CommandLine.Spec
 @Command(name = "ping", description = ["Start or reuse a project daemon and exchange a ping request."])
 class DaemonPingCommand : Runnable {
     @ParentCommand
-    lateinit var daemon: DaemonCommand
+    lateinit var parent: DaemonOperations
 
     @Spec
     lateinit var spec: CommandSpec
 
     override fun run() {
-        val root = daemon.root
-        val mpsHome = requireMpsHome(root, spec.commandLine(), "daemon ping")
-        val projectPath = requireProjectPath(spec.commandLine(), root.workingDirectory)
-
-        val response = root.launcher.ping(projectPath, mpsHome, resolveJavaHome(root))
+        val root = parent.root
+        val response = root.ensureDaemon().ping()
         spec.commandLine().out.println(GsonCodec.toJson(response))
     }
 }

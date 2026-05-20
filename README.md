@@ -13,10 +13,7 @@ mops daemon status
 mops daemon stop
 ```
 
-This checkout is the Kotlin daemon prototype. The old Go/offline command surface and the previous Live IDE bridge
-prototype were intentionally removed. MPS-backed work now goes through a per-project daemon process that the CLI starts
-or reuses for daemon-backed commands. `mops model resave` is the planned first real model operation; the command and
-protocol route are present, while the MPS API resave implementation is still pending.
+The CLI starts or reuses a per-project daemon process for most commands.
 
 ## Commands
 
@@ -25,8 +22,8 @@ mops --mps-home <path> daemon ping
 ```
 
 Starts or reuses the persistent daemon for the current MPS project, exchanges one ping request over a loopback socket,
-and prints the structured response. `MOPS_MPS_HOME` can be used instead of `--mps-home`.
-The command walks upward from the current directory until it finds a `.mps` directory.
+and prints the structured response. The command walks upward from the current directory until it finds a `.mps`
+directory.
 
 ```sh
 mops --mps-home <path> model resave <model-target>
@@ -46,8 +43,8 @@ working directory. With `--all`, it reads every known daemon record.
 ## Daemon State
 
 Daemon records, logs, working files, and isolated IDEA config and system directories live outside the MPS project. By
-default the CLI stores them under `~/.mops/daemon`; set `MOPS_DAEMON_HOME` to use another directory. Each project gets a
-stable hashed subdirectory under `projects/`, including:
+default the CLI stores them under `~/.mops/daemon`; pass `--daemon-home <path>` to use another directory. Each project
+gets a stable hashed subdirectory under `projects/`, including:
 
 - `daemon.json` - atomic daemon record with port, token, PID, protocol version, daemon version, project path, MPS home,
   log path, and startup time

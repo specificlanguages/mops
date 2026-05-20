@@ -1,6 +1,3 @@
-import com.specificlanguages.jbrtoolchain.JbrToolchainExtension
-import com.specificlanguages.mpsplatformcache.MpsPlatformCache
-
 plugins {
     id("mops.kotlin-jvm-conventions")
     application
@@ -9,18 +6,18 @@ plugins {
     id("com.specificlanguages.jbr-toolchain") version "1.0.2"
 }
 
-val integrationTestMps: Configuration by configurations.creating {
+val integrationTestMps by configurations.registering {
     isCanBeConsumed = false
 }
 
 val integrationTest by sourceSets.creating {
-    resources.srcDir(project(":daemon").projectDir.resolve("src/test/resources"))
     compileClasspath += sourceSets.main.get().output
     runtimeClasspath += sourceSets.main.get().output
 }
 
-val daemonDist by configurations.registering {
-    isCanBeResolved = false
+val daemonRuntimeClasspath by configurations.registering {
+    isCanBeConsumed = false
+    isCanBeResolved = true
 }
 
 dependencies {
@@ -29,12 +26,13 @@ dependencies {
     implementation("info.picocli:picocli:4.7.7")
 
     integrationTestMps("com.jetbrains:mps:2025.1.2")
-    add("jbr", "com.jetbrains.jdk:jbr_jcef:21.0.8-b895.146")
+    jbr("com.jetbrains.jdk:jbr_jcef:21.0.8-b895.146")
 
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testImplementation("com.github.stefanbirkner:system-lambda:1.2.1")
 
-    daemonDist(project(path = ":daemon", configuration = "dist"))
+    daemonRuntimeClasspath(project(":daemon"))
 }
 
 configurations.named(integrationTest.implementationConfigurationName) {
@@ -53,27 +51,51 @@ application {
     mainClass = "com.specificlanguages.mops.cli.MainKt"
 }
 
-val integrationTestMpsRoot = mpsPlatformCache.getMpsRoot(providers.provider { integrationTestMps })
+val integrationTestMpsRoot = mpsPlatformCache.getMpsRoot(integrationTestMps)
 val integrationTestJbr = jbrToolchain.javaLauncher
-val integrationTestDaemonClasspath = providers.provider {
-    fileTree(project(":daemon").layout.buildDirectory.dir("install/mops-daemon/lib")) {
-        include("*.jar")
-    }.asPath
+
+val writeDaemonClasspath by tasks.registering {
+    val outputFile = layout.buildDirectory.file("generated/daemon-classpath/mops-daemon.classpath")
+    inputs.files(daemonRuntimeClasspath)
+    outputs.file(outputFile)
+
+    doLast {
+        val entries = daemonRuntimeClasspath.get().files
+            .map { "lib/${it.name}" }
+            .toSortedSet()
+        val file = outputFile.get().asFile
+        file.parentFile.mkdirs()
+        file.writeText(entries.joinToString(System.lineSeparator(), postfix = System.lineSeparator()))
+    }
+}
+
+distributions {
+    main {
+        contents {
+            into("lib") {
+                from(daemonRuntimeClasspath)
+                duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+            }
+            into("lib") {
+                from(writeDaemonClasspath)
+            }
+        }
+    }
 }
 
 tasks.register<Test>("integrationTest") {
     description = "Runs CLI integration tests against a daemon started with downloaded MPS and JBR distributions."
-    dependsOn(":daemon:installDist")
+    dependsOn(daemonRuntimeClasspath)
 
     testClassesDirs = integrationTest.output.classesDirs
     classpath = integrationTest.runtimeClasspath
-    doFirst {
-        systemProperty("mops.integration.mpsHome", integrationTestMpsRoot.get().absolutePath)
-        systemProperty(
-            "mops.integration.javaHome",
-            integrationTestJbr.get().metadata.installationPath.asFile.absolutePath,
+
+    jvmArgumentProviders.add {
+        listOf(
+            "-Dtest.mpsHome=${integrationTestMpsRoot.get()}",
+            "-Dtest.jbrHome=${integrationTestJbr.get().metadata.installationPath}",
+            "-Dmops.daemon.classpath=${daemonRuntimeClasspath.get().asPath}"
         )
-        systemProperty("mops.integration.daemonClasspath", integrationTestDaemonClasspath.get())
     }
 }
 
@@ -82,9 +104,8 @@ tasks.named("check") {
 }
 
 tasks.named<JavaExec>("run") {
-    dependsOn(daemonDist)
-    environment(
-        "MOPS_DAEMON_CLASSPATH",
-        fileTree(daemonDist.map { it.asFileTree.matching { include("lib/*.jar") } }).asPath,
-    )
+    dependsOn(daemonRuntimeClasspath)
+    doFirst {
+        systemProperty("mops.daemon.classpath", daemonRuntimeClasspath.get().asPath)
+    }
 }

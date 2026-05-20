@@ -1,5 +1,7 @@
 package com.specificlanguages.mops.protocol
 
+import java.nio.file.Path
+
 /**
  * Contact information and metadata of a running mops daemon.
  */
@@ -10,14 +12,12 @@ data class DaemonRecord(
     val pid: Long,
 
     // Compatibility
-    val protocolVersion: Int,
     val daemonVersion: String,
 
-    // Applicability
-    val projectPath: String,
-    val mpsHome: String,
+    // Context
+    val context: DaemonContext,
 
     // Runtime information
-    val logPath: String,
+    val workspace: Path,
     val startupTime: String,
 )

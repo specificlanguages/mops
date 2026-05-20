@@ -1,19 +1,23 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.protocol.DaemonRecordStore
+import org.junit.jupiter.api.io.CleanupMode
+import org.junit.jupiter.api.io.TempDir
 import java.io.ByteArrayOutputStream
 import java.io.PrintWriter
+import java.nio.file.Files
 import java.nio.file.Path
+import java.util.Comparator
+import kotlin.io.path.createDirectories
+import kotlin.io.path.exists
 import kotlin.io.path.pathString
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import org.junit.jupiter.api.io.TempDir
-import kotlin.io.path.createDirectories
+import kotlin.test.assertFalse
 
 class DaemonStatusStopCommandTest {
-    @TempDir
+    @TempDir(cleanup = CleanupMode.ON_SUCCESS)
     lateinit var tempDir: Path
 
     @Test
@@ -25,18 +29,20 @@ class DaemonStatusStopCommandTest {
             port = 4321,
             project = project,
             mpsHome = mpsHome,
-            logPath = daemonHome.resolve("projects/example/logs/daemon.log").pathString,
+            workspace = daemonHome.resolve("projects/example"),
         )
-        DaemonRecordStore(daemonEnvironment(daemonHome)).write(record)
+        val store = DaemonRecordStore.forDaemonHome(daemonHome)
+        store.write(record)
         val stdout = ByteArrayOutputStream()
 
         val exitCode = newCommandLine(
-            launcher = RecordingLauncher(),
-            environment = daemonEnvironment(daemonHome),
             workingDirectory = project,
         ).also {
             it.out = PrintWriter(stdout, true)
-        }.execute("daemon", "status")
+        }.execute(
+            "--daemon-home", daemonHome.pathString,
+            "daemon", "status"
+        )
 
         assertEquals(0, exitCode)
         val output = stdout.toString()
@@ -55,7 +61,7 @@ class DaemonStatusStopCommandTest {
         dir1.createDirectories()
         val mps1 = tempDir.mpsHome(name = "mps-one")
 
-        val store = DaemonRecordStore(daemonEnvironment(daemonHome))
+        val store = DaemonRecordStore.forDaemonHome(daemonHome)
         store.write(
             daemonRecord(
                 port = 1111,
@@ -63,7 +69,7 @@ class DaemonStatusStopCommandTest {
                 pid = 1,
                 project = dir1,
                 mpsHome = mps1,
-                logPath = "/logs/one.log",
+                workspace = daemonHome.resolve("projects/one"),
             ),
         )
 
@@ -78,19 +84,20 @@ class DaemonStatusStopCommandTest {
                 pid = 2,
                 project = dir2,
                 mpsHome = mps2,
-                logPath = "/logs/two.log",
+                workspace = daemonHome.resolve("projects/two"),
                 startupTime = "2026-05-12T12:01:00Z",
             ),
         )
         val stdout = ByteArrayOutputStream()
 
         val exitCode = newCommandLine(
-            launcher = RecordingLauncher(),
-            environment = daemonEnvironment(daemonHome),
             workingDirectory = tempDir,
         ).also {
             it.out = PrintWriter(stdout, true)
-        }.execute("daemon", "status", "--all")
+        }.execute(
+            "--daemon-home", daemonHome.pathString,
+            "daemon", "status", "--all"
+        )
 
         assertEquals(0, exitCode)
         assertContains(stdout.toString(), dir1.pathString)
@@ -100,35 +107,95 @@ class DaemonStatusStopCommandTest {
     }
 
     @Test
-    fun `daemon stop sends shutdown and removes the current project record`() {
-        val project = tempDir.mpsProject()
+    fun `daemon status all lists stale daemon records after context paths disappear`() {
         val daemonHome = tempDir.resolve("daemon-home")
-        val mpsHome = tempDir.mpsHome()
-        val store = DaemonRecordStore(daemonEnvironment(daemonHome))
-        val fakeDaemon = startOneShotDaemon("""{"type":"stop","status":"ok","protocolVersion":1}""")
-        store.write(
-            daemonRecord(
-                port = fakeDaemon.port,
-                project = project,
-                mpsHome = mpsHome,
-                logPath = "/logs/daemon.log",
-            ),
+        val staleRecord = writeStaleDaemonRecord(
+            daemonHome = daemonHome,
+            port = 3333,
         )
         val stdout = ByteArrayOutputStream()
 
         val exitCode = newCommandLine(
-            launcher = RecordingLauncher(),
-            environment = daemonEnvironment(daemonHome),
-            workingDirectory = project,
+            workingDirectory = tempDir,
         ).also {
             it.out = PrintWriter(stdout, true)
-        }.execute("daemon", "stop")
+        }.execute(
+            "--daemon-home", daemonHome.pathString,
+            "daemon", "status", "--all"
+        )
 
-        fakeDaemon.join()
         assertEquals(0, exitCode)
-        assertContains(fakeDaemon.requestLine, "\"type\":\"stop\"")
-        assertContains(fakeDaemon.requestLine, "\"token\":\"secret\"")
-        assertContains(stdout.toString(), "stopped")
-        assertNull(store.read(project))
+        assertContains(stdout.toString(), staleRecord.projectPath.pathString)
+        assertContains(stdout.toString(), staleRecord.mpsHome.pathString)
+        assertContains(stdout.toString(), staleRecord.javaHome.pathString)
+        assertContains(stdout.toString(), "3333")
     }
+
+    @Test
+    fun `daemon stop all removes stale daemon records after context paths disappear`() {
+        val daemonHome = tempDir.resolve("daemon-home")
+        val staleRecord = writeStaleDaemonRecord(
+            daemonHome = daemonHome,
+            port = 9,
+        )
+        val stdout = ByteArrayOutputStream()
+
+        val exitCode = newCommandLine(
+            workingDirectory = tempDir,
+        ).also {
+            it.out = PrintWriter(stdout, true)
+        }.execute(
+            "--daemon-home", daemonHome.pathString,
+            "daemon", "stop", "--all"
+        )
+
+        assertEquals(0, exitCode)
+        assertContains(stdout.toString(), "removed stale daemon record for project=${staleRecord.projectPath.pathString}")
+        assertFalse(staleRecord.recordPath.exists())
+    }
+
+    private fun writeStaleDaemonRecord(
+        daemonHome: Path,
+        port: Int,
+    ): StaleDaemonRecord {
+        val projectPath = tempDir.mpsProject("deleted-project-$port")
+        val mpsHome = tempDir.mpsHome("deleted-mps-$port")
+        val javaHome = Path.of(System.getProperty("java.home")).toRealPath()
+        val store = DaemonRecordStore.forDaemonHome(daemonHome)
+        store.write(
+            daemonRecord(
+                port = port,
+                token = "stale-token",
+                pid = 999_999L,
+                project = projectPath,
+                mpsHome = mpsHome,
+                workspace = daemonHome.resolve("projects/stale"),
+                startupTime = "2026-05-12T12:02:00Z",
+            ),
+        )
+        val recordPath = store.recordPath(projectPath)
+
+        deleteRecursively(projectPath)
+        deleteRecursively(mpsHome)
+
+        return StaleDaemonRecord(
+            recordPath = recordPath,
+            projectPath = projectPath,
+            mpsHome = mpsHome,
+            javaHome = javaHome,
+        )
+    }
+
+    private fun deleteRecursively(path: Path) {
+        Files.walk(path).use { paths ->
+            paths.sorted(Comparator.reverseOrder()).forEach { Files.deleteIfExists(it) }
+        }
+    }
+
+    private data class StaleDaemonRecord(
+        val recordPath: Path,
+        val projectPath: Path,
+        val mpsHome: Path,
+        val javaHome: Path,
+    )
 }

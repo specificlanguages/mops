@@ -1,7 +1,7 @@
 package com.specificlanguages.mops.cli
 
-import com.specificlanguages.mops.protocol.DaemonRecord
-import com.specificlanguages.mops.protocol.DaemonRecordStore
+import com.specificlanguages.mops.daemoncomms.DaemonPool
+import com.specificlanguages.mops.protocol.StoredDaemonRecord
 import picocli.CommandLine.Command
 import picocli.CommandLine.Model.CommandSpec
 import picocli.CommandLine.Option
@@ -16,7 +16,7 @@ import picocli.CommandLine.Spec
 @Command(name = "status", description = ["Print daemon status."])
 class DaemonStatusCommand : Runnable {
     @ParentCommand
-    lateinit var daemon: DaemonCommand
+    lateinit var parent: DaemonOperations
 
     @Spec
     lateinit var spec: CommandSpec
@@ -25,18 +25,25 @@ class DaemonStatusCommand : Runnable {
     var all: Boolean = false
 
     override fun run() {
-        val root = daemon.root
-        val records = DaemonRecordStore(root.environment)
-        val selected = selectDaemonRecords(all, root, spec.commandLine(), records)
+        val root = parent.root
+        val pool = root.ensureDaemonPool()
 
+        val recordSpec =
+            if (all) DaemonPool.Spec.All
+            else DaemonPool.Spec.ForProject(root.resolveProjectPath())
+
+        val selected = pool.findRecords(recordSpec)
+
+        val out = spec.commandLine().out
         if (selected.isEmpty()) {
-            spec.commandLine().out.println("no mops daemons")
+            out.println("no mops daemons")
             return
         }
 
-        selected.forEach { record: DaemonRecord ->
-            spec.commandLine().out.println(
-                "running project=${record.projectPath} port=${record.port} pid=${record.pid} mpsHome=${record.mpsHome} log=${record.logPath}",
+        selected.forEach { storedRecord: StoredDaemonRecord ->
+            val record = storedRecord.record
+            out.println(
+                "running workspace=${record.workspace} context=${record.context} port=${record.port} pid=${record.pid}",
             )
         }
     }

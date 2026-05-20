@@ -12,7 +12,7 @@ import picocli.CommandLine.ParentCommand
     description = ["Run model operations through the mops daemon."],
     subcommands = [ModelResaveCommand::class],
 )
-class ModelCommand : Runnable {
+class ModelOperations : Runnable {
     @ParentCommand
     lateinit var root: MopsCommand
 

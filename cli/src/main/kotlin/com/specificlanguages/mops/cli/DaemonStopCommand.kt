@@ -1,13 +1,10 @@
 package com.specificlanguages.mops.cli
 
+import com.specificlanguages.mops.daemoncomms.DaemonPool
 import com.specificlanguages.mops.protocol.DaemonRecord
-import com.specificlanguages.mops.protocol.DaemonRecordStore
-import java.nio.file.Path
-import picocli.CommandLine.Command
+import com.specificlanguages.mops.protocol.StoredDaemonRecord
+import picocli.CommandLine.*
 import picocli.CommandLine.Model.CommandSpec
-import picocli.CommandLine.Option
-import picocli.CommandLine.ParentCommand
-import picocli.CommandLine.Spec
 
 /**
  * Stops known daemon processes and removes stale daemon records.
@@ -18,7 +15,7 @@ import picocli.CommandLine.Spec
 @Command(name = "stop", description = ["Stop a daemon process."])
 class DaemonStopCommand : Runnable {
     @ParentCommand
-    lateinit var daemon: DaemonCommand
+    lateinit var parent: DaemonOperations
 
     @Spec
     lateinit var spec: CommandSpec
@@ -27,23 +24,27 @@ class DaemonStopCommand : Runnable {
     var all: Boolean = false
 
     override fun run() {
-        val root = daemon.root
-        val records = DaemonRecordStore(root.environment)
-        val selected = selectDaemonRecords(all, root, spec.commandLine(), records)
+        val root = parent.root
+        val pool = root.ensureDaemonPool()
+
+        val recordSpec =
+            if (all) DaemonPool.Spec.All
+            else DaemonPool.Spec.ForProject(root.resolveProjectPath())
+
+        val out = spec.commandLine().out
+
+        val selected = pool.findRecords(recordSpec)
 
         if (selected.isEmpty()) {
-            spec.commandLine().out.println("no mops daemons")
-            return
-        }
-
-        selected.forEach { record: DaemonRecord ->
-            try {
-                DaemonClient().stop(record)
-                records.delete(Path.of(record.projectPath))
-                spec.commandLine().out.println("stopped project=${record.projectPath} pid=${record.pid}")
-            } catch (_: Exception) {
-                records.delete(Path.of(record.projectPath))
-                spec.commandLine().out.println("removed stale daemon record for project=${record.projectPath}")
+            out.println("no mops daemons")
+        } else {
+            selected.forEach { storedRecord: StoredDaemonRecord ->
+                val record = storedRecord.record
+                if (pool.stop(storedRecord)) {
+                    out.println("stopped project=${record.context.realProjectPath} pid=${record.pid}")
+                } else {
+                    out.println("removed stale daemon record for project=${record.context.realProjectPath}")
+                }
             }
         }
     }
