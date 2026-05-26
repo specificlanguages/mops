@@ -116,6 +116,8 @@ class ModelResaveCliIntegrationTest {
 
             if (anyAlive) {
                 Thread.sleep(100)
+            } else {
+                return
             }
         }
     }
