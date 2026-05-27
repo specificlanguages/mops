@@ -3,6 +3,7 @@ package com.specificlanguages.mops.cli
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
 import com.specificlanguages.mops.protocol.ModelResaveResponse
+import com.specificlanguages.mops.protocol.MpsListResponse
 import com.specificlanguages.mops.protocol.MpsNodeJson
 import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.PongResponse
@@ -96,6 +97,7 @@ class ModelGetNodeCommandTest {
 
         override fun ping(): PongResponse = throw UnsupportedOperationException()
         override fun resave(modelTarget: Path): ModelResaveResponse = throw UnsupportedOperationException()
+        override fun list(target: String?, depth: Int): MpsListResponse = throw UnsupportedOperationException()
 
         override fun getNode(target: NodeTarget): ModelGetNodeResponse {
             this.target = target

@@ -4,6 +4,7 @@ import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
 import com.specificlanguages.mops.protocol.ModelResaveResponse
+import com.specificlanguages.mops.protocol.MpsListResponse
 import com.specificlanguages.mops.protocol.PongResponse
 import java.nio.file.Path
 
@@ -12,4 +13,5 @@ object FakeDaemonClient : DaemonClient {
     override fun resave(modelTarget: Path): ModelResaveResponse = throw UnsupportedOperationException()
     override fun getNode(target: NodeTarget): ModelGetNodeResponse =
         throw UnsupportedOperationException()
+    override fun list(target: String?, depth: Int): MpsListResponse = throw UnsupportedOperationException()
 }
