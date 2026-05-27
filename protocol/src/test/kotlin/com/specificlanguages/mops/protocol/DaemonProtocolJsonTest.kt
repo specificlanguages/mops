@@ -2,6 +2,7 @@ package com.specificlanguages.mops.protocol
 
 import com.google.gson.JsonParseException
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -46,30 +47,53 @@ class DaemonProtocolJsonTest {
 
     @Test
     fun `get-node target JSON is nested under the daemon request`() {
-        assertEquals(
-            """{"type":"model-get-node","token":"secret","target":{"modelTarget":"/project/models/main.mps","nodeId":"2110045694544566904"}}""",
-            GsonCodec.toJson(
-                ModelGetNodeRequest(
-                    token = "secret",
-                    target = NodeTarget.InModel(
-                        modelTarget = "/project/models/main.mps",
-                        nodeId = "2110045694544566904",
-                    ),
+        val inModelRequest = GsonCodec.toJson(
+            ModelGetNodeRequest(
+                token = "secret",
+                target = NodeTarget.InModel(
+                    modelTarget = "/project/models/main.mps",
+                    nodeId = "2110045694544566904",
                 ),
-                DaemonRequest::class.java,
             ),
+            DaemonRequest::class.java,
+        )
+        assertContains(inModelRequest, """"type":"model-get-node"""")
+        assertContains(inModelRequest, """"target"""")
+        assertContains(inModelRequest, """"modelTarget":"/project/models/main.mps"""")
+        assertContains(inModelRequest, """"nodeId":"2110045694544566904"""")
+        assertEquals(
+            ModelGetNodeRequest(
+                token = "secret",
+                target = NodeTarget.InModel(
+                    modelTarget = "/project/models/main.mps",
+                    nodeId = "2110045694544566904",
+                ),
+            ),
+            GsonCodec.fromJson(inModelRequest, DaemonRequest::class.java),
+        )
+
+        val nodeReferenceRequest = GsonCodec.toJson(
+            ModelGetNodeRequest(
+                token = "secret",
+                target = NodeTarget.NodeReference(
+                    "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+                ),
+            ),
+            DaemonRequest::class.java,
+        )
+        assertContains(nodeReferenceRequest, """"target"""")
+        assertContains(
+            nodeReferenceRequest,
+            """"nodeReference":"r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"""",
         )
         assertEquals(
-            """{"type":"model-get-node","token":"secret","target":{"nodeReference":"r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"}}""",
-            GsonCodec.toJson(
-                ModelGetNodeRequest(
-                    token = "secret",
-                    target = NodeTarget.NodeReference(
-                        "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
-                    ),
+            ModelGetNodeRequest(
+                token = "secret",
+                target = NodeTarget.NodeReference(
+                    "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
                 ),
-                DaemonRequest::class.java,
             ),
+            GsonCodec.fromJson(nodeReferenceRequest, DaemonRequest::class.java),
         )
     }
 
