@@ -2,6 +2,7 @@ package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.GsonCodec
+import com.specificlanguages.mops.protocol.MpsNodeJson
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import java.io.ByteArrayOutputStream
@@ -37,22 +38,22 @@ class ModelGetNodeCliIntegrationTest {
             )
 
             assertEquals(0, result.exitCode, result.output)
-            val node = GsonCodec.fromJson(result.stdout, Map::class.java)
+            val node = nodeJson(result)
             assertEquals(
                 "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
-                node["model"],
+                node.model,
             )
-            assertEquals("jetbrains.mps.lang.structure.structure.ConceptDeclaration", node["concept"])
-            assertEquals("2110045694544566904", node["id"])
+            assertEquals("jetbrains.mps.lang.structure.structure.ConceptDeclaration", node.concept)
+            assertEquals("2110045694544566904", node.id)
             assertEquals("JsonFile", propertyValue(node, "name"))
-            val references = node["references"] as List<*>
-            val extendsReference = references.single { (it as Map<*, *>)["role"] == "extends" } as Map<*, *>
-            val target = extendsReference["target"] as Map<*, *>
-            assertEquals("r:00000000-0000-4000-0000-011c89590288(jetbrains.mps.lang.core.structure)", target["model"])
-            assertTrue(target["node"] is String)
-            val children = node["children"] as List<*>
-            assertTrue(children.isNotEmpty())
-            assertTrue(children.any { (it as Map<*, *>)["role"] == "implements" })
+            val extendsReference = requireNotNull(node.references).single { it.role == "extends" }
+            assertEquals(
+                "r:00000000-0000-4000-0000-011c89590288(jetbrains.mps.lang.core.structure)",
+                extendsReference.target.model,
+            )
+            assertNotNull(extendsReference.target.node)
+            assertTrue(requireNotNull(node.children).isNotEmpty())
+            assertTrue(requireNotNull(node.children).any { it.role == "implements" })
         } finally {
             stopDaemons(project, daemonHome)
         }
@@ -76,8 +77,8 @@ class ModelGetNodeCliIntegrationTest {
             )
 
             assertEquals(0, result.exitCode, result.output)
-            val node = GsonCodec.fromJson(result.stdout, Map::class.java)
-            assertEquals("2110045694544566904", node["id"])
+            val node = nodeJson(result)
+            assertEquals("2110045694544566904", node.id)
             assertEquals("JsonFile", propertyValue(node, "name"))
         } finally {
             stopDaemons(project, daemonHome)
@@ -100,8 +101,8 @@ class ModelGetNodeCliIntegrationTest {
             )
 
             assertEquals(0, result.exitCode, result.output)
-            val node = GsonCodec.fromJson(result.stdout, Map::class.java)
-            assertEquals(modelReference, node["model"])
+            val node = nodeJson(result)
+            assertEquals(modelReference, node.model)
             assertEquals("JsonFile", propertyValue(node, "name"))
         } finally {
             stopDaemons(project, daemonHome)
@@ -124,8 +125,8 @@ class ModelGetNodeCliIntegrationTest {
             )
 
             assertEquals(0, result.exitCode, result.output)
-            val node = GsonCodec.fromJson(result.stdout, Map::class.java)
-            assertEquals("2110045694544566904", node["id"])
+            val node = nodeJson(result)
+            assertEquals("2110045694544566904", node.id)
             assertEquals("JsonFile", propertyValue(node, "name"))
         } finally {
             stopDaemons(project, daemonHome)
@@ -150,12 +151,12 @@ class ModelGetNodeCliIntegrationTest {
             )
 
             assertEquals(0, result.exitCode, result.output)
-            val node = GsonCodec.fromJson(result.stdout, Map::class.java)
+            val node = nodeJson(result)
             assertEquals(
                 "jetbrains.mps.lang.structure.structure.InterfaceConceptReference",
-                node["concept"],
+                node.concept,
             )
-            assertFalse(node.containsKey("role"))
+            assertNull(node.role)
         } finally {
             stopDaemons(project, daemonHome)
         }
@@ -215,11 +216,11 @@ class ModelGetNodeCliIntegrationTest {
         )
     }
 
-    private fun propertyValue(node: Map<*, *>, name: String): String? {
-        val properties = node["properties"] as List<*>
-        val property = properties.single { (it as Map<*, *>)["name"] == name } as Map<*, *>
-        return property["value"] as String?
-    }
+    private fun nodeJson(result: CliResult): MpsNodeJson =
+        GsonCodec.fromJson(result.stdout, MpsNodeJson::class.java)
+
+    private fun propertyValue(node: MpsNodeJson, name: String): String? =
+        requireNotNull(node.properties).single { it.name == name }.value
 
     private data class CliResult(
         val exitCode: Int,
