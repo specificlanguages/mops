@@ -55,7 +55,14 @@ class ModelResaveCliIntegrationTest {
             assertEquals("jetbrains.mps.lang.structure.structure.ConceptDeclaration", node["concept"])
             assertEquals("2110045694544566904", node["id"])
             assertEquals("JsonFile", (node["properties"] as Map<*, *>)["name"])
-            assertTrue((node["children"] as List<*>).isNotEmpty())
+            val references = node["references"] as List<*>
+            val extendsReference = references.single { (it as Map<*, *>)["role"] == "extends" } as Map<*, *>
+            val target = extendsReference["target"] as Map<*, *>
+            assertEquals("r:00000000-0000-4000-0000-011c89590288(jetbrains.mps.lang.core.structure)", target["model"])
+            assertTrue(target["node"] is String)
+            val children = node["children"] as List<*>
+            assertTrue(children.isNotEmpty())
+            assertTrue(children.any { (it as Map<*, *>)["role"] == "implements" })
         } finally {
             newCommandLine(
                 workingDirectory = project,
