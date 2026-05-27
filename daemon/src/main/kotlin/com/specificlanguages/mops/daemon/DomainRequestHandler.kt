@@ -68,7 +68,7 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
             throw IllegalArgumentException("nodeId is required when nodeReference is not provided")
         }
 
-        val model = findModel(project, modelTarget)
+        val model = findSingleModel(project, modelTarget)
             ?: throw IllegalArgumentException("model not found: $modelTarget")
         model.load()
         return model.getNode(createNodeId(nodeId))
@@ -144,21 +144,48 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
     }
 
     private fun findModel(project: Project, modelTarget: String): SModel? {
+        val candidates = matchingModels(project, modelTarget)
+        val model = candidates.firstOrNull()
+        if (model == null) {
+            logMissingModelTarget(project, modelTarget)
+        }
+        return model
+    }
+
+    private fun findSingleModel(project: Project, modelTarget: String): SModel? {
+        val candidates = matchingModels(project, modelTarget)
+        if (candidates.size > 1) {
+            throw IllegalArgumentException(
+                "ambiguous model target $modelTarget: " +
+                    candidates.joinToString { "${it.name.longName} [${it.filePath()}]" },
+            )
+        }
+
+        val model = candidates.firstOrNull()
+        if (model == null) {
+            logMissingModelTarget(project, modelTarget)
+        }
+        return model
+    }
+
+    private fun matchingModels(project: Project, modelTarget: String): List<SModel> {
         val targetPath = targetPath(modelTarget)
-        val candidates = modelCandidates(project).toList()
-        val model = candidates
-            .firstOrNull { model ->
+        return modelCandidates(project)
+            .filter { model ->
                 model.name.longName == modelTarget ||
                     model.name.value == modelTarget ||
                     PersistenceFacade.getInstance().asString(model.reference) == modelTarget ||
                     targetPath != null && model.filePath() == targetPath
             }
-        if (model == null) {
-            logger.log(
-                "model target $modelTarget not found among ${candidates.size} models: " +
-                    candidates.take(20).joinToString { "${it.name.longName} [${it.filePath()}]" })
-        }
-        return model
+            .toList()
+    }
+
+    private fun logMissingModelTarget(project: Project, modelTarget: String) {
+        val candidates = modelCandidates(project).toList()
+        logger.log(
+            "model target $modelTarget not found among ${candidates.size} models: " +
+                candidates.take(20).joinToString { "${it.name.longName} [${it.filePath()}]" },
+        )
     }
 
     private fun modelCandidates(project: Project): Sequence<SModel> =

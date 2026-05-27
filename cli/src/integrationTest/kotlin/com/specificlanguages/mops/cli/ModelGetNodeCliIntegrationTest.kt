@@ -10,6 +10,8 @@ import java.nio.file.Path
 import java.time.Instant.now
 import kotlin.io.path.createDirectories
 import kotlin.io.path.pathString
+import kotlin.io.path.readText
+import kotlin.io.path.writeText
 import kotlin.jvm.optionals.getOrNull
 import kotlin.test.*
 
@@ -204,6 +206,47 @@ class ModelGetNodeCliIntegrationTest {
                 node["concept"],
             )
             assertFalse(node.containsKey("role"))
+        } finally {
+            stopDaemons(project, daemonHome)
+        }
+    }
+
+    @Test
+    fun `fails instead of guessing when model target is ambiguous`() {
+        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val model = project.resolve(
+            "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps",
+        )
+        val duplicate = model.resolveSibling("duplicate.structure.mps")
+        duplicate.writeText(
+            model.readText().replace(
+                "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
+                "r:11111111-2222-4333-8444-555555555555(com.specificlanguages.json.structure)",
+            ),
+        )
+
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+        val stdout = ByteArrayOutputStream()
+        val stderr = ByteArrayOutputStream()
+
+        try {
+            val exitCode = newCommandLine(
+                workingDirectory = project,
+            ).also {
+                it.out = PrintWriter(stdout, true)
+                it.err = PrintWriter(stderr, true)
+            }.execute(
+                "--daemon-home",
+                daemonHome.pathString,
+                *javaAndMpsHomeArgs(),
+                "model",
+                "get-node",
+                "com.specificlanguages.json.structure",
+                "2110045694544566904",
+            )
+
+            assertNotEquals(0, exitCode, "CLI output:\n${stdout}\nCLI error:\n${stderr}")
+            assertContains(stderr.toString(), "ambiguous model target")
         } finally {
             stopDaemons(project, daemonHome)
         }
