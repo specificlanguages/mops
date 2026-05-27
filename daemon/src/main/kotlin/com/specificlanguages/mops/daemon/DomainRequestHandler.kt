@@ -41,7 +41,7 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
                         code = "NODE_NOT_FOUND",
                         message = "node not found",
                     )
-                ModelGetNodeResponse(node = JsonNodeExporter().export(node, includeModel = true))
+                ModelGetNodeResponse(node = JsonNodeExporter().export(node))
             }
         } catch (exception: Exception) {
             errorResponse(

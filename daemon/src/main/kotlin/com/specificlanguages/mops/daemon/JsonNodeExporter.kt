@@ -6,8 +6,7 @@ import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 class JsonNodeExporter(
     private val persistence: PersistenceFacade = PersistenceFacade.getInstance(),
 ) {
-    fun export(node: SNode, includeModel: Boolean = false): Map<String, Any?> =
-        export(node = node, includeModel = includeModel, includeRole = false)
+    fun export(node: SNode): Map<String, Any?> = export(node, includeModel = true, includeRole = false)
 
     private fun export(node: SNode, includeModel: Boolean, includeRole: Boolean): Map<String, Any?> {
         val result = linkedMapOf<String, Any?>()
@@ -40,7 +39,7 @@ class JsonNodeExporter(
                 }
                 reference.targetNodeId?.let { target["node"] = persistence.asString(it) }
                 linkedMapOf(
-                    "role" to reference.link.role,
+                    "role" to reference.link.name,
                     "target" to target,
                 )
             }
