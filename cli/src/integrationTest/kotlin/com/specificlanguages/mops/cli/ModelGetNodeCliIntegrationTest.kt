@@ -136,6 +136,45 @@ class ModelGetNodeCliIntegrationTest {
         }
     }
 
+    @Test
+    fun `omits parent role from addressed non-root node`() {
+        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val model = project.resolve(
+            "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps",
+        )
+
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+        val stdout = ByteArrayOutputStream()
+        val stderr = ByteArrayOutputStream()
+
+        try {
+            val exitCode = newCommandLine(
+                workingDirectory = project,
+            ).also {
+                it.out = PrintWriter(stdout, true)
+                it.err = PrintWriter(stderr, true)
+            }.execute(
+                "--daemon-home",
+                daemonHome.pathString,
+                *javaAndMpsHomeArgs(),
+                "model",
+                "get-node",
+                model.pathString,
+                "1P8oQ4NaXDT",
+            )
+
+            assertEquals(0, exitCode, "CLI output:\n${stdout}\nCLI error:\n${stderr}")
+            val node = GsonCodec.fromJson(stdout.toString(), Map::class.java)
+            assertEquals(
+                "jetbrains.mps.lang.structure.structure.InterfaceConceptReference",
+                node["concept"],
+            )
+            assertFalse(node.containsKey("role"))
+        } finally {
+            stopDaemons(project, daemonHome)
+        }
+    }
+
     private fun stopDaemons(project: Path, daemonHome: Path) {
         newCommandLine(
             workingDirectory = project,
