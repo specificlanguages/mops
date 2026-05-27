@@ -77,6 +77,50 @@ class ModelResaveCliIntegrationTest {
     }
 
     @Test
+    fun `accepts compact regular node id through daemon`() {
+        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val model = project.resolve(
+            "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps",
+        )
+
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+        val stdout = ByteArrayOutputStream()
+        val stderr = ByteArrayOutputStream()
+
+        try {
+            val exitCode = newCommandLine(
+                workingDirectory = project,
+            ).also {
+                it.out = PrintWriter(stdout, true)
+                it.err = PrintWriter(stderr, true)
+            }.execute(
+                "--daemon-home",
+                daemonHome.pathString,
+                *javaAndMpsHomeArgs(),
+                "model",
+                "get-node",
+                model.pathString,
+                "1P8oQ4NaXDS",
+            )
+
+            assertEquals(0, exitCode, "CLI output:\n${stdout}\nCLI error:\n${stderr}")
+            val node = GsonCodec.fromJson(stdout.toString(), Map::class.java)
+            assertEquals("2110045694544566904", node["id"])
+            assertEquals("JsonFile", (node["properties"] as Map<*, *>)["name"])
+        } finally {
+            newCommandLine(
+                workingDirectory = project,
+            ).execute(
+                "--daemon-home",
+                daemonHome.pathString,
+                "--mps-home", requiredProperty("test.mpsHome"),
+                "daemon", "stop")
+
+            waitForAllDaemons(daemonHome)
+        }
+    }
+
+    @Test
     fun `restores resolve attributes through daemon`() {
         val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
         val model = project.resolve(

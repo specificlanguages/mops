@@ -5,9 +5,11 @@ import de.itemis.mps.gradle.project.loader.EnvironmentKind
 import de.itemis.mps.gradle.project.loader.ProjectLoader
 import jetbrains.mps.extapi.persistence.FileDataSource
 import jetbrains.mps.project.Project
+import jetbrains.mps.smodel.JavaFriendlyBase64
 import org.jetbrains.mps.openapi.model.SNode
 import org.jetbrains.mps.openapi.model.EditableSModel
 import org.jetbrains.mps.openapi.model.SModel
+import org.jetbrains.mps.openapi.model.SNodeId
 import org.jetbrains.mps.openapi.model.SaveOptions
 import org.jetbrains.mps.openapi.model.SaveResult
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
@@ -284,7 +286,20 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
         val model = findModel(project, modelTarget)
             ?: throw IllegalArgumentException("model not found: $modelTarget")
         model.load()
-        return model.getNode(PersistenceFacade.getInstance().createNodeId(nodeId))
+        return model.getNode(createNodeId(nodeId))
+    }
+
+    private fun createNodeId(nodeId: String): SNodeId {
+        val persistence = PersistenceFacade.getInstance()
+        val parsed = persistence.createNodeId(nodeId)
+        if (parsed != null) {
+            return parsed
+        }
+
+        val decoded = JavaFriendlyBase64().parseLong(nodeId)
+        return requireNotNull(persistence.createNodeId(java.lang.Long.toUnsignedString(decoded))) {
+            "could not parse nodeId: $nodeId"
+        }
     }
 
     private fun resaveModel(project: Project, request: ModelResaveRequest): DaemonResponse {
