@@ -32,12 +32,42 @@ class DaemonProtocolJsonTest {
         assertEquals(
             ModelGetNodeRequest(
                 token = "secret",
-                modelTarget = "/project/models/main.mps",
-                nodeId = "2110045694544566904",
-                nodeReference = null,
+                target = GetNodeTarget.InModel(
+                    modelTarget = "/project/models/main.mps",
+                    nodeId = "2110045694544566904",
+                ),
             ),
             GsonCodec.fromJson(
-                """{"type":"model-get-node","token":"secret","modelTarget":"/project/models/main.mps","nodeId":"2110045694544566904"}""",
+                """{"type":"model-get-node","token":"secret","target":{"modelTarget":"/project/models/main.mps","nodeId":"2110045694544566904"}}""",
+                DaemonRequest::class.java,
+            ),
+        )
+    }
+
+    @Test
+    fun `get-node target JSON is nested under the daemon request`() {
+        assertEquals(
+            """{"type":"model-get-node","token":"secret","target":{"modelTarget":"/project/models/main.mps","nodeId":"2110045694544566904"}}""",
+            GsonCodec.toJson(
+                ModelGetNodeRequest(
+                    token = "secret",
+                    target = GetNodeTarget.InModel(
+                        modelTarget = "/project/models/main.mps",
+                        nodeId = "2110045694544566904",
+                    ),
+                ),
+                DaemonRequest::class.java,
+            ),
+        )
+        assertEquals(
+            """{"type":"model-get-node","token":"secret","target":{"nodeReference":"r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"}}""",
+            GsonCodec.toJson(
+                ModelGetNodeRequest(
+                    token = "secret",
+                    target = GetNodeTarget.NodeReference(
+                        "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+                    ),
+                ),
                 DaemonRequest::class.java,
             ),
         )

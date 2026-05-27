@@ -2,6 +2,7 @@ package com.specificlanguages.mops.daemoncomms
 
 import com.specificlanguages.mops.protocol.ModelResaveResponse
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
+import com.specificlanguages.mops.protocol.GetNodeTarget
 import com.specificlanguages.mops.protocol.PongResponse
 import java.nio.file.Path
 

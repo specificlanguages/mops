@@ -1,4 +1,4 @@
-package com.specificlanguages.mops.daemoncomms
+package com.specificlanguages.mops.protocol
 
 sealed interface GetNodeTarget {
     data class InModel(val modelTarget: String, val nodeId: String) : GetNodeTarget

@@ -1,7 +1,7 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DefaultDaemonClient
-import com.specificlanguages.mops.daemoncomms.GetNodeTarget
+import com.specificlanguages.mops.protocol.GetNodeTarget
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -29,6 +29,7 @@ class DefaultDaemonClientTest {
         daemon.join(5_000)
         assertEquals(response, actual)
         assertContains(daemon.requestsReceived.single(), "\"type\":\"model-get-node\"")
+        assertContains(daemon.requestsReceived.single(), "\"target\"")
         assertContains(daemon.requestsReceived.single(), "\"modelTarget\":\"/project/models/main.mps\"")
         assertContains(daemon.requestsReceived.single(), "\"nodeId\":\"2110045694544566904\"")
     }

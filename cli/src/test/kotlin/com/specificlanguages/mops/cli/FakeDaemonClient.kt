@@ -1,7 +1,7 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DaemonClient
-import com.specificlanguages.mops.daemoncomms.GetNodeTarget
+import com.specificlanguages.mops.protocol.GetNodeTarget
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
 import com.specificlanguages.mops.protocol.ModelResaveResponse
 import com.specificlanguages.mops.protocol.PongResponse

@@ -4,6 +4,7 @@ import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.DaemonRequest
 import com.specificlanguages.mops.protocol.DaemonRecord
 import com.specificlanguages.mops.protocol.DaemonResponse
+import com.specificlanguages.mops.protocol.GetNodeTarget
 import com.specificlanguages.mops.protocol.GsonCodec
 import com.specificlanguages.mops.protocol.ModelGetNodeRequest
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
@@ -52,21 +53,7 @@ class DefaultDaemonClient(
 
     override fun getNode(target: GetNodeTarget): ModelGetNodeResponse =
         exchange(
-            when (target) {
-                is GetNodeTarget.InModel -> ModelGetNodeRequest(
-                    token = token,
-                    modelTarget = target.modelTarget,
-                    nodeId = target.nodeId,
-                    nodeReference = null,
-                )
-
-                is GetNodeTarget.NodeReference -> ModelGetNodeRequest(
-                    token = token,
-                    modelTarget = null,
-                    nodeId = null,
-                    nodeReference = target.nodeReference,
-                )
-            },
+            ModelGetNodeRequest(token = token, target = target),
             ModelGetNodeResponse::class.java
         )
 

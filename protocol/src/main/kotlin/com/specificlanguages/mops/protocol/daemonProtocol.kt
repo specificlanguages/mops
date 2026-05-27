@@ -19,6 +19,8 @@ val GsonCodec: Gson = GsonBuilder()
     .registerTypeAdapter(DaemonRequest::class.java, DaemonRequestJsonAdapter)
     .registerTypeAdapter(DaemonResponse::class.java, DaemonResponseJsonAdapter)
     .registerTypeAdapter(DaemonContext::class.java, DaemonContextJsonAdapter)
+    .registerTypeAdapter(GetNodeTarget::class.java, GetNodeTargetJsonAdapter)
+    .registerTypeAdapter(ModelGetNodeRequest::class.java, ModelGetNodeRequestJsonAdapter)
     .registerTypeHierarchyAdapter(Path::class.java, PathJsonAdapter)
     .create()
 
@@ -69,6 +71,69 @@ private object DaemonRequestJsonAdapter : JsonSerializer<DaemonRequest>, JsonDes
     override fun serialize(src: DaemonRequest, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
         return context.serialize(src, src.javaClass)
     }
+}
+
+private object ModelGetNodeRequestJsonAdapter : JsonSerializer<ModelGetNodeRequest>,
+    JsonDeserializer<ModelGetNodeRequest> {
+    override fun serialize(src: ModelGetNodeRequest, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
+        val result = JsonObject()
+        result.addProperty("type", src.type)
+        result.addProperty("token", src.token)
+        result.add("target", context.serialize(src.target, GetNodeTarget::class.java))
+        return result
+    }
+
+    override fun deserialize(
+        json: JsonElement?,
+        typeOfT: Type,
+        context: JsonDeserializationContext,
+    ): ModelGetNodeRequest {
+        val message = requireObject(json, "message must be one JSON object, got: $json")
+        return ModelGetNodeRequest(
+            token = requireNotNull(message.stringField("token")) { "token is required" },
+            target = context.deserialize(
+                requireNotNull(message.get("target")) { "target is required" },
+                GetNodeTarget::class.java,
+            ),
+        )
+    }
+}
+
+private object GetNodeTargetJsonAdapter : JsonSerializer<GetNodeTarget>, JsonDeserializer<GetNodeTarget> {
+    override fun serialize(src: GetNodeTarget, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
+        val result = JsonObject()
+        addGetNodeTarget(result, src)
+        return result
+    }
+
+    override fun deserialize(json: JsonElement?, typeOfT: Type, context: JsonDeserializationContext): GetNodeTarget =
+        readGetNodeTarget(requireObject(json, "get-node target must be one JSON object, got: $json"))
+}
+
+private fun addGetNodeTarget(targetObject: JsonObject, target: GetNodeTarget) {
+    when (target) {
+        is GetNodeTarget.InModel -> {
+            targetObject.addProperty("modelTarget", target.modelTarget)
+            targetObject.addProperty("nodeId", target.nodeId)
+        }
+
+        is GetNodeTarget.NodeReference -> targetObject.addProperty("nodeReference", target.nodeReference)
+    }
+}
+
+private fun readGetNodeTarget(targetObject: JsonObject): GetNodeTarget {
+    val nodeReference = targetObject.stringField("nodeReference")
+    if (!nodeReference.isNullOrBlank()) {
+        return GetNodeTarget.NodeReference(nodeReference)
+    }
+
+    val modelTarget = targetObject.stringField("modelTarget")
+    val nodeId = targetObject.stringField("nodeId")
+    if (!modelTarget.isNullOrBlank() && !nodeId.isNullOrBlank()) {
+        return GetNodeTarget.InModel(modelTarget = modelTarget, nodeId = nodeId)
+    }
+
+    throw JsonParseException("get-node target requires nodeReference or modelTarget plus nodeId")
 }
 
 private object DaemonResponseJsonAdapter : JsonSerializer<DaemonResponse>, JsonDeserializer<DaemonResponse> {

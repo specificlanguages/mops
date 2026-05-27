@@ -31,9 +31,7 @@ data class ModelResaveRequest(
  */
 data class ModelGetNodeRequest(
     override val token: String,
-    val modelTarget: String?,
-    val nodeId: String?,
-    val nodeReference: String?,
+    val target: GetNodeTarget,
 ) : DaemonRequest {
     override val type: String = "model-get-node"
 }

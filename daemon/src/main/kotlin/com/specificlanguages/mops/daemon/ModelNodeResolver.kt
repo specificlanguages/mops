@@ -1,6 +1,6 @@
 package com.specificlanguages.mops.daemon
 
-import com.specificlanguages.mops.protocol.ModelGetNodeRequest
+import com.specificlanguages.mops.protocol.GetNodeTarget
 import jetbrains.mps.extapi.persistence.FileDataSource
 import jetbrains.mps.project.Project
 import jetbrains.mps.smodel.JavaFriendlyBase64
@@ -15,28 +15,19 @@ class ModelNodeResolver(
     private val logger: DaemonLogger,
     private val persistence: PersistenceFacade = PersistenceFacade.getInstance(),
 ) {
-    fun resolveGetNode(project: Project, request: ModelGetNodeRequest): SNode? {
-        val nodeReference = request.nodeReference
-        if (!nodeReference.isNullOrBlank()) {
-            return persistence
-                .createNodeReference(nodeReference)
+    fun resolveGetNode(project: Project, target: GetNodeTarget): SNode? =
+        when (target) {
+            is GetNodeTarget.NodeReference -> persistence
+                .createNodeReference(target.nodeReference)
                 .resolve(project.repository)
-        }
 
-        val modelTarget = request.modelTarget
-        if (modelTarget.isNullOrBlank()) {
-            throw IllegalArgumentException("modelTarget is required when nodeReference is not provided")
+            is GetNodeTarget.InModel -> {
+                val model = findSingleModel(project, target.modelTarget)
+                    ?: throw IllegalArgumentException("model not found: ${target.modelTarget}")
+                model.load()
+                model.getNode(createNodeId(target.nodeId))
+            }
         }
-        val nodeId = request.nodeId
-        if (nodeId.isNullOrBlank()) {
-            throw IllegalArgumentException("nodeId is required when nodeReference is not provided")
-        }
-
-        val model = findSingleModel(project, modelTarget)
-            ?: throw IllegalArgumentException("model not found: $modelTarget")
-        model.load()
-        return model.getNode(createNodeId(nodeId))
-    }
 
     fun findModel(project: Project, modelTarget: String): SModel? {
         val candidates = matchingModels(project, modelTarget)
