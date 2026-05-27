@@ -66,4 +66,37 @@ class ModelGetNodeCommandTest {
             stdout.toString(),
         )
     }
+
+    @Test
+    fun `model get-node accepts a serialized node reference`() {
+        val project = tempDir.mpsProject()
+        val pool = RecordingPool()
+        pool.getNodeResponse = ModelGetNodeResponse(
+            node = mapOf(
+                "model" to "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
+                "concept" to "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                "id" to "2110045694544566904",
+            ),
+        )
+        val stdout = ByteArrayOutputStream()
+        val mpsHome = tempDir.mpsHome()
+        val javaHome = tempDir.javaHome()
+        val nodeReference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
+
+        val exitCode = CommandLine(MopsCommand(workingDirectory = project, daemonPool = pool))
+            .setExecutionExceptionHandler(PrintErrorAndExit)
+            .also { it.out = PrintWriter(stdout, true) }
+            .execute(
+                "--mps-home", mpsHome.toString(),
+                "--java-home", javaHome.toString(),
+                "model", "get-node",
+                nodeReference,
+            )
+
+        assertEquals(0, exitCode)
+        assertNull(pool.getNodeModelTarget)
+        assertNull(pool.getNodeNodeId)
+        assertEquals(nodeReference, pool.getNodeNodeReference)
+        assertContains(stdout.toString(), """"id":"2110045694544566904"""")
+    }
 }
