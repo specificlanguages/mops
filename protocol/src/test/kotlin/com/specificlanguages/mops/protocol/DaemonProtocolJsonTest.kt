@@ -109,6 +109,45 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `list request and response JSON carry a semantic list tree`() {
+        assertEquals(
+            MpsListRequest(token = "secret", target = null, depth = 1),
+            GsonCodec.fromJson(
+                """{"type":"list","token":"secret","depth":1}""",
+                DaemonRequest::class.java,
+            ),
+        )
+        val serializedRequest = GsonCodec.toJson(
+            MpsListRequest(token = "secret", target = null, depth = 1),
+            DaemonRequest::class.java,
+        )
+        assertEquals(
+            MpsListRequest(token = "secret", target = null, depth = 1),
+            GsonCodec.fromJson(serializedRequest, DaemonRequest::class.java),
+        )
+        assertEquals(
+            MpsListResponse(
+                root = MpsListEntryJson(
+                    type = "project",
+                    name = "mps-json",
+                    children = listOf(
+                        MpsListEntryJson(
+                            type = "module",
+                            name = "com.specificlanguages.json",
+                            moduleKind = "language",
+                            reference = "f3f42ddf-d692-4c29-90fb-7360196f01ab(com.specificlanguages.json)",
+                        ),
+                    ),
+                ),
+            ),
+            GsonCodec.fromJson(
+                """{"type":"list","root":{"type":"project","name":"mps-json","children":[{"type":"module","name":"com.specificlanguages.json","moduleKind":"language","reference":"f3f42ddf-d692-4c29-90fb-7360196f01ab(com.specificlanguages.json)"}]}}""",
+                DaemonResponse::class.java,
+            ),
+        )
+    }
+
+    @Test
     fun `message adapters require a type discriminator`() {
         val exception = assertFailsWith<JsonParseException> {
             GsonCodec.fromJson("""{"token":"secret"}""", DaemonRequest::class.java)

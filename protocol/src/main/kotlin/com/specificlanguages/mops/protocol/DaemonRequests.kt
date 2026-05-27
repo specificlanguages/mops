@@ -35,3 +35,14 @@ data class ModelGetNodeRequest(
 ) : DaemonRequest {
     override val type: String = "model-get-node"
 }
+
+/**
+ * Request to list one loaded MPS navigation target as a bounded semantic tree.
+ */
+data class MpsListRequest(
+    override val token: String,
+    val target: String?,
+    val depth: Int,
+) : DaemonRequest {
+    override val type: String = "list"
+}

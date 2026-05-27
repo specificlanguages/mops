@@ -53,6 +53,13 @@ data class ModelGetNodeResponse(val node: MpsNodeJson) : DaemonResponse {
 }
 
 /**
+ * Successful response carrying a semantic list tree rooted at the resolved MPS navigation target.
+ */
+data class MpsListResponse(val root: MpsListEntryJson) : DaemonResponse {
+    override val type: String = "list"
+}
+
+/**
  * Startup message emitted on daemon stdout when the loopback server is ready to accept authenticated requests.
  */
 data class ReadyMessage(val port: Int) : DaemonResponse {
