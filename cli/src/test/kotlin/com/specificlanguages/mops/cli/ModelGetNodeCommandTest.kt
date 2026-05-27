@@ -1,7 +1,10 @@
 package com.specificlanguages.mops.cli
 
+import com.specificlanguages.mops.daemoncomms.DaemonClient
+import com.specificlanguages.mops.daemoncomms.GetNodeTarget
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
-import org.junit.jupiter.api.io.TempDir
+import com.specificlanguages.mops.protocol.ModelResaveResponse
+import com.specificlanguages.mops.protocol.PongResponse
 import picocli.CommandLine
 import java.io.ByteArrayOutputStream
 import java.io.PrintWriter
@@ -9,12 +12,8 @@ import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 
 class ModelGetNodeCommandTest {
-    @TempDir
-    lateinit var tempDir: Path
-
     @Test
     fun `model get-node requires a node reference or model target plus node id`() {
         val stderr = ByteArrayOutputStream()
@@ -32,9 +31,8 @@ class ModelGetNodeCommandTest {
 
     @Test
     fun `model get-node prints json node export for model target and node id`() {
-        val project = tempDir.mpsProject()
-        val pool = RecordingPool()
-        pool.getNodeResponse = ModelGetNodeResponse(
+        val client = RecordingGetNodeClient()
+        client.response = ModelGetNodeResponse(
             node = mapOf(
                 "model" to "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
                 "concept" to "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
@@ -42,24 +40,23 @@ class ModelGetNodeCommandTest {
             ),
         )
         val stdout = ByteArrayOutputStream()
-        val mpsHome = tempDir.mpsHome()
-        val javaHome = tempDir.javaHome()
 
-        val exitCode = CommandLine(MopsCommand(workingDirectory = project, daemonPool = pool))
+        val exitCode = CommandLine(ModelGetNodeCommand(client))
             .setExecutionExceptionHandler(PrintErrorAndExit)
             .also { it.out = PrintWriter(stdout, true) }
             .execute(
-                "--mps-home", mpsHome.toString(),
-                "--java-home", javaHome.toString(),
-                "model", "get-node",
                 "com.specificlanguages.json.structure",
                 "2110045694544566904",
             )
 
         assertEquals(0, exitCode)
-        assertEquals("com.specificlanguages.json.structure", pool.getNodeModelTarget)
-        assertEquals("2110045694544566904", pool.getNodeNodeId)
-        assertNull(pool.getNodeNodeReference)
+        assertEquals(
+            GetNodeTarget.InModel(
+                modelTarget = "com.specificlanguages.json.structure",
+                nodeId = "2110045694544566904",
+            ),
+            client.target,
+        )
         assertEquals(
             """{"model":"r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)","concept":"jetbrains.mps.lang.structure.structure.ConceptDeclaration","id":"2110045694544566904"}""" +
                     System.lineSeparator(),
@@ -69,9 +66,8 @@ class ModelGetNodeCommandTest {
 
     @Test
     fun `model get-node accepts a serialized node reference`() {
-        val project = tempDir.mpsProject()
-        val pool = RecordingPool()
-        pool.getNodeResponse = ModelGetNodeResponse(
+        val client = RecordingGetNodeClient()
+        client.response = ModelGetNodeResponse(
             node = mapOf(
                 "model" to "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
                 "concept" to "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
@@ -79,24 +75,30 @@ class ModelGetNodeCommandTest {
             ),
         )
         val stdout = ByteArrayOutputStream()
-        val mpsHome = tempDir.mpsHome()
-        val javaHome = tempDir.javaHome()
         val nodeReference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
 
-        val exitCode = CommandLine(MopsCommand(workingDirectory = project, daemonPool = pool))
+        val exitCode = CommandLine(ModelGetNodeCommand(client))
             .setExecutionExceptionHandler(PrintErrorAndExit)
             .also { it.out = PrintWriter(stdout, true) }
             .execute(
-                "--mps-home", mpsHome.toString(),
-                "--java-home", javaHome.toString(),
-                "model", "get-node",
                 nodeReference,
             )
 
         assertEquals(0, exitCode)
-        assertNull(pool.getNodeModelTarget)
-        assertNull(pool.getNodeNodeId)
-        assertEquals(nodeReference, pool.getNodeNodeReference)
+        assertEquals(GetNodeTarget.NodeReference(nodeReference), client.target)
         assertContains(stdout.toString(), """"id":"2110045694544566904"""")
+    }
+
+    private class RecordingGetNodeClient : DaemonClient {
+        lateinit var response: ModelGetNodeResponse
+        var target: GetNodeTarget? = null
+
+        override fun ping(): PongResponse = throw UnsupportedOperationException()
+        override fun resave(modelTarget: Path): ModelResaveResponse = throw UnsupportedOperationException()
+
+        override fun getNode(target: GetNodeTarget): ModelGetNodeResponse {
+            this.target = target
+            return response
+        }
     }
 }

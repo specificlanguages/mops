@@ -11,5 +11,5 @@ import java.nio.file.Path
 interface DaemonClient {
     fun ping(): PongResponse
     fun resave(modelTarget: Path): ModelResaveResponse
-    fun getNode(modelTarget: String?, nodeId: String?, nodeReference: String?): ModelGetNodeResponse
+    fun getNode(target: GetNodeTarget): ModelGetNodeResponse
 }

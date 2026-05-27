@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DefaultDaemonClient
+import com.specificlanguages.mops.daemoncomms.GetNodeTarget
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -19,9 +20,10 @@ class DefaultDaemonClientTest {
         val daemon = startPrerecordedDaemon(response)
 
         val actual = DefaultDaemonClient(daemon.port, "secret").getNode(
-            modelTarget = "/project/models/main.mps",
-            nodeId = "2110045694544566904",
-            nodeReference = null,
+            GetNodeTarget.InModel(
+                modelTarget = "/project/models/main.mps",
+                nodeId = "2110045694544566904",
+            ),
         )
 
         daemon.join(5_000)

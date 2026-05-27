@@ -1,7 +1,5 @@
 package com.specificlanguages.mops.cli
 
-import com.specificlanguages.mops.daemoncomms.DaemonClient
-import com.specificlanguages.mops.daemoncomms.DaemonPool
 import com.specificlanguages.mops.protocol.*
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
@@ -70,45 +68,4 @@ internal fun startPrerecordedDaemon(vararg responses: DaemonResponse): Recording
     daemon.start()
     assertTrue(daemon.serverReady.await(5, TimeUnit.SECONDS), "fake daemon did not bind")
     return daemon
-}
-
-internal class RecordingPool : DaemonPool {
-    var context: DaemonContext? = null
-    var modelTarget: Path? = null
-    var getNodeModelTarget: String? = null
-    var getNodeNodeId: String? = null
-    var getNodeNodeReference: String? = null
-    var getNodeResponse: ModelGetNodeResponse = ModelGetNodeResponse(emptyMap())
-
-    override fun ensureDaemon(context: DaemonContext): DaemonClient {
-        this.context = context
-
-        return object : DaemonClient {
-            override fun ping(): PongResponse = PongResponse(
-                projectPath = context.realProjectPath.pathString,
-                mpsHome = context.realMpsHome.pathString,
-                workspacePath = "irrelevant",
-            )
-
-            override fun resave(modelTarget: Path): ModelResaveResponse {
-                this@RecordingPool.modelTarget = modelTarget
-                return ModelResaveResponse(modelTarget = modelTarget.pathString)
-            }
-
-            override fun getNode(modelTarget: String?, nodeId: String?, nodeReference: String?): ModelGetNodeResponse {
-                this@RecordingPool.getNodeModelTarget = modelTarget
-                this@RecordingPool.getNodeNodeId = nodeId
-                this@RecordingPool.getNodeNodeReference = nodeReference
-                return getNodeResponse
-            }
-        }
-    }
-
-    override fun findRecords(spec: DaemonPool.Spec): List<StoredDaemonRecord> {
-        TODO("Not yet implemented")
-    }
-
-    override fun stop(record: StoredDaemonRecord): Boolean {
-        TODO("Not yet implemented")
-    }
 }

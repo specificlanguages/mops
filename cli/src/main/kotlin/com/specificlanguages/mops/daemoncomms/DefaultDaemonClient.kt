@@ -50,14 +50,23 @@ class DefaultDaemonClient(
             ModelResaveResponse::class.java
         )
 
-    override fun getNode(modelTarget: String?, nodeId: String?, nodeReference: String?): ModelGetNodeResponse =
+    override fun getNode(target: GetNodeTarget): ModelGetNodeResponse =
         exchange(
-            ModelGetNodeRequest(
-                token = token,
-                modelTarget = modelTarget,
-                nodeId = nodeId,
-                nodeReference = nodeReference,
-            ),
+            when (target) {
+                is GetNodeTarget.InModel -> ModelGetNodeRequest(
+                    token = token,
+                    modelTarget = target.modelTarget,
+                    nodeId = target.nodeId,
+                    nodeReference = null,
+                )
+
+                is GetNodeTarget.NodeReference -> ModelGetNodeRequest(
+                    token = token,
+                    modelTarget = null,
+                    nodeId = null,
+                    nodeReference = target.nodeReference,
+                )
+            },
             ModelGetNodeResponse::class.java
         )
 
