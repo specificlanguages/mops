@@ -137,6 +137,40 @@ class ModelGetNodeCliIntegrationTest {
     }
 
     @Test
+    fun `accepts serialized node reference through daemon`() {
+        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val nodeReference =
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
+
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+        val stdout = ByteArrayOutputStream()
+        val stderr = ByteArrayOutputStream()
+
+        try {
+            val exitCode = newCommandLine(
+                workingDirectory = project,
+            ).also {
+                it.out = PrintWriter(stdout, true)
+                it.err = PrintWriter(stderr, true)
+            }.execute(
+                "--daemon-home",
+                daemonHome.pathString,
+                *javaAndMpsHomeArgs(),
+                "model",
+                "get-node",
+                nodeReference,
+            )
+
+            assertEquals(0, exitCode, "CLI output:\n${stdout}\nCLI error:\n${stderr}")
+            val node = GsonCodec.fromJson(stdout.toString(), Map::class.java)
+            assertEquals("2110045694544566904", node["id"])
+            assertEquals("JsonFile", (node["properties"] as Map<*, *>)["name"])
+        } finally {
+            stopDaemons(project, daemonHome)
+        }
+    }
+
+    @Test
     fun `omits parent role from addressed non-root node`() {
         val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
         val model = project.resolve(
