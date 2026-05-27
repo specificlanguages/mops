@@ -5,10 +5,12 @@ import de.itemis.mps.gradle.project.loader.EnvironmentKind
 import de.itemis.mps.gradle.project.loader.ProjectLoader
 import jetbrains.mps.extapi.persistence.FileDataSource
 import jetbrains.mps.project.Project
+import org.jetbrains.mps.openapi.model.SNode
 import org.jetbrains.mps.openapi.model.EditableSModel
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SaveOptions
 import org.jetbrains.mps.openapi.model.SaveResult
+import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import java.io.BufferedReader
@@ -238,9 +240,51 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
 
     fun handleDomainRequest(project: Project, request: DaemonRequest): DaemonResponse {
         return when (request) {
+            is ModelGetNodeRequest -> getNode(project, request)
             is ModelResaveRequest -> resaveModel(project, request)
             else -> errorResponse("UNSUPPORTED_REQUEST", "unsupported request type: ${request.type}")
         }
+    }
+
+    private fun getNode(project: Project, request: ModelGetNodeRequest): DaemonResponse {
+        return try {
+            project.modelAccess.computeReadAction {
+                val node = resolveNode(project, request)
+                    ?: return@computeReadAction errorResponse(
+                        code = "NODE_NOT_FOUND",
+                        message = "node not found",
+                    )
+                ModelGetNodeResponse(node = JsonNodeExporter().export(node, includeModel = true))
+            }
+        } catch (exception: Exception) {
+            errorResponse(
+                code = "GET_NODE_FAILED",
+                message = exception.message ?: exception.javaClass.name,
+            )
+        }
+    }
+
+    private fun resolveNode(project: Project, request: ModelGetNodeRequest): SNode? {
+        val nodeReference = request.nodeReference
+        if (!nodeReference.isNullOrBlank()) {
+            return PersistenceFacade.getInstance()
+                .createNodeReference(nodeReference)
+                .resolve(project.repository)
+        }
+
+        val modelTarget = request.modelTarget
+        if (modelTarget.isNullOrBlank()) {
+            throw IllegalArgumentException("modelTarget is required when nodeReference is not provided")
+        }
+        val nodeId = request.nodeId
+        if (nodeId.isNullOrBlank()) {
+            throw IllegalArgumentException("nodeId is required when nodeReference is not provided")
+        }
+
+        val model = findModel(project, modelTarget)
+            ?: throw IllegalArgumentException("model not found: $modelTarget")
+        model.load()
+        return model.getNode(PersistenceFacade.getInstance().createNodeId(nodeId))
     }
 
     private fun resaveModel(project: Project, request: ModelResaveRequest): DaemonResponse {
@@ -344,4 +388,56 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
     private fun errorResponse(code: String, message: String): DaemonErrorResponse =
         DaemonErrorResponse(errorCode = code, message = message, workspacePath = workspacePath.pathString)
 
+}
+
+class JsonNodeExporter(
+    private val persistence: PersistenceFacade = PersistenceFacade.getInstance(),
+) {
+    fun export(node: SNode, includeModel: Boolean = false): Map<String, Any?> {
+        val result = linkedMapOf<String, Any?>()
+        val model = node.model
+        if (includeModel) {
+            model?.let { result["model"] = persistence.asString(it.reference) }
+        }
+        node.containmentLink?.let { result["role"] = it.role }
+        result["concept"] = node.concept.qualifiedName
+        result["id"] = persistence.asString(node.nodeId)
+
+        val properties = node.properties
+            .mapNotNull { property ->
+                node.getProperty(property)?.let { value -> property.name to value }
+            }
+            .sortedBy { it.first }
+            .toMap(LinkedHashMap())
+        if (properties.isNotEmpty()) {
+            result["properties"] = properties
+        }
+
+        val references = node.references
+            .map { reference ->
+                val target = linkedMapOf<String, Any?>()
+                val targetModel = reference.targetSModelReference
+                if (targetModel != null && targetModel != model?.reference) {
+                    target["model"] = persistence.asString(targetModel)
+                }
+                reference.targetNodeId?.let { target["node"] = persistence.asString(it) }
+                linkedMapOf(
+                    "role" to reference.link.role,
+                    "target" to target,
+                )
+            }
+            .sortedBy { it["role"] as String }
+        if (references.isNotEmpty()) {
+            result["references"] = references
+        }
+
+        val children = node.children
+            .map { export(it, includeModel = false) }
+            .toList()
+        if (children.isNotEmpty()) {
+            result["children"] = children
+        }
+
+        return result
+    }
 }

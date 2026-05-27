@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.protocol.DaemonRecordStore
+import com.specificlanguages.mops.protocol.GsonCodec
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import java.io.ByteArrayOutputStream
@@ -17,6 +18,56 @@ import kotlin.test.*
 class ModelResaveCliIntegrationTest {
     @TempDir(cleanup = CleanupMode.ON_SUCCESS)
     lateinit var tempDir: Path
+
+    @Test
+    fun `exports node json through daemon`() {
+        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val model = project.resolve(
+            "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps",
+        )
+
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+        val stdout = ByteArrayOutputStream()
+        val stderr = ByteArrayOutputStream()
+
+        try {
+            val exitCode = newCommandLine(
+                workingDirectory = project,
+            ).also {
+                it.out = PrintWriter(stdout, true)
+                it.err = PrintWriter(stderr, true)
+            }.execute(
+                "--daemon-home",
+                daemonHome.pathString,
+                *javaAndMpsHomeArgs(),
+                "model",
+                "get-node",
+                model.pathString,
+                "2110045694544566904",
+            )
+
+            assertEquals(0, exitCode, "CLI output:\n${stdout}\nCLI error:\n${stderr}")
+            val node = GsonCodec.fromJson(stdout.toString(), Map::class.java)
+            assertEquals(
+                "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
+                node["model"],
+            )
+            assertEquals("jetbrains.mps.lang.structure.structure.ConceptDeclaration", node["concept"])
+            assertEquals("2110045694544566904", node["id"])
+            assertEquals("JsonFile", (node["properties"] as Map<*, *>)["name"])
+            assertTrue((node["children"] as List<*>).isNotEmpty())
+        } finally {
+            newCommandLine(
+                workingDirectory = project,
+            ).execute(
+                "--daemon-home",
+                daemonHome.pathString,
+                "--mps-home", requiredProperty("test.mpsHome"),
+                "daemon", "stop")
+
+            waitForAllDaemons(daemonHome)
+        }
+    }
 
     @Test
     fun `restores resolve attributes through daemon`() {
