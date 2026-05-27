@@ -121,6 +121,48 @@ class ModelResaveCliIntegrationTest {
     }
 
     @Test
+    fun `accepts serialized model reference as model target through daemon`() {
+        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val modelReference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
+
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+        val stdout = ByteArrayOutputStream()
+        val stderr = ByteArrayOutputStream()
+
+        try {
+            val exitCode = newCommandLine(
+                workingDirectory = project,
+            ).also {
+                it.out = PrintWriter(stdout, true)
+                it.err = PrintWriter(stderr, true)
+            }.execute(
+                "--daemon-home",
+                daemonHome.pathString,
+                *javaAndMpsHomeArgs(),
+                "model",
+                "get-node",
+                modelReference,
+                "2110045694544566904",
+            )
+
+            assertEquals(0, exitCode, "CLI output:\n${stdout}\nCLI error:\n${stderr}")
+            val node = GsonCodec.fromJson(stdout.toString(), Map::class.java)
+            assertEquals(modelReference, node["model"])
+            assertEquals("JsonFile", (node["properties"] as Map<*, *>)["name"])
+        } finally {
+            newCommandLine(
+                workingDirectory = project,
+            ).execute(
+                "--daemon-home",
+                daemonHome.pathString,
+                "--mps-home", requiredProperty("test.mpsHome"),
+                "daemon", "stop")
+
+            waitForAllDaemons(daemonHome)
+        }
+    }
+
+    @Test
     fun `restores resolve attributes through daemon`() {
         val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
         val model = project.resolve(

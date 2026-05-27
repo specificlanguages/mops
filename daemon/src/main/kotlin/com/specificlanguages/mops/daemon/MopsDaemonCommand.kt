@@ -365,6 +365,7 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
             .firstOrNull { model ->
                 model.name.longName == modelTarget ||
                         model.name.value == modelTarget ||
+                        PersistenceFacade.getInstance().asString(model.reference) == modelTarget ||
                         targetPath != null && model.filePath() == targetPath
             }
         if (model == null) {
