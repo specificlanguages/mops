@@ -10,7 +10,10 @@ import picocli.CommandLine.ParentCommand
 @Command(
     name = "model",
     description = ["Run model operations through the mops daemon."],
-    subcommands = [ModelResaveCommand::class],
+    subcommands = [
+        ModelGetNodeCommand::class,
+        ModelResaveCommand::class,
+    ],
 )
 class ModelOperations : Runnable {
     @ParentCommand

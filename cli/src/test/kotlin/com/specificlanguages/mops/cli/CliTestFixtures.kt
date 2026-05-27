@@ -90,6 +90,9 @@ internal class RecordingPool : DaemonPool {
                 this@RecordingPool.modelTarget = modelTarget
                 return ModelResaveResponse(modelTarget = modelTarget.pathString)
             }
+
+            override fun getNode(modelTarget: String?, nodeId: String?, nodeReference: String?): ModelGetNodeResponse =
+                throw UnsupportedOperationException()
         }
     }
 

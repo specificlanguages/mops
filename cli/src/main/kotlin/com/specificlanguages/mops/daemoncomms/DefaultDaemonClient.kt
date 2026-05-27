@@ -5,6 +5,8 @@ import com.specificlanguages.mops.protocol.DaemonRequest
 import com.specificlanguages.mops.protocol.DaemonRecord
 import com.specificlanguages.mops.protocol.DaemonResponse
 import com.specificlanguages.mops.protocol.GsonCodec
+import com.specificlanguages.mops.protocol.ModelGetNodeRequest
+import com.specificlanguages.mops.protocol.ModelGetNodeResponse
 import com.specificlanguages.mops.protocol.ModelResaveRequest
 import com.specificlanguages.mops.protocol.ModelResaveResponse
 import com.specificlanguages.mops.protocol.PingRequest
@@ -46,6 +48,17 @@ class DefaultDaemonClient(
         exchange(
             ModelResaveRequest(token = token, modelTarget = modelTarget.pathString),
             ModelResaveResponse::class.java
+        )
+
+    override fun getNode(modelTarget: String?, nodeId: String?, nodeReference: String?): ModelGetNodeResponse =
+        exchange(
+            ModelGetNodeRequest(
+                token = token,
+                modelTarget = modelTarget,
+                nodeId = nodeId,
+                nodeReference = nodeReference,
+            ),
+            ModelGetNodeResponse::class.java
         )
 
     private fun <T : DaemonResponse> exchange(request: DaemonRequest, responseType: Class<T>): T {

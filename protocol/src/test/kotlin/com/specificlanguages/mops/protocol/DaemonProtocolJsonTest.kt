@@ -29,6 +29,18 @@ class DaemonProtocolJsonTest {
                 DaemonRequest::class.java,
             ),
         )
+        assertEquals(
+            ModelGetNodeRequest(
+                token = "secret",
+                modelTarget = "/project/models/main.mps",
+                nodeId = "2110045694544566904",
+                nodeReference = null,
+            ),
+            GsonCodec.fromJson(
+                """{"type":"model-get-node","token":"secret","modelTarget":"/project/models/main.mps","nodeId":"2110045694544566904"}""",
+                DaemonRequest::class.java,
+            ),
+        )
     }
 
     @Test
@@ -48,6 +60,19 @@ class DaemonProtocolJsonTest {
             ),
             GsonCodec.fromJson(
                 """{"type":"error","errorCode":"NOT_IMPLEMENTED","message":"not wired yet","workspacePath":"/state"}""",
+                DaemonResponse::class.java,
+            ),
+        )
+        assertEquals(
+            ModelGetNodeResponse(
+                node = mapOf(
+                    "model" to "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
+                    "concept" to "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                    "id" to "2110045694544566904",
+                ),
+            ),
+            GsonCodec.fromJson(
+                """{"type":"model-get-node","node":{"model":"r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)","concept":"jetbrains.mps.lang.structure.structure.ConceptDeclaration","id":"2110045694544566904"}}""",
                 DaemonResponse::class.java,
             ),
         )

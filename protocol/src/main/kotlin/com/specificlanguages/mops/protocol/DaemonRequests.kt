@@ -25,3 +25,15 @@ data class ModelResaveRequest(
 ) : DaemonRequest {
     override val type: String = "model-resave"
 }
+
+/**
+ * Request to export one loaded node from the project daemon.
+ */
+data class ModelGetNodeRequest(
+    override val token: String,
+    val modelTarget: String?,
+    val nodeId: String?,
+    val nodeReference: String?,
+) : DaemonRequest {
+    override val type: String = "model-get-node"
+}
