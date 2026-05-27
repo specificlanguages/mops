@@ -1,60 +1,62 @@
 package com.specificlanguages.mops.daemon
 
+import com.specificlanguages.mops.protocol.MpsNodeJson
+import com.specificlanguages.mops.protocol.MpsNodePropertyJson
+import com.specificlanguages.mops.protocol.MpsNodeReferenceJson
+import com.specificlanguages.mops.protocol.MpsNodeReferenceTargetJson
 import org.jetbrains.mps.openapi.model.SNode
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 
 class JsonNodeExporter(
     private val persistence: PersistenceFacade = PersistenceFacade.getInstance(),
 ) {
-    fun export(node: SNode): Map<String, Any?> = export(node, includeModel = true, includeRole = false)
+    fun export(node: SNode): MpsNodeJson = export(node, includeModel = true, includeRole = false)
 
-    private fun export(node: SNode, includeModel: Boolean, includeRole: Boolean): Map<String, Any?> {
-        val result = linkedMapOf<String, Any?>()
+    private fun export(node: SNode, includeModel: Boolean, includeRole: Boolean): MpsNodeJson {
         val model = node.model
-        if (includeModel) {
-            model?.let { result["model"] = persistence.asString(it.reference) }
-        }
-        if (includeRole) {
-            node.containmentLink?.let { result["role"] = it.role }
-        }
-        result["concept"] = node.concept.qualifiedName
-        result["id"] = persistence.asString(node.nodeId)
 
         val properties = node.properties
             .mapNotNull { property ->
-                node.getProperty(property)?.let { value -> property.name to value }
+                node.getProperty(property)?.let { value ->
+                    MpsNodePropertyJson(name = property.name, value = value)
+                }
             }
-            .sortedBy { it.first }
-            .toMap(LinkedHashMap())
-        if (properties.isNotEmpty()) {
-            result["properties"] = properties
-        }
+            .sortedBy { it.name }
+            .takeIf { it.isNotEmpty() }
 
         val references = node.references
             .map { reference ->
-                val target = linkedMapOf<String, Any?>()
                 val targetModel = reference.targetSModelReference
-                if (targetModel != null && targetModel != model?.reference) {
-                    target["model"] = persistence.asString(targetModel)
-                }
-                reference.targetNodeId?.let { target["node"] = persistence.asString(it) }
-                linkedMapOf(
-                    "role" to reference.link.name,
-                    "target" to target,
+                MpsNodeReferenceJson(
+                    role = reference.link.name,
+                    target = MpsNodeReferenceTargetJson(
+                        model = targetModel
+                            ?.takeIf { it != model?.reference }
+                            ?.let(persistence::asString),
+                        node = reference.targetNodeId?.let(persistence::asString),
+                    ),
                 )
             }
-            .sortedBy { it["role"] as String }
-        if (references.isNotEmpty()) {
-            result["references"] = references
-        }
+            .sortedBy { it.role }
+            .takeIf { it.isNotEmpty() }
 
         val children = node.children
             .map { export(node = it, includeModel = false, includeRole = true) }
             .toList()
-        if (children.isNotEmpty()) {
-            result["children"] = children
-        }
+            .takeIf { it.isNotEmpty() }
 
-        return result
+        return MpsNodeJson(
+            model = model
+                ?.takeIf { includeModel }
+                ?.let { persistence.asString(it.reference) },
+            role = node.containmentLink
+                ?.takeIf { includeRole }
+                ?.role,
+            concept = node.concept.qualifiedName,
+            id = persistence.asString(node.nodeId),
+            properties = properties,
+            references = references,
+            children = children,
+        )
     }
 }

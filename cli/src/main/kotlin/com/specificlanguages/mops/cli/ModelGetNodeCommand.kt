@@ -1,7 +1,7 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DaemonClient
-import com.specificlanguages.mops.protocol.GetNodeTarget
+import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.GsonCodec
 import picocli.CommandLine.Command
 import picocli.CommandLine.Model.CommandSpec
@@ -28,8 +28,8 @@ class ModelGetNodeCommand(private val daemonClient: DaemonClient? = null) : Runn
     override fun run() {
         val client = daemonClient ?: model.root.ensureDaemon()
         val response = when (nodeTarget.size) {
-            1 -> client.getNode(GetNodeTarget.NodeReference(nodeTarget[0]))
-            2 -> client.getNode(GetNodeTarget.InModel(modelTarget = nodeTarget[0], nodeId = nodeTarget[1]))
+            1 -> client.getNode(NodeTarget.NodeReference(nodeTarget[0]))
+            2 -> client.getNode(NodeTarget.InModel(modelTarget = nodeTarget[0], nodeId = nodeTarget[1]))
             else -> error("expected one node reference or model target plus node id")
         }
 

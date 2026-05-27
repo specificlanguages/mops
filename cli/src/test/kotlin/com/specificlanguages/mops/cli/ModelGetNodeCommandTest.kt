@@ -1,9 +1,10 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DaemonClient
-import com.specificlanguages.mops.protocol.GetNodeTarget
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
 import com.specificlanguages.mops.protocol.ModelResaveResponse
+import com.specificlanguages.mops.protocol.MpsNodeJson
+import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.PongResponse
 import picocli.CommandLine
 import java.io.ByteArrayOutputStream
@@ -33,10 +34,10 @@ class ModelGetNodeCommandTest {
     fun `model get-node prints json node export for model target and node id`() {
         val client = RecordingGetNodeClient()
         client.response = ModelGetNodeResponse(
-            node = mapOf(
-                "model" to "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
-                "concept" to "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
-                "id" to "2110045694544566904",
+            node = MpsNodeJson(
+                model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
+                concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                id = "2110045694544566904",
             ),
         )
         val stdout = ByteArrayOutputStream()
@@ -51,7 +52,7 @@ class ModelGetNodeCommandTest {
 
         assertEquals(0, exitCode)
         assertEquals(
-            GetNodeTarget.InModel(
+            NodeTarget.InModel(
                 modelTarget = "com.specificlanguages.json.structure",
                 nodeId = "2110045694544566904",
             ),
@@ -68,10 +69,10 @@ class ModelGetNodeCommandTest {
     fun `model get-node accepts a serialized node reference`() {
         val client = RecordingGetNodeClient()
         client.response = ModelGetNodeResponse(
-            node = mapOf(
-                "model" to "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
-                "concept" to "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
-                "id" to "2110045694544566904",
+            node = MpsNodeJson(
+                model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
+                concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                id = "2110045694544566904",
             ),
         )
         val stdout = ByteArrayOutputStream()
@@ -85,18 +86,18 @@ class ModelGetNodeCommandTest {
             )
 
         assertEquals(0, exitCode)
-        assertEquals(GetNodeTarget.NodeReference(nodeReference), client.target)
+        assertEquals(NodeTarget.NodeReference(nodeReference), client.target)
         assertContains(stdout.toString(), """"id":"2110045694544566904"""")
     }
 
     private class RecordingGetNodeClient : DaemonClient {
         lateinit var response: ModelGetNodeResponse
-        var target: GetNodeTarget? = null
+        var target: NodeTarget? = null
 
         override fun ping(): PongResponse = throw UnsupportedOperationException()
         override fun resave(modelTarget: Path): ModelResaveResponse = throw UnsupportedOperationException()
 
-        override fun getNode(target: GetNodeTarget): ModelGetNodeResponse {
+        override fun getNode(target: NodeTarget): ModelGetNodeResponse {
             this.target = target
             return response
         }

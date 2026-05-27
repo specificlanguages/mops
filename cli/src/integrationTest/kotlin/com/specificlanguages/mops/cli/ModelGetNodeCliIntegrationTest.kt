@@ -44,7 +44,7 @@ class ModelGetNodeCliIntegrationTest {
             )
             assertEquals("jetbrains.mps.lang.structure.structure.ConceptDeclaration", node["concept"])
             assertEquals("2110045694544566904", node["id"])
-            assertEquals("JsonFile", (node["properties"] as Map<*, *>)["name"])
+            assertEquals("JsonFile", propertyValue(node, "name"))
             val references = node["references"] as List<*>
             val extendsReference = references.single { (it as Map<*, *>)["role"] == "extends" } as Map<*, *>
             val target = extendsReference["target"] as Map<*, *>
@@ -78,7 +78,7 @@ class ModelGetNodeCliIntegrationTest {
             assertEquals(0, result.exitCode, result.output)
             val node = GsonCodec.fromJson(result.stdout, Map::class.java)
             assertEquals("2110045694544566904", node["id"])
-            assertEquals("JsonFile", (node["properties"] as Map<*, *>)["name"])
+            assertEquals("JsonFile", propertyValue(node, "name"))
         } finally {
             stopDaemons(project, daemonHome)
         }
@@ -102,7 +102,7 @@ class ModelGetNodeCliIntegrationTest {
             assertEquals(0, result.exitCode, result.output)
             val node = GsonCodec.fromJson(result.stdout, Map::class.java)
             assertEquals(modelReference, node["model"])
-            assertEquals("JsonFile", (node["properties"] as Map<*, *>)["name"])
+            assertEquals("JsonFile", propertyValue(node, "name"))
         } finally {
             stopDaemons(project, daemonHome)
         }
@@ -126,7 +126,7 @@ class ModelGetNodeCliIntegrationTest {
             assertEquals(0, result.exitCode, result.output)
             val node = GsonCodec.fromJson(result.stdout, Map::class.java)
             assertEquals("2110045694544566904", node["id"])
-            assertEquals("JsonFile", (node["properties"] as Map<*, *>)["name"])
+            assertEquals("JsonFile", propertyValue(node, "name"))
         } finally {
             stopDaemons(project, daemonHome)
         }
@@ -213,6 +213,12 @@ class ModelGetNodeCliIntegrationTest {
             stdout = stdout.toString(),
             stderr = stderr.toString(),
         )
+    }
+
+    private fun propertyValue(node: Map<*, *>, name: String): String? {
+        val properties = node["properties"] as List<*>
+        val property = properties.single { (it as Map<*, *>)["name"] == name } as Map<*, *>
+        return property["value"] as String?
     }
 
     private data class CliResult(

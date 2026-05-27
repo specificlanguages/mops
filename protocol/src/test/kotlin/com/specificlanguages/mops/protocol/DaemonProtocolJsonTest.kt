@@ -32,7 +32,7 @@ class DaemonProtocolJsonTest {
         assertEquals(
             ModelGetNodeRequest(
                 token = "secret",
-                target = GetNodeTarget.InModel(
+                target = NodeTarget.InModel(
                     modelTarget = "/project/models/main.mps",
                     nodeId = "2110045694544566904",
                 ),
@@ -51,7 +51,7 @@ class DaemonProtocolJsonTest {
             GsonCodec.toJson(
                 ModelGetNodeRequest(
                     token = "secret",
-                    target = GetNodeTarget.InModel(
+                    target = NodeTarget.InModel(
                         modelTarget = "/project/models/main.mps",
                         nodeId = "2110045694544566904",
                     ),
@@ -64,7 +64,7 @@ class DaemonProtocolJsonTest {
             GsonCodec.toJson(
                 ModelGetNodeRequest(
                     token = "secret",
-                    target = GetNodeTarget.NodeReference(
+                    target = NodeTarget.NodeReference(
                         "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
                     ),
                 ),
@@ -95,10 +95,10 @@ class DaemonProtocolJsonTest {
         )
         assertEquals(
             ModelGetNodeResponse(
-                node = mapOf(
-                    "model" to "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
-                    "concept" to "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
-                    "id" to "2110045694544566904",
+                node = MpsNodeJson(
+                    model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
+                    concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                    id = "2110045694544566904",
                 ),
             ),
             GsonCodec.fromJson(

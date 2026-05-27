@@ -26,6 +26,7 @@ dependencies {
         include("lib/mps-collections.jar")
         include("lib/mps-closures.jar")
         include("lib/mps-environment.jar")
+        include("lib/mps-persistence.jar")
         include("lib/mps-platform.jar")
         include("lib/mps-openapi.jar")
         include("lib/mps-references.jar")

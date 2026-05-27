@@ -2,7 +2,7 @@ package com.specificlanguages.mops.daemoncomms
 
 import com.specificlanguages.mops.protocol.ModelResaveResponse
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
-import com.specificlanguages.mops.protocol.GetNodeTarget
+import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.PongResponse
 import java.nio.file.Path
 
@@ -12,5 +12,5 @@ import java.nio.file.Path
 interface DaemonClient {
     fun ping(): PongResponse
     fun resave(modelTarget: Path): ModelResaveResponse
-    fun getNode(target: GetNodeTarget): ModelGetNodeResponse
+    fun getNode(target: NodeTarget): ModelGetNodeResponse
 }

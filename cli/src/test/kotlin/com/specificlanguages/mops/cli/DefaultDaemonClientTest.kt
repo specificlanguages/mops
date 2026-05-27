@@ -1,8 +1,9 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DefaultDaemonClient
-import com.specificlanguages.mops.protocol.GetNodeTarget
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
+import com.specificlanguages.mops.protocol.MpsNodeJson
+import com.specificlanguages.mops.protocol.NodeTarget
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -11,16 +12,16 @@ class DefaultDaemonClientTest {
     @Test
     fun `get node sends model target and node id request`() {
         val response = ModelGetNodeResponse(
-            node = mapOf(
-                "model" to "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
-                "concept" to "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
-                "id" to "2110045694544566904",
+            node = MpsNodeJson(
+                model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
+                concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                id = "2110045694544566904",
             ),
         )
         val daemon = startPrerecordedDaemon(response)
 
         val actual = DefaultDaemonClient(daemon.port, "secret").getNode(
-            GetNodeTarget.InModel(
+            NodeTarget.InModel(
                 modelTarget = "/project/models/main.mps",
                 nodeId = "2110045694544566904",
             ),

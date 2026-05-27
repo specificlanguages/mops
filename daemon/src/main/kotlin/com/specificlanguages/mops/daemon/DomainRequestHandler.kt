@@ -30,7 +30,7 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
     private fun getNode(project: Project, request: ModelGetNodeRequest): DaemonResponse {
         return try {
             project.modelAccess.computeReadAction {
-                val node = modelNodeResolver.resolveGetNode(project, request.target)
+                val node = modelNodeResolver.findNode(project, request.target)
                     ?: return@computeReadAction errorResponse(
                         code = "NODE_NOT_FOUND",
                         message = "node not found",

@@ -48,7 +48,7 @@ data class ModelResaveResponse(val modelTarget: String) : DaemonResponse {
 /**
  * Successful response carrying one JSON node export object.
  */
-data class ModelGetNodeResponse(val node: Map<String, Any?>) : DaemonResponse {
+data class ModelGetNodeResponse(val node: MpsNodeJson) : DaemonResponse {
     override val type: String = "model-get-node"
 }
 

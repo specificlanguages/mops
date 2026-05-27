@@ -13,13 +13,12 @@ import com.google.gson.JsonSerializer
 import java.lang.reflect.Type
 import java.nio.file.Path
 import kotlin.io.path.invariantSeparatorsPathString
-import kotlin.io.path.pathString
 
 val GsonCodec: Gson = GsonBuilder()
     .registerTypeAdapter(DaemonRequest::class.java, DaemonRequestJsonAdapter)
     .registerTypeAdapter(DaemonResponse::class.java, DaemonResponseJsonAdapter)
     .registerTypeAdapter(DaemonContext::class.java, DaemonContextJsonAdapter)
-    .registerTypeAdapter(GetNodeTarget::class.java, GetNodeTargetJsonAdapter)
+    .registerTypeAdapter(NodeTarget::class.java, NodeTargetJsonAdapter)
     .registerTypeAdapter(ModelGetNodeRequest::class.java, ModelGetNodeRequestJsonAdapter)
     .registerTypeHierarchyAdapter(Path::class.java, PathJsonAdapter)
     .create()
@@ -79,7 +78,7 @@ private object ModelGetNodeRequestJsonAdapter : JsonSerializer<ModelGetNodeReque
         val result = JsonObject()
         result.addProperty("type", src.type)
         result.addProperty("token", src.token)
-        result.add("target", context.serialize(src.target, GetNodeTarget::class.java))
+        result.add("target", context.serialize(src.target, NodeTarget::class.java))
         return result
     }
 
@@ -93,44 +92,44 @@ private object ModelGetNodeRequestJsonAdapter : JsonSerializer<ModelGetNodeReque
             token = requireNotNull(message.stringField("token")) { "token is required" },
             target = context.deserialize(
                 requireNotNull(message.get("target")) { "target is required" },
-                GetNodeTarget::class.java,
+                NodeTarget::class.java,
             ),
         )
     }
 }
 
-private object GetNodeTargetJsonAdapter : JsonSerializer<GetNodeTarget>, JsonDeserializer<GetNodeTarget> {
-    override fun serialize(src: GetNodeTarget, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
+private object NodeTargetJsonAdapter : JsonSerializer<NodeTarget>, JsonDeserializer<NodeTarget> {
+    override fun serialize(src: NodeTarget, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
         val result = JsonObject()
-        addGetNodeTarget(result, src)
+        addNodeTarget(result, src)
         return result
     }
 
-    override fun deserialize(json: JsonElement?, typeOfT: Type, context: JsonDeserializationContext): GetNodeTarget =
-        readGetNodeTarget(requireObject(json, "get-node target must be one JSON object, got: $json"))
+    override fun deserialize(json: JsonElement?, typeOfT: Type, context: JsonDeserializationContext): NodeTarget =
+        readNodeTarget(requireObject(json, "get-node target must be one JSON object, got: $json"))
 }
 
-private fun addGetNodeTarget(targetObject: JsonObject, target: GetNodeTarget) {
+private fun addNodeTarget(targetObject: JsonObject, target: NodeTarget) {
     when (target) {
-        is GetNodeTarget.InModel -> {
+        is NodeTarget.InModel -> {
             targetObject.addProperty("modelTarget", target.modelTarget)
             targetObject.addProperty("nodeId", target.nodeId)
         }
 
-        is GetNodeTarget.NodeReference -> targetObject.addProperty("nodeReference", target.nodeReference)
+        is NodeTarget.NodeReference -> targetObject.addProperty("nodeReference", target.nodeReference)
     }
 }
 
-private fun readGetNodeTarget(targetObject: JsonObject): GetNodeTarget {
+private fun readNodeTarget(targetObject: JsonObject): NodeTarget {
     val nodeReference = targetObject.stringField("nodeReference")
     if (!nodeReference.isNullOrBlank()) {
-        return GetNodeTarget.NodeReference(nodeReference)
+        return NodeTarget.NodeReference(nodeReference)
     }
 
     val modelTarget = targetObject.stringField("modelTarget")
     val nodeId = targetObject.stringField("nodeId")
     if (!modelTarget.isNullOrBlank() && !nodeId.isNullOrBlank()) {
-        return GetNodeTarget.InModel(modelTarget = modelTarget, nodeId = nodeId)
+        return NodeTarget.InModel(modelTarget = modelTarget, nodeId = nodeId)
     }
 
     throw JsonParseException("get-node target requires nodeReference or modelTarget plus nodeId")
