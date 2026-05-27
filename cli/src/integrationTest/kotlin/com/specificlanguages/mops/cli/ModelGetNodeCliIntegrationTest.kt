@@ -27,27 +27,17 @@ class ModelGetNodeCliIntegrationTest {
         )
 
         val daemonHome = tempDir.resolve("daemon-home").createDirectories()
-        val stdout = ByteArrayOutputStream()
-        val stderr = ByteArrayOutputStream()
 
         try {
-            val exitCode = newCommandLine(
-                workingDirectory = project,
-            ).also {
-                it.out = PrintWriter(stdout, true)
-                it.err = PrintWriter(stderr, true)
-            }.execute(
-                "--daemon-home",
-                daemonHome.pathString,
-                *javaAndMpsHomeArgs(),
-                "model",
-                "get-node",
+            val result = runGetNode(
+                project,
+                daemonHome,
                 model.pathString,
                 "2110045694544566904",
             )
 
-            assertEquals(0, exitCode, "CLI output:\n${stdout}\nCLI error:\n${stderr}")
-            val node = GsonCodec.fromJson(stdout.toString(), Map::class.java)
+            assertEquals(0, result.exitCode, result.output)
+            val node = GsonCodec.fromJson(result.stdout, Map::class.java)
             assertEquals(
                 "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
                 node["model"],
@@ -76,27 +66,17 @@ class ModelGetNodeCliIntegrationTest {
         )
 
         val daemonHome = tempDir.resolve("daemon-home").createDirectories()
-        val stdout = ByteArrayOutputStream()
-        val stderr = ByteArrayOutputStream()
 
         try {
-            val exitCode = newCommandLine(
-                workingDirectory = project,
-            ).also {
-                it.out = PrintWriter(stdout, true)
-                it.err = PrintWriter(stderr, true)
-            }.execute(
-                "--daemon-home",
-                daemonHome.pathString,
-                *javaAndMpsHomeArgs(),
-                "model",
-                "get-node",
+            val result = runGetNode(
+                project,
+                daemonHome,
                 model.pathString,
                 "1P8oQ4NaXDS",
             )
 
-            assertEquals(0, exitCode, "CLI output:\n${stdout}\nCLI error:\n${stderr}")
-            val node = GsonCodec.fromJson(stdout.toString(), Map::class.java)
+            assertEquals(0, result.exitCode, result.output)
+            val node = GsonCodec.fromJson(result.stdout, Map::class.java)
             assertEquals("2110045694544566904", node["id"])
             assertEquals("JsonFile", (node["properties"] as Map<*, *>)["name"])
         } finally {
@@ -110,27 +90,17 @@ class ModelGetNodeCliIntegrationTest {
         val modelReference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
 
         val daemonHome = tempDir.resolve("daemon-home").createDirectories()
-        val stdout = ByteArrayOutputStream()
-        val stderr = ByteArrayOutputStream()
 
         try {
-            val exitCode = newCommandLine(
-                workingDirectory = project,
-            ).also {
-                it.out = PrintWriter(stdout, true)
-                it.err = PrintWriter(stderr, true)
-            }.execute(
-                "--daemon-home",
-                daemonHome.pathString,
-                *javaAndMpsHomeArgs(),
-                "model",
-                "get-node",
+            val result = runGetNode(
+                project,
+                daemonHome,
                 modelReference,
                 "2110045694544566904",
             )
 
-            assertEquals(0, exitCode, "CLI output:\n${stdout}\nCLI error:\n${stderr}")
-            val node = GsonCodec.fromJson(stdout.toString(), Map::class.java)
+            assertEquals(0, result.exitCode, result.output)
+            val node = GsonCodec.fromJson(result.stdout, Map::class.java)
             assertEquals(modelReference, node["model"])
             assertEquals("JsonFile", (node["properties"] as Map<*, *>)["name"])
         } finally {
@@ -145,26 +115,16 @@ class ModelGetNodeCliIntegrationTest {
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
 
         val daemonHome = tempDir.resolve("daemon-home").createDirectories()
-        val stdout = ByteArrayOutputStream()
-        val stderr = ByteArrayOutputStream()
 
         try {
-            val exitCode = newCommandLine(
-                workingDirectory = project,
-            ).also {
-                it.out = PrintWriter(stdout, true)
-                it.err = PrintWriter(stderr, true)
-            }.execute(
-                "--daemon-home",
-                daemonHome.pathString,
-                *javaAndMpsHomeArgs(),
-                "model",
-                "get-node",
+            val result = runGetNode(
+                project,
+                daemonHome,
                 nodeReference,
             )
 
-            assertEquals(0, exitCode, "CLI output:\n${stdout}\nCLI error:\n${stderr}")
-            val node = GsonCodec.fromJson(stdout.toString(), Map::class.java)
+            assertEquals(0, result.exitCode, result.output)
+            val node = GsonCodec.fromJson(result.stdout, Map::class.java)
             assertEquals("2110045694544566904", node["id"])
             assertEquals("JsonFile", (node["properties"] as Map<*, *>)["name"])
         } finally {
@@ -180,27 +140,17 @@ class ModelGetNodeCliIntegrationTest {
         )
 
         val daemonHome = tempDir.resolve("daemon-home").createDirectories()
-        val stdout = ByteArrayOutputStream()
-        val stderr = ByteArrayOutputStream()
 
         try {
-            val exitCode = newCommandLine(
-                workingDirectory = project,
-            ).also {
-                it.out = PrintWriter(stdout, true)
-                it.err = PrintWriter(stderr, true)
-            }.execute(
-                "--daemon-home",
-                daemonHome.pathString,
-                *javaAndMpsHomeArgs(),
-                "model",
-                "get-node",
+            val result = runGetNode(
+                project,
+                daemonHome,
                 model.pathString,
                 "1P8oQ4NaXDT",
             )
 
-            assertEquals(0, exitCode, "CLI output:\n${stdout}\nCLI error:\n${stderr}")
-            val node = GsonCodec.fromJson(stdout.toString(), Map::class.java)
+            assertEquals(0, result.exitCode, result.output)
+            val node = GsonCodec.fromJson(result.stdout, Map::class.java)
             assertEquals(
                 "jetbrains.mps.lang.structure.structure.InterfaceConceptReference",
                 node["concept"],
@@ -226,30 +176,52 @@ class ModelGetNodeCliIntegrationTest {
         )
 
         val daemonHome = tempDir.resolve("daemon-home").createDirectories()
-        val stdout = ByteArrayOutputStream()
-        val stderr = ByteArrayOutputStream()
 
         try {
-            val exitCode = newCommandLine(
-                workingDirectory = project,
-            ).also {
-                it.out = PrintWriter(stdout, true)
-                it.err = PrintWriter(stderr, true)
-            }.execute(
-                "--daemon-home",
-                daemonHome.pathString,
-                *javaAndMpsHomeArgs(),
-                "model",
-                "get-node",
+            val result = runGetNode(
+                project,
+                daemonHome,
                 "com.specificlanguages.json.structure",
                 "2110045694544566904",
             )
 
-            assertNotEquals(0, exitCode, "CLI output:\n${stdout}\nCLI error:\n${stderr}")
-            assertContains(stderr.toString(), "ambiguous model target")
+            assertNotEquals(0, result.exitCode, result.output)
+            assertContains(result.stderr, "ambiguous model target")
         } finally {
             stopDaemons(project, daemonHome)
         }
+    }
+
+    private fun runGetNode(project: Path, daemonHome: Path, vararg nodeTarget: String): CliResult {
+        val stdout = ByteArrayOutputStream()
+        val stderr = ByteArrayOutputStream()
+        val exitCode = newCommandLine(
+            workingDirectory = project,
+        ).also {
+            it.out = PrintWriter(stdout, true)
+            it.err = PrintWriter(stderr, true)
+        }.execute(
+            "--daemon-home",
+            daemonHome.pathString,
+            *javaAndMpsHomeArgs(),
+            "model",
+            "get-node",
+            *nodeTarget,
+        )
+        return CliResult(
+            exitCode = exitCode,
+            stdout = stdout.toString(),
+            stderr = stderr.toString(),
+        )
+    }
+
+    private data class CliResult(
+        val exitCode: Int,
+        val stdout: String,
+        val stderr: String,
+    ) {
+        val output: String
+            get() = "CLI output:\n$stdout\nCLI error:\n$stderr"
     }
 
     private fun stopDaemons(project: Path, daemonHome: Path) {
