@@ -1,10 +1,20 @@
 package com.specificlanguages.mops.cli
 
+import com.specificlanguages.mops.protocol.GsonCodec
 import picocli.CommandLine.Command
+import picocli.CommandLine.Model.CommandSpec
 import picocli.CommandLine.Parameters
+import picocli.CommandLine.ParentCommand
+import picocli.CommandLine.Spec
 
 @Command(name = "get-node", description = ["Export one loaded MPS node as JSON."])
 class ModelGetNodeCommand : Runnable {
+    @ParentCommand
+    lateinit var model: ModelOperations
+
+    @Spec
+    lateinit var spec: CommandSpec
+
     @Parameters(
         index = "0..1",
         arity = "1..2",
@@ -14,6 +24,13 @@ class ModelGetNodeCommand : Runnable {
     lateinit var nodeTarget: Array<String>
 
     override fun run() {
-        throw UnsupportedOperationException("model get-node is not implemented yet")
+        val client = model.root.ensureDaemon()
+        val response = when (nodeTarget.size) {
+            1 -> client.getNode(modelTarget = null, nodeId = null, nodeReference = nodeTarget[0])
+            2 -> client.getNode(modelTarget = nodeTarget[0], nodeId = nodeTarget[1], nodeReference = null)
+            else -> error("expected one node reference or model target plus node id")
+        }
+
+        spec.commandLine().out.println(GsonCodec.toJson(response.node))
     }
 }

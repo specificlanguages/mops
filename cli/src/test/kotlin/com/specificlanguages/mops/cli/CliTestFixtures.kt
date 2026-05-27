@@ -75,6 +75,10 @@ internal fun startPrerecordedDaemon(vararg responses: DaemonResponse): Recording
 internal class RecordingPool : DaemonPool {
     var context: DaemonContext? = null
     var modelTarget: Path? = null
+    var getNodeModelTarget: String? = null
+    var getNodeNodeId: String? = null
+    var getNodeNodeReference: String? = null
+    var getNodeResponse: ModelGetNodeResponse = ModelGetNodeResponse(emptyMap())
 
     override fun ensureDaemon(context: DaemonContext): DaemonClient {
         this.context = context
@@ -91,8 +95,12 @@ internal class RecordingPool : DaemonPool {
                 return ModelResaveResponse(modelTarget = modelTarget.pathString)
             }
 
-            override fun getNode(modelTarget: String?, nodeId: String?, nodeReference: String?): ModelGetNodeResponse =
-                throw UnsupportedOperationException()
+            override fun getNode(modelTarget: String?, nodeId: String?, nodeReference: String?): ModelGetNodeResponse {
+                this@RecordingPool.getNodeModelTarget = modelTarget
+                this@RecordingPool.getNodeNodeId = nodeId
+                this@RecordingPool.getNodeNodeReference = nodeReference
+                return getNodeResponse
+            }
         }
     }
 

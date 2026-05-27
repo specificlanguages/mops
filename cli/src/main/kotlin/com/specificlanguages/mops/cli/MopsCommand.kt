@@ -25,7 +25,8 @@ class MopsCommand(
     /**
      * The working directory for the CLI. All paths are resolved relative to this directory.
      */
-    val workingDirectory: Path = Path.of(System.getProperty("user.dir"))
+    val workingDirectory: Path = Path.of(System.getProperty("user.dir")),
+    private val daemonPool: DaemonPool? = null,
 ) : Runnable {
 
     init {
@@ -57,10 +58,11 @@ class MopsCommand(
         CommandLine(this).usage(System.out)
     }
 
-    private var daemonPool: DefaultDaemonPool? = null
+    private var defaultDaemonPool: DefaultDaemonPool? = null
 
     fun ensureDaemonPool(): DaemonPool =
-        daemonPool ?: createDaemonPool().also { daemonPool = it }
+        daemonPool ?:
+        defaultDaemonPool ?: createDaemonPool().also { defaultDaemonPool = it }
 
     fun ensureDaemon(projectPathHint: Path = workingDirectory): DaemonClient =
         ensureDaemonPool().ensureDaemon(createDaemonContext(projectPathHint))
