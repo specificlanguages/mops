@@ -57,6 +57,30 @@ class MpsListCommandTest {
         assertEquals(response.root, GsonCodec.fromJson(stdout, MpsListEntryJson::class.java))
     }
 
+    @Test
+    fun `list sends space-separated target segments to daemon`() {
+        val client = mock<DaemonClient>()
+        whenever(
+            client.list(
+                eq(listOf("com.specificlanguages.json", "com.specificlanguages.json.structure", "JsonFile")),
+                eq(1),
+            ),
+        ).thenReturn(sampleListResponse())
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(MpsListCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("com.specificlanguages.json", "com.specificlanguages.json.structure", "JsonFile")
+        }
+
+        assertEquals(0, exitCode)
+        verify(client).list(
+            eq(listOf("com.specificlanguages.json", "com.specificlanguages.json.structure", "JsonFile")),
+            eq(1),
+        )
+    }
+
     private fun sampleListResponse() =
         MpsListResponse(
             root = MpsListEntryJson(

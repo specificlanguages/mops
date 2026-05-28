@@ -31,17 +31,16 @@ class MpsListCommand(private val daemonClient: DaemonClient? = null) : Runnable 
     var json: Boolean = false
 
     @Parameters(
-        index = "0",
-        arity = "0..1",
-        paramLabel = "TARGET",
-        description = ["MPS navigation target. Omit for project root; use / for loaded repository root."],
+        arity = "0..*",
+        paramLabel = "TARGET_SEGMENT",
+        description = ["MPS navigation target segments. Omit for project root; use / for loaded repository root."],
     )
-    var target: String? = null
+    var target: List<String> = emptyList()
 
     override fun run() {
         require(depth in 0..8) { "depth must be between 0 and 8" }
-        val requestedTarget = target
-        require(requestedTarget == null || requestedTarget.isNotEmpty()) { "target must not be blank" }
+        val requestedTarget = target.takeIf { it.isNotEmpty() }
+        require(target.none { it.isEmpty() }) { "target segment must not be blank" }
 
         val client = daemonClient ?: root.ensureDaemon()
         val response = client.list(target = requestedTarget, depth = depth)

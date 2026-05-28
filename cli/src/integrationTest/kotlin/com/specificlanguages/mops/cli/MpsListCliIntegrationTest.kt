@@ -136,7 +136,8 @@ class MpsListCliIntegrationTest {
                 project,
                 daemonHome,
                 "--json",
-                "com.specificlanguages.json/com.specificlanguages.json.structure",
+                "com.specificlanguages.json",
+                "com.specificlanguages.json.structure",
             )
 
             assertEquals(0, result.exitCode, result.output)
@@ -194,7 +195,9 @@ class MpsListCliIntegrationTest {
                 project,
                 daemonHome,
                 "--json",
-                "com.specificlanguages.json/com.specificlanguages.json.structure/JsonFile",
+                "com.specificlanguages.json",
+                "com.specificlanguages.json.structure",
+                "JsonFile",
             )
 
             assertEquals(0, result.exitCode, result.output)

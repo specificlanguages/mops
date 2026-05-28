@@ -14,5 +14,5 @@ interface DaemonClient {
     fun ping(): PongResponse
     fun resave(modelTarget: Path): ModelResaveResponse
     fun getNode(target: NodeTarget): ModelGetNodeResponse
-    fun list(target: String?, depth: Int): MpsListResponse
+    fun list(target: List<String>?, depth: Int): MpsListResponse
 }

@@ -41,7 +41,7 @@ data class ModelGetNodeRequest(
  */
 data class MpsListRequest(
     override val token: String,
-    val target: String?,
+    val target: List<String>?,
     val depth: Int,
 ) : DaemonRequest {
     override val type: String = "list"

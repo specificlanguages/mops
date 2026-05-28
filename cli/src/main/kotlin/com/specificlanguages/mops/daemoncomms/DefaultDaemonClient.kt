@@ -59,7 +59,7 @@ class DefaultDaemonClient(
             ModelGetNodeResponse::class.java
         )
 
-    override fun list(target: String?, depth: Int): MpsListResponse =
+    override fun list(target: List<String>?, depth: Int): MpsListResponse =
         exchange(
             MpsListRequest(token = token, target = target, depth = depth),
             MpsListResponse::class.java

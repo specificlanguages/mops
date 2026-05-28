@@ -142,11 +142,19 @@ class DaemonProtocolJsonTest {
             ),
         )
         val serializedRequest = GsonCodec.toJson(
-            MpsListRequest(token = "secret", target = null, depth = 1),
+            MpsListRequest(
+                token = "secret",
+                target = listOf("com.specificlanguages.json", "com.specificlanguages.json.structure"),
+                depth = 1,
+            ),
             DaemonRequest::class.java,
         )
         assertEquals(
-            MpsListRequest(token = "secret", target = null, depth = 1),
+            MpsListRequest(
+                token = "secret",
+                target = listOf("com.specificlanguages.json", "com.specificlanguages.json.structure"),
+                depth = 1,
+            ),
             GsonCodec.fromJson(serializedRequest, DaemonRequest::class.java),
         )
         assertEquals(

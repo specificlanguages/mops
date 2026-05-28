@@ -55,11 +55,18 @@ class DefaultDaemonClientTest {
         )
         val daemon = startPrerecordedDaemon(response)
 
-        val actual = DefaultDaemonClient(daemon.port, "secret").list(target = null, depth = 1)
+        val actual = DefaultDaemonClient(daemon.port, "secret").list(
+            target = listOf("com.specificlanguages.json", "com.specificlanguages.json.structure"),
+            depth = 1,
+        )
 
         daemon.join(5_000)
         assertEquals(response, actual)
         assertContains(daemon.requestsReceived.single(), "\"type\":\"list\"")
+        assertContains(
+            daemon.requestsReceived.single(),
+            "\"target\":[\"com.specificlanguages.json\",\"com.specificlanguages.json.structure\"]",
+        )
         assertContains(daemon.requestsReceived.single(), "\"depth\":1")
     }
 }

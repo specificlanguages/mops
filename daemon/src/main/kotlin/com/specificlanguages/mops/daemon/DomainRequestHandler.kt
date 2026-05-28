@@ -43,12 +43,12 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
             val target = request.target
             val root = when (target) {
                 null -> mpsListExporter.exportProject(project, request.depth)
-                "/" -> mpsListExporter.exportRepository(project.repository, request.depth)
+                listOf("/") -> mpsListExporter.exportRepository(project.repository, request.depth)
                 else -> {
                     val root = resolveListTarget(project, target)
                         ?: return@computeReadAction errorResponse(
                             code = "TARGET_NOT_FOUND",
-                            message = "target not found: $target",
+                            message = "target not found: ${target.joinToString(" ")}",
                         )
                     when (root) {
                         is ListTarget.Module -> mpsListExporter.exportModule(root.module, request.depth)
@@ -61,30 +61,31 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
         }
     }
 
-    private fun resolveListTarget(project: Project, target: String): ListTarget? {
-        resolveModelReference(project, target)?.let { return ListTarget.Model(it) }
-
-        val segments = target.split("/")
-        if (segments.size == 1) {
-            return findProjectModule(project, target)?.let(ListTarget::Module)
+    private fun resolveListTarget(project: Project, target: List<String>): ListTarget? {
+        if (target.size == 1) {
+            resolveModelReference(project, target.single())?.let { return ListTarget.Model(it) }
         }
-        if (segments.size !in 2..3) {
+
+        if (target.size == 1) {
+            return findProjectModule(project, target.single())?.let(ListTarget::Module)
+        }
+        if (target.size !in 2..3) {
             return null
         }
 
-        val moduleName = segments[0]
-        val modelName = segments[1]
+        val moduleName = target[0]
+        val modelName = target[1]
         val module = findProjectModule(project, moduleName) ?: return null
         val model = module.models
             .singleOrNull { it.name.value == modelName }
             ?: return null
 
-        if (segments.size == 2) {
+        if (target.size == 2) {
             return ListTarget.Model(model)
         }
 
         return model.rootNodes
-            .singleOrNull { nodeName(it) == segments[2] || persistence.asString(it.nodeId) == segments[2] }
+            .singleOrNull { nodeName(it) == target[2] || persistence.asString(it.nodeId) == target[2] }
             ?.let(ListTarget::RootNode)
     }
 
