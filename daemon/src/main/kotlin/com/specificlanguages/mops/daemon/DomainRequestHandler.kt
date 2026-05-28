@@ -15,6 +15,7 @@ import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SaveOptions
 import org.jetbrains.mps.openapi.model.SaveResult
 import org.jetbrains.mps.openapi.module.SModule
+import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
@@ -23,6 +24,7 @@ import kotlin.io.path.pathString
 class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
     private val modelNodeResolver = ModelNodeResolver(logger)
     private val mpsListExporter = MpsListExporter()
+    private val persistence = PersistenceFacade.getInstance()
 
     fun handleDomainRequest(project: Project, request: DaemonRequest): DaemonResponse {
         return when (request) {
@@ -56,6 +58,8 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
     }
 
     private fun resolveListTarget(project: Project, target: String): ListTarget? {
+        resolveModelReference(project, target)?.let { return ListTarget.Model(it) }
+
         val slash = target.indexOf('/')
         if (slash < 0) {
             return findProjectModule(project, target)?.let(ListTarget::Module)
@@ -68,6 +72,11 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
             .singleOrNull { it.name.value == modelName }
             ?.let(ListTarget::Model)
     }
+
+    private fun resolveModelReference(project: Project, target: String): SModel? =
+        runCatching {
+            persistence.createModelReference(target).resolve(project.repository)
+        }.getOrNull()
 
     private fun findProjectModule(project: Project, target: String): SModule? =
         project.projectModulesWithGenerators.singleOrNull { it.moduleName == target }

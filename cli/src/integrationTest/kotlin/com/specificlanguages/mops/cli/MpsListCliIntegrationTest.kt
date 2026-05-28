@@ -160,6 +160,30 @@ class MpsListCliIntegrationTest {
         }
     }
 
+    @Test
+    fun `lists root nodes owned by serialized model reference through daemon`() {
+        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+        val modelReference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
+
+        try {
+            val result = runList(project, daemonHome, "--json", modelReference)
+
+            assertEquals(0, result.exitCode, result.output)
+            val model = GsonCodec.fromJson(result.stdout, MpsListEntryJson::class.java)
+            assertEquals("model", model.type)
+            assertEquals("com.specificlanguages.json.structure", model.name)
+            assertEquals(modelReference, model.reference)
+
+            val roots = assertNotNull(model.children)
+            val jsonFile = roots.single { it.name == "JsonFile" }
+            assertEquals("root", jsonFile.type)
+            assertEquals("2110045694544566904", jsonFile.id)
+        } finally {
+            stopDaemons(project, daemonHome)
+        }
+    }
+
     private fun runList(project: Path, daemonHome: Path, vararg args: String): CliResult =
         runListCommand(project, daemonHome, "list", *args)
 
