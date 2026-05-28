@@ -18,6 +18,7 @@ import kotlin.io.path.isDirectory
     description = ["Kotlin CLI for the daemon-backed MPS prototype."],
     subcommands = [
         DaemonOperations::class,
+        MpsListCommand::class,
         ModelOperations::class,
     ],
 )

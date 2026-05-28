@@ -11,10 +11,23 @@ import org.mockito.kotlin.whenever
 import picocli.CommandLine
 import java.io.ByteArrayOutputStream
 import java.io.PrintWriter
+import kotlin.test.assertContains
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class MpsListCommandTest {
+    @Test
+    fun `mops list is a top-level daemon-backed command`() {
+        val stderr = ByteArrayOutputStream()
+
+        val exitCode = newCommandLine()
+            .also { it.err = PrintWriter(stderr, true) }
+            .execute("list")
+
+        assertEquals(1, exitCode)
+        assertContains(stderr.toString(), "MPS home is required")
+    }
+
     @Test
     fun `list prints semantic tree as indented tab-separated text`() {
         val client = mock<DaemonClient>()
