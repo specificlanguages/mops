@@ -7,7 +7,6 @@ import com.specificlanguages.mops.protocol.ModelGetNodeRequest
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
 import com.specificlanguages.mops.protocol.ModelResaveRequest
 import com.specificlanguages.mops.protocol.ModelResaveResponse
-import com.specificlanguages.mops.protocol.MpsListEntryJson
 import com.specificlanguages.mops.protocol.MpsListRequest
 import com.specificlanguages.mops.protocol.MpsListResponse
 import jetbrains.mps.project.Project
@@ -21,24 +20,20 @@ import kotlin.io.path.pathString
 
 class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
     private val modelNodeResolver = ModelNodeResolver(logger)
+    private val mpsListExporter = MpsListExporter()
 
     fun handleDomainRequest(project: Project, request: DaemonRequest): DaemonResponse {
         return when (request) {
             is ModelGetNodeRequest -> getNode(project, request)
             is ModelResaveRequest -> resaveModel(project, request)
-            is MpsListRequest -> list(project)
+            is MpsListRequest -> list(project, request)
             else -> errorResponse("UNSUPPORTED_REQUEST", "unsupported request type: ${request.type}")
         }
     }
 
-    private fun list(project: Project): DaemonResponse {
+    private fun list(project: Project, request: MpsListRequest): DaemonResponse {
         return project.modelAccess.computeReadAction {
-            MpsListResponse(
-                root = MpsListEntryJson(
-                    type = "project",
-                    name = project.name,
-                ),
-            )
+            MpsListResponse(root = mpsListExporter.exportProject(project, request.depth))
         }
     }
 
