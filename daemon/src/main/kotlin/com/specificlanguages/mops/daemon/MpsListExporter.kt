@@ -6,8 +6,10 @@ import jetbrains.mps.project.Project
 import jetbrains.mps.project.Solution
 import jetbrains.mps.smodel.Generator
 import jetbrains.mps.smodel.Language
+import jetbrains.mps.smodel.SNodeUtil
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SNode
+import org.jetbrains.mps.openapi.model.SNodeAccessUtil
 import org.jetbrains.mps.openapi.module.SModule
 import org.jetbrains.mps.openapi.module.SRepository
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
@@ -63,7 +65,7 @@ class MpsListExporter(
             children = if (depth > 0) {
                 model.rootNodes
                     .asSequence()
-                    .sortedWith(compareBy<SNode> { it.name == null }.thenBy { it.name ?: "" })
+                    .sortedWith(compareBy<SNode> { nodeName(it) == null }.thenBy { nodeName(it) ?: "" })
                     .map(::rootEntry)
                     .toList()
             } else {
@@ -91,11 +93,14 @@ class MpsListExporter(
     private fun rootEntry(node: SNode): MpsListEntryJson =
         MpsListEntryJson(
             type = "root",
-            name = node.name,
+            name = nodeName(node),
             concept = node.concept.qualifiedName,
             id = persistence.asString(node.nodeId),
             reference = persistence.asString(node.reference),
         )
+
+    private fun nodeName(node: SNode): String? =
+        SNodeAccessUtil.getPropertyValue(node, SNodeUtil.property_INamedConcept_name) as String?
 
     private fun SModule.moduleKind(): String =
         when (this) {
