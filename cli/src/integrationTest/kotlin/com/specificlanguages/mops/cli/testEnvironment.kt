@@ -1,5 +1,7 @@
 package com.specificlanguages.mops.cli
 
+import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
+import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import java.nio.file.Files
 import java.nio.file.Path
@@ -49,10 +51,30 @@ public fun javaAndMpsHomeArgs(): Array<String> =
         requiredProperty("test.mpsHome"),
     )
 
+fun runCommandLine(workingDirectory: Path, vararg args: String): CliResult {
+    var exitCode = Int.MIN_VALUE
+    var stderr = ""
+    val stdout = tapSystemOut {
+        stderr = tapSystemErr {
+            exitCode = newCommandLine(workingDirectory = workingDirectory).execute(*args)
+        }
+    }
+
+    return CliResult(exitCode = exitCode, stdout = stdout, stderr = stderr)
+}
+
+data class CliResult(
+    val exitCode: Int,
+    val stdout: String,
+    val stderr: String,
+) {
+    val output: String
+        get() = "CLI output:\n$stdout\nCLI error:\n$stderr"
+}
+
 fun stopDaemons(project: Path, daemonHome: Path) {
-    newCommandLine(
-        workingDirectory = project,
-    ).execute(
+    runCommandLine(
+        project,
         "--daemon-home",
         daemonHome.pathString,
         "--mps-home", requiredProperty("test.mpsHome"),

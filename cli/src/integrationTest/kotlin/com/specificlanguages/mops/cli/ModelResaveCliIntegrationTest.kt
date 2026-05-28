@@ -2,8 +2,7 @@ package com.specificlanguages.mops.cli
 
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
-import java.io.ByteArrayOutputStream
-import java.io.PrintWriter
+import org.junit.jupiter.api.parallel.ResourceLock
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.pathString
@@ -11,6 +10,7 @@ import kotlin.io.path.readText
 import kotlin.io.path.writeText
 import kotlin.test.*
 
+@ResourceLock("system-streams")
 class ModelResaveCliIntegrationTest {
     @TempDir(cleanup = CleanupMode.ON_SUCCESS)
     lateinit var tempDir: Path
@@ -27,16 +27,10 @@ class ModelResaveCliIntegrationTest {
         assertFalse(model.readText().contains(""" resolve=""""), "test setup should remove resolve attributes")
 
         val daemonHome = tempDir.resolve("daemon-home").createDirectories()
-        val stdout = ByteArrayOutputStream()
-        val stderr = ByteArrayOutputStream()
 
         try {
-            val exitCode = newCommandLine(
-                workingDirectory = project,
-            ).also {
-                it.out = PrintWriter(stdout, true)
-                it.err = PrintWriter(stderr, true)
-            }.execute(
+            val result = runCommandLine(
+                project,
                 "--daemon-home",
                 daemonHome.pathString,
                 *javaAndMpsHomeArgs(),
@@ -45,8 +39,8 @@ class ModelResaveCliIntegrationTest {
                 model.pathString,
             )
 
-            assertEquals(0, exitCode, "CLI output:\n${stdout}\nCLI error:\n${stderr}")
-            assertContains(stdout.toString(), "Model resaved successfully: ${model.toRealPath().toRealPath()}")
+            assertEquals(0, result.exitCode, result.output)
+            assertContains(result.stdout, "Model resaved successfully: ${model.toRealPath().toRealPath()}")
             assertEquals(original, model.readText())
         } finally {
             stopDaemons(project, daemonHome)
@@ -60,16 +54,10 @@ class ModelResaveCliIntegrationTest {
         unknownModel.writeText("<model />")
 
         val daemonHome = tempDir.resolve("daemon-home").createDirectories()
-        val stdout = ByteArrayOutputStream()
-        val stderr = ByteArrayOutputStream()
 
         try {
-            val exitCode = newCommandLine(
-                workingDirectory = project,
-            ).also {
-                it.out = PrintWriter(stdout, true)
-                it.err = PrintWriter(stderr, true)
-            }.execute(
+            val result = runCommandLine(
+                project,
                 "--daemon-home",
                 daemonHome.pathString,
                 *javaAndMpsHomeArgs(),
@@ -78,9 +66,9 @@ class ModelResaveCliIntegrationTest {
                 unknownModel.pathString,
             )
 
-            assertEquals(1, exitCode, "CLI output:\n${stdout}\nCLI error:\n${stderr}")
-            assertContains(stderr.toString(), "model not found: ${unknownModel.toRealPath()}")
-            assertFalse(stdout.toString().contains("Model resaved successfully"))
+            assertEquals(1, result.exitCode, result.output)
+            assertContains(result.stderr, "model not found: ${unknownModel.toRealPath()}")
+            assertFalse(result.stdout.contains("Model resaved successfully"))
         } finally {
             stopDaemons(project, daemonHome)
         }

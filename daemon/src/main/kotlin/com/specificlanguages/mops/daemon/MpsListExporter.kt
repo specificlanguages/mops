@@ -25,6 +25,13 @@ class MpsListExporter(
             },
         )
 
+    fun exportRepository(depth: Int): MpsListEntryJson =
+        MpsListEntryJson(
+            type = "repository",
+            name = "/",
+            children = null,
+        )
+
     private fun moduleEntry(module: SModule): MpsListEntryJson =
         MpsListEntryJson(
             type = "module",

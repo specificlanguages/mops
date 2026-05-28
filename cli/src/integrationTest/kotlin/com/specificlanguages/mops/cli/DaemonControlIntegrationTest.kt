@@ -1,6 +1,5 @@
 package com.specificlanguages.mops.cli
 
-import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.protocol.DaemonContext
 import com.specificlanguages.mops.protocol.DaemonRecord
 import com.specificlanguages.mops.protocol.DaemonResponse
@@ -10,8 +9,6 @@ import com.specificlanguages.mops.protocol.PongResponse
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.api.parallel.ResourceLock
-import java.io.ByteArrayOutputStream
-import java.io.PrintWriter
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.pathString
@@ -21,6 +18,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 
+@ResourceLock("system-streams")
 class DaemonControlIntegrationTest {
 
     @TempDir(cleanup = CleanupMode.ON_SUCCESS)
@@ -33,30 +31,27 @@ class DaemonControlIntegrationTest {
 
         val store = DaemonRecordStore.forDaemonHome(daemonHome)
 
-        val pingExitCode = newCommandLine(workingDirectory = project).execute(
+        val ping = runCommandLine(
+            project,
             *javaAndMpsHomeArgs(),
             "--daemon-home", daemonHome.pathString,
             "daemon", "ping"
         )
-        assertEquals(0, pingExitCode)
+        assertEquals(0, ping.exitCode, ping.output)
 
-        val stdout = ByteArrayOutputStream()
-
-        val stopExitCode = newCommandLine(workingDirectory = project).also {
-            it.out = PrintWriter(stdout, true)
-        }.execute(
+        val stop = runCommandLine(
+            project,
             *javaAndMpsHomeArgs(),
             "--daemon-home", daemonHome.pathString,
             "daemon", "stop"
         )
 
-        assertEquals(0, stopExitCode)
-        assertContains(stdout.toString(), "stopped")
+        assertEquals(0, stop.exitCode, stop.output)
+        assertContains(stop.stdout, "stopped")
         assertNull(store.read(project))
     }
 
     @Test
-    @ResourceLock("system-streams")
     fun `daemon ping output remains a single JSON response after replacing a stale project daemon record`() {
         val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
         val daemonHome = tempDir.resolve("daemon-home").createDirectories()
@@ -80,23 +75,21 @@ class DaemonControlIntegrationTest {
             ),
         )
 
-        var pingExitCode = Int.MIN_VALUE
-        val stdout = tapSystemOut {
-            pingExitCode = newCommandLine(workingDirectory = project).execute(
-                *javaAndMpsHomeArgs(),
-                "--daemon-home", daemonHome.pathString,
-                "daemon", "ping",
-            )
-        }
+        val ping = runCommandLine(
+            project,
+            *javaAndMpsHomeArgs(),
+            "--daemon-home", daemonHome.pathString,
+            "daemon", "ping",
+        )
 
         try {
-            assertEquals(0, pingExitCode)
+            assertEquals(0, ping.exitCode, ping.output)
 
             val response = try {
-                GsonCodec.fromJson(stdout, DaemonResponse::class.java)
+                GsonCodec.fromJson(ping.stdout, DaemonResponse::class.java)
             } catch (exception: RuntimeException) {
                 throw AssertionError(
-                    "daemon ping stdout should be parseable as a single JSON response, but was:\n$stdout",
+                    "daemon ping stdout should be parseable as a single JSON response, but was:\n${ping.stdout}",
                     exception,
                 )
             }
@@ -104,13 +97,7 @@ class DaemonControlIntegrationTest {
             assertIs<PongResponse>(response)
             assertEquals(project.toRealPath().pathString, response.projectPath)
         } finally {
-            val stopOutput = ByteArrayOutputStream()
-            newCommandLine(workingDirectory = project).also {
-                it.out = PrintWriter(stopOutput, true)
-            }.execute(
-                "--daemon-home", daemonHome.pathString,
-                "daemon", "stop",
-            )
+            stopDaemons(project, daemonHome)
         }
     }
 

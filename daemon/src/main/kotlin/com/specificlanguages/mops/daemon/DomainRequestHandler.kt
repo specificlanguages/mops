@@ -33,7 +33,15 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
 
     private fun list(project: Project, request: MpsListRequest): DaemonResponse {
         return project.modelAccess.computeReadAction {
-            MpsListResponse(root = mpsListExporter.exportProject(project, request.depth))
+            val root = when (request.target) {
+                null -> mpsListExporter.exportProject(project, request.depth)
+                "/" -> mpsListExporter.exportRepository(request.depth)
+                else -> return@computeReadAction errorResponse(
+                    code = "TARGET_NOT_FOUND",
+                    message = "target not found: ${request.target}",
+                )
+            }
+            MpsListResponse(root = root)
         }
     }
 

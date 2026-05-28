@@ -4,8 +4,7 @@ import com.specificlanguages.mops.protocol.GsonCodec
 import com.specificlanguages.mops.protocol.MpsNodeJson
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
-import java.io.ByteArrayOutputStream
-import java.io.PrintWriter
+import org.junit.jupiter.api.parallel.ResourceLock
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.pathString
@@ -13,6 +12,7 @@ import kotlin.io.path.readText
 import kotlin.io.path.writeText
 import kotlin.test.*
 
+@ResourceLock("system-streams")
 class ModelGetNodeCliIntegrationTest {
     @TempDir(cleanup = CleanupMode.ON_SUCCESS)
     lateinit var tempDir: Path
@@ -190,15 +190,9 @@ class ModelGetNodeCliIntegrationTest {
         }
     }
 
-    private fun runGetNode(project: Path, daemonHome: Path, vararg nodeTarget: String): CliResult {
-        val stdout = ByteArrayOutputStream()
-        val stderr = ByteArrayOutputStream()
-        val exitCode = newCommandLine(
-            workingDirectory = project,
-        ).also {
-            it.out = PrintWriter(stdout, true)
-            it.err = PrintWriter(stderr, true)
-        }.execute(
+    private fun runGetNode(project: Path, daemonHome: Path, vararg nodeTarget: String): CliResult =
+        runCommandLine(
+            project,
             "--daemon-home",
             daemonHome.pathString,
             *javaAndMpsHomeArgs(),
@@ -206,26 +200,10 @@ class ModelGetNodeCliIntegrationTest {
             "get-node",
             *nodeTarget,
         )
-        return CliResult(
-            exitCode = exitCode,
-            stdout = stdout.toString(),
-            stderr = stderr.toString(),
-        )
-    }
 
     private fun nodeJson(result: CliResult): MpsNodeJson =
         GsonCodec.fromJson(result.stdout, MpsNodeJson::class.java)
 
     private fun propertyValue(node: MpsNodeJson, name: String): String? =
         requireNotNull(node.properties).single { it.name == name }.value
-
-    private data class CliResult(
-        val exitCode: Int,
-        val stdout: String,
-        val stderr: String,
-    ) {
-        val output: String
-            get() = "CLI output:\n$stdout\nCLI error:\n$stderr"
-    }
-
 }
