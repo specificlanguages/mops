@@ -10,10 +10,13 @@ import com.specificlanguages.mops.protocol.ModelResaveResponse
 import com.specificlanguages.mops.protocol.MpsListRequest
 import com.specificlanguages.mops.protocol.MpsListResponse
 import jetbrains.mps.project.Project
+import jetbrains.mps.smodel.SNodeUtil
 import org.jetbrains.mps.openapi.model.EditableSModel
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SaveOptions
 import org.jetbrains.mps.openapi.model.SaveResult
+import org.jetbrains.mps.openapi.model.SNode
+import org.jetbrains.mps.openapi.model.SNodeAccessUtil
 import org.jetbrains.mps.openapi.module.SModule
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import java.nio.file.Path
@@ -50,6 +53,7 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
                     when (root) {
                         is ListTarget.Module -> mpsListExporter.exportModule(root.module, request.depth)
                         is ListTarget.Model -> mpsListExporter.exportModel(root.model, request.depth)
+                        is ListTarget.RootNode -> mpsListExporter.exportRoot(root.node, request.depth)
                     }
                 }
             }
@@ -60,17 +64,28 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
     private fun resolveListTarget(project: Project, target: String): ListTarget? {
         resolveModelReference(project, target)?.let { return ListTarget.Model(it) }
 
-        val slash = target.indexOf('/')
-        if (slash < 0) {
+        val segments = target.split("/")
+        if (segments.size == 1) {
             return findProjectModule(project, target)?.let(ListTarget::Module)
         }
+        if (segments.size !in 2..3) {
+            return null
+        }
 
-        val moduleName = target.substring(0, slash)
-        val modelName = target.substring(slash + 1)
+        val moduleName = segments[0]
+        val modelName = segments[1]
         val module = findProjectModule(project, moduleName) ?: return null
-        return module.models
+        val model = module.models
             .singleOrNull { it.name.value == modelName }
-            ?.let(ListTarget::Model)
+            ?: return null
+
+        if (segments.size == 2) {
+            return ListTarget.Model(model)
+        }
+
+        return model.rootNodes
+            .singleOrNull { nodeName(it) == segments[2] || persistence.asString(it.nodeId) == segments[2] }
+            ?.let(ListTarget::RootNode)
     }
 
     private fun resolveModelReference(project: Project, target: String): SModel? =
@@ -81,9 +96,13 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
     private fun findProjectModule(project: Project, target: String): SModule? =
         project.projectModulesWithGenerators.singleOrNull { it.moduleName == target }
 
+    private fun nodeName(node: SNode): String? =
+        SNodeAccessUtil.getPropertyValue(node, SNodeUtil.property_INamedConcept_name) as String?
+
     private sealed interface ListTarget {
         data class Module(val module: SModule) : ListTarget
         data class Model(val model: SModel) : ListTarget
+        data class RootNode(val node: SNode) : ListTarget
     }
 
     private fun getNode(project: Project, request: ModelGetNodeRequest): DaemonResponse {

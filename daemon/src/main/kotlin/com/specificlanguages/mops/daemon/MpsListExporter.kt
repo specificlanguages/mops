@@ -66,7 +66,20 @@ class MpsListExporter(
                 model.rootNodes
                     .asSequence()
                     .sortedWith(compareBy<SNode> { nodeName(it) == null }.thenBy { nodeName(it) ?: "" })
-                    .map(::rootEntry)
+                    .map { rootEntry(it) }
+                    .toList()
+            } else {
+                null
+            },
+        )
+
+    fun exportRoot(node: SNode, depth: Int): MpsListEntryJson =
+        rootEntry(
+            node,
+            children = if (depth > 0) {
+                node.children
+                    .asSequence()
+                    .map { childEntry(it, depth - 1) }
                     .toList()
             } else {
                 null
@@ -90,13 +103,32 @@ class MpsListExporter(
             children = children,
         )
 
-    private fun rootEntry(node: SNode): MpsListEntryJson =
+    private fun rootEntry(node: SNode, children: List<MpsListEntryJson>? = null): MpsListEntryJson =
         MpsListEntryJson(
             type = "root",
             name = nodeName(node),
             concept = node.concept.qualifiedName,
             id = persistence.asString(node.nodeId),
             reference = persistence.asString(node.reference),
+            children = children,
+        )
+
+    private fun childEntry(node: SNode, depth: Int): MpsListEntryJson =
+        MpsListEntryJson(
+            type = "node",
+            role = node.containmentLink?.role,
+            name = nodeName(node),
+            concept = node.concept.qualifiedName,
+            id = persistence.asString(node.nodeId),
+            reference = persistence.asString(node.reference),
+            children = if (depth > 0) {
+                node.children
+                    .asSequence()
+                    .map { childEntry(it, depth - 1) }
+                    .toList()
+            } else {
+                null
+            },
         )
 
     private fun nodeName(node: SNode): String? =

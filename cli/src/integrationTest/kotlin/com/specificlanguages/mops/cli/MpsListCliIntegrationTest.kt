@@ -184,6 +184,41 @@ class MpsListCliIntegrationTest {
         }
     }
 
+    @Test
+    fun `lists containment children owned by root node path through daemon`() {
+        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+
+        try {
+            val result = runList(
+                project,
+                daemonHome,
+                "--json",
+                "com.specificlanguages.json/com.specificlanguages.json.structure/JsonFile",
+            )
+
+            assertEquals(0, result.exitCode, result.output)
+            val root = GsonCodec.fromJson(result.stdout, MpsListEntryJson::class.java)
+            assertEquals("root", root.type)
+            assertEquals("JsonFile", root.name)
+            assertEquals("2110045694544566904", root.id)
+
+            val children = assertNotNull(root.children)
+            val implements = children.single { it.role == "implements" }
+            assertEquals("node", implements.type)
+            assertNull(implements.name)
+            assertEquals(
+                "jetbrains.mps.lang.structure.structure.InterfaceConceptReference",
+                implements.concept,
+            )
+            assertNotNull(implements.id)
+            assertNotNull(implements.reference)
+            assertNull(implements.children)
+        } finally {
+            stopDaemons(project, daemonHome)
+        }
+    }
+
     private fun runList(project: Path, daemonHome: Path, vararg args: String): CliResult =
         runListCommand(project, daemonHome, "list", *args)
 
