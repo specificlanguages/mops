@@ -7,6 +7,7 @@ import jetbrains.mps.project.Solution
 import jetbrains.mps.smodel.Generator
 import jetbrains.mps.smodel.Language
 import org.jetbrains.mps.openapi.module.SModule
+import org.jetbrains.mps.openapi.module.SRepository
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 
 class MpsListExporter(
@@ -25,12 +26,12 @@ class MpsListExporter(
             },
         )
 
-    fun exportRepository(project: Project, depth: Int): MpsListEntryJson =
+    fun exportRepository(repository: SRepository, depth: Int): MpsListEntryJson =
         MpsListEntryJson(
             type = "repository",
             name = "/",
             children = if (depth > 0) {
-                project.repository.modules
+                repository.modules
                     .asSequence()
                     .sortedBy { it.moduleName }
                     .map(::moduleEntry)
