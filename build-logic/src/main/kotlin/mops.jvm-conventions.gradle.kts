@@ -10,7 +10,7 @@ repositories {
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 dependencies {
-    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.1.0")
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

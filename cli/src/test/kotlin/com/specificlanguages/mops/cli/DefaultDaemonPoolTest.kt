@@ -2,9 +2,16 @@ package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DefaultDaemonClient
 import com.specificlanguages.mops.daemoncomms.DefaultDaemonPool
+import com.specificlanguages.mops.daemoncomms.DaemonClient
+import com.specificlanguages.mops.daemoncomms.DaemonLauncher
 import com.specificlanguages.mops.protocol.DaemonContext
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.PongResponse
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
@@ -41,8 +48,10 @@ class DefaultDaemonPoolTest {
         )
         store.write(daemonRecord)
 
-        val launcher = RecordingLauncher()
-        launcher.existingDaemons[daemonRecord.context] = DefaultDaemonClient(fakeDaemon.port, daemonRecord.token)
+        val launcher = mock<DaemonLauncher>()
+        whenever(launcher.connectToExistingDaemon(daemonRecord)).thenReturn(
+            DefaultDaemonClient(fakeDaemon.port, daemonRecord.token),
+        )
         val pool = DefaultDaemonPool(store, launcher)
         val context = DaemonContext.fromLivePaths(
             projectPath = project,
@@ -55,6 +64,7 @@ class DefaultDaemonPoolTest {
 
         assertContains(fakeDaemon.requestsReceived[0], "\"type\":\"ping\"")
         assertContains(fakeDaemon.requestsReceived[0], "\"token\":\"secret\"")
+        verify(launcher, never()).startDaemon(any())
     }
 
     @Test
@@ -74,7 +84,7 @@ class DefaultDaemonPoolTest {
         )
 
         assertFailsWith<IllegalStateException> {
-            DefaultDaemonPool(store, RecordingLauncher()).ensureDaemon(
+            DefaultDaemonPool(store, launcherWithUnreachableExistingDaemon()).ensureDaemon(
                 DaemonContext.fromLivePaths(
                     projectPath = project,
                     mpsHome = mpsHome,
@@ -109,8 +119,10 @@ class DefaultDaemonPoolTest {
         )
         store.write(record)
 
-        val launcher = RecordingLauncher()
-        launcher.existingDaemons[record.context] = DefaultDaemonClient(fakeDaemon.port, record.token)
+        val launcher = mock<DaemonLauncher>()
+        whenever(launcher.connectToExistingDaemon(record)).thenReturn(
+            DefaultDaemonClient(fakeDaemon.port, record.token),
+        )
         val exception = assertFailsWith<IllegalStateException> {
             DefaultDaemonPool(store, launcher).ensureDaemon(
                 DaemonContext.fromLivePaths(
@@ -124,6 +136,7 @@ class DefaultDaemonPoolTest {
         fakeDaemon.join(5_000)
         assertContains(exception.message!!, "different context")
         assertContains(exception.message!!, otherMpsHome.pathString)
+        verify(launcher, never()).startDaemon(any())
     }
 
     @Test
@@ -145,7 +158,7 @@ class DefaultDaemonPoolTest {
         )
 
         assertFailsWith<IllegalStateException> {
-            DefaultDaemonPool(store, RecordingLauncher()).ensureDaemon(
+            DefaultDaemonPool(store, launcherWithUnreachableExistingDaemon()).ensureDaemon(
                 DaemonContext.fromLivePaths(
                     projectPath = project,
                     mpsHome = mpsHome,
@@ -156,5 +169,14 @@ class DefaultDaemonPoolTest {
 
         assertNull(store.read(project))
     }
-}
 
+    private fun launcherWithUnreachableExistingDaemon(): DaemonLauncher {
+        val unreachableDaemon = mock<DaemonClient>()
+        whenever(unreachableDaemon.ping()).thenThrow(IllegalStateException("daemon is unreachable"))
+
+        val launcher = mock<DaemonLauncher>()
+        whenever(launcher.connectToExistingDaemon(any())).thenReturn(unreachableDaemon)
+        whenever(launcher.startDaemon(any())).thenReturn(mock<DaemonClient>())
+        return launcher
+    }
+}

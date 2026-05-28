@@ -29,7 +29,8 @@ dependencies {
     jbr("com.jetbrains.jdk:jbr_jcef:21.0.8-b895.146")
 
     testImplementation(kotlin("test"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.1.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:6.3.0")
     testImplementation("com.github.stefanbirkner:system-lambda:1.2.1")
 
     daemonRuntimeClasspath(project(":daemon"))
