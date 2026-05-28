@@ -11,6 +11,7 @@ import com.specificlanguages.mops.protocol.MpsListRequest
 import com.specificlanguages.mops.protocol.MpsListResponse
 import jetbrains.mps.project.Project
 import org.jetbrains.mps.openapi.model.EditableSModel
+import org.jetbrains.mps.openapi.module.SModule
 import org.jetbrains.mps.openapi.model.SaveOptions
 import org.jetbrains.mps.openapi.model.SaveResult
 import java.nio.file.Path
@@ -33,17 +34,25 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
 
     private fun list(project: Project, request: MpsListRequest): DaemonResponse {
         return project.modelAccess.computeReadAction {
-            val root = when (request.target) {
+            val target = request.target
+            val root = when (target) {
                 null -> mpsListExporter.exportProject(project, request.depth)
                 "/" -> mpsListExporter.exportRepository(project.repository, request.depth)
-                else -> return@computeReadAction errorResponse(
-                    code = "TARGET_NOT_FOUND",
-                    message = "target not found: ${request.target}",
-                )
+                else -> {
+                    val module = findProjectModule(project, target)
+                        ?: return@computeReadAction errorResponse(
+                            code = "TARGET_NOT_FOUND",
+                            message = "target not found: $target",
+                        )
+                    mpsListExporter.exportModule(module, request.depth)
+                }
             }
             MpsListResponse(root = root)
         }
     }
+
+    private fun findProjectModule(project: Project, target: String): SModule? =
+        project.projectModulesWithGenerators.singleOrNull { it.moduleName == target }
 
     private fun getNode(project: Project, request: ModelGetNodeRequest): DaemonResponse {
         return try {

@@ -101,6 +101,31 @@ class MpsListCliIntegrationTest {
         }
     }
 
+    @Test
+    fun `lists models owned by project module through daemon`() {
+        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+
+        try {
+            val result = runList(project, daemonHome, "--json", "com.specificlanguages.json")
+
+            assertEquals(0, result.exitCode, result.output)
+            val module = GsonCodec.fromJson(result.stdout, MpsListEntryJson::class.java)
+            assertEquals("module", module.type)
+            assertEquals("com.specificlanguages.json", module.name)
+            assertEquals("language", module.moduleKind)
+            assertEquals("f3f42ddf-d692-4c29-90fb-7360196f01ab(com.specificlanguages.json)", module.reference)
+
+            val models = assertNotNull(module.children)
+            val structure = models.single { it.name == "com.specificlanguages.json.structure" }
+            assertEquals("model", structure.type)
+            assertEquals("r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)", structure.reference)
+            assertNull(structure.children)
+        } finally {
+            stopDaemons(project, daemonHome)
+        }
+    }
+
     private fun runList(project: Path, daemonHome: Path, vararg args: String): CliResult =
         runListCommand(project, daemonHome, "list", *args)
 

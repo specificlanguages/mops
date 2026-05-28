@@ -6,6 +6,7 @@ import jetbrains.mps.project.Project
 import jetbrains.mps.project.Solution
 import jetbrains.mps.smodel.Generator
 import jetbrains.mps.smodel.Language
+import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.module.SModule
 import org.jetbrains.mps.openapi.module.SRepository
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
@@ -20,7 +21,7 @@ class MpsListExporter(
             children = if (depth > 0) {
                 project.projectModulesWithGenerators
                     .sortedBy { it.moduleName }
-                    .map(::moduleEntry)
+                    .map { moduleEntry(it) }
             } else {
                 null
             },
@@ -34,19 +35,41 @@ class MpsListExporter(
                 repository.modules
                     .asSequence()
                     .sortedBy { it.moduleName }
-                    .map(::moduleEntry)
+                    .map { moduleEntry(it) }
                     .toList()
             } else {
                 null
             },
         )
 
-    private fun moduleEntry(module: SModule): MpsListEntryJson =
+    fun exportModule(module: SModule, depth: Int): MpsListEntryJson =
+        moduleEntry(
+            module,
+            children = if (depth > 0) {
+                module.models
+                    .asSequence()
+                    .sortedBy { it.name.value }
+                    .map(::modelEntry)
+                    .toList()
+            } else {
+                null
+            },
+        )
+
+    private fun moduleEntry(module: SModule, children: List<MpsListEntryJson>? = null): MpsListEntryJson =
         MpsListEntryJson(
             type = "module",
             name = module.moduleName,
             moduleKind = module.moduleKind(),
             reference = persistence.asString(module.moduleReference),
+            children = children,
+        )
+
+    private fun modelEntry(model: SModel): MpsListEntryJson =
+        MpsListEntryJson(
+            type = "model",
+            name = model.name.value,
+            reference = persistence.asString(model.reference),
         )
 
     private fun SModule.moduleKind(): String =
