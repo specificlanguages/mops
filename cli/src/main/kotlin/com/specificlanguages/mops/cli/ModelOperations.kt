@@ -9,6 +9,7 @@ import picocli.CommandLine.ParentCommand
  */
 @Command(
     name = "model",
+    mixinStandardHelpOptions = true,
     description = ["Run model operations through the mops daemon."],
     subcommands = [
         ModelGetNodeCommand::class,

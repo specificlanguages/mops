@@ -7,6 +7,7 @@ import picocli.CommandLine
  */
 @CommandLine.Command(
     name = "daemon",
+    mixinStandardHelpOptions = true,
     description = ["Inspect or control mops daemon processes."],
     subcommands = [
         DaemonPingCommand::class,
