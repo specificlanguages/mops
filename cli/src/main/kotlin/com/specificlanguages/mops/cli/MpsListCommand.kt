@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DaemonClient
+import com.specificlanguages.mops.protocol.GsonCodec
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import picocli.CommandLine.Command
 import picocli.CommandLine.Model.CommandSpec
@@ -28,6 +29,12 @@ class MpsListCommand(private val daemonClient: DaemonClient? = null) : Runnable 
     )
     var depth: Int = 1
 
+    @Option(
+        names = ["--json"],
+        description = ["Print the semantic list tree as JSON."],
+    )
+    var json: Boolean = false
+
     @Parameters(
         index = "0",
         arity = "0..1",
@@ -43,7 +50,11 @@ class MpsListCommand(private val daemonClient: DaemonClient? = null) : Runnable 
 
         val client = daemonClient ?: root.ensureDaemon()
         val response = client.list(target = requestedTarget, depth = depth)
-        renderText(response.root, indent = 0)
+        if (json) {
+            spec.commandLine().out.println(GsonCodec.toJson(response.root))
+        } else {
+            renderText(response.root, indent = 0)
+        }
     }
 
     private fun renderText(entry: MpsListEntryJson, indent: Int) {

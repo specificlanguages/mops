@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DaemonClient
+import com.specificlanguages.mops.protocol.GsonCodec
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import com.specificlanguages.mops.protocol.MpsListResponse
 import org.mockito.kotlin.eq
@@ -18,22 +19,7 @@ class MpsListCommandTest {
     @Test
     fun `list prints semantic tree as indented tab-separated text`() {
         val client = mock<DaemonClient>()
-        whenever(client.list(isNull(), eq(1))).thenReturn(
-            MpsListResponse(
-                root = MpsListEntryJson(
-                    type = "project",
-                    name = "mps-json",
-                    children = listOf(
-                        MpsListEntryJson(
-                            type = "module",
-                            name = "com.specificlanguages.json",
-                            moduleKind = "language",
-                            reference = "f3f42ddf-d692-4c29-90fb-7360196f01ab(com.specificlanguages.json)",
-                        ),
-                    ),
-                ),
-            ),
-        )
+        whenever(client.list(isNull(), eq(1))).thenReturn(sampleListResponse())
         val stdout = ByteArrayOutputStream()
 
         val exitCode = CommandLine(MpsListCommand(client))
@@ -50,4 +36,37 @@ class MpsListCommandTest {
             stdout.toString(),
         )
     }
+
+    @Test
+    fun `list prints semantic tree as json when requested`() {
+        val client = mock<DaemonClient>()
+        val response = sampleListResponse()
+        whenever(client.list(isNull(), eq(1))).thenReturn(response)
+        val stdout = ByteArrayOutputStream()
+
+        val exitCode = CommandLine(MpsListCommand(client))
+            .setExecutionExceptionHandler(PrintErrorAndExit)
+            .also { it.out = PrintWriter(stdout, true) }
+            .execute("--json")
+
+        assertEquals(0, exitCode)
+        verify(client).list(isNull(), eq(1))
+        assertEquals(response.root, GsonCodec.fromJson(stdout.toString(), MpsListEntryJson::class.java))
+    }
+
+    private fun sampleListResponse() =
+        MpsListResponse(
+            root = MpsListEntryJson(
+                type = "project",
+                name = "mps-json",
+                children = listOf(
+                    MpsListEntryJson(
+                        type = "module",
+                        name = "com.specificlanguages.json",
+                        moduleKind = "language",
+                        reference = "f3f42ddf-d692-4c29-90fb-7360196f01ab(com.specificlanguages.json)",
+                    ),
+                ),
+            ),
+        )
 }
