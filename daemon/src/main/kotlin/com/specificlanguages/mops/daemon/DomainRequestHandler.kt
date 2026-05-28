@@ -11,9 +11,10 @@ import com.specificlanguages.mops.protocol.MpsListRequest
 import com.specificlanguages.mops.protocol.MpsListResponse
 import jetbrains.mps.project.Project
 import org.jetbrains.mps.openapi.model.EditableSModel
-import org.jetbrains.mps.openapi.module.SModule
+import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SaveOptions
 import org.jetbrains.mps.openapi.model.SaveResult
+import org.jetbrains.mps.openapi.module.SModule
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
@@ -39,20 +40,42 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
                 null -> mpsListExporter.exportProject(project, request.depth)
                 "/" -> mpsListExporter.exportRepository(project.repository, request.depth)
                 else -> {
-                    val module = findProjectModule(project, target)
+                    val root = resolveListTarget(project, target)
                         ?: return@computeReadAction errorResponse(
                             code = "TARGET_NOT_FOUND",
                             message = "target not found: $target",
                         )
-                    mpsListExporter.exportModule(module, request.depth)
+                    when (root) {
+                        is ListTarget.Module -> mpsListExporter.exportModule(root.module, request.depth)
+                        is ListTarget.Model -> mpsListExporter.exportModel(root.model, request.depth)
+                    }
                 }
             }
             MpsListResponse(root = root)
         }
     }
 
+    private fun resolveListTarget(project: Project, target: String): ListTarget? {
+        val slash = target.indexOf('/')
+        if (slash < 0) {
+            return findProjectModule(project, target)?.let(ListTarget::Module)
+        }
+
+        val moduleName = target.substring(0, slash)
+        val modelName = target.substring(slash + 1)
+        val module = findProjectModule(project, moduleName) ?: return null
+        return module.models
+            .singleOrNull { it.name.value == modelName }
+            ?.let(ListTarget::Model)
+    }
+
     private fun findProjectModule(project: Project, target: String): SModule? =
         project.projectModulesWithGenerators.singleOrNull { it.moduleName == target }
+
+    private sealed interface ListTarget {
+        data class Module(val module: SModule) : ListTarget
+        data class Model(val model: SModel) : ListTarget
+    }
 
     private fun getNode(project: Project, request: ModelGetNodeRequest): DaemonResponse {
         return try {

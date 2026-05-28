@@ -7,6 +7,7 @@ import jetbrains.mps.project.Solution
 import jetbrains.mps.smodel.Generator
 import jetbrains.mps.smodel.Language
 import org.jetbrains.mps.openapi.model.SModel
+import org.jetbrains.mps.openapi.model.SNode
 import org.jetbrains.mps.openapi.module.SModule
 import org.jetbrains.mps.openapi.module.SRepository
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
@@ -56,6 +57,20 @@ class MpsListExporter(
             },
         )
 
+    fun exportModel(model: SModel, depth: Int): MpsListEntryJson =
+        modelEntry(
+            model,
+            children = if (depth > 0) {
+                model.rootNodes
+                    .asSequence()
+                    .sortedWith(compareBy<SNode> { it.name == null }.thenBy { it.name ?: "" })
+                    .map(::rootEntry)
+                    .toList()
+            } else {
+                null
+            },
+        )
+
     private fun moduleEntry(module: SModule, children: List<MpsListEntryJson>? = null): MpsListEntryJson =
         MpsListEntryJson(
             type = "module",
@@ -65,11 +80,21 @@ class MpsListExporter(
             children = children,
         )
 
-    private fun modelEntry(model: SModel): MpsListEntryJson =
+    private fun modelEntry(model: SModel, children: List<MpsListEntryJson>? = null): MpsListEntryJson =
         MpsListEntryJson(
             type = "model",
             name = model.name.value,
             reference = persistence.asString(model.reference),
+            children = children,
+        )
+
+    private fun rootEntry(node: SNode): MpsListEntryJson =
+        MpsListEntryJson(
+            type = "root",
+            name = node.name,
+            concept = node.concept.qualifiedName,
+            id = persistence.asString(node.nodeId),
+            reference = persistence.asString(node.reference),
         )
 
     private fun SModule.moduleKind(): String =
