@@ -54,6 +54,7 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
                         is ListTarget.Module -> mpsListExporter.exportModule(root.module, request.depth)
                         is ListTarget.Model -> mpsListExporter.exportModel(root.model, request.depth)
                         is ListTarget.RootNode -> mpsListExporter.exportRoot(root.node, request.depth)
+                        is ListTarget.Node -> mpsListExporter.exportNode(root.node, request.depth)
                     }
                 }
             }
@@ -69,7 +70,7 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
         if (target.size == 1) {
             return findProjectModule(project, target.single())?.let(ListTarget::Module)
         }
-        if (target.size !in 2..3) {
+        if (target.size < 2) {
             return null
         }
 
@@ -84,9 +85,19 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
             return ListTarget.Model(model)
         }
 
-        return model.rootNodes
-            .singleOrNull { nodeName(it) == target[2] || persistence.asString(it.nodeId) == target[2] }
-            ?.let(ListTarget::RootNode)
+        val rootNode = model.rootNodes
+            .singleOrNull { nodeMatches(it, target[2]) }
+            ?: return null
+
+        if (target.size == 3) {
+            return ListTarget.RootNode(rootNode)
+        }
+
+        var node = rootNode
+        for (segment in target.drop(3)) {
+            node = node.children.singleOrNull { nodeMatches(it, segment) } ?: return null
+        }
+        return ListTarget.Node(node)
     }
 
     private fun resolveModelReference(project: Project, target: String): SModel? =
@@ -100,10 +111,14 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
     private fun nodeName(node: SNode): String? =
         SNodeAccessUtil.getPropertyValue(node, SNodeUtil.property_INamedConcept_name) as String?
 
+    private fun nodeMatches(node: SNode, segment: String): Boolean =
+        nodeName(node) == segment || persistence.asString(node.nodeId) == segment
+
     private sealed interface ListTarget {
         data class Module(val module: SModule) : ListTarget
         data class Model(val model: SModel) : ListTarget
         data class RootNode(val node: SNode) : ListTarget
+        data class Node(val node: SNode) : ListTarget
     }
 
     private fun getNode(project: Project, request: ModelGetNodeRequest): DaemonResponse {

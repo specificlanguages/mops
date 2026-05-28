@@ -86,6 +86,9 @@ class MpsListExporter(
             },
         )
 
+    fun exportNode(node: SNode, depth: Int): MpsListEntryJson =
+        nodeEntry(node, role = null, depth = depth)
+
     private fun moduleEntry(module: SModule, children: List<MpsListEntryJson>? = null): MpsListEntryJson =
         MpsListEntryJson(
             type = "module",
@@ -114,9 +117,12 @@ class MpsListExporter(
         )
 
     private fun childEntry(node: SNode, depth: Int): MpsListEntryJson =
+        nodeEntry(node, role = node.containmentLink?.role, depth = depth)
+
+    private fun nodeEntry(node: SNode, role: String?, depth: Int): MpsListEntryJson =
         MpsListEntryJson(
             type = "node",
-            role = node.containmentLink?.role,
+            role = role,
             name = nodeName(node),
             concept = node.concept.qualifiedName,
             id = persistence.asString(node.nodeId),
