@@ -33,7 +33,7 @@ class MpsListCommand(private val daemonClient: DaemonClient? = null) : Runnable 
     @Parameters(
         arity = "0..*",
         paramLabel = "TARGET_SEGMENT",
-        description = ["MPS navigation target segments. Omit for project root; use / for loaded repository root."],
+        description = ["MPS navigation target segments. Omit for project root; use / for repository root."],
     )
     var target: List<String> = emptyList()
 
