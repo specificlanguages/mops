@@ -7,6 +7,9 @@ import com.specificlanguages.mops.protocol.ModelGetNodeRequest
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
 import com.specificlanguages.mops.protocol.ModelResaveRequest
 import com.specificlanguages.mops.protocol.ModelResaveResponse
+import com.specificlanguages.mops.protocol.MpsListEntryJson
+import com.specificlanguages.mops.protocol.MpsListRequest
+import com.specificlanguages.mops.protocol.MpsListResponse
 import jetbrains.mps.project.Project
 import org.jetbrains.mps.openapi.model.EditableSModel
 import org.jetbrains.mps.openapi.model.SaveOptions
@@ -23,7 +26,19 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
         return when (request) {
             is ModelGetNodeRequest -> getNode(project, request)
             is ModelResaveRequest -> resaveModel(project, request)
+            is MpsListRequest -> list(project)
             else -> errorResponse("UNSUPPORTED_REQUEST", "unsupported request type: ${request.type}")
+        }
+    }
+
+    private fun list(project: Project): DaemonResponse {
+        return project.modelAccess.computeReadAction {
+            MpsListResponse(
+                root = MpsListEntryJson(
+                    type = "project",
+                    name = project.name,
+                ),
+            )
         }
     }
 
