@@ -263,6 +263,39 @@ class MpsListCliIntegrationTest {
         }
     }
 
+    @Test
+    fun `limits depth across module model root and child traversal through daemon`() {
+        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+
+        try {
+            val result = runList(
+                project,
+                daemonHome,
+                "--json",
+                "--depth",
+                "4",
+                "com.specificlanguages.json.build",
+            )
+
+            assertEquals(0, result.exitCode, result.output)
+            val module = GsonCodec.fromJson(result.stdout, MpsListEntryJson::class.java)
+            assertEquals("module", module.type)
+
+            val models = assertNotNull(module.children)
+            val model = models.single { it.name == "com.specificlanguages.json.build" }
+            val roots = assertNotNull(model.children)
+            val buildProject = roots.single { it.name == "com.specificlanguages.json" }
+            val rootChildren = assertNotNull(buildProject.children)
+            val version = rootChildren.single { it.name == "version" }
+            val versionChildren = assertNotNull(version.children)
+            val initialValue = versionChildren.single { it.role == "initialValue" }
+            assertNull(initialValue.children)
+        } finally {
+            stopDaemons(project, daemonHome)
+        }
+    }
+
     private fun runList(project: Path, daemonHome: Path, vararg args: String): CliResult =
         runListCommand(project, daemonHome, "list", *args)
 

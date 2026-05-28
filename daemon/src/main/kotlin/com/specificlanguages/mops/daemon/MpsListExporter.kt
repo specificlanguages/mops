@@ -24,7 +24,7 @@ class MpsListExporter(
             children = if (depth > 0) {
                 project.projectModulesWithGenerators
                     .sortedBy { it.moduleName }
-                    .map { moduleEntry(it) }
+                    .map { moduleEntry(it, depth - 1) }
             } else {
                 null
             },
@@ -38,7 +38,7 @@ class MpsListExporter(
                 repository.modules
                     .asSequence()
                     .sortedBy { it.moduleName }
-                    .map { moduleEntry(it) }
+                    .map { moduleEntry(it, depth - 1) }
                     .toList()
             } else {
                 null
@@ -46,48 +46,30 @@ class MpsListExporter(
         )
 
     fun exportModule(module: SModule, depth: Int): MpsListEntryJson =
+        moduleEntry(module, depth)
+
+    fun exportModel(model: SModel, depth: Int): MpsListEntryJson =
+        modelEntry(model, depth)
+
+    fun exportRoot(node: SNode, depth: Int): MpsListEntryJson =
+        rootEntry(node, depth)
+
+    fun exportNode(node: SNode, depth: Int): MpsListEntryJson =
+        nodeEntry(node, role = null, depth = depth)
+
+    private fun moduleEntry(module: SModule, depth: Int): MpsListEntryJson =
         moduleEntry(
             module,
             children = if (depth > 0) {
                 module.models
                     .asSequence()
                     .sortedBy { it.name.value }
-                    .map(::modelEntry)
+                    .map { modelEntry(it, depth - 1) }
                     .toList()
             } else {
                 null
             },
         )
-
-    fun exportModel(model: SModel, depth: Int): MpsListEntryJson =
-        modelEntry(
-            model,
-            children = if (depth > 0) {
-                model.rootNodes
-                    .asSequence()
-                    .sortedWith(compareBy<SNode> { nodeName(it) == null }.thenBy { nodeName(it) ?: "" })
-                    .map { rootEntry(it) }
-                    .toList()
-            } else {
-                null
-            },
-        )
-
-    fun exportRoot(node: SNode, depth: Int): MpsListEntryJson =
-        rootEntry(
-            node,
-            children = if (depth > 0) {
-                node.children
-                    .asSequence()
-                    .map { childEntry(it, depth - 1) }
-                    .toList()
-            } else {
-                null
-            },
-        )
-
-    fun exportNode(node: SNode, depth: Int): MpsListEntryJson =
-        nodeEntry(node, role = null, depth = depth)
 
     private fun moduleEntry(module: SModule, children: List<MpsListEntryJson>? = null): MpsListEntryJson =
         MpsListEntryJson(
@@ -98,12 +80,39 @@ class MpsListExporter(
             children = children,
         )
 
+    private fun modelEntry(model: SModel, depth: Int): MpsListEntryJson =
+        modelEntry(
+            model,
+            children = if (depth > 0) {
+                model.rootNodes
+                    .asSequence()
+                    .sortedWith(compareBy<SNode> { nodeName(it) == null }.thenBy { nodeName(it) ?: "" })
+                    .map { rootEntry(it, depth - 1) }
+                    .toList()
+            } else {
+                null
+            },
+        )
+
     private fun modelEntry(model: SModel, children: List<MpsListEntryJson>? = null): MpsListEntryJson =
         MpsListEntryJson(
             type = "model",
             name = model.name.value,
             reference = persistence.asString(model.reference),
             children = children,
+        )
+
+    private fun rootEntry(node: SNode, depth: Int): MpsListEntryJson =
+        rootEntry(
+            node,
+            children = if (depth > 0) {
+                node.children
+                    .asSequence()
+                    .map { childEntry(it, depth - 1) }
+                    .toList()
+            } else {
+                null
+            },
         )
 
     private fun rootEntry(node: SNode, children: List<MpsListEntryJson>? = null): MpsListEntryJson =
