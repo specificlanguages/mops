@@ -86,7 +86,10 @@ distributions {
 
 tasks.register<Test>("integrationTest") {
     description = "Runs CLI integration tests against a daemon started with downloaded MPS and JBR distributions."
-    dependsOn(daemonRuntimeClasspath)
+
+    inputs.files(daemonRuntimeClasspath)
+        .withPropertyName("daemonRuntimeClasspath")
+        .withNormalizer(ClasspathNormalizer::class)
 
     testClassesDirs = integrationTest.output.classesDirs
     classpath = integrationTest.runtimeClasspath
