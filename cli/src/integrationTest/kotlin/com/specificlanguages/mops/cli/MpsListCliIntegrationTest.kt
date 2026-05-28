@@ -1,6 +1,5 @@
 package com.specificlanguages.mops.cli
 
-import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.GsonCodec
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import org.junit.jupiter.api.io.CleanupMode
@@ -8,10 +7,8 @@ import org.junit.jupiter.api.io.TempDir
 import java.io.ByteArrayOutputStream
 import java.io.PrintWriter
 import java.nio.file.Path
-import java.time.Instant.now
 import kotlin.io.path.createDirectories
 import kotlin.io.path.pathString
-import kotlin.jvm.optionals.getOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -58,39 +55,6 @@ class MpsListCliIntegrationTest {
             stderr = stderr.toString(),
         )
     }
-
-    private fun stopDaemons(project: Path, daemonHome: Path) {
-        newCommandLine(
-            workingDirectory = project,
-        ).execute(
-            "--daemon-home",
-            daemonHome.pathString,
-            "--mps-home", requiredProperty("test.mpsHome"),
-            "daemon", "stop",
-        )
-
-        waitForAllDaemons(daemonHome)
-    }
-
-    private fun waitForAllDaemons(daemonHome: Path) {
-        val recordStore = DaemonRecordStore.forDaemonHome(daemonHome)
-        val deadline = now().plusSeconds(10)
-        while (now() < deadline) {
-            val anyAlive = recordStore.readAll().any { record ->
-                val handle = ProcessHandle.of(record.record.pid).getOrNull()
-                handle != null && handle.isAlive
-            }
-
-            if (anyAlive) {
-                Thread.sleep(100)
-            } else {
-                return
-            }
-        }
-    }
-
-    private fun requiredProperty(name: String): String =
-        requireNotNull(System.getProperty(name)) { "missing system property $name" }
 
     private data class CliResult(
         val exitCode: Int,

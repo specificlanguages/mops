@@ -1,10 +1,13 @@
 package com.specificlanguages.mops.cli
 
+import com.specificlanguages.mops.protocol.DaemonRecordStore
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.time.Instant.now
 import kotlin.io.path.createDirectories
 import kotlin.io.path.pathString
+import kotlin.jvm.optionals.getOrNull
 import kotlin.jvm.javaClass
 import kotlin.use
 
@@ -43,5 +46,35 @@ public fun javaAndMpsHomeArgs(): Array<String> =
         "--java-home",
         requiredProperty("test.jbrHome"),
         "--mps-home",
-        requiredProperty("test.mpsHome")
+        requiredProperty("test.mpsHome"),
     )
+
+fun stopDaemons(project: Path, daemonHome: Path) {
+    newCommandLine(
+        workingDirectory = project,
+    ).execute(
+        "--daemon-home",
+        daemonHome.pathString,
+        "--mps-home", requiredProperty("test.mpsHome"),
+        "daemon", "stop",
+    )
+
+    waitForAllDaemons(daemonHome)
+}
+
+private fun waitForAllDaemons(daemonHome: Path) {
+    val recordStore = DaemonRecordStore.forDaemonHome(daemonHome)
+    val deadline = now().plusSeconds(10)
+    while (now() < deadline) {
+        val anyAlive = recordStore.readAll().any { record ->
+            val handle = ProcessHandle.of(record.record.pid).getOrNull()
+            handle != null && handle.isAlive
+        }
+
+        if (anyAlive) {
+            Thread.sleep(100)
+        } else {
+            return
+        }
+    }
+}

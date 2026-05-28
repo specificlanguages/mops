@@ -1,17 +1,14 @@
 package com.specificlanguages.mops.cli
 
-import com.specificlanguages.mops.protocol.DaemonRecordStore
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import java.io.ByteArrayOutputStream
 import java.io.PrintWriter
 import java.nio.file.Path
-import java.time.Instant.now
 import kotlin.io.path.createDirectories
 import kotlin.io.path.pathString
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
-import kotlin.jvm.optionals.getOrNull
 import kotlin.test.*
 
 class ModelResaveCliIntegrationTest {
@@ -52,15 +49,7 @@ class ModelResaveCliIntegrationTest {
             assertContains(stdout.toString(), "Model resaved successfully: ${model.toRealPath().toRealPath()}")
             assertEquals(original, model.readText())
         } finally {
-            newCommandLine(
-                workingDirectory = project,
-            ).execute(
-                "--daemon-home",
-                daemonHome.pathString,
-                "--mps-home", requiredProperty("test.mpsHome"),
-                "daemon", "stop")
-
-            waitForAllDaemons(daemonHome)
+            stopDaemons(project, daemonHome)
         }
     }
 
@@ -93,35 +82,7 @@ class ModelResaveCliIntegrationTest {
             assertContains(stderr.toString(), "model not found: ${unknownModel.toRealPath()}")
             assertFalse(stdout.toString().contains("Model resaved successfully"))
         } finally {
-            newCommandLine(
-                workingDirectory = project,
-            ).execute(
-                "--daemon-home",
-                daemonHome.pathString,
-                "--mps-home", requiredProperty("test.mpsHome"),
-                "daemon", "stop")
-
-            waitForAllDaemons(daemonHome)
+            stopDaemons(project, daemonHome)
         }
     }
-
-    private fun waitForAllDaemons(daemonHome: Path) {
-        val recordStore = DaemonRecordStore.forDaemonHome(daemonHome)
-        val deadline = now().plusSeconds(10)
-        while (now() < deadline) {
-            val anyAlive = recordStore.readAll().any { record ->
-                val handle = ProcessHandle.of(record.record.pid).getOrNull()
-                handle != null && handle.isAlive
-            }
-
-            if (anyAlive) {
-                Thread.sleep(100)
-            } else {
-                return
-            }
-        }
-    }
-
-    private fun requiredProperty(name: String): String =
-        requireNotNull(System.getProperty(name)) { "missing system property $name" }
 }
