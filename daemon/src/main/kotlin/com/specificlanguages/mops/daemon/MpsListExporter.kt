@@ -25,11 +25,19 @@ class MpsListExporter(
             },
         )
 
-    fun exportRepository(depth: Int): MpsListEntryJson =
+    fun exportRepository(project: Project, depth: Int): MpsListEntryJson =
         MpsListEntryJson(
             type = "repository",
             name = "/",
-            children = null,
+            children = if (depth > 0) {
+                project.repository.modules
+                    .asSequence()
+                    .sortedBy { it.moduleName }
+                    .map(::moduleEntry)
+                    .toList()
+            } else {
+                null
+            },
         )
 
     private fun moduleEntry(module: SModule): MpsListEntryJson =

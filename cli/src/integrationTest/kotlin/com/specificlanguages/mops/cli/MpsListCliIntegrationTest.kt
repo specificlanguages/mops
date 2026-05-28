@@ -81,6 +81,26 @@ class MpsListCliIntegrationTest {
         }
     }
 
+    @Test
+    fun `lists loaded repository modules through daemon`() {
+        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+
+        try {
+            val result = runListCommand(project, daemonHome, "ls", "--json", "/")
+
+            assertEquals(0, result.exitCode, result.output)
+            val root = GsonCodec.fromJson(result.stdout, MpsListEntryJson::class.java)
+            assertEquals("repository", root.type)
+            val modules = assertNotNull(root.children)
+            assertNotNull(modules.singleOrNull { it.name == "com.specificlanguages.json" })
+            assertNotNull(modules.singleOrNull { it.name == "com.specificlanguages.json.build" })
+            assertNotNull(modules.singleOrNull { it.name == "MPS.Core" })
+        } finally {
+            stopDaemons(project, daemonHome)
+        }
+    }
+
     private fun runList(project: Path, daemonHome: Path, vararg args: String): CliResult =
         runListCommand(project, daemonHome, "list", *args)
 
