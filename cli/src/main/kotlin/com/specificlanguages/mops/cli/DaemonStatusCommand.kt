@@ -3,10 +3,8 @@ package com.specificlanguages.mops.cli
 import com.specificlanguages.mops.daemoncomms.DaemonPool
 import com.specificlanguages.mops.protocol.StoredDaemonRecord
 import picocli.CommandLine.Command
-import picocli.CommandLine.Model.CommandSpec
 import picocli.CommandLine.Option
 import picocli.CommandLine.ParentCommand
-import picocli.CommandLine.Spec
 
 /**
  * Reads persisted daemon records and reports which project daemons are known locally.
@@ -17,9 +15,6 @@ import picocli.CommandLine.Spec
 class DaemonStatusCommand : Runnable {
     @ParentCommand
     lateinit var parent: DaemonOperations
-
-    @Spec
-    lateinit var spec: CommandSpec
 
     @Option(names = ["--all"], description = ["Show daemon state for all projects."])
     var all: Boolean = false
@@ -34,15 +29,14 @@ class DaemonStatusCommand : Runnable {
 
         val selected = pool.findRecords(recordSpec)
 
-        val out = spec.commandLine().out
         if (selected.isEmpty()) {
-            out.println("no mops daemons")
+            println("no mops daemons")
             return
         }
 
         selected.forEach { storedRecord: StoredDaemonRecord ->
             val record = storedRecord.record
-            out.println(
+            println(
                 "running workspace=${record.workspace} context=${record.context} port=${record.port} pid=${record.pid}",
             )
         }

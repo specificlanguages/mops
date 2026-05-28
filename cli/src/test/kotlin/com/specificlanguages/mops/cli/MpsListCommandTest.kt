@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.cli
 
+import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.GsonCodec
 import com.specificlanguages.mops.protocol.MpsListEntryJson
@@ -9,23 +10,24 @@ import org.mockito.kotlin.isNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.junit.jupiter.api.parallel.ResourceLock
 import picocli.CommandLine
-import java.io.ByteArrayOutputStream
-import java.io.PrintWriter
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
+@ResourceLock("system-streams")
 class MpsListCommandTest {
     @Test
     fun `list prints semantic tree as indented tab-separated text`() {
         val client = mock<DaemonClient>()
         whenever(client.list(isNull(), eq(1))).thenReturn(sampleListResponse())
-        val stdout = ByteArrayOutputStream()
+        var exitCode = Int.MIN_VALUE
 
-        val exitCode = CommandLine(MpsListCommand(client))
-            .setExecutionExceptionHandler(PrintErrorAndExit)
-            .also { it.out = PrintWriter(stdout, true) }
-            .execute()
+        val stdout = tapSystemOut {
+            exitCode = CommandLine(MpsListCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute()
+        }
 
         assertEquals(0, exitCode)
         verify(client).list(isNull(), eq(1))
@@ -33,7 +35,7 @@ class MpsListCommandTest {
             "project\tmps-json" + System.lineSeparator() +
                 "  language\tcom.specificlanguages.json\tf3f42ddf-d692-4c29-90fb-7360196f01ab(com.specificlanguages.json)" +
                 System.lineSeparator(),
-            stdout.toString(),
+            stdout,
         )
     }
 
@@ -42,16 +44,17 @@ class MpsListCommandTest {
         val client = mock<DaemonClient>()
         val response = sampleListResponse()
         whenever(client.list(isNull(), eq(1))).thenReturn(response)
-        val stdout = ByteArrayOutputStream()
+        var exitCode = Int.MIN_VALUE
 
-        val exitCode = CommandLine(MpsListCommand(client))
-            .setExecutionExceptionHandler(PrintErrorAndExit)
-            .also { it.out = PrintWriter(stdout, true) }
-            .execute("--json")
+        val stdout = tapSystemOut {
+            exitCode = CommandLine(MpsListCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("--json")
+        }
 
         assertEquals(0, exitCode)
         verify(client).list(isNull(), eq(1))
-        assertEquals(response.root, GsonCodec.fromJson(stdout.toString(), MpsListEntryJson::class.java))
+        assertEquals(response.root, GsonCodec.fromJson(stdout, MpsListEntryJson::class.java))
     }
 
     private fun sampleListResponse() =

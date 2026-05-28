@@ -1,10 +1,8 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DaemonPool
-import com.specificlanguages.mops.protocol.DaemonRecord
 import com.specificlanguages.mops.protocol.StoredDaemonRecord
 import picocli.CommandLine.*
-import picocli.CommandLine.Model.CommandSpec
 
 /**
  * Stops known daemon processes and removes stale daemon records.
@@ -17,9 +15,6 @@ class DaemonStopCommand : Runnable {
     @ParentCommand
     lateinit var parent: DaemonOperations
 
-    @Spec
-    lateinit var spec: CommandSpec
-
     @Option(names = ["--all"], description = ["Stop daemons for all projects."])
     var all: Boolean = false
 
@@ -31,19 +26,17 @@ class DaemonStopCommand : Runnable {
             if (all) DaemonPool.Spec.All
             else DaemonPool.Spec.ForProject(root.resolveProjectPath())
 
-        val out = spec.commandLine().out
-
         val selected = pool.findRecords(recordSpec)
 
         if (selected.isEmpty()) {
-            out.println("no mops daemons")
+            println("no mops daemons")
         } else {
             selected.forEach { storedRecord: StoredDaemonRecord ->
                 val record = storedRecord.record
                 if (pool.stop(storedRecord)) {
-                    out.println("stopped project=${record.context.realProjectPath} pid=${record.pid}")
+                    println("stopped project=${record.context.realProjectPath} pid=${record.pid}")
                 } else {
-                    out.println("removed stale daemon record for project=${record.context.realProjectPath}")
+                    println("removed stale daemon record for project=${record.context.realProjectPath}")
                 }
             }
         }

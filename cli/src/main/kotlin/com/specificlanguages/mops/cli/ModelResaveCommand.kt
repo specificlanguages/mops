@@ -1,12 +1,9 @@
 package com.specificlanguages.mops.cli
 
 import java.nio.file.Path
-import kotlin.io.path.absolute
 import picocli.CommandLine.Command
-import picocli.CommandLine.Model.CommandSpec
 import picocli.CommandLine.Parameters
 import picocli.CommandLine.ParentCommand
-import picocli.CommandLine.Spec
 
 /**
  * CLI entry point for resaving a persisted model through the project daemon.
@@ -19,9 +16,6 @@ class ModelResaveCommand : Runnable {
     @ParentCommand
     lateinit var model: ModelOperations
 
-    @Spec
-    lateinit var spec: CommandSpec
-
     @Parameters(index = "0", paramLabel = "MODEL_TARGET", description = ["Persisted model path to resave."])
     lateinit var modelTarget: String
 
@@ -30,6 +24,6 @@ class ModelResaveCommand : Runnable {
         val resolvedTarget = Path.of(modelTarget).toRealPath()
 
         val response = root.ensureDaemon(resolvedTarget).resave(resolvedTarget)
-        spec.commandLine().out.println("Model resaved successfully: ${response.modelTarget}")
+        println("Model resaved successfully: ${response.modelTarget}")
     }
 }

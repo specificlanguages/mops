@@ -1,11 +1,12 @@
 package com.specificlanguages.mops.cli
 
-import java.io.ByteArrayOutputStream
-import java.io.PrintWriter
+import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
+import org.junit.jupiter.api.parallel.ResourceLock
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 
+@ResourceLock("system-streams")
 class CommandHelpTest {
     @Test
     fun `root help lists top-level commands`() {
@@ -34,12 +35,12 @@ class CommandHelpTest {
     }
 
     private fun runHelp(vararg args: String): String {
-        val stdout = ByteArrayOutputStream()
-        val exitCode = newCommandLine()
-            .also { it.out = PrintWriter(stdout, true) }
-            .execute(*args)
+        var exitCode = Int.MIN_VALUE
+        val stdout = tapSystemOut {
+            exitCode = newCommandLine().execute(*args)
+        }
 
         assertEquals(0, exitCode)
-        return stdout.toString()
+        return stdout
     }
 }

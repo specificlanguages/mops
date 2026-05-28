@@ -1,10 +1,10 @@
 package com.specificlanguages.mops.cli
 
+import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
-import java.io.ByteArrayOutputStream
-import java.io.PrintWriter
+import org.junit.jupiter.api.parallel.ResourceLock
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Comparator
@@ -16,6 +16,7 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
+@ResourceLock("system-streams")
 class DaemonStatusStopCommandTest {
     @TempDir(cleanup = CleanupMode.ON_SUCCESS)
     lateinit var tempDir: Path
@@ -33,23 +34,20 @@ class DaemonStatusStopCommandTest {
         )
         val store = DaemonRecordStore.forDaemonHome(daemonHome)
         store.write(record)
-        val stdout = ByteArrayOutputStream()
+        var exitCode = Int.MIN_VALUE
 
-        val exitCode = newCommandLine(
-            workingDirectory = project,
-        ).also {
-            it.out = PrintWriter(stdout, true)
-        }.execute(
-            "--daemon-home", daemonHome.pathString,
-            "daemon", "status"
-        )
+        val stdout = tapSystemOut {
+            exitCode = newCommandLine(workingDirectory = project).execute(
+                "--daemon-home", daemonHome.pathString,
+                "daemon", "status",
+            )
+        }
 
         assertEquals(0, exitCode)
-        val output = stdout.toString()
-        assertContains(output, "running")
-        assertContains(output, project.pathString)
-        assertContains(output, "4321")
-        assertContains(output, mpsHome.pathString)
+        assertContains(stdout, "running")
+        assertContains(stdout, project.pathString)
+        assertContains(stdout, "4321")
+        assertContains(stdout, mpsHome.pathString)
     }
 
     @Test
@@ -88,22 +86,20 @@ class DaemonStatusStopCommandTest {
                 startupTime = "2026-05-12T12:01:00Z",
             ),
         )
-        val stdout = ByteArrayOutputStream()
+        var exitCode = Int.MIN_VALUE
 
-        val exitCode = newCommandLine(
-            workingDirectory = tempDir,
-        ).also {
-            it.out = PrintWriter(stdout, true)
-        }.execute(
-            "--daemon-home", daemonHome.pathString,
-            "daemon", "status", "--all"
-        )
+        val stdout = tapSystemOut {
+            exitCode = newCommandLine(workingDirectory = tempDir).execute(
+                "--daemon-home", daemonHome.pathString,
+                "daemon", "status", "--all",
+            )
+        }
 
         assertEquals(0, exitCode)
-        assertContains(stdout.toString(), dir1.pathString)
-        assertContains(stdout.toString(), dir2.pathString)
-        assertContains(stdout.toString(), "1111")
-        assertContains(stdout.toString(), "2222")
+        assertContains(stdout, dir1.pathString)
+        assertContains(stdout, dir2.pathString)
+        assertContains(stdout, "1111")
+        assertContains(stdout, "2222")
     }
 
     @Test
@@ -113,22 +109,20 @@ class DaemonStatusStopCommandTest {
             daemonHome = daemonHome,
             port = 3333,
         )
-        val stdout = ByteArrayOutputStream()
+        var exitCode = Int.MIN_VALUE
 
-        val exitCode = newCommandLine(
-            workingDirectory = tempDir,
-        ).also {
-            it.out = PrintWriter(stdout, true)
-        }.execute(
-            "--daemon-home", daemonHome.pathString,
-            "daemon", "status", "--all"
-        )
+        val stdout = tapSystemOut {
+            exitCode = newCommandLine(workingDirectory = tempDir).execute(
+                "--daemon-home", daemonHome.pathString,
+                "daemon", "status", "--all",
+            )
+        }
 
         assertEquals(0, exitCode)
-        assertContains(stdout.toString(), staleRecord.projectPath.pathString)
-        assertContains(stdout.toString(), staleRecord.mpsHome.pathString)
-        assertContains(stdout.toString(), staleRecord.javaHome.pathString)
-        assertContains(stdout.toString(), "3333")
+        assertContains(stdout, staleRecord.projectPath.pathString)
+        assertContains(stdout, staleRecord.mpsHome.pathString)
+        assertContains(stdout, staleRecord.javaHome.pathString)
+        assertContains(stdout, "3333")
     }
 
     @Test
@@ -138,19 +132,17 @@ class DaemonStatusStopCommandTest {
             daemonHome = daemonHome,
             port = 9,
         )
-        val stdout = ByteArrayOutputStream()
+        var exitCode = Int.MIN_VALUE
 
-        val exitCode = newCommandLine(
-            workingDirectory = tempDir,
-        ).also {
-            it.out = PrintWriter(stdout, true)
-        }.execute(
-            "--daemon-home", daemonHome.pathString,
-            "daemon", "stop", "--all"
-        )
+        val stdout = tapSystemOut {
+            exitCode = newCommandLine(workingDirectory = tempDir).execute(
+                "--daemon-home", daemonHome.pathString,
+                "daemon", "stop", "--all",
+            )
+        }
 
         assertEquals(0, exitCode)
-        assertContains(stdout.toString(), "removed stale daemon record for project=${staleRecord.projectPath.pathString}")
+        assertContains(stdout, "removed stale daemon record for project=${staleRecord.projectPath.pathString}")
         assertFalse(staleRecord.recordPath.exists())
     }
 

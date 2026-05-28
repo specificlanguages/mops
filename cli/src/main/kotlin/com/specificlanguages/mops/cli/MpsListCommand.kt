@@ -4,11 +4,9 @@ import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.GsonCodec
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import picocli.CommandLine.Command
-import picocli.CommandLine.Model.CommandSpec
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 import picocli.CommandLine.ParentCommand
-import picocli.CommandLine.Spec
 
 @Command(
     name = "list",
@@ -18,9 +16,6 @@ import picocli.CommandLine.Spec
 class MpsListCommand(private val daemonClient: DaemonClient? = null) : Runnable {
     @ParentCommand
     lateinit var root: MopsCommand
-
-    @Spec
-    lateinit var spec: CommandSpec
 
     @Option(
         names = ["--depth"],
@@ -51,14 +46,14 @@ class MpsListCommand(private val daemonClient: DaemonClient? = null) : Runnable 
         val client = daemonClient ?: root.ensureDaemon()
         val response = client.list(target = requestedTarget, depth = depth)
         if (json) {
-            spec.commandLine().out.println(GsonCodec.toJson(response.root))
+            println(GsonCodec.toJson(response.root))
         } else {
             renderText(response.root, indent = 0)
         }
     }
 
     private fun renderText(entry: MpsListEntryJson, indent: Int) {
-        spec.commandLine().out.println("${"  ".repeat(indent)}${entry.columns().joinToString("\t")}")
+        println("${"  ".repeat(indent)}${entry.columns().joinToString("\t")}")
         entry.children.orEmpty().forEach { child -> renderText(child, indent + 1) }
     }
 
