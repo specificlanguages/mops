@@ -162,6 +162,38 @@ class MpsListCliIntegrationTest {
     }
 
     @Test
+    fun `expands dot-prefixed model suffix after module target through daemon`() {
+        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+        val moduleTargets = listOf(
+            "com.specificlanguages.json",
+            "f3f42ddf-d692-4c29-90fb-7360196f01ab(com.specificlanguages.json)",
+        )
+
+        try {
+            for (moduleTarget in moduleTargets) {
+                val result = runList(
+                    project,
+                    daemonHome,
+                    "--json",
+                    moduleTarget,
+                    ".structure",
+                    "JsonFile",
+                )
+
+                assertEquals(0, result.exitCode, result.output)
+                val root = GsonCodec.fromJson(result.stdout, MpsListEntryJson::class.java)
+                assertEquals("root", root.type)
+                assertEquals("JsonFile", root.name)
+                assertEquals("2110045694544566904", root.id)
+                assertNotNull(root.children)
+            }
+        } finally {
+            stopDaemons(project, daemonHome)
+        }
+    }
+
+    @Test
     fun `lists root nodes owned by serialized model reference through daemon`() {
         val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
         val daemonHome = tempDir.resolve("daemon-home").createDirectories()

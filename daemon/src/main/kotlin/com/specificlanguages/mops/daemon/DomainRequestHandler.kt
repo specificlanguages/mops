@@ -77,9 +77,8 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
             return null
         }
 
-        val moduleName = target[0]
-        val modelName = target[1]
-        val module = findProjectModule(project, moduleName) ?: return null
+        val module = findProjectModule(project, target[0]) ?: return null
+        val modelName = modelName(module, target[1])
         val model = module.models
             .singleOrNull { it.name.value == modelName }
             ?: return null
@@ -114,7 +113,16 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
         }.getOrNull()
 
     private fun findProjectModule(project: Project, target: String): SModule? =
-        project.projectModulesWithGenerators.singleOrNull { it.moduleName == target }
+        project.projectModulesWithGenerators.singleOrNull {
+            it.moduleName == target || persistence.asString(it.moduleReference) == target
+        }
+
+    private fun modelName(module: SModule, segment: String): String =
+        if (segment.startsWith(".") && segment.length > 1) {
+            module.moduleName + segment
+        } else {
+            segment
+        }
 
     private fun nodeName(node: SNode): String? =
         SNodeAccessUtil.getPropertyValue(node, SNodeUtil.property_INamedConcept_name) as String?
