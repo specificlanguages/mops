@@ -1,10 +1,12 @@
 package com.specificlanguages.mops.cli
 
+import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.GsonCodec
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import com.specificlanguages.mops.protocol.MpsListResponse
+import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.isNull
 import org.mockito.kotlin.mock
@@ -13,6 +15,7 @@ import org.mockito.kotlin.whenever
 import org.junit.jupiter.api.parallel.ResourceLock
 import picocli.CommandLine
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 
 @ResourceLock("system-streams")
@@ -79,6 +82,31 @@ class MpsListCommandTest {
             eq(listOf("com.specificlanguages.json", "com.specificlanguages.json.structure", "JsonFile")),
             eq(1),
         )
+    }
+
+    @Test
+    fun `list rejects slash-bearing target segments before contacting daemon`() {
+        val invalidTargets = listOf(
+            "com.specificlanguages.json/com.specificlanguages.json.structure",
+            "com.specificlanguages.json/",
+            "com.specificlanguages.json//com.specificlanguages.json.structure",
+            "/tmp/project/model.mps",
+        )
+
+        for (invalidTarget in invalidTargets) {
+            val client = mock<DaemonClient>()
+            var exitCode = Int.MIN_VALUE
+
+            val stderr = tapSystemErr {
+                exitCode = CommandLine(MpsListCommand(client))
+                    .setExecutionExceptionHandler(PrintErrorAndExit)
+                    .execute(invalidTarget)
+            }
+
+            assertEquals(1, exitCode)
+            assertContains(stderr, "target segments must be space-separated")
+            verifyNoInteractions(client)
+        }
     }
 
     private fun sampleListResponse() =

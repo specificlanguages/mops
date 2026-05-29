@@ -39,8 +39,12 @@ class MpsListCommand(private val daemonClient: DaemonClient? = null) : Runnable 
 
     override fun run() {
         require(depth in 0..8) { "depth must be between 0 and 8" }
-        val requestedTarget = target.takeIf { it.isNotEmpty() }
         require(target.none { it.isEmpty() }) { "target segment must not be blank" }
+        require(usesSpaceSeparatedTargetSegments()) {
+            "target segments must be space-separated; use / only for repository root or pass a serialized node reference as one target"
+        }
+
+        val requestedTarget = target.takeIf { it.isNotEmpty() }
 
         val client = daemonClient ?: root.ensureDaemon()
         val response = client.list(target = requestedTarget, depth = depth)
@@ -72,4 +76,9 @@ class MpsListCommand(private val daemonClient: DaemonClient? = null) : Runnable 
 
     private fun MpsListEntryJson.nodeColumnsWithoutType(): List<String> =
         listOf(name ?: "<unnamed>", concept.orEmpty(), reference.orEmpty()) + listOfNotNull(error)
+
+    private fun usesSpaceSeparatedTargetSegments(): Boolean =
+        target.none { it.contains("/") } ||
+            target == listOf("/") ||
+            target.size == 1 && target.single().startsWith("r:") && target.single().contains("/")
 }
