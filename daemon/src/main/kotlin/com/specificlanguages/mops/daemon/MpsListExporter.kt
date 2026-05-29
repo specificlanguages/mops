@@ -21,12 +21,10 @@ class MpsListExporter(
         MpsListEntryJson(
             type = "project",
             name = project.name,
-            children = if (depth > 0) {
+            children = childEntries(depth) { childDepth ->
                 project.projectModulesWithGenerators
                     .sortedBy { it.moduleName }
-                    .map { moduleEntry(it, depth - 1) }
-            } else {
-                null
+                    .map { moduleEntry(it, childDepth) }
             },
         )
 
@@ -34,14 +32,12 @@ class MpsListExporter(
         MpsListEntryJson(
             type = "repository",
             name = "/",
-            children = if (depth > 0) {
+            children = childEntries(depth) { childDepth ->
                 repository.modules
                     .asSequence()
                     .sortedBy { it.moduleName }
-                    .map { moduleEntry(it, depth - 1) }
+                    .map { moduleEntry(it, childDepth) }
                     .toList()
-            } else {
-                null
             },
         )
 
@@ -58,71 +54,42 @@ class MpsListExporter(
         nodeEntry(node, role = null, depth = depth)
 
     private fun moduleEntry(module: SModule, depth: Int): MpsListEntryJson =
-        moduleEntry(
-            module,
-            children = if (depth > 0) {
-                module.models
-                    .asSequence()
-                    .sortedBy { it.name.value }
-                    .map { modelEntry(it, depth - 1) }
-                    .toList()
-            } else {
-                null
-            },
-        )
-
-    private fun moduleEntry(module: SModule, children: List<MpsListEntryJson>? = null): MpsListEntryJson =
         MpsListEntryJson(
             type = "module",
             name = module.moduleName,
             moduleKind = module.moduleKind(),
             reference = persistence.asString(module.moduleReference),
-            children = children,
-        )
-
-    private fun modelEntry(model: SModel, depth: Int): MpsListEntryJson =
-        modelEntry(
-            model,
-            children = if (depth > 0) {
-                model.rootNodes
+            children = childEntries(depth) { childDepth ->
+                module.models
                     .asSequence()
-                    .sortedWith(compareBy<SNode> { nodeName(it) == null }.thenBy { nodeName(it) ?: "" })
-                    .map { rootEntry(it, depth - 1) }
+                    .sortedBy { it.name.value }
+                    .map { modelEntry(it, childDepth) }
                     .toList()
-            } else {
-                null
             },
         )
 
-    private fun modelEntry(model: SModel, children: List<MpsListEntryJson>? = null): MpsListEntryJson =
+    private fun modelEntry(model: SModel, depth: Int): MpsListEntryJson =
         MpsListEntryJson(
             type = "model",
             name = model.name.value,
             reference = persistence.asString(model.reference),
-            children = children,
-        )
-
-    private fun rootEntry(node: SNode, depth: Int): MpsListEntryJson =
-        rootEntry(
-            node,
-            children = if (depth > 0) {
-                node.children
+            children = childEntries(depth) { childDepth ->
+                model.rootNodes
                     .asSequence()
-                    .map { childEntry(it, depth - 1) }
+                    .sortedWith(compareBy<SNode> { nodeName(it) == null }.thenBy { nodeName(it) ?: "" })
+                    .map { rootEntry(it, childDepth) }
                     .toList()
-            } else {
-                null
             },
         )
 
-    private fun rootEntry(node: SNode, children: List<MpsListEntryJson>? = null): MpsListEntryJson =
+    private fun rootEntry(node: SNode, depth: Int): MpsListEntryJson =
         MpsListEntryJson(
             type = "root",
             name = nodeName(node),
             concept = node.concept.qualifiedName,
             id = persistence.asString(node.nodeId),
             reference = persistence.asString(node.reference),
-            children = children,
+            children = containmentEntries(node, depth),
         )
 
     private fun childEntry(node: SNode, depth: Int): MpsListEntryJson =
@@ -136,15 +103,26 @@ class MpsListExporter(
             concept = node.concept.qualifiedName,
             id = persistence.asString(node.nodeId),
             reference = persistence.asString(node.reference),
-            children = if (depth > 0) {
-                node.children
-                    .asSequence()
-                    .map { childEntry(it, depth - 1) }
-                    .toList()
-            } else {
-                null
-            },
+            children = containmentEntries(node, depth),
         )
+
+    private fun containmentEntries(node: SNode, depth: Int): List<MpsListEntryJson>? =
+        childEntries(depth) { childDepth ->
+            node.children
+                .asSequence()
+                .map { childEntry(it, childDepth) }
+                .toList()
+        }
+
+    private fun childEntries(
+        depth: Int,
+        entries: (childDepth: Int) -> List<MpsListEntryJson>,
+    ): List<MpsListEntryJson>? =
+        if (depth > 0) {
+            entries(depth - 1)
+        } else {
+            null
+        }
 
     private fun nodeName(node: SNode): String? =
         SNodeAccessUtil.getPropertyValue(node, SNodeUtil.property_INamedConcept_name) as String?
