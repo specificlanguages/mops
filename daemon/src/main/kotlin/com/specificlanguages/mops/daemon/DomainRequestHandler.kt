@@ -66,6 +66,7 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
 
     private fun resolveListTarget(project: Project, target: List<String>): ListTarget? {
         if (target.size == 1) {
+            resolveNodeReference(project, target.single())?.let { return listTargetForNode(it) }
             resolveModelReference(project, target.single())?.let { return ListTarget.Model(it) }
         }
 
@@ -102,6 +103,11 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
         return ListTarget.Node(node)
     }
 
+    private fun resolveNodeReference(project: Project, target: String): SNode? =
+        runCatching {
+            persistence.createNodeReference(target).resolve(project.repository)
+        }.getOrNull()
+
     private fun resolveModelReference(project: Project, target: String): SModel? =
         runCatching {
             persistence.createModelReference(target).resolve(project.repository)
@@ -124,6 +130,13 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
                 IdEncoder().parseNodeId(nodeId)
             }
         }.getOrNull()
+
+    private fun listTargetForNode(node: SNode): ListTarget =
+        if (node.parent == null) {
+            ListTarget.RootNode(node)
+        } else {
+            ListTarget.Node(node)
+        }
 
     private sealed interface ListTarget {
         data class Module(val module: SModule) : ListTarget

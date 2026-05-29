@@ -249,6 +249,28 @@ class MpsListCliIntegrationTest {
     }
 
     @Test
+    fun `lists root node addressed by serialized node reference through daemon`() {
+        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+        val nodeReference =
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
+
+        try {
+            val result = runList(project, daemonHome, "--json", nodeReference)
+
+            assertEquals(0, result.exitCode, result.output)
+            val root = GsonCodec.fromJson(result.stdout, MpsListEntryJson::class.java)
+            assertEquals("root", root.type)
+            assertEquals("JsonFile", root.name)
+            assertEquals("2110045694544566904", root.id)
+            assertEquals(nodeReference, root.reference)
+            assertNotNull(root.children)
+        } finally {
+            stopDaemons(project, daemonHome)
+        }
+    }
+
+    @Test
     fun `lists containment children owned by child node path through daemon`() {
         val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
         val daemonHome = tempDir.resolve("daemon-home").createDirectories()
