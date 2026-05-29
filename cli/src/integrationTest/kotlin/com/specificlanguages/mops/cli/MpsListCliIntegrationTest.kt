@@ -417,6 +417,46 @@ class MpsListCliIntegrationTest {
         }
     }
 
+    @Test
+    fun `fails instead of guessing when root node target is ambiguous`() {
+        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val model = project.resolve(
+            "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps",
+        )
+        model.writeText(
+            model.readText().replace(
+                """<property role="TrG5h" value="JsonObject" />""",
+                """<property role="TrG5h" value="JsonFile" />""",
+            ),
+        )
+
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+
+        try {
+            val result = runList(
+                project,
+                daemonHome,
+                "--json",
+                "com.specificlanguages.json",
+                "com.specificlanguages.json.structure",
+                "JsonFile",
+            )
+
+            assertNotEquals(0, result.exitCode, result.output)
+            assertContains(result.stderr, "ambiguous root node target JsonFile")
+            assertContains(
+                result.stderr,
+                "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+            )
+            assertContains(
+                result.stderr,
+                "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544567020",
+            )
+        } finally {
+            stopDaemons(project, daemonHome)
+        }
+    }
+
     private fun runList(project: Path, daemonHome: Path, vararg args: String): CliResult =
         runListCommand(project, daemonHome, "list", *args)
 

@@ -104,9 +104,14 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
             return ListTargetResolution.Found(ListTarget.Model(model))
         }
 
-        val rootNode = model.rootNodes
-            .singleOrNull { nodeMatches(it, target[2]) }
-            ?: return ListTargetResolution.Missing
+        val rootNodes = model.rootNodes
+            .filter { nodeMatches(it, target[2]) }
+            .toList()
+        val rootNode = when (rootNodes.size) {
+            0 -> return ListTargetResolution.Missing
+            1 -> rootNodes.single()
+            else -> return ambiguousRootNodeTarget(target[2], rootNodes)
+        }
 
         if (target.size == 3) {
             return ListTargetResolution.Found(ListTarget.RootNode(rootNode))
@@ -124,6 +129,15 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
             "ambiguous model target $modelName:\n" +
                 models.joinToString("\n") {
                     "model\t${it.name.value}\t${persistence.asString(it.reference)}"
+                },
+        )
+
+    private fun ambiguousRootNodeTarget(target: String, nodes: List<SNode>): ListTargetResolution.Ambiguous =
+        ListTargetResolution.Ambiguous(
+            "ambiguous root node target $target:\n" +
+                nodes.joinToString("\n") {
+                    "root\t${nodeName(it) ?: "<unnamed>"}\t" +
+                        "${persistence.asString(it.nodeId)}\t${persistence.asString(it.reference)}"
                 },
         )
 
