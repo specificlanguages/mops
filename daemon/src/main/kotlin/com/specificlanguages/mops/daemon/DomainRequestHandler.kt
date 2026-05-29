@@ -47,11 +47,17 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
                 null -> mpsListExporter.exportProject(project, request.depth)
                 listOf("/") -> mpsListExporter.exportRepository(project.repository, request.depth)
                 else -> {
-                    val root = resolveListTarget(project, target)
-                        ?: return@computeReadAction errorResponse(
+                    val root = when (val resolution = resolveListTarget(project, target)) {
+                        is ListTargetResolution.Found -> resolution.target
+                        is ListTargetResolution.Ambiguous -> return@computeReadAction errorResponse(
+                            code = "AMBIGUOUS_TARGET",
+                            message = resolution.message,
+                        )
+                        ListTargetResolution.Missing -> return@computeReadAction errorResponse(
                             code = "TARGET_NOT_FOUND",
                             message = "target not found: ${target.joinToString(" ")}",
                         )
+                    }
                     when (root) {
                         is ListTarget.Module -> mpsListExporter.exportModule(root.module, request.depth)
                         is ListTarget.Model -> mpsListExporter.exportModel(root.model, request.depth)
@@ -64,43 +70,62 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
         }
     }
 
-    private fun resolveListTarget(project: Project, target: List<String>): ListTarget? {
+    private fun resolveListTarget(project: Project, target: List<String>): ListTargetResolution {
         if (target.size == 1) {
-            resolveNodeReference(project, target.single())?.let { return listTargetForNode(it) }
-            resolveModelReference(project, target.single())?.let { return ListTarget.Model(it) }
+            resolveNodeReference(project, target.single())?.let {
+                return ListTargetResolution.Found(listTargetForNode(it))
+            }
+            resolveModelReference(project, target.single())?.let {
+                return ListTargetResolution.Found(ListTarget.Model(it))
+            }
         }
 
         if (target.size == 1) {
-            return findProjectModule(project, target.single())?.let(ListTarget::Module)
+            return findProjectModule(project, target.single())
+                ?.let { ListTargetResolution.Found(ListTarget.Module(it)) }
+                ?: ListTargetResolution.Missing
         }
         if (target.size < 2) {
-            return null
+            return ListTargetResolution.Missing
         }
 
-        val module = findProjectModule(project, target[0]) ?: return null
+        val module = findProjectModule(project, target[0]) ?: return ListTargetResolution.Missing
         val modelName = modelName(module, target[1])
-        val model = module.models
-            .singleOrNull { it.name.value == modelName }
-            ?: return null
+        val models = module.models
+            .filter { it.name.value == modelName }
+            .toList()
+        val model = when (models.size) {
+            0 -> return ListTargetResolution.Missing
+            1 -> models.single()
+            else -> return ambiguousModelTarget(modelName, models)
+        }
 
         if (target.size == 2) {
-            return ListTarget.Model(model)
+            return ListTargetResolution.Found(ListTarget.Model(model))
         }
 
         val rootNode = model.rootNodes
             .singleOrNull { nodeMatches(it, target[2]) }
-            ?: return null
+            ?: return ListTargetResolution.Missing
 
         if (target.size == 3) {
-            return ListTarget.RootNode(rootNode)
+            return ListTargetResolution.Found(ListTarget.RootNode(rootNode))
         }
 
         var node = rootNode
         for (segment in target.drop(3)) {
-            node = node.children.singleOrNull { nodeMatches(it, segment) } ?: return null
+            node = node.children.singleOrNull { nodeMatches(it, segment) } ?: return ListTargetResolution.Missing
         }
-        return ListTarget.Node(node)
+        return ListTargetResolution.Found(ListTarget.Node(node))
     }
+
+    private fun ambiguousModelTarget(modelName: String, models: List<SModel>): ListTargetResolution.Ambiguous =
+        ListTargetResolution.Ambiguous(
+            "ambiguous model target $modelName:\n" +
+                models.joinToString("\n") {
+                    "model\t${it.name.value}\t${persistence.asString(it.reference)}"
+                },
+        )
 
     private fun resolveNodeReference(project: Project, target: String): SNode? =
         runCatching {
@@ -151,6 +176,12 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
         data class Model(val model: SModel) : ListTarget
         data class RootNode(val node: SNode) : ListTarget
         data class Node(val node: SNode) : ListTarget
+    }
+
+    private sealed interface ListTargetResolution {
+        data class Found(val target: ListTarget) : ListTargetResolution
+        data class Ambiguous(val message: String) : ListTargetResolution
+        data object Missing : ListTargetResolution
     }
 
     private fun getNode(project: Project, request: ModelGetNodeRequest): DaemonResponse {
