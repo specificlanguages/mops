@@ -102,7 +102,7 @@ A non-owning relationship instance from a source **MPS Node** to a target **MPS 
 _Related_: Reference Link
 
 **Node Usage**:
-A **Reference** whose target is the **MPS Node** being searched for. A **Node Usage** identifies where the target node is used, not the target node's serialized identity.
+A **Reference** whose target is the **MPS Node** being searched for. A **Node Usage** has an owning source **MPS Node**, a **Role** identifying the **Reference Link**, and the searched target **MPS Node**.
 _Avoid_: node reference when describing usage
 _Related_: Node Reference, Reference
 
@@ -154,4 +154,4 @@ Domain expert: No. Listing a node follows **Containment Links** only, so it show
 
 Dev: Is a node reference the same thing as a usage?
 
-Domain expert: No. A **Node Reference** is a serialized identity for an **MPS Node**. A **Node Usage** is a **Reference** from a source node to the target node being searched for.
+Domain expert: No. A **Node Reference** is a serialized identity for an **MPS Node**. A **Node Usage** is a **Reference** owned by a source node and pointing to the target node being searched for.

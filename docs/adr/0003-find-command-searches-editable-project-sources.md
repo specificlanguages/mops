@@ -1,0 +1,3 @@
+# find command searches editable project sources
+
+`mops find` searches **Editable Project Sources** because its intended caller is an LLM looking for model code it may modify, not packaged project-visible libraries or stub models. The command has two explicit modes: `find instances` returns matching root or child nodes for any resolvable fully qualified concept name, including subconcepts by default and excluding them with `--exact`; `find usages` returns references to any resolvable target node. Both modes return only source locations from **Editable Project Sources**, use bounded single-response results with `--limit`, and keep response payloads domain-shaped as reusable `nodes` and `usages` responses rather than one generic search-result format.
