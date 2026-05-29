@@ -223,6 +223,32 @@ class MpsListCliIntegrationTest {
     }
 
     @Test
+    fun `lists root node addressed by compact node id through daemon`() {
+        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+
+        try {
+            val result = runList(
+                project,
+                daemonHome,
+                "--json",
+                "com.specificlanguages.json",
+                "com.specificlanguages.json.structure",
+                "1P8oQ4NaXDS",
+            )
+
+            assertEquals(0, result.exitCode, result.output)
+            val root = GsonCodec.fromJson(result.stdout, MpsListEntryJson::class.java)
+            assertEquals("root", root.type)
+            assertEquals("JsonFile", root.name)
+            assertEquals("2110045694544566904", root.id)
+            assertNotNull(root.children)
+        } finally {
+            stopDaemons(project, daemonHome)
+        }
+    }
+
+    @Test
     fun `lists containment children owned by child node path through daemon`() {
         val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
         val daemonHome = tempDir.resolve("daemon-home").createDirectories()

@@ -11,12 +11,14 @@ import com.specificlanguages.mops.protocol.MpsListRequest
 import com.specificlanguages.mops.protocol.MpsListResponse
 import jetbrains.mps.project.Project
 import jetbrains.mps.smodel.SNodeUtil
+import jetbrains.mps.smodel.persistence.def.v9.IdEncoder
 import org.jetbrains.mps.openapi.model.EditableSModel
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SaveOptions
 import org.jetbrains.mps.openapi.model.SaveResult
 import org.jetbrains.mps.openapi.model.SNode
 import org.jetbrains.mps.openapi.model.SNodeAccessUtil
+import org.jetbrains.mps.openapi.model.SNodeId
 import org.jetbrains.mps.openapi.module.SModule
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import java.nio.file.Path
@@ -112,7 +114,16 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
         SNodeAccessUtil.getPropertyValue(node, SNodeUtil.property_INamedConcept_name) as String?
 
     private fun nodeMatches(node: SNode, segment: String): Boolean =
-        nodeName(node) == segment || persistence.asString(node.nodeId) == segment
+        nodeName(node) == segment || node.nodeId == parseNodeIdOrNull(segment)
+
+    private fun parseNodeIdOrNull(nodeId: String): SNodeId? =
+        runCatching {
+            if (nodeId.all(Char::isDigit)) {
+                persistence.createNodeId(nodeId)
+            } else {
+                IdEncoder().parseNodeId(nodeId)
+            }
+        }.getOrNull()
 
     private sealed interface ListTarget {
         data class Module(val module: SModule) : ListTarget
