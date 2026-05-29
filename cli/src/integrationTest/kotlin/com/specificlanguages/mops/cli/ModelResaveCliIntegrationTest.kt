@@ -50,7 +50,7 @@ class ModelResaveCliIntegrationTest {
     @Test
     fun `reports daemon errors on failure`() {
         val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
-        val unknownModel = project.resolve("not-a-loaded-model.mps")
+        val unknownModel = project.resolve("not-a-project-model.mps")
         unknownModel.writeText("<model />")
 
         val daemonHome = tempDir.resolve("daemon-home").createDirectories()

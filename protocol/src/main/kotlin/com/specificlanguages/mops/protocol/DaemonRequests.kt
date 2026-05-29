@@ -17,7 +17,7 @@ data class StopRequest(override val token: String) : DaemonRequest {
 }
 
 /**
- * Request to resave one model target inside the already loaded project daemon.
+ * Request to resave one model target inside the project daemon.
  */
 data class ModelResaveRequest(
     override val token: String,
@@ -27,7 +27,7 @@ data class ModelResaveRequest(
 }
 
 /**
- * Request to export one loaded node from the project daemon.
+ * Request to export one node from the project daemon.
  */
 data class ModelGetNodeRequest(
     override val token: String,
@@ -37,7 +37,7 @@ data class ModelGetNodeRequest(
 }
 
 /**
- * Request to list one loaded MPS navigation target as a bounded semantic tree.
+ * Request to list one MPS navigation target as a bounded semantic tree.
  */
 data class MpsListRequest(
     override val token: String,

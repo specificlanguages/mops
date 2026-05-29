@@ -1,6 +1,6 @@
 # mops
 
-mops helps users and agents inspect and work with loaded JetBrains MPS projects from a CLI. This glossary keeps MPS project vocabulary precise when discussing navigation, lookup, and model operations.
+mops helps users and agents inspect and work with JetBrains MPS projects from a CLI. This glossary keeps MPS project vocabulary precise when discussing navigation, lookup, and model operations.
 
 ## Language
 
@@ -14,7 +14,7 @@ The canonical name of an **MPS Project**.
 _Related_: project directory name
 
 **MPS Module**:
-A top-level MPS unit visible to a loaded MPS session, such as a language, solution, or generator.
+A top-level MPS unit visible to an MPS project session, such as a language, solution, or generator.
 _Avoid_: module when the owning scope is unclear
 
 **Module Name**:
@@ -22,7 +22,7 @@ The canonical name of an **MPS Module**.
 _Related_: Module Reference
 
 **Project Module**:
-An **MPS Module** that belongs to an **MPS Project**, including its generators when they are part of that project. Dependency and platform modules loaded alongside the project are not **Project Modules**.
+An **MPS Module** that belongs to an **MPS Project**, including its generators when they are part of that project. Dependency and platform modules available alongside the project are not **Project Modules**.
 _Related_: dependency module, platform module
 
 **MPS Repository**:

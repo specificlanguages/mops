@@ -86,7 +86,7 @@ class MpsListCliIntegrationTest {
     }
 
     @Test
-    fun `lists loaded repository modules through daemon`() {
+    fun `lists repository modules through daemon`() {
         val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
         val daemonHome = tempDir.resolve("daemon-home").createDirectories()
 

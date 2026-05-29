@@ -5,7 +5,7 @@ import picocli.CommandLine.Command
 import picocli.CommandLine.ParentCommand
 
 /**
- * Picocli command group for model-level operations that require a loaded MPS project.
+ * Picocli command group for model-level operations that require an MPS project.
  */
 @Command(
     name = "model",

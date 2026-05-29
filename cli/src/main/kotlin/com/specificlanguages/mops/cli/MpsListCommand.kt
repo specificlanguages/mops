@@ -11,7 +11,7 @@ import picocli.CommandLine.ParentCommand
 @Command(
     name = "list",
     aliases = ["ls"],
-    description = ["List a loaded MPS navigation target as a bounded tree."],
+    description = ["List an MPS navigation target as a bounded tree."],
 )
 class MpsListCommand(private val daemonClient: DaemonClient? = null) : Runnable {
     @ParentCommand
