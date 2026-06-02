@@ -66,8 +66,7 @@ class ModelNodeResolver(
         val targetPath = targetPath(modelTarget)
         return modelCandidates(project)
             .filter { model ->
-                model.name.longName == modelTarget ||
-                    model.name.value == modelTarget ||
+                model.name.value == modelTarget ||
                     persistence.asString(model.reference) == modelTarget ||
                     targetPath != null && model.filePath() == targetPath
             }

@@ -107,6 +107,52 @@ class ModelGetNodeCliIntegrationTest {
     }
 
     @Test
+    fun `matches model target by model name value instead of long name`() {
+        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val model = project.resolve(
+            "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps",
+        )
+        model.resolveSibling("com.specificlanguages.json.structure@tests.mps").writeText(
+            model.readText().replace(
+                "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
+                "r:11111111-2222-4333-8444-555555555555(com.specificlanguages.json.structure@tests)",
+            ),
+        )
+
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+
+        try {
+            val unstereotypedResult = runGetNode(
+                project,
+                daemonHome,
+                "com.specificlanguages.json.structure",
+                "2110045694544566904",
+            )
+
+            assertEquals(0, unstereotypedResult.exitCode, unstereotypedResult.output)
+            assertEquals(
+                "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
+                nodeJson(unstereotypedResult).model,
+            )
+
+            val stereotypedResult = runGetNode(
+                project,
+                daemonHome,
+                "com.specificlanguages.json.structure@tests",
+                "2110045694544566904",
+            )
+
+            assertEquals(0, stereotypedResult.exitCode, stereotypedResult.output)
+            assertEquals(
+                "r:11111111-2222-4333-8444-555555555555(com.specificlanguages.json.structure@tests)",
+                nodeJson(stereotypedResult).model,
+            )
+        } finally {
+            stopDaemons(project, daemonHome)
+        }
+    }
+
+    @Test
     fun `accepts serialized node reference through daemon`() {
         val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
         val nodeReference =
