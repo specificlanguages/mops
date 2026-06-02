@@ -119,7 +119,14 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
 
         var node = rootNode
         for (segment in target.drop(3)) {
-            node = node.children.singleOrNull { nodeMatches(it, segment) } ?: return ListTargetResolution.Missing
+            val childNodes = node.children
+                .filter { nodeMatches(it, segment) }
+                .toList()
+            node = when (childNodes.size) {
+                0 -> return ListTargetResolution.Missing
+                1 -> childNodes.single()
+                else -> return ambiguousChildNodeTarget(segment, childNodes)
+            }
         }
         return ListTargetResolution.Found(ListTarget.Node(node))
     }
@@ -137,6 +144,15 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
             "ambiguous root node target $target:\n" +
                 nodes.joinToString("\n") {
                     "root\t${nodeName(it) ?: "<unnamed>"}\t" +
+                        "${persistence.asString(it.nodeId)}\t${persistence.asString(it.reference)}"
+                },
+        )
+
+    private fun ambiguousChildNodeTarget(target: String, nodes: List<SNode>): ListTargetResolution.Ambiguous =
+        ListTargetResolution.Ambiguous(
+            "ambiguous child node target $target:\n" +
+                nodes.joinToString("\n") {
+                    "node\t${it.containmentLink?.role.orEmpty()}\t${nodeName(it) ?: "<unnamed>"}\t" +
                         "${persistence.asString(it.nodeId)}\t${persistence.asString(it.reference)}"
                 },
         )

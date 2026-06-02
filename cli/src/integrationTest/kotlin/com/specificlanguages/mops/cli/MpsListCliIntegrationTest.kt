@@ -457,6 +457,47 @@ class MpsListCliIntegrationTest {
         }
     }
 
+    @Test
+    fun `fails instead of guessing when child node target is ambiguous`() {
+        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val model = project.resolve(
+            "solutions/com.specificlanguages.json.build/models/com.specificlanguages.json.build.mps",
+        )
+        model.writeText(
+            model.readText().replace(
+                """<property role="TrG5h" value="mps_home" />""",
+                """<property role="TrG5h" value="version" />""",
+            ),
+        )
+
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+
+        try {
+            val result = runList(
+                project,
+                daemonHome,
+                "--json",
+                "com.specificlanguages.json.build",
+                "com.specificlanguages.json.build",
+                "com.specificlanguages.json",
+                "version",
+            )
+
+            assertNotEquals(0, result.exitCode, result.output)
+            assertContains(result.stderr, "ambiguous child node target version")
+            assertContains(
+                result.stderr,
+                "r:1044fb59-f691-4b27-8b09-aa9b966feb0e(com.specificlanguages.json.build)/48805613928016575",
+            )
+            assertContains(
+                result.stderr,
+                "r:1044fb59-f691-4b27-8b09-aa9b966feb0e(com.specificlanguages.json.build)/48805613928016630",
+            )
+        } finally {
+            stopDaemons(project, daemonHome)
+        }
+    }
+
     private fun runList(project: Path, daemonHome: Path, vararg args: String): CliResult =
         runListCommand(project, daemonHome, "list", *args)
 
