@@ -418,6 +418,51 @@ class MpsListCliIntegrationTest {
     }
 
     @Test
+    fun `fails instead of guessing when module target is ambiguous`() {
+        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val duplicateReference = "11111111-2222-4333-8444-555555555555(com.specificlanguages.json.build)"
+        val originalDescriptor = project.resolve(
+            "solutions/com.specificlanguages.json.build/com.specificlanguages.json.build.msd",
+        )
+        val duplicateDirectory = project.resolve("solutions/duplicate-json-build").createDirectories()
+        duplicateDirectory.resolve("duplicate-json-build.msd").writeText(
+            originalDescriptor.readText().replace(
+                "84f0ad52-c7ca-45dd-99c5-9605c96bf808",
+                "11111111-2222-4333-8444-555555555555",
+            ),
+        )
+        val modulesXml = project.resolve(".mps/modules.xml")
+        modulesXml.writeText(
+            modulesXml.readText().replace(
+                "    </projectModules>",
+                "      <modulePath path=\"\$PROJECT_DIR\$/solutions/duplicate-json-build/duplicate-json-build.msd\" folder=\"\" />\n" +
+                    "    </projectModules>",
+            ),
+        )
+
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+
+        try {
+            val result = runList(
+                project,
+                daemonHome,
+                "--json",
+                "com.specificlanguages.json.build",
+            )
+
+            assertNotEquals(0, result.exitCode, result.output)
+            assertContains(result.stderr, "ambiguous module target com.specificlanguages.json.build")
+            assertContains(
+                result.stderr,
+                "84f0ad52-c7ca-45dd-99c5-9605c96bf808(com.specificlanguages.json.build)",
+            )
+            assertContains(result.stderr, duplicateReference)
+        } finally {
+            stopDaemons(project, daemonHome)
+        }
+    }
+
+    @Test
     fun `fails instead of guessing when root node target is ambiguous`() {
         val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
         val model = project.resolve(

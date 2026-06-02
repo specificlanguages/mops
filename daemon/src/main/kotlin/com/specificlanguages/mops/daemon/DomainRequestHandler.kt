@@ -81,15 +81,17 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
         }
 
         if (target.size == 1) {
-            return findProjectModule(project, target.single())
-                ?.let { ListTargetResolution.Found(ListTarget.Module(it)) }
-                ?: ListTargetResolution.Missing
+            return resolveProjectModuleTarget(project, target.single())
         }
         if (target.size < 2) {
             return ListTargetResolution.Missing
         }
 
-        val module = findProjectModule(project, target[0]) ?: return ListTargetResolution.Missing
+        val module = when (val resolution = resolveProjectModuleTarget(project, target[0])) {
+            is ListTargetResolution.Found -> (resolution.target as ListTarget.Module).module
+            is ListTargetResolution.Ambiguous -> return resolution
+            ListTargetResolution.Missing -> return ListTargetResolution.Missing
+        }
         val modelName = modelName(module, target[1])
         val models = module.models
             .filter { it.name.value == modelName }
@@ -131,6 +133,14 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
         return ListTargetResolution.Found(ListTarget.Node(node))
     }
 
+    private fun ambiguousModuleTarget(target: String, modules: List<SModule>): ListTargetResolution.Ambiguous =
+        ListTargetResolution.Ambiguous(
+            "ambiguous module target $target:\n" +
+                modules.joinToString("\n") {
+                    "module\t${it.moduleName}\t${persistence.asString(it.moduleReference)}"
+                },
+        )
+
     private fun ambiguousModelTarget(modelName: String, models: List<SModel>): ListTargetResolution.Ambiguous =
         ListTargetResolution.Ambiguous(
             "ambiguous model target $modelName:\n" +
@@ -167,8 +177,17 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
             persistence.createModelReference(target).resolve(project.repository)
         }.getOrNull()
 
-    private fun findProjectModule(project: Project, target: String): SModule? =
-        project.projectModulesWithGenerators.singleOrNull {
+    private fun resolveProjectModuleTarget(project: Project, target: String): ListTargetResolution {
+        val modules = matchingProjectModules(project, target)
+        return when (modules.size) {
+            0 -> ListTargetResolution.Missing
+            1 -> ListTargetResolution.Found(ListTarget.Module(modules.single()))
+            else -> ambiguousModuleTarget(target, modules)
+        }
+    }
+
+    private fun matchingProjectModules(project: Project, target: String): List<SModule> =
+        project.projectModulesWithGenerators.filter {
             it.moduleName == target || persistence.asString(it.moduleReference) == target
         }
 
