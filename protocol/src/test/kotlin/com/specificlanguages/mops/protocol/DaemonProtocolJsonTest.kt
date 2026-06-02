@@ -180,6 +180,44 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `find-usages request and response JSON carry usage results`() {
+        val target = NodeTarget.NodeReference(
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+        )
+        val request = FindUsagesRequest(token = "secret", target = target, limit = 100)
+        val serializedRequest = GsonCodec.toJson(request, DaemonRequest::class.java)
+
+        assertContains(serializedRequest, """"type":"find-usages"""")
+        assertContains(serializedRequest, """"limit":100""")
+        assertEquals(
+            request,
+            GsonCodec.fromJson(serializedRequest, DaemonRequest::class.java),
+        )
+
+        assertEquals(
+            FindUsagesResponse(
+                limit = 100,
+                truncated = false,
+                usages = listOf(
+                    MpsNodeUsageJson(
+                        role = "concept",
+                        owner = MpsNodeSummaryJson(
+                            type = "node",
+                            name = "JsonObject",
+                            concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                            reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905",
+                        ),
+                    ),
+                ),
+            ),
+            GsonCodec.fromJson(
+                """{"type":"usages","limit":100,"truncated":false,"usages":[{"role":"concept","owner":{"type":"node","name":"JsonObject","concept":"jetbrains.mps.lang.structure.structure.ConceptDeclaration","reference":"r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905"}}]}""",
+                DaemonResponse::class.java,
+            ),
+        )
+    }
+
+    @Test
     fun `message adapters require a type discriminator`() {
         val exception = assertFailsWith<JsonParseException> {
             GsonCodec.fromJson("""{"token":"secret"}""", DaemonRequest::class.java)

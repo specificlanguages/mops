@@ -37,6 +37,17 @@ data class ModelGetNodeRequest(
 }
 
 /**
+ * Request to find references to one resolved MPS node in editable project sources.
+ */
+data class FindUsagesRequest(
+    override val token: String,
+    val target: NodeTarget,
+    val limit: Int,
+) : DaemonRequest {
+    override val type: String = "find-usages"
+}
+
+/**
  * Request to list one MPS navigation target as a bounded semantic tree.
  */
 data class MpsListRequest(

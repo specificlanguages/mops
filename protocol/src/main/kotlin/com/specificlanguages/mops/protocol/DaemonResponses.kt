@@ -53,6 +53,17 @@ data class ModelGetNodeResponse(val node: MpsNodeJson) : DaemonResponse {
 }
 
 /**
+ * Successful response carrying bounded Node Usage search results.
+ */
+data class FindUsagesResponse(
+    val limit: Int,
+    val truncated: Boolean,
+    val usages: List<MpsNodeUsageJson>,
+) : DaemonResponse {
+    override val type: String = "usages"
+}
+
+/**
  * Successful response carrying a semantic list tree rooted at the resolved MPS navigation target.
  */
 data class MpsListResponse(val root: MpsListEntryJson) : DaemonResponse {

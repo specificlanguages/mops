@@ -4,6 +4,8 @@ import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.DaemonRequest
 import com.specificlanguages.mops.protocol.DaemonRecord
 import com.specificlanguages.mops.protocol.DaemonResponse
+import com.specificlanguages.mops.protocol.FindUsagesRequest
+import com.specificlanguages.mops.protocol.FindUsagesResponse
 import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.GsonCodec
 import com.specificlanguages.mops.protocol.ModelGetNodeRequest
@@ -57,6 +59,12 @@ class DefaultDaemonClient(
         exchange(
             ModelGetNodeRequest(token = token, target = target),
             ModelGetNodeResponse::class.java
+        )
+
+    override fun findUsages(target: NodeTarget, limit: Int): FindUsagesResponse =
+        exchange(
+            FindUsagesRequest(token = token, target = target, limit = limit),
+            FindUsagesResponse::class.java
         )
 
     override fun list(target: List<String>?, depth: Int): MpsListResponse =
