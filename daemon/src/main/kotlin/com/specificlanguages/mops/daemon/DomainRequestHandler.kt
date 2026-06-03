@@ -75,9 +75,13 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
             resolveNodeReference(project, target.single())?.let {
                 return ListTargetResolution.Found(listTargetForNode(it))
             }
-            resolveModelReference(project, target.single())?.let {
-                return ListTargetResolution.Found(ListTarget.Model(it))
-            }
+        }
+        if (target.isEmpty()) {
+            return ListTargetResolution.Missing
+        }
+
+        resolveModelReference(project, target[0])?.let {
+            return resolveModelPathTarget(it, target.drop(1))
         }
 
         if (target.size == 1) {
@@ -102,25 +106,28 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
             else -> return ambiguousModelTarget(modelName, models)
         }
 
-        if (target.size == 2) {
+        return resolveModelPathTarget(model, target.drop(2))
+    }
+
+    private fun resolveModelPathTarget(model: SModel, target: List<String>): ListTargetResolution {
+        if (target.isEmpty()) {
             return ListTargetResolution.Found(ListTarget.Model(model))
         }
-
         val rootNodes = model.rootNodes
-            .filter { nodeMatches(it, target[2]) }
+            .filter { nodeMatches(it, target[0]) }
             .toList()
         val rootNode = when (rootNodes.size) {
             0 -> return ListTargetResolution.Missing
             1 -> rootNodes.single()
-            else -> return ambiguousRootNodeTarget(target[2], rootNodes)
+            else -> return ambiguousRootNodeTarget(target[0], rootNodes)
         }
 
-        if (target.size == 3) {
+        if (target.size == 1) {
             return ListTargetResolution.Found(ListTarget.RootNode(rootNode))
         }
 
         var node = rootNode
-        for (segment in target.drop(3)) {
+        for (segment in target.drop(1)) {
             val childNodes = node.children
                 .filter { nodeMatches(it, segment) }
                 .toList()
