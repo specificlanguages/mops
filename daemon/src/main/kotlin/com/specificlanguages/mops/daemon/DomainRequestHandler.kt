@@ -62,13 +62,14 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
     }
 
     private fun resolveListTarget(project: Project, target: List<String>): ListTargetResolution {
+        if (target.isEmpty()) {
+            return ListTargetResolution.Missing
+        }
+
         if (target.size == 1) {
             resolveNodeReference(project, target.single())?.let {
                 return ListTargetResolution.Found(listTargetForNode(it))
             }
-        }
-        if (target.isEmpty()) {
-            return ListTargetResolution.Missing
         }
 
         resolveModelReference(project, target[0])?.let {
@@ -77,9 +78,6 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
 
         if (target.size == 1) {
             return resolveProjectModuleTarget(project, target.single())
-        }
-        if (target.size < 2) {
-            return ListTargetResolution.Missing
         }
 
         val module = when (val resolution = resolveProjectModuleTarget(project, target[0])) {
@@ -104,8 +102,9 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
         if (target.isEmpty()) {
             return ListTargetResolution.Found(ListTarget.Model(model))
         }
+        val rootSegmentId = parseNodeIdOrNull(target[0])
         val rootNodes = model.rootNodes
-            .filter { nodeMatches(it, target[0]) }
+            .filter { nodeMatches(it, target[0], rootSegmentId) }
             .toList()
         val rootNode = when (rootNodes.size) {
             0 -> return ListTargetResolution.Missing
@@ -119,8 +118,9 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
 
         var node = rootNode
         for (segment in target.drop(1)) {
+            val segmentId = parseNodeIdOrNull(segment)
             val childNodes = node.children
-                .filter { nodeMatches(it, segment) }
+                .filter { nodeMatches(it, segment, segmentId) }
                 .toList()
             node = when (childNodes.size) {
                 0 -> return ListTargetResolution.Missing
@@ -132,37 +132,35 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
     }
 
     private fun ambiguousModuleTarget(target: String, modules: List<SModule>): ListTargetResolution.Ambiguous =
-        ListTargetResolution.Ambiguous(
-            "ambiguous module target $target:\n" +
-                modules.joinToString("\n") {
-                    "module\t${it.moduleName}\t${persistence.asString(it.moduleReference)}"
-                },
-        )
+        ambiguousTarget("module", target, modules) {
+            "module\t${it.moduleName}\t${persistence.asString(it.moduleReference)}"
+        }
 
     private fun ambiguousModelTarget(modelName: String, models: List<SModel>): ListTargetResolution.Ambiguous =
-        ListTargetResolution.Ambiguous(
-            "ambiguous model target $modelName:\n" +
-                models.joinToString("\n") {
-                    "model\t${it.name.value}\t${persistence.asString(it.reference)}"
-                },
-        )
+        ambiguousTarget("model", modelName, models) {
+            "model\t${it.name.value}\t${persistence.asString(it.reference)}"
+        }
 
     private fun ambiguousRootNodeTarget(target: String, nodes: List<SNode>): ListTargetResolution.Ambiguous =
-        ListTargetResolution.Ambiguous(
-            "ambiguous root node target $target:\n" +
-                nodes.joinToString("\n") {
-                    "root\t${nodeName(it) ?: "<unnamed>"}\t" +
-                        "${persistence.asString(it.nodeId)}\t${persistence.asString(it.reference)}"
-                },
-        )
+        ambiguousTarget("root node", target, nodes) {
+            "root\t${nodeName(it) ?: "<unnamed>"}\t" +
+                "${persistence.asString(it.nodeId)}\t${persistence.asString(it.reference)}"
+        }
 
     private fun ambiguousChildNodeTarget(target: String, nodes: List<SNode>): ListTargetResolution.Ambiguous =
+        ambiguousTarget("child node", target, nodes) {
+            "node\t${it.containmentLink?.role.orEmpty()}\t${nodeName(it) ?: "<unnamed>"}\t" +
+                "${persistence.asString(it.nodeId)}\t${persistence.asString(it.reference)}"
+        }
+
+    private fun <T> ambiguousTarget(
+        kind: String,
+        target: String,
+        items: List<T>,
+        row: (T) -> String,
+    ): ListTargetResolution.Ambiguous =
         ListTargetResolution.Ambiguous(
-            "ambiguous child node target $target:\n" +
-                nodes.joinToString("\n") {
-                    "node\t${it.containmentLink?.role.orEmpty()}\t${nodeName(it) ?: "<unnamed>"}\t" +
-                        "${persistence.asString(it.nodeId)}\t${persistence.asString(it.reference)}"
-                },
+            "ambiguous $kind target $target:\n" + items.joinToString("\n", transform = row),
         )
 
     private fun resolveNodeReference(project: Project, target: String): SNode? =
@@ -199,8 +197,8 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
     private fun nodeName(node: SNode): String? =
         SNodeAccessUtil.getPropertyValue(node, SNodeUtil.property_INamedConcept_name) as String?
 
-    private fun nodeMatches(node: SNode, segment: String): Boolean =
-        nodeName(node) == segment || node.nodeId == parseNodeIdOrNull(segment)
+    private fun nodeMatches(node: SNode, name: String, nodeId: SNodeId?): Boolean =
+        nodeName(node) == name || node.nodeId == nodeId
 
     private fun parseNodeIdOrNull(nodeId: String): SNodeId? =
         runCatching {
@@ -231,56 +229,53 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
         data object Missing : ListTargetResolution
     }
 
-    private fun getNode(project: Project, request: ModelGetNodeRequest): DaemonResponse {
-        return try {
+    private fun getNode(project: Project, request: ModelGetNodeRequest): DaemonResponse =
+        withResolvedNode(project, request.target, failureCode = "GET_NODE_FAILED") { node ->
+            ModelGetNodeResponse(node = JsonNodeExporter().export(node))
+        }
+
+    private fun findUsages(project: Project, request: FindUsagesRequest): DaemonResponse =
+        withResolvedNode(project, request.target, failureCode = "FIND_USAGES_FAILED") { target ->
+            val scope = EditableFilteringScope(project.scope)
+
+            val collected = CollectConsumer<SReference>()
+            FindUsagesFacade.getInstance().findUsages(scope, setOf(target), collected, EmptyProgressMonitor())
+
+            val references = collected.result
+            val selected = if (request.limit > 0) references.take(request.limit) else references
+
+            FindUsagesResponse(
+                limit = request.limit,
+                truncated = selected.size < references.size,
+                usages = selected.map { MpsNodeUsageJson(role = it.link.name, owner = nodeSummary(it.sourceNode)) },
+            )
+        }
+
+    /**
+     * Resolves [target] inside a read action and passes the node to [body], translating a resolve
+     * miss into NODE_NOT_FOUND and any thrown exception into an error response with [failureCode].
+     */
+    private fun withResolvedNode(
+        project: Project,
+        target: NodeTarget,
+        failureCode: String,
+        body: (SNode) -> DaemonResponse,
+    ): DaemonResponse =
+        try {
             project.modelAccess.computeReadAction {
-                val node = modelNodeResolver.findNode(project, request.target)
+                val node = modelNodeResolver.findNode(project, target)
                     ?: return@computeReadAction errorResponse(
                         code = "NODE_NOT_FOUND",
                         message = "node not found",
                     )
-                ModelGetNodeResponse(node = JsonNodeExporter().export(node))
+                body(node)
             }
         } catch (exception: Exception) {
             errorResponse(
-                code = "GET_NODE_FAILED",
+                code = failureCode,
                 message = exception.message ?: exception.javaClass.name,
             )
         }
-    }
-
-    private fun findUsages(project: Project, request: FindUsagesRequest): DaemonResponse {
-        return try {
-            project.modelAccess.computeReadAction {
-                val target = modelNodeResolver.findNode(project, request.target)
-                    ?: return@computeReadAction errorResponse(
-                        code = "NODE_NOT_FOUND",
-                        message = "node not found",
-                    )
-
-                val scope = EditableFilteringScope(project.scope)
-
-                val collected = CollectConsumer<SReference>()
-                FindUsagesFacade.getInstance().findUsages(scope, setOf(target), collected, EmptyProgressMonitor())
-
-                val references = collected.result
-
-                val truncated = request.limit > 0 && references.size > request.limit
-                val selected = if (request.limit > 0) references.take(request.limit) else references
-
-                FindUsagesResponse(
-                    limit = request.limit,
-                    truncated = truncated,
-                    usages = selected.map { MpsNodeUsageJson(role = it.link.name, owner = nodeSummary(it.sourceNode)) },
-                )
-            }
-        } catch (exception: Exception) {
-            errorResponse(
-                code = "FIND_USAGES_FAILED",
-                message = exception.message ?: exception.javaClass.name,
-            )
-        }
-    }
 
     private fun nodeSummary(node: SNode): MpsNodeSummaryJson =
         MpsNodeSummaryJson(
@@ -335,13 +330,10 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
         return try {
             future.get()
         } catch (exception: Exception) {
-            val cause = if (exception is ExecutionException) exception.cause else exception
+            val cause = if (exception is ExecutionException) exception.cause ?: exception else exception
             errorResponse(
                 code = "SAVE_FAILED",
-                message = cause?.message
-                    ?: cause?.javaClass?.name
-                    ?: exception.message
-                    ?: exception.javaClass.name,
+                message = cause.message ?: cause.javaClass.name,
             )
         }
     }
