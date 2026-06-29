@@ -1,24 +1,14 @@
 package com.specificlanguages.mops.daemon
 
-import com.specificlanguages.mops.protocol.DaemonErrorResponse
-import com.specificlanguages.mops.protocol.DaemonRequest
-import com.specificlanguages.mops.protocol.DaemonResponse
-import com.specificlanguages.mops.protocol.ModelGetNodeRequest
-import com.specificlanguages.mops.protocol.ModelGetNodeResponse
-import com.specificlanguages.mops.protocol.ModelResaveRequest
-import com.specificlanguages.mops.protocol.ModelResaveResponse
-import com.specificlanguages.mops.protocol.MpsListRequest
-import com.specificlanguages.mops.protocol.MpsListResponse
+import com.specificlanguages.mops.protocol.*
+import jetbrains.mps.progress.EmptyProgressMonitor
+import jetbrains.mps.project.EditableFilteringScope
 import jetbrains.mps.project.Project
 import jetbrains.mps.smodel.SNodeUtil
 import jetbrains.mps.smodel.persistence.def.v9.IdEncoder
-import org.jetbrains.mps.openapi.model.EditableSModel
-import org.jetbrains.mps.openapi.model.SModel
-import org.jetbrains.mps.openapi.model.SaveOptions
-import org.jetbrains.mps.openapi.model.SaveResult
-import org.jetbrains.mps.openapi.model.SNode
-import org.jetbrains.mps.openapi.model.SNodeAccessUtil
-import org.jetbrains.mps.openapi.model.SNodeId
+import jetbrains.mps.util.CollectConsumer
+import org.jetbrains.mps.openapi.model.*
+import org.jetbrains.mps.openapi.module.FindUsagesFacade
 import org.jetbrains.mps.openapi.module.SModule
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import java.nio.file.Path
@@ -34,6 +24,7 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
     fun handleDomainRequest(project: Project, request: DaemonRequest): DaemonResponse {
         return when (request) {
             is ModelGetNodeRequest -> getNode(project, request)
+            is FindUsagesRequest -> findUsages(project, request)
             is ModelResaveRequest -> resaveModel(project, request)
             is MpsListRequest -> list(project, request)
             else -> errorResponse("UNSUPPORTED_REQUEST", "unsupported request type: ${request.type}")
@@ -257,6 +248,47 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
             )
         }
     }
+
+    private fun findUsages(project: Project, request: FindUsagesRequest): DaemonResponse {
+        return try {
+            project.modelAccess.computeReadAction {
+                val target = modelNodeResolver.findNode(project, request.target)
+                    ?: return@computeReadAction errorResponse(
+                        code = "NODE_NOT_FOUND",
+                        message = "node not found",
+                    )
+
+                val scope = EditableFilteringScope(project.scope)
+
+                val collected = CollectConsumer<SReference>()
+                FindUsagesFacade.getInstance().findUsages(scope, setOf(target), collected, EmptyProgressMonitor())
+
+                val references = collected.result
+
+                val truncated = request.limit > 0 && references.size > request.limit
+                val selected = if (request.limit > 0) references.take(request.limit) else references
+
+                FindUsagesResponse(
+                    limit = request.limit,
+                    truncated = truncated,
+                    usages = selected.map { MpsNodeUsageJson(role = it.link.name, owner = nodeSummary(it.sourceNode)) },
+                )
+            }
+        } catch (exception: Exception) {
+            errorResponse(
+                code = "FIND_USAGES_FAILED",
+                message = exception.message ?: exception.javaClass.name,
+            )
+        }
+    }
+
+    private fun nodeSummary(node: SNode): MpsNodeSummaryJson =
+        MpsNodeSummaryJson(
+            type = "node",
+            name = nodeName(node),
+            concept = node.concept.qualifiedName,
+            reference = persistence.asString(node.reference),
+        )
 
     private fun resaveModel(project: Project, request: ModelResaveRequest): DaemonResponse {
         val modelTarget = request.modelTarget
