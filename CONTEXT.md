@@ -118,6 +118,32 @@ _Related_: Node ID, path
 A globally usable reference to an **MPS Module**. mops does not assume a separate short module identifier.
 _Related_: module id
 
+### Model Editing
+
+**Edit Operation**:
+A single primitive modification to an **MPS Node** in **Editable Project Sources**: setting a property, setting a **Reference**, or adding, deleting, moving, or copying a node.
+_Avoid_: mutation, change
+_Related_: Editable Project Sources, Node Subtree, Constraint
+
+**Node Subtree**:
+An **MPS Node** together with all nodes reachable from it through **Containment Links**. Copying a node "with descendants" copies its **Node Subtree**.
+_Avoid_: node tree, branch
+_Related_: Containment Link, Child
+
+**Constraint**:
+A language-defined rule that restricts whether an edit is well-formed, such as which **MPS Concepts** may fill an **MPS Link**, a link's cardinality, or whether a node may be a **Child** of another node.
+_Avoid_: rule, validation
+_Related_: Constraint Violation, Model Check
+
+**Constraint Violation**:
+A **Constraint** that a proposed **Edit Operation** would break.
+_Related_: Constraint
+
+**Model Check**:
+The full validation of an **MPS Model**, including typesystem and checking rules. It is distinct from the cheaper **Constraint** evaluation and is performed as its own operation because it may be costly.
+_Avoid_: validation, type check
+_Related_: Constraint
+
 ## Example Dialogue
 
 Dev: Should project contents include MPS.Core?
@@ -155,3 +181,15 @@ Domain expert: No. Listing a node follows **Containment Links** only, so it show
 Dev: Is a node reference the same thing as a usage?
 
 Domain expert: No. A **Node Reference** is a serialized identity for an **MPS Node**. A **Node Usage** is a **Reference** owned by a source node and pointing to the target node being searched for.
+
+Dev: When we edit a model, do we run a full model check?
+
+Domain expert: No. An **Edit Operation** evaluates **Constraints**, which is cheap. A full **Model Check**, including the typesystem, is a separate operation because it may be costly.
+
+Dev: If an edit is forced through despite breaking a rule, do we stay quiet about it?
+
+Domain expert: No. mops reports **Constraint Violations** whether or not they block the **Edit Operation**.
+
+Dev: Does copying a node bring its references along?
+
+Domain expert: Copying a node copies its **Node Subtree**, which follows **Containment Links** only. Each **Reference** in the subtree still records its target, but the referenced nodes are not themselves copied.
