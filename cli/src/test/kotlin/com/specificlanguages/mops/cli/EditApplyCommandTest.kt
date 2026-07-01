@@ -1,0 +1,117 @@
+package com.specificlanguages.mops.cli
+
+import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
+import com.github.stefanbirkner.systemlambda.SystemLambda.withTextFromSystemIn
+import com.specificlanguages.mops.daemoncomms.DaemonClient
+import com.specificlanguages.mops.protocol.EditApplyResponse
+import com.specificlanguages.mops.protocol.EditBatch
+import com.specificlanguages.mops.protocol.EditOperation
+import com.specificlanguages.mops.protocol.EditTarget
+import com.specificlanguages.mops.protocol.GsonCodec
+import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.api.parallel.ResourceLock
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
+import org.mockito.kotlin.whenever
+import picocli.CommandLine
+import java.nio.file.Path
+import kotlin.io.path.writeText
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+@ResourceLock("system-streams")
+class EditApplyCommandTest {
+    @TempDir
+    lateinit var tempDir: Path
+
+    @Test
+    fun `edit apply reads batch from stdin and prints user-facing response payload`() {
+        val client = mock<DaemonClient>()
+        val batch = sampleBatch()
+        val response = EditApplyResponse(created = emptyMap(), violations = emptyList())
+        whenever(client.editApply(batch)).thenReturn(response)
+        var exitCode = Int.MIN_VALUE
+        var stdout = ""
+
+        withTextFromSystemIn(GsonCodec.toJson(batch)).execute {
+            stdout = tapSystemOut {
+                exitCode = CommandLine(EditApplyCommand(client))
+                    .setExecutionExceptionHandler(PrintErrorAndExit)
+                    .execute()
+            }
+        }
+
+        assertEquals(0, exitCode)
+        verify(client).editApply(batch)
+        assertEquals(response, GsonCodec.fromJson(stdout, EditApplyResponse::class.java))
+    }
+
+    @Test
+    fun `edit apply reads batch from file`() {
+        val client = mock<DaemonClient>()
+        val batch = sampleBatch()
+        val response = EditApplyResponse(created = emptyMap(), violations = emptyList())
+        whenever(client.editApply(batch)).thenReturn(response)
+        val batchFile = tempDir.resolve("batch.json").apply {
+            writeText(GsonCodec.toJson(batch))
+        }
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(EditApplyCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("--file", batchFile.toString())
+        }
+
+        assertEquals(0, exitCode)
+        verify(client).editApply(batch)
+    }
+
+    @Test
+    fun `edit apply rejects empty batch before daemon dispatch`() {
+        val client = mock<DaemonClient>()
+        var exitCode = Int.MIN_VALUE
+
+        withTextFromSystemIn("""{"operations":[]}""").execute {
+            tapSystemOut {
+                exitCode = CommandLine(EditApplyCommand(client))
+                    .setExecutionExceptionHandler(PrintErrorAndExit)
+                    .execute()
+            }
+        }
+
+        assertEquals(1, exitCode)
+        verifyNoInteractions(client)
+    }
+
+    @Test
+    fun `edit apply rejects malformed batch before daemon dispatch`() {
+        val client = mock<DaemonClient>()
+        var exitCode = Int.MIN_VALUE
+
+        withTextFromSystemIn("""{"operations":[""").execute {
+            tapSystemOut {
+                exitCode = CommandLine(EditApplyCommand(client))
+                    .setExecutionExceptionHandler(PrintErrorAndExit)
+                    .execute()
+            }
+        }
+
+        assertEquals(1, exitCode)
+        verifyNoInteractions(client)
+    }
+
+    private fun sampleBatch(): EditBatch =
+        EditBatch(
+            operations = listOf(
+                EditOperation.SetProperty(
+                    target = EditTarget.NodeReference(
+                        "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+                    ),
+                    name = "name",
+                    value = "RenamedConcept",
+                ),
+            ),
+        )
+}

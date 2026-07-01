@@ -4,6 +4,9 @@ import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.DaemonRequest
 import com.specificlanguages.mops.protocol.DaemonRecord
 import com.specificlanguages.mops.protocol.DaemonResponse
+import com.specificlanguages.mops.protocol.EditApplyRequest
+import com.specificlanguages.mops.protocol.EditApplyResponse
+import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.FindInstancesRequest
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindUsagesRequest
@@ -73,6 +76,12 @@ class DefaultDaemonClient(
         exchange(
             FindInstancesRequest(token = token, concept = concept, exact = exact, limit = limit),
             FindInstancesResponse::class.java
+        )
+
+    override fun editApply(batch: EditBatch): EditApplyResponse =
+        exchange(
+            EditApplyRequest(token = token, batch = batch),
+            EditApplyResponse::class.java
         )
 
     override fun list(target: List<String>?, depth: Int): MpsListResponse =

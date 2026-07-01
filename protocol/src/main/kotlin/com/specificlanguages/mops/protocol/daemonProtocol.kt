@@ -19,6 +19,8 @@ val GsonCodec: Gson = GsonBuilder()
     .registerTypeAdapter(DaemonResponse::class.java, DaemonResponseJsonAdapter)
     .registerTypeAdapter(DaemonContext::class.java, DaemonContextJsonAdapter)
     .registerTypeAdapter(NodeTarget::class.java, NodeTargetJsonAdapter)
+    .registerTypeAdapter(EditOperation::class.java, EditOperationJsonAdapter)
+    .registerTypeAdapter(EditTarget::class.java, EditTargetJsonAdapter)
     .registerTypeHierarchyAdapter(Path::class.java, PathJsonAdapter)
     .create()
 
@@ -63,6 +65,7 @@ private object DaemonRequestJsonAdapter : JsonSerializer<DaemonRequest>, JsonDes
             "model-get-node" -> ModelGetNodeRequest::class.java
             "find-usages" -> FindUsagesRequest::class.java
             "find-instances" -> FindInstancesRequest::class.java
+            "edit-apply" -> EditApplyRequest::class.java
             "list" -> MpsListRequest::class.java
             else -> throw JsonParseException("unsupported request type $type")
         }
@@ -111,6 +114,76 @@ private fun readNodeTarget(targetObject: JsonObject): NodeTarget {
     throw JsonParseException("get-node target requires nodeReference or modelTarget plus nodeId")
 }
 
+private object EditOperationJsonAdapter : JsonSerializer<EditOperation>, JsonDeserializer<EditOperation> {
+    override fun serialize(src: EditOperation, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
+        val result = JsonObject()
+        result.addProperty("op", src.op)
+        when (src) {
+            is EditOperation.SetProperty -> {
+                result.add("target", context.serialize(src.target, EditTarget::class.java))
+                result.addProperty("name", src.name)
+                src.value?.let { result.addProperty("value", it) }
+            }
+        }
+        return result
+    }
+
+    override fun deserialize(json: JsonElement?, typeOfT: Type, context: JsonDeserializationContext): EditOperation {
+        val operation = requireObject(json, "edit operation must be one JSON object, got: $json")
+        return when (val op = operation.stringField("op")) {
+            "setProperty" -> EditOperation.SetProperty(
+                target = context.deserialize(requireNotNull(operation.get("target")) { "setProperty target is required" }, EditTarget::class.java),
+                name = requireNotNull(operation.stringField("name")) { "setProperty name is required" },
+                value = operation.stringField("value"),
+            )
+
+            null, "" -> throw JsonParseException("edit operation op is required")
+            else -> throw JsonParseException("unsupported edit operation $op")
+        }
+    }
+}
+
+private object EditTargetJsonAdapter : JsonSerializer<EditTarget>, JsonDeserializer<EditTarget> {
+    override fun serialize(src: EditTarget, typeOfSrc: Type, context: JsonSerializationContext): JsonElement =
+        when (src) {
+            is EditTarget.Alias -> JsonPrimitive(src.alias)
+            is EditTarget.NodeReference -> JsonPrimitive(src.nodeReference)
+            is EditTarget.InModel -> JsonObject().apply {
+                addProperty("model", src.modelTarget)
+                addProperty("nodeId", src.nodeId)
+            }
+        }
+
+    override fun deserialize(json: JsonElement?, typeOfT: Type, context: JsonDeserializationContext): EditTarget {
+        if (json == null || json.isJsonNull) {
+            throw JsonParseException("edit target is required")
+        }
+
+        if (json.isJsonPrimitive && json.asJsonPrimitive.isString) {
+            val value = json.asString
+            return if (value.startsWith("$")) {
+                EditTarget.Alias(value)
+            } else {
+                EditTarget.NodeReference(value)
+            }
+        }
+
+        val targetObject = requireObject(json, "edit target must be a node reference string or JSON object, got: $json")
+        val nodeReference = targetObject.stringField("nodeReference")
+        if (!nodeReference.isNullOrBlank()) {
+            return EditTarget.NodeReference(nodeReference)
+        }
+
+        val modelTarget = targetObject.stringField("model") ?: targetObject.stringField("modelTarget")
+        val nodeId = targetObject.stringField("nodeId")
+        if (!modelTarget.isNullOrBlank() && !nodeId.isNullOrBlank()) {
+            return EditTarget.InModel(modelTarget = modelTarget, nodeId = nodeId)
+        }
+
+        throw JsonParseException("edit target requires a node reference string or model plus nodeId")
+    }
+}
+
 private object DaemonResponseJsonAdapter : JsonSerializer<DaemonResponse>, JsonDeserializer<DaemonResponse> {
     override fun serialize(src: DaemonResponse, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
         return context.serialize(src, src.javaClass)
@@ -127,6 +200,7 @@ private object DaemonResponseJsonAdapter : JsonSerializer<DaemonResponse>, JsonD
                 "model-get-node" -> ModelGetNodeResponse::class.java
                 "usages" -> FindUsagesResponse::class.java
                 "nodes" -> FindInstancesResponse::class.java
+                "edit-apply" -> EditApplyResponse::class.java
                 "list" -> MpsListResponse::class.java
                 "ready" -> ReadyMessage::class.java
                 else -> throw JsonParseException("unsupported response type $type")

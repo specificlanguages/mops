@@ -99,6 +99,61 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `edit apply request and response JSON carry set-property batches`() {
+        val nodeReference =
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
+        val request = EditApplyRequest(
+            token = "secret",
+            batch = EditBatch(
+                operations = listOf(
+                    EditOperation.SetProperty(
+                        target = EditTarget.NodeReference(nodeReference),
+                        name = "name",
+                        value = "RenamedConcept",
+                    ),
+                    EditOperation.SetProperty(
+                        target = EditTarget.InModel(
+                            modelTarget = "/project/models/main.mps",
+                            nodeId = "2110045694544566905",
+                        ),
+                        name = "description",
+                        value = null,
+                    ),
+                ),
+            ),
+        )
+        val serializedRequest = GsonCodec.toJson(request, DaemonRequest::class.java)
+
+        assertContains(serializedRequest, """"type":"edit-apply"""")
+        assertContains(serializedRequest, """"op":"setProperty"""")
+        assertContains(serializedRequest, """"target":"$nodeReference"""")
+        assertContains(serializedRequest, """"target":{"model":"/project/models/main.mps","nodeId":"2110045694544566905"}""")
+        assertEquals(
+            request,
+            GsonCodec.fromJson(serializedRequest, DaemonRequest::class.java),
+        )
+
+        val response = EditApplyResponse(
+            created = mapOf("\$new" to "$nodeReference-copy"),
+            violations = listOf(
+                EditConstraintViolation(
+                    operation = 0,
+                    constraint = "property",
+                    message = "not checked in this slice",
+                ),
+            ),
+        )
+        val serializedResponse = GsonCodec.toJson(response, DaemonResponse::class.java)
+
+        assertContains(serializedResponse, """"type":"edit-apply"""")
+        assertContains(serializedResponse, "\"created\":{\"\$new\":\"$nodeReference-copy\"}")
+        assertEquals(
+            response,
+            GsonCodec.fromJson(serializedResponse, DaemonResponse::class.java),
+        )
+    }
+
+    @Test
     fun `response JSON decodes to concrete daemon response messages`() {
         assertEquals(
             ReadyMessage(port = 3210),

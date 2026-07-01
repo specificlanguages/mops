@@ -1,6 +1,10 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DefaultDaemonClient
+import com.specificlanguages.mops.protocol.EditApplyResponse
+import com.specificlanguages.mops.protocol.EditBatch
+import com.specificlanguages.mops.protocol.EditOperation
+import com.specificlanguages.mops.protocol.EditTarget
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindUsagesResponse
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
@@ -139,5 +143,32 @@ class DefaultDaemonClientTest {
         assertContains(daemon.requestsReceived.single(), "\"target\"")
         assertContains(daemon.requestsReceived.single(), "\"nodeReference\":\"$nodeReference\"")
         assertContains(daemon.requestsReceived.single(), "\"limit\":100")
+    }
+
+    @Test
+    fun `edit apply sends batch request`() {
+        val response = EditApplyResponse(created = emptyMap(), violations = emptyList())
+        val daemon = startPrerecordedDaemon(response)
+        val batch = EditBatch(
+            operations = listOf(
+                EditOperation.SetProperty(
+                    target = EditTarget.NodeReference(
+                        "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+                    ),
+                    name = "name",
+                    value = "RenamedConcept",
+                ),
+            ),
+        )
+
+        val actual = DefaultDaemonClient(daemon.port, "secret").editApply(batch)
+
+        daemon.join(5_000)
+        assertEquals(response, actual)
+        assertContains(daemon.requestsReceived.single(), "\"type\":\"edit-apply\"")
+        assertContains(daemon.requestsReceived.single(), "\"operations\"")
+        assertContains(daemon.requestsReceived.single(), "\"op\":\"setProperty\"")
+        assertContains(daemon.requestsReceived.single(), "\"name\":\"name\"")
+        assertContains(daemon.requestsReceived.single(), "\"value\":\"RenamedConcept\"")
     }
 }

@@ -17,6 +17,7 @@ import kotlin.io.path.pathString
 
 class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
     private val modelNodeResolver = ModelNodeResolver(logger)
+    private val editBatchExecutor = EditBatchExecutor(modelNodeResolver)
     private val mpsListExporter = MpsListExporter()
     private val persistence = PersistenceFacade.getInstance()
     private val writeTransaction = WriteTransaction()
@@ -26,6 +27,7 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
             is ModelGetNodeRequest -> getNode(project, request)
             is FindUsagesRequest -> findUsages(project, request)
             is FindInstancesRequest -> findInstances(project, request)
+            is EditApplyRequest -> editApply(project, request)
             is ModelResaveRequest -> resaveModel(project, request)
             is MpsListRequest -> list(project, request)
             else -> errorResponse("UNSUPPORTED_REQUEST", "unsupported request type: ${request.type}")
@@ -317,6 +319,24 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
             concept = node.concept.qualifiedName,
             reference = persistence.asString(node.reference),
         )
+
+    private fun editApply(project: Project, request: EditApplyRequest): DaemonResponse =
+        try {
+            writeTransaction.run(project) {
+                when (val outcome = editBatchExecutor.apply(project, request.batch, this)) {
+                    is EditApplyOutcome.Success -> outcome.response
+                    is EditApplyOutcome.Failure -> errorResponse(
+                        code = outcome.code,
+                        message = outcome.message,
+                    )
+                }
+            }
+        } catch (throwable: Throwable) {
+            errorResponse(
+                code = "EDIT_APPLY_FAILED",
+                message = throwable.message ?: throwable.javaClass.name,
+            )
+        }
 
     private fun resaveModel(project: Project, request: ModelResaveRequest): DaemonResponse {
         val modelTarget = request.modelTarget

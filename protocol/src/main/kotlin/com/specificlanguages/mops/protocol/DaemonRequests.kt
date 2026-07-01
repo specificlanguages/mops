@@ -60,6 +60,16 @@ data class FindInstancesRequest(
 }
 
 /**
+ * Request to apply one atomic batch of Edit Operations inside the project daemon.
+ */
+data class EditApplyRequest(
+    override val token: String,
+    val batch: EditBatch,
+) : DaemonRequest {
+    override val type: String = "edit-apply"
+}
+
+/**
  * Request to list one MPS navigation target as a bounded semantic tree.
  */
 data class MpsListRequest(

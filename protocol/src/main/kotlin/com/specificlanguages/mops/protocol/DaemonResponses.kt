@@ -75,6 +75,16 @@ data class FindInstancesResponse(
 }
 
 /**
+ * Successful response for an applied Edit Operation batch.
+ */
+data class EditApplyResponse(
+    val created: Map<String, String>,
+    val violations: List<EditConstraintViolation>,
+) : DaemonResponse {
+    override val type: String = "edit-apply"
+}
+
+/**
  * Successful response carrying a semantic list tree rooted at the resolved MPS navigation target.
  */
 data class MpsListResponse(val root: MpsListEntryJson) : DaemonResponse {
