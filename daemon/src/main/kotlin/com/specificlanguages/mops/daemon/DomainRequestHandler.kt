@@ -13,14 +13,13 @@ import org.jetbrains.mps.openapi.module.FindUsagesFacade
 import org.jetbrains.mps.openapi.module.SModule
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import java.nio.file.Path
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ExecutionException
 import kotlin.io.path.pathString
 
 class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
     private val modelNodeResolver = ModelNodeResolver(logger)
     private val mpsListExporter = MpsListExporter()
     private val persistence = PersistenceFacade.getInstance()
+    private val writeTransaction = WriteTransaction()
 
     fun handleDomainRequest(project: Project, request: DaemonRequest): DaemonResponse {
         return when (request) {
@@ -325,49 +324,32 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
             return errorResponse("INVALID_REQUEST", "modelTarget is required")
         }
 
-        val future = CompletableFuture<DaemonResponse>()
-
-        project.modelAccess.executeCommandInEDT {
-            try {
-                val response = project.modelAccess.computeWriteAction {
-                    val model = modelNodeResolver.findModel(project, modelTarget)
-                        ?: return@computeWriteAction errorResponse(
-                            code = "MODEL_NOT_FOUND",
-                            message = "model not found: $modelTarget",
-                        )
-                    if (model.isReadOnly || model !is EditableSModel) {
-                        return@computeWriteAction errorResponse(
-                            code = "MODEL_READ_ONLY",
-                            message = "model is not editable: ${model.name.longName}",
-                        )
-                    }
-
-                    model.load()
-
-                    val result = model.save(SaveOptions.FORCE_SAVE_WITH_RESOLVE_INFO).toCompletableFuture().join()
-
-                    if (result != SaveResult.SAVED_TO_DATA_SOURCE && result != SaveResult.NOT_CHANGED) {
-                        return@computeWriteAction errorResponse(
-                            code = "SAVE_FAILED",
-                            message = "model save failed for ${model.name.longName}: $result",
-                        )
-                    }
-
-                    ModelResaveResponse(modelTarget = modelTarget)
-                }
-                future.complete(response)
-            } catch (t: Throwable) {
-                future.completeExceptionally(t)
-            }
-        }
-
         return try {
-            future.get()
+            writeTransaction.run(project) {
+                val model = modelNodeResolver.findModel(project, modelTarget)
+                    ?: return@run errorResponse(
+                        code = "MODEL_NOT_FOUND",
+                        message = "model not found: $modelTarget",
+                    )
+
+                model.load()
+
+                when (val outcome = saveWithResolveInfo(listOf(model))) {
+                    SaveOutcome.Saved -> ModelResaveResponse(modelTarget = modelTarget)
+                    is SaveOutcome.NotEditable -> errorResponse(
+                        code = "MODEL_READ_ONLY",
+                        message = "model is not editable: ${outcome.model.name.longName}",
+                    )
+                    is SaveOutcome.SaveFailed -> errorResponse(
+                        code = "SAVE_FAILED",
+                        message = "model save failed for ${outcome.model.name.longName}: ${outcome.result}",
+                    )
+                }
+            }
         } catch (exception: Exception) {
-            val cause = if (exception is ExecutionException) exception.cause ?: exception else exception
             errorResponse(
                 code = "SAVE_FAILED",
-                message = cause.message ?: cause.javaClass.name,
+                message = exception.message ?: exception.javaClass.name,
             )
         }
     }
