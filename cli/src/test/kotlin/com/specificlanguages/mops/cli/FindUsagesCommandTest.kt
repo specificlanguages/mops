@@ -10,6 +10,7 @@ import com.specificlanguages.mops.protocol.NodeTarget
 import org.junit.jupiter.api.parallel.ResourceLock
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import picocli.CommandLine
 import kotlin.test.Test
@@ -98,6 +99,49 @@ class FindUsagesCommandTest {
 
         assertEquals(0, exitCode)
         verify(client).findUsages(NodeTarget.NodeReference(nodeReference), 0)
+    }
+
+    @Test
+    fun `find usages appends a truncation row when more results exist`() {
+        val client = mock<DaemonClient>()
+        val nodeReference =
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
+        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), 1)).thenReturn(
+            sampleUsagesResponse(limit = 1).copy(truncated = true),
+        )
+        var exitCode = Int.MIN_VALUE
+
+        val stdout = tapSystemOut {
+            exitCode = CommandLine(FindUsagesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("--limit", "1", nodeReference)
+        }
+
+        assertEquals(0, exitCode)
+        assertEquals(
+            "usage\tconcept\tJsonObject\tjetbrains.mps.lang.structure.structure.ConceptDeclaration\t" +
+                "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
+                System.lineSeparator() +
+                "truncated\t1\tmore results not shown" + System.lineSeparator(),
+            stdout,
+        )
+    }
+
+    @Test
+    fun `find usages rejects a negative limit before dispatching to the daemon`() {
+        val client = mock<DaemonClient>()
+        val nodeReference =
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(FindUsagesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("--limit", "-1", nodeReference)
+        }
+
+        assertEquals(1, exitCode)
+        verifyNoInteractions(client)
     }
 
     private fun sampleUsagesResponse(limit: Int = 100) =

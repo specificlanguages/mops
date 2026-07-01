@@ -36,12 +36,16 @@ class FindUsagesCommand(private val daemonClient: DaemonClient? = null) : Runnab
     lateinit var nodeTarget: Array<String>
 
     override fun run() {
+        require(limit >= 0) { "limit must not be negative" }
         val client = daemonClient ?: find.root.ensureDaemon()
         val response = client.findUsages(target = nodeTarget(), limit = limit)
         if (json) {
             println(GsonCodec.toJson(response))
         } else {
             response.usages.forEach(::renderText)
+            if (response.truncated) {
+                println(listOf("truncated", response.usages.size, "more results not shown").joinToString("\t"))
+            }
         }
     }
 
