@@ -345,10 +345,10 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
                     )
                 }
             }
-        } catch (exception: Exception) {
+        } catch (throwable: Throwable) {
             errorResponse(
                 code = "SAVE_FAILED",
-                message = exception.message ?: exception.javaClass.name,
+                message = throwable.message ?: throwable.javaClass.name,
             )
         }
     }
