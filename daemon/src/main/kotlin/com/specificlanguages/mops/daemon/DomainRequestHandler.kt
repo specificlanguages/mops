@@ -5,6 +5,7 @@ import jetbrains.mps.progress.EmptyProgressMonitor
 import jetbrains.mps.project.EditableFilteringScope
 import jetbrains.mps.project.Project
 import jetbrains.mps.smodel.SNodeUtil
+import jetbrains.mps.smodel.language.ConceptRegistry
 import jetbrains.mps.smodel.persistence.def.v9.IdEncoder
 import jetbrains.mps.util.CollectConsumer
 import org.jetbrains.mps.openapi.model.*
@@ -25,6 +26,7 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
         return when (request) {
             is ModelGetNodeRequest -> getNode(project, request)
             is FindUsagesRequest -> findUsages(project, request)
+            is FindInstancesRequest -> findInstances(project, request)
             is ModelResaveRequest -> resaveModel(project, request)
             is MpsListRequest -> list(project, request)
             else -> errorResponse("UNSUPPORTED_REQUEST", "unsupported request type: ${request.type}")
@@ -251,6 +253,38 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
             )
         }
 
+    private fun findInstances(project: Project, request: FindInstancesRequest): DaemonResponse =
+        try {
+            project.modelAccess.computeReadAction {
+                val concept = ConceptRegistry.getInstance().getConceptByName(request.concept)
+                if (!concept.isValid) {
+                    return@computeReadAction errorResponse(
+                        code = "CONCEPT_NOT_FOUND",
+                        message = "concept not found: ${request.concept}",
+                    )
+                }
+
+                val scope = EditableFilteringScope(project.scope)
+                val collected = CollectConsumer<SNode>()
+                FindUsagesFacade.getInstance()
+                    .findInstances(scope, setOf(concept), request.exact, collected, EmptyProgressMonitor())
+
+                val instances = collected.result
+                val selected = if (request.limit > 0) instances.take(request.limit) else instances
+
+                FindInstancesResponse(
+                    limit = request.limit,
+                    truncated = selected.size < instances.size,
+                    nodes = selected.map { nodeSummary(it) },
+                )
+            }
+        } catch (exception: Exception) {
+            errorResponse(
+                code = "FIND_INSTANCES_FAILED",
+                message = exception.message ?: exception.javaClass.name,
+            )
+        }
+
     /**
      * Resolves [target] inside a read action and passes the node to [body], translating a resolve
      * miss into NODE_NOT_FOUND and any thrown exception into an error response with [failureCode].
@@ -279,7 +313,7 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
 
     private fun nodeSummary(node: SNode): MpsNodeSummaryJson =
         MpsNodeSummaryJson(
-            type = "node",
+            type = if (node.parent == null) "root" else "node",
             name = nodeName(node),
             concept = node.concept.qualifiedName,
             reference = persistence.asString(node.reference),

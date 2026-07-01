@@ -33,6 +33,29 @@ Planned daemon-backed resave command. It will infer the MPS project, start or re
 daemon to resave one model target through MPS APIs.
 
 ```sh
+mops --mps-home <path> find instances [--exact] [--limit N] [--json] <concept>
+```
+
+Searches **Editable Project Sources** for nodes that are instances of a fully qualified MPS concept, including
+subconcepts and MPS interface matches by default. `--exact` restricts results to nodes whose direct concept is the
+queried one. An unresolved concept fails with `CONCEPT_NOT_FOUND`; an existing concept with no matches succeeds with no
+rows. Text output is tab-separated rows of `root` or `node`, the node name (or `<unnamed>`), the node's actual concept,
+and its serialized node reference. `--json` prints an object with `limit`, `truncated`, and a `nodes` array.
+
+```sh
+mops --mps-home <path> find usages [--limit N] [--json] <node-reference>
+mops --mps-home <path> find usages [--limit N] [--json] <model-target> <node-id>
+```
+
+Searches **Editable Project Sources** for references to one resolved target node, addressed the same way as
+`model get-node`. An unresolved target fails with `NODE_NOT_FOUND`. Text output is tab-separated rows of `usage`, the
+reference role, and the owning node's name (or `<unnamed>`), concept, and reference; the owner is typed `root` or `node`
+by its position in its model. `--json` prints an object with `limit`, `truncated`, and a `usages` array whose entries
+carry the reference `role` and a nested `owner` node summary. Both `find` modes default to `--limit 100`, treat
+`--limit 0` as unlimited, reject negative limits, and append a `truncated` row (in text) or set `truncated` (in JSON)
+only when more matches exist than were returned.
+
+```sh
 mops daemon status [--all]
 mops daemon stop [--all]
 ```

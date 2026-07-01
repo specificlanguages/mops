@@ -62,6 +62,7 @@ private object DaemonRequestJsonAdapter : JsonSerializer<DaemonRequest>, JsonDes
             "model-resave" -> ModelResaveRequest::class.java
             "model-get-node" -> ModelGetNodeRequest::class.java
             "find-usages" -> FindUsagesRequest::class.java
+            "find-instances" -> FindInstancesRequest::class.java
             "list" -> MpsListRequest::class.java
             else -> throw JsonParseException("unsupported request type $type")
         }
@@ -125,6 +126,7 @@ private object DaemonResponseJsonAdapter : JsonSerializer<DaemonResponse>, JsonD
                 "model-resave" -> ModelResaveResponse::class.java
                 "model-get-node" -> ModelGetNodeResponse::class.java
                 "usages" -> FindUsagesResponse::class.java
+                "nodes" -> FindInstancesResponse::class.java
                 "list" -> MpsListResponse::class.java
                 "ready" -> ReadyMessage::class.java
                 else -> throw JsonParseException("unsupported response type $type")

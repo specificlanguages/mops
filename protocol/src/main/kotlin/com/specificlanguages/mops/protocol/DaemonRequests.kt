@@ -48,6 +48,18 @@ data class FindUsagesRequest(
 }
 
 /**
+ * Request to find instances of one MPS concept in editable project sources.
+ */
+data class FindInstancesRequest(
+    override val token: String,
+    val concept: String,
+    val exact: Boolean,
+    val limit: Int,
+) : DaemonRequest {
+    override val type: String = "find-instances"
+}
+
+/**
  * Request to list one MPS navigation target as a bounded semantic tree.
  */
 data class MpsListRequest(

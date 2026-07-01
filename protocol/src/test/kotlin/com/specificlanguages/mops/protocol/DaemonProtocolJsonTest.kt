@@ -5,6 +5,7 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 
 class DaemonProtocolJsonTest {
     @Test
@@ -214,6 +215,48 @@ class DaemonProtocolJsonTest {
                 """{"type":"usages","limit":100,"truncated":false,"usages":[{"role":"concept","owner":{"type":"node","name":"JsonObject","concept":"jetbrains.mps.lang.structure.structure.ConceptDeclaration","reference":"r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905"}}]}""",
                 DaemonResponse::class.java,
             ),
+        )
+    }
+
+    @Test
+    fun `find-instances request and nodes response JSON carry node results`() {
+        val request = FindInstancesRequest(
+            token = "secret",
+            concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+            exact = true,
+            limit = 100,
+        )
+        val serializedRequest = GsonCodec.toJson(request, DaemonRequest::class.java)
+
+        assertContains(serializedRequest, """"type":"find-instances"""")
+        assertContains(serializedRequest, """"concept":"jetbrains.mps.lang.structure.structure.ConceptDeclaration"""")
+        assertContains(serializedRequest, """"exact":true""")
+        assertContains(serializedRequest, """"limit":100""")
+        assertEquals(
+            request,
+            GsonCodec.fromJson(serializedRequest, DaemonRequest::class.java),
+        )
+
+        val response = FindInstancesResponse(
+            limit = 100,
+            truncated = false,
+            nodes = listOf(
+                MpsNodeSummaryJson(
+                    type = "root",
+                    name = "JsonObject",
+                    concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                    reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905",
+                ),
+            ),
+        )
+        val serializedResponse = GsonCodec.toJson(response, DaemonResponse::class.java)
+
+        assertContains(serializedResponse, """"type":"nodes"""")
+        assertFalse(serializedResponse.contains(""""id"""), "node summary must omit model-local id: $serializedResponse")
+        assertFalse(serializedResponse.contains(""""model"""), "node summary must omit separate model: $serializedResponse")
+        assertEquals(
+            response,
+            GsonCodec.fromJson(serializedResponse, DaemonResponse::class.java),
         )
     }
 

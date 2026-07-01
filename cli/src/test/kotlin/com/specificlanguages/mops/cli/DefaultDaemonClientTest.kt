@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DefaultDaemonClient
+import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindUsagesResponse
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
 import com.specificlanguages.mops.protocol.MpsListEntryJson
@@ -71,6 +72,39 @@ class DefaultDaemonClientTest {
             "\"target\":[\"com.specificlanguages.json\",\"com.specificlanguages.json.structure\"]",
         )
         assertContains(daemon.requestsReceived.single(), "\"depth\":1")
+    }
+
+    @Test
+    fun `find instances sends concept exact and limit request`() {
+        val response = FindInstancesResponse(
+            limit = 100,
+            truncated = false,
+            nodes = listOf(
+                MpsNodeSummaryJson(
+                    type = "root",
+                    name = "JsonObject",
+                    concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                    reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905",
+                ),
+            ),
+        )
+        val daemon = startPrerecordedDaemon(response)
+
+        val actual = DefaultDaemonClient(daemon.port, "secret").findInstances(
+            concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+            exact = true,
+            limit = 100,
+        )
+
+        daemon.join(5_000)
+        assertEquals(response, actual)
+        assertContains(daemon.requestsReceived.single(), "\"type\":\"find-instances\"")
+        assertContains(
+            daemon.requestsReceived.single(),
+            "\"concept\":\"jetbrains.mps.lang.structure.structure.ConceptDeclaration\"",
+        )
+        assertContains(daemon.requestsReceived.single(), "\"exact\":true")
+        assertContains(daemon.requestsReceived.single(), "\"limit\":100")
     }
 
     @Test
