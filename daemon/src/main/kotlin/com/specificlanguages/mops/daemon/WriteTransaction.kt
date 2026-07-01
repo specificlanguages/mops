@@ -11,9 +11,11 @@ import java.util.concurrent.ExecutionException
 /**
  * Runs a mutating [body] inside MPS's write context: an EDT command wrapping a write action, with
  * the result bridged back to the calling thread. A throwable raised inside the write action is
- * unwrapped and rethrown to the caller.
+ * rethrown to the caller, unwrapped from the [ExecutionException] the bridge would otherwise wrap
+ * it in.
  *
- * Inside the body, affected editable models are persisted through [WriteScope.saveWithResolveInfo].
+ * Inside the body, use [WriteScope.asEditable] to guard that a model may be written and
+ * [WriteScope.saveWithResolveInfo] to persist the affected models.
  */
 class WriteTransaction {
     fun <T> run(project: Project, body: WriteScope.() -> T): T {
@@ -37,16 +39,18 @@ class WriteTransaction {
     /** Operations available to a [run] body while inside the write action. */
     object WriteScope {
         /**
-         * Saves each of [models] with resolve info, checking first that it is an editable, writable
-         * model. Stops at the first model that is not editable or fails to save and reports it;
-         * returns [SaveOutcome.Saved] when every model was persisted.
+         * Returns [model] typed as an [EditableSModel] if it may be written, or `null` if it is
+         * read-only or not an editable model at all. Guard with this before mutating or saving.
          */
-        fun saveWithResolveInfo(models: Iterable<SModel>): SaveOutcome {
-            for (model in models) {
-                if (model.isReadOnly || model !is EditableSModel) {
-                    return SaveOutcome.NotEditable(model)
-                }
+        fun asEditable(model: SModel): EditableSModel? =
+            if (model.isReadOnly || model !is EditableSModel) null else model
 
+        /**
+         * Saves each of [models] with resolve info. Stops at the first model that fails to save and
+         * reports it; returns [SaveOutcome.Saved] when every model was persisted.
+         */
+        fun saveWithResolveInfo(models: Iterable<EditableSModel>): SaveOutcome {
+            for (model in models) {
                 val result = model.save(SaveOptions.FORCE_SAVE_WITH_RESOLVE_INFO).toCompletableFuture().join()
                 if (result != SaveResult.SAVED_TO_DATA_SOURCE && result != SaveResult.NOT_CHANGED) {
                     return SaveOutcome.SaveFailed(model, result)
@@ -60,6 +64,5 @@ class WriteTransaction {
 /** The result of saving a set of models with resolve info. */
 sealed interface SaveOutcome {
     data object Saved : SaveOutcome
-    data class NotEditable(val model: SModel) : SaveOutcome
     data class SaveFailed(val model: SModel, val result: SaveResult) : SaveOutcome
 }

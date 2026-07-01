@@ -331,15 +331,14 @@ class DomainRequestHandler(val logger: DaemonLogger, val workspacePath: Path) {
                         code = "MODEL_NOT_FOUND",
                         message = "model not found: $modelTarget",
                     )
-
-                model.load()
-
-                when (val outcome = saveWithResolveInfo(listOf(model))) {
-                    SaveOutcome.Saved -> ModelResaveResponse(modelTarget = modelTarget)
-                    is SaveOutcome.NotEditable -> errorResponse(
+                val editable = asEditable(model)
+                    ?: return@run errorResponse(
                         code = "MODEL_READ_ONLY",
-                        message = "model is not editable: ${outcome.model.name.longName}",
+                        message = "model is not editable: ${model.name.longName}",
                     )
+
+                when (val outcome = saveWithResolveInfo(listOf(editable))) {
+                    SaveOutcome.Saved -> ModelResaveResponse(modelTarget = modelTarget)
                     is SaveOutcome.SaveFailed -> errorResponse(
                         code = "SAVE_FAILED",
                         message = "model save failed for ${outcome.model.name.longName}: ${outcome.result}",
