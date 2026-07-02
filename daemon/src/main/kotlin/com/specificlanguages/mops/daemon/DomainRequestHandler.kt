@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsAccess
+import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRead
 import com.specificlanguages.mops.daemon.core.MpsResult
 import com.specificlanguages.mops.daemon.core.MpsWrite
@@ -8,30 +9,45 @@ import com.specificlanguages.mops.protocol.*
 import java.nio.file.Path
 import kotlin.io.path.pathString
 
+private sealed interface DaemonErrorCode {
+    val name: String
+
+    object UnsupportedRequest : DaemonErrorCode {
+        override val name = "UNSUPPORTED_REQUEST"
+    }
+    object GenericFailure : DaemonErrorCode {
+        override val name = "GENERIC_FAILURE"
+    }
+    class MpsError(code: MpsErrorCode) : DaemonErrorCode {
+        override val name = code.name
+    }
+    class ProtocolError(override val name: String) : DaemonErrorCode
+}
+
 class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
     fun handleDomainRequest(request: DaemonRequest): DaemonResponse {
         return when (request) {
-            is ModelGetNodeRequest -> readResponse(mpsAccess, failureCode = "GET_NODE_FAILED", {
-                getNode(target = request.target)
+            is ModelGetNodeRequest -> readResponse({
+                getNode(request.target)
             }) { ModelGetNodeResponse(node = it) }
 
-            is FindUsagesRequest -> readResponse(mpsAccess, failureCode = "FIND_USAGES_FAILED", {
-                findUsages(target = request.target, limit = request.limit)
+            is FindUsagesRequest -> readResponse({
+                findUsages(request.target, request.limit)
             }) {
                 FindUsagesResponse(limit = it.limit, truncated = it.truncated, usages = it.usages)
             }
 
-            is FindInstancesRequest -> readResponse(mpsAccess, failureCode = "FIND_INSTANCES_FAILED", {
-                findInstances(concept = request.concept, exact = request.exact, limit = request.limit)
+            is FindInstancesRequest -> readResponse({
+                findInstances(request.concept, request.exact, request.limit)
             }) {
                 FindInstancesResponse(limit = it.limit, truncated = it.truncated, nodes = it.nodes)
             }
 
-            is EditApplyRequest -> writeResponse(mpsAccess, failureCode = "EDIT_APPLY_FAILED", {
+            is EditApplyRequest -> writeResponse({
                 applyEdit(request.batch)
             }) { it }
 
-            is ModelResaveRequest -> writeResponse(mpsAccess, failureCode = "SAVE_FAILED", {
+            is ModelResaveRequest -> writeResponse({
                 resave(request.modelTarget)
             }) { ModelResaveResponse(modelTarget = request.modelTarget) }
 
@@ -39,41 +55,37 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
                 list(target = request.target, depth = request.depth)
             }.toResponse { MpsListResponse(root = it) }
 
-            else -> errorResponse("UNSUPPORTED_REQUEST", "unsupported request type: ${request.type}")
+            else -> errorResponse(DaemonErrorCode.UnsupportedRequest, "unsupported request type: ${request.type}")
         }
     }
 
     private fun <T> readResponse(
-        mpsAccess: MpsAccess,
-        failureCode: String,
         action: MpsRead.() -> MpsResult<T>,
         success: (T) -> DaemonResponse,
     ): DaemonResponse =
         try {
             mpsAccess.read(action).toResponse(success)
         } catch (exception: Exception) {
-            errorResponse(failureCode, exception.message ?: exception.javaClass.name)
+            errorResponse(DaemonErrorCode.GenericFailure, exception.message ?: exception.javaClass.name)
         }
 
     private fun <T> writeResponse(
-        mpsAccess: MpsAccess,
-        failureCode: String,
         action: MpsWrite.() -> MpsResult<T>,
         success: (T) -> DaemonResponse,
     ): DaemonResponse =
         try {
             mpsAccess.write(action).toResponse(success)
         } catch (throwable: Throwable) {
-            errorResponse(failureCode, throwable.message ?: throwable.javaClass.name)
+            errorResponse(DaemonErrorCode.GenericFailure, throwable.message ?: throwable.javaClass.name)
         }
 
     private fun <T> MpsResult<T>.toResponse(success: (T) -> DaemonResponse): DaemonResponse =
         when (this) {
             is MpsResult.Ok -> success(value)
-            is MpsResult.Error -> errorResponse(code.protocolCode, message)
-            is MpsResult.ProtocolError -> errorResponse(code, message)
+            is MpsResult.Error -> errorResponse(DaemonErrorCode.MpsError(code), message)
+            is MpsResult.ProtocolError -> errorResponse(DaemonErrorCode.ProtocolError(code), message)
         }
 
-    private fun errorResponse(code: String, message: String): DaemonErrorResponse =
-        DaemonErrorResponse(errorCode = code, message = message, workspacePath = workspacePath.pathString)
+    private fun errorResponse(code: DaemonErrorCode, message: String): DaemonErrorResponse =
+        DaemonErrorResponse(errorCode = code.name, message = message, workspacePath = workspacePath.pathString)
 }

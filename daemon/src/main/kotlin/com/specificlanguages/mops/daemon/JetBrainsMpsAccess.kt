@@ -63,12 +63,12 @@ class JetBrainsMpsAccess(
         }
 
         override fun getNode(target: NodeTarget): MpsResult<MpsNodeJson> =
-            withResolvedNode(target, failureCode = MpsErrorCode.GET_NODE_FAILED) { node ->
+            withResolvedNode(target) { node ->
                 MpsResult.Ok(jsonNodeExporter.export(node))
             }
 
         override fun findUsages(target: NodeTarget, limit: Int): MpsResult<FindUsagesPayload> =
-            withResolvedNode(target, failureCode = MpsErrorCode.FIND_USAGES_FAILED) { node ->
+            withResolvedNode(target) { node ->
                 val scope = EditableFilteringScope(project.scope)
                 val collected = CollectConsumer<SReference>()
                 FindUsagesFacade.getInstance().findUsages(scope, setOf(node), collected, EmptyProgressMonitor())
@@ -114,7 +114,7 @@ class JetBrainsMpsAccess(
                 )
             } catch (exception: Exception) {
                 MpsResult.Error(
-                    code = MpsErrorCode.FIND_INSTANCES_FAILED,
+                    code = MpsErrorCode.GENERIC_FAILURE,
                     message = exception.message ?: exception.javaClass.name,
                 )
             }
@@ -129,7 +129,6 @@ class JetBrainsMpsAccess(
 
         private fun <T> withResolvedNode(
             target: NodeTarget,
-            failureCode: MpsErrorCode,
             body: (SNode) -> MpsResult<T>,
         ): MpsResult<T> =
             try {
@@ -141,7 +140,7 @@ class JetBrainsMpsAccess(
                 body(node)
             } catch (exception: Exception) {
                 MpsResult.Error(
-                    code = failureCode,
+                    code = MpsErrorCode.GENERIC_FAILURE,
                     message = exception.message ?: exception.javaClass.name,
                 )
             }

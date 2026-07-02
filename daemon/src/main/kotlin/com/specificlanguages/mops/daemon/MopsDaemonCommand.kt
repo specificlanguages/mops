@@ -4,7 +4,6 @@ import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.protocol.*
 import de.itemis.mps.gradle.project.loader.EnvironmentKind
 import de.itemis.mps.gradle.project.loader.ProjectLoader
-import jetbrains.mps.project.Project
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import java.io.BufferedReader
@@ -71,7 +70,7 @@ class MopsDaemonCommand : Runnable {
             projectPath = projectPath,
             mpsHome = mpsHome,
             logger = logger,
-        ).runWithProject(projectDaemon::daemonBody)
+        ).runWithMpsAccess(projectDaemon::daemonBody)
     }
 }
 
@@ -87,7 +86,7 @@ class DaemonRunner(
     val logger: DaemonLogger
 ) {
 
-    fun runWithProject(action: (Project) -> Unit) {
+    fun runWithMpsAccess(action: (MpsAccess) -> Unit) {
         logger.log("verifying environment for project $projectPath")
         val environmentProblem = checkEnvironment()
         if (environmentProblem != null) {
@@ -98,7 +97,7 @@ class DaemonRunner(
 
         ProjectLoader
             .build { environmentKind = EnvironmentKind.IDEA }
-            .executeWithProject(projectPath.toFile()) { _, project -> action(project) }
+            .executeWithProject(projectPath.toFile()) { _, project -> action(JetBrainsMpsAccess(project, logger)) }
     }
 
     private fun checkEnvironment(): EnvironmentProblem? =
@@ -136,7 +135,7 @@ class ProjectDaemon(
 ) {
     var done = false
 
-    fun daemonBody(project: Project) {
+    fun daemonBody(mpsAccess: MpsAccess) {
         logger.log("environment ready for project ${projectPath.pathString}")
 
         ServerSocket(/* port = */ 0, /* backlog = */ 10, /* bindAddr = */ getLoopbackAddress()).use { server ->
@@ -167,7 +166,7 @@ class ProjectDaemon(
                     break
                 }
                 socket.use {
-                    connection(socket, JetBrainsMpsAccess(project = project, logger = logger))
+                    connection(socket, mpsAccess)
                 }
             }
         }
