@@ -98,6 +98,7 @@ tasks.register<Test>("integrationTest") {
         listOf(
             "-Dtest.mpsHome=${integrationTestMpsRoot.get()}",
             "-Dtest.jbrHome=${integrationTestJbr.get().metadata.installationPath}",
+            "-Dtest.projectsDir=${rootDir.resolve("test-projects")}",
             "-Dmops.daemon.classpath=${daemonRuntimeClasspath.get().asPath}"
         )
     }

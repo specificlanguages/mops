@@ -10,21 +10,15 @@ import java.time.Instant.now
 import kotlin.io.path.createDirectories
 import kotlin.io.path.pathString
 import kotlin.jvm.optionals.getOrNull
-import kotlin.jvm.javaClass
 import kotlin.use
 
 fun copyTestProject(name: String, target: Path): Path {
-    val source = Path.of(
-        requireNotNull(DummyForClassLoader.javaClass.classLoader.getResource("test-projects/$name")) {
-            "missing test project resource test-projects/$name"
-        }.toURI(),
-    )
+    val source = Path.of(requiredProperty("test.projectsDir")).resolve(name)
+    require(Files.isDirectory(source)) { "missing test project $source" }
     target.createDirectories()
     copyDirectory(source, target)
     return target
 }
-
-private object DummyForClassLoader {}
 
 private fun copyDirectory(source: Path, target: Path) {
     target.createDirectories()
