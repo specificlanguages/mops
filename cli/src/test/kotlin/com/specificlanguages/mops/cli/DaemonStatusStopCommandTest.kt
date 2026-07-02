@@ -51,6 +51,36 @@ class DaemonStatusStopCommandTest {
     }
 
     @Test
+    fun `daemon status uses explicit project root when working directory is elsewhere`() {
+        val project = tempDir.mpsProject()
+        val daemonHome = tempDir.resolve("daemon-home")
+        val mpsHome = tempDir.mpsHome()
+        val record = daemonRecord(
+            port = 4322,
+            project = project,
+            mpsHome = mpsHome,
+            workspace = daemonHome.resolve("projects/example"),
+        )
+        val store = DaemonRecordStore.forDaemonHome(daemonHome)
+        store.write(record)
+        val outside = tempDir.resolve("outside").createDirectories()
+        var exitCode = Int.MIN_VALUE
+
+        val stdout = tapSystemOut {
+            exitCode = newCommandLine(workingDirectory = outside).execute(
+                "--daemon-home", daemonHome.pathString,
+                "--project-root", project.pathString,
+                "daemon", "status",
+            )
+        }
+
+        assertEquals(0, exitCode)
+        assertContains(stdout, "running")
+        assertContains(stdout, project.pathString)
+        assertContains(stdout, "4322")
+    }
+
+    @Test
     fun `daemon status all lists every daemon record without project inference`() {
         val daemonHome = tempDir.resolve("daemon-home")
 
