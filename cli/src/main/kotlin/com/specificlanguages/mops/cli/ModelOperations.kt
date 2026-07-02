@@ -13,6 +13,7 @@ import picocli.CommandLine.ParentCommand
     description = ["Run model operations through the mops daemon."],
     subcommands = [
         ModelGetNodeCommand::class,
+        ModelEditCommand::class,
         ModelResaveCommand::class,
     ],
 )

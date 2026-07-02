@@ -9,10 +9,10 @@ import picocli.CommandLine.ParentCommand
 import java.nio.file.Path
 import kotlin.io.path.readText
 
-@Command(name = "apply", description = ["Apply a JSON batch of edit operations."])
-class EditApplyCommand(private val daemonClient: DaemonClient? = null) : Runnable {
+@Command(name = "edit", description = ["Apply a JSON batch of edit operations."])
+class ModelEditCommand(private val daemonClient: DaemonClient? = null) : Runnable {
     @ParentCommand
-    lateinit var edit: EditOperations
+    lateinit var model: ModelOperations
 
     @Option(
         names = ["--file"],
@@ -25,7 +25,7 @@ class EditApplyCommand(private val daemonClient: DaemonClient? = null) : Runnabl
         val batch = readBatch()
         require(batch.operations.isNotEmpty()) { "edit batch must contain at least one operation" }
 
-        val client = daemonClient ?: edit.root.ensureDaemon()
+        val client = daemonClient ?: model.root.ensureDaemon()
         val response = client.editApply(batch)
         println(GsonCodec.toJson(response))
     }
@@ -37,7 +37,7 @@ class EditApplyCommand(private val daemonClient: DaemonClient? = null) : Runnabl
     private fun inputText(): String =
         file?.let { fileName ->
             val path = Path.of(fileName)
-            val resolved = if (path.isAbsolute) path else edit.root.workingDirectory.resolve(path)
+            val resolved = if (path.isAbsolute) path else model.root.workingDirectory.resolve(path)
             resolved.readText()
         } ?: System.`in`.bufferedReader().readText()
 }

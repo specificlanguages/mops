@@ -187,10 +187,10 @@ class EditApplyCliIntegrationTest {
             "--daemon-home",
             daemonHome.pathString,
             *javaAndMpsHomeArgs(),
-            "edit",
-            "apply",
-            "--file",
-            batchFile.pathString,
+                "model",
+                "edit",
+                "--file",
+                batchFile.pathString,
         )
     }
 

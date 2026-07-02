@@ -26,7 +26,7 @@ class EditApplyCommandTest {
     lateinit var tempDir: Path
 
     @Test
-    fun `edit apply reads batch from stdin and prints user-facing response payload`() {
+    fun `model edit reads batch from stdin and prints user-facing response payload`() {
         val client = mock<DaemonClient>()
         val batch = sampleBatch()
         val response = EditApplyResponse(created = emptyMap(), violations = emptyList())
@@ -36,7 +36,7 @@ class EditApplyCommandTest {
 
         withTextFromSystemIn(GsonCodec.toJson(batch)).execute {
             stdout = tapSystemOut {
-                exitCode = CommandLine(EditApplyCommand(client))
+                exitCode = CommandLine(ModelEditCommand(client))
                     .setExecutionExceptionHandler(PrintErrorAndExit)
                     .execute()
             }
@@ -48,7 +48,7 @@ class EditApplyCommandTest {
     }
 
     @Test
-    fun `edit apply reads batch from file`() {
+    fun `model edit reads batch from file`() {
         val client = mock<DaemonClient>()
         val batch = sampleBatch()
         val response = EditApplyResponse(created = emptyMap(), violations = emptyList())
@@ -59,7 +59,7 @@ class EditApplyCommandTest {
         var exitCode = Int.MIN_VALUE
 
         tapSystemOut {
-            exitCode = CommandLine(EditApplyCommand(client))
+            exitCode = CommandLine(ModelEditCommand(client))
                 .setExecutionExceptionHandler(PrintErrorAndExit)
                 .execute("--file", batchFile.toString())
         }
@@ -69,13 +69,13 @@ class EditApplyCommandTest {
     }
 
     @Test
-    fun `edit apply rejects empty batch before daemon dispatch`() {
+    fun `model edit rejects empty batch before daemon dispatch`() {
         val client = mock<DaemonClient>()
         var exitCode = Int.MIN_VALUE
 
         withTextFromSystemIn("""{"operations":[]}""").execute {
             tapSystemOut {
-                exitCode = CommandLine(EditApplyCommand(client))
+                exitCode = CommandLine(ModelEditCommand(client))
                     .setExecutionExceptionHandler(PrintErrorAndExit)
                     .execute()
             }
@@ -86,13 +86,13 @@ class EditApplyCommandTest {
     }
 
     @Test
-    fun `edit apply rejects malformed batch before daemon dispatch`() {
+    fun `model edit rejects malformed batch before daemon dispatch`() {
         val client = mock<DaemonClient>()
         var exitCode = Int.MIN_VALUE
 
         withTextFromSystemIn("""{"operations":[""").execute {
             tapSystemOut {
-                exitCode = CommandLine(EditApplyCommand(client))
+                exitCode = CommandLine(ModelEditCommand(client))
                     .setExecutionExceptionHandler(PrintErrorAndExit)
                     .execute()
             }

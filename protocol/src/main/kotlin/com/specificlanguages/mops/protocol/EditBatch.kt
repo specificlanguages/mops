@@ -1,7 +1,7 @@
 package com.specificlanguages.mops.protocol
 
 /**
- * Ordered batch of Edit Operations applied atomically by `mops edit apply`.
+ * Ordered batch of Edit Operations applied atomically by `mops model edit`.
  */
 data class EditBatch(
     val operations: List<EditOperation>,

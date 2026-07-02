@@ -9,6 +9,7 @@ This checkout is a Gradle-rooted Kotlin prototype with two application subprojec
 mops --help
 mops --mps-home /path/to/mps daemon ping
 mops --mps-home /path/to/mps model resave path/to/model
+mops --mps-home /path/to/mps model edit --file edit-batch.json
 mops daemon status
 mops daemon stop
 ```
@@ -29,8 +30,17 @@ directory.
 mops --mps-home <path> model resave <model-target>
 ```
 
-Planned daemon-backed resave command. It will infer the MPS project, start or reuse a per-project daemon, and ask that
-daemon to resave one model target through MPS APIs.
+Resaves one model target through the daemon-backed MPS APIs. The command infers the MPS project, starts or reuses a
+per-project daemon, and asks that daemon to persist the target model.
+
+```sh
+mops --mps-home <path> model edit [--file PATH]
+```
+
+Applies a JSON batch of edit operations through the daemon. The current schema and examples live in
+[docs/model-edit.md](docs/model-edit.md), with the machine-readable schema in
+[docs/model-edit.schema.json](docs/model-edit.schema.json).
+The first supported operation is `setProperty`, where `value` omitted or `null` clears the property.
 
 ```sh
 mops --mps-home <path> find instances [--exact] [--limit N] [--json] <concept>
@@ -81,6 +91,7 @@ records are removed when the recorded process or socket is no longer reachable.
 
 ```sh
 ./gradlew check
+./gradlew installMops
 ./gradlew :cli:run --args="--mps-home /path/to/mps daemon ping"
 ./gradlew :cli:run --args=--help
 ./gradlew :daemon:run --args=--help

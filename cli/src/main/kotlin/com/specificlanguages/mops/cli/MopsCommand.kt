@@ -18,7 +18,6 @@ import kotlin.io.path.isDirectory
     description = ["Kotlin CLI for the daemon-backed MPS prototype."],
     subcommands = [
         DaemonOperations::class,
-        EditOperations::class,
         FindOperations::class,
         MpsListCommand::class,
         ModelOperations::class,
@@ -41,6 +40,13 @@ class MopsCommand(
         description = ["MPS home used by daemon-backed commands."],
     )
     var mpsHome: String? = null
+
+    @Option(
+        names = ["--project-root"],
+        paramLabel = "PATH",
+        description = ["Explicit MPS project root. Overrides upward inference from the working directory."],
+    )
+    var projectRoot: String? = null
 
     @Option(
         names = ["--daemon-home"],
@@ -93,7 +99,17 @@ class MopsCommand(
 
     fun resolveMpsHome(): Path? = mpsHome?.let(workingDirectory::resolve)
 
-    fun resolveProjectPath(start: Path = workingDirectory): Path = MopsCommand.resolveProjectPath(start)
+    fun resolveProjectPath(start: Path = workingDirectory): Path {
+        projectRoot?.let { configuredProjectRoot ->
+            val resolved = workingDirectory.resolve(configuredProjectRoot).normalize()
+            if (resolved.resolve(".mps").isDirectory()) {
+                return resolved
+            }
+            throw ProjectPathNotFoundException(resolved)
+        }
+
+        return MopsCommand.resolveProjectPath(start)
+    }
 
     companion object {
         fun resolveProjectPath(start: Path): Path {

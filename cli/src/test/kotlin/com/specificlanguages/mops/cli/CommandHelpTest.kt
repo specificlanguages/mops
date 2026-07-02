@@ -13,16 +13,16 @@ class CommandHelpTest {
         val output = runHelp("--help")
 
         assertContains(output, "daemon")
-        assertContains(output, "edit")
         assertContains(output, "list, ls")
         assertContains(output, "model")
+        assertContains(output, "--project-root")
     }
 
     @Test
-    fun `edit help lists edit subcommands`() {
-        val output = runHelp("edit", "--help")
+    fun `model help lists edit subcommand`() {
+        val output = runHelp("model", "--help")
 
-        assertContains(output, "apply")
+        assertContains(output, "edit")
     }
 
     @Test
