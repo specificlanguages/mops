@@ -1,6 +1,8 @@
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteExisting
+import kotlin.io.path.isSymbolicLink
 
 plugins {
     base
@@ -23,32 +25,40 @@ tasks.named("build") {
     dependsOn(subprojects.map { "${it.path}:build" })
 }
 
-val localBinDir = Path.of(System.getProperty("user.home"), ".local", "bin")
-val localShareDir = Path.of(System.getProperty("user.home"), ".local", "share", "mops")
-val installedCli = layout.projectDirectory.dir("cli/build/install/mops")
-
-tasks.register("installMops") {
+tasks.register<Sync>("installMops") {
     group = "distribution"
     description = "Install the mops CLI into ~/.local/share/mops and symlink ~/.local/bin/mops."
     dependsOn(":cli:installDist")
 
-    inputs.dir(installedCli)
-    outputs.dir(localShareDir)
-    outputs.dir(localBinDir)
+    val localShareDir = Path.of(System.getProperty("user.home"), ".local", "share", "mops")
+    val cliInstallDist = evaluationDependsOn(":cli").tasks.named<Sync>("installDist")
+    val installedCli = cliInstallDist.map { it.destinationDir }
+    val sharedInstall = localShareDir.resolve("current")
+    val installedExecutable = sharedInstall.resolve("bin/mops")
+    val binLink = Path.of(System.getProperty("user.home"), ".local", "bin").resolve("mops")
 
-    doLast {
-        val installed = installedCli.asFile.toPath()
-        require(Files.isDirectory(installed)) { "CLI distribution not found at $installed; run :cli:installDist first" }
+    val localBinDir = Path.of(System.getProperty("user.home"), ".local", "bin")
+
+    from(installedCli)
+    into(sharedInstall)
+    outputs.file(binLink)
+
+    doFirst {
+        val installedCliPath = installedCli.get()
+        require(installedCliPath.isDirectory) {
+            "CLI distribution not found at $installedCliPath; run :cli:installDist first"
+        }
 
         localShareDir.createDirectories()
         localBinDir.createDirectories()
 
-        val sharedInstall = localShareDir.resolve("current")
-        Files.deleteIfExists(sharedInstall)
-        Files.createSymbolicLink(sharedInstall, installed)
+        if (sharedInstall.isSymbolicLink()) {
+            sharedInstall.deleteExisting()
+        }
+    }
 
-        val binLink = localBinDir.resolve("mops")
+    doLast {
         Files.deleteIfExists(binLink)
-        Files.createSymbolicLink(binLink, sharedInstall.resolve("bin/mops"))
+        Files.createSymbolicLink(binLink, installedExecutable)
     }
 }
