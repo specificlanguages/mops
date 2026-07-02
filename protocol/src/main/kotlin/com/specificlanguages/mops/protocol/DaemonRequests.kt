@@ -21,7 +21,7 @@ data class StopRequest(override val token: String) : DaemonRequest {
  */
 data class ModelResaveRequest(
     override val token: String,
-    val modelTarget: String?,
+    val modelTarget: String,
 ) : DaemonRequest {
     override val type: String = "model-resave"
 }

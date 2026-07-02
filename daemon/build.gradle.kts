@@ -14,6 +14,7 @@ configurations {
 }
 
 dependencies {
+    implementation(project(":daemon-core"))
     implementation(project(":protocol"))
     implementation(project(":launcher"))
     implementation("info.picocli:picocli:4.7.7")

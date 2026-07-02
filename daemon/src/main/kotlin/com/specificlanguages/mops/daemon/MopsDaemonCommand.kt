@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.daemon
 
+import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.protocol.*
 import de.itemis.mps.gradle.project.loader.EnvironmentKind
 import de.itemis.mps.gradle.project.loader.ProjectLoader
@@ -166,13 +167,13 @@ class ProjectDaemon(
                     break
                 }
                 socket.use {
-                    connection(socket, project)
+                    connection(socket, JetBrainsMpsAccess(project = project, logger = logger))
                 }
             }
         }
     }
 
-    private fun connection(socket: Socket, project: Project) {
+    private fun connection(socket: Socket, mpsAccess: MpsAccess) {
         val requestLine = BufferedReader(InputStreamReader(socket.getInputStream())).readLine()
 
         val response = run {
@@ -204,7 +205,7 @@ class ProjectDaemon(
                 )
 
                 is StopRequest -> StoppedResponse()
-                else -> DomainRequestHandler(logger, workspace.path).handleDomainRequest(project, request)
+                else -> DomainRequestHandler(workspace.path, mpsAccess).handleDomainRequest(request)
             }
         }
 
