@@ -4,8 +4,8 @@ import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.DaemonRequest
 import com.specificlanguages.mops.protocol.DaemonRecord
 import com.specificlanguages.mops.protocol.DaemonResponse
-import com.specificlanguages.mops.protocol.EditApplyRequest
-import com.specificlanguages.mops.protocol.EditApplyResponse
+import com.specificlanguages.mops.protocol.ModelEditRequest
+import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.FindInstancesRequest
 import com.specificlanguages.mops.protocol.FindInstancesResponse
@@ -78,10 +78,10 @@ class DefaultDaemonClient(
             FindInstancesResponse::class.java
         )
 
-    override fun editApply(batch: EditBatch): EditApplyResponse =
+    override fun modelEdit(batch: EditBatch): ModelEditResponse =
         exchange(
-            EditApplyRequest(token = token, batch = batch),
-            EditApplyResponse::class.java
+            ModelEditRequest(token = token, batch = batch),
+            ModelEditResponse::class.java
         )
 
     override fun list(target: List<String>?, depth: Int): MpsListResponse =

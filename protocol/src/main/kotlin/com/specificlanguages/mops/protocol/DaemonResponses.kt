@@ -77,11 +77,11 @@ data class FindInstancesResponse(
 /**
  * Successful response for an applied Edit Operation batch.
  */
-data class EditApplyResponse(
+data class ModelEditResponse(
     val created: Map<String, String>,
     val violations: List<EditConstraintViolation>,
 ) : DaemonResponse {
-    override val type: String = "edit-apply"
+    override val type: String = "model-edit"
 }
 
 /**

@@ -3,7 +3,7 @@ package com.specificlanguages.mops.cli
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.github.stefanbirkner.systemlambda.SystemLambda.withTextFromSystemIn
 import com.specificlanguages.mops.daemoncomms.DaemonClient
-import com.specificlanguages.mops.protocol.EditApplyResponse
+import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
@@ -21,7 +21,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @ResourceLock("system-streams")
-class EditApplyCommandTest {
+class ModelEditCommandTest {
     @TempDir
     lateinit var tempDir: Path
 
@@ -29,8 +29,8 @@ class EditApplyCommandTest {
     fun `model edit reads batch from stdin and prints user-facing response payload`() {
         val client = mock<DaemonClient>()
         val batch = sampleBatch()
-        val response = EditApplyResponse(created = emptyMap(), violations = emptyList())
-        whenever(client.editApply(batch)).thenReturn(response)
+        val response = ModelEditResponse(created = emptyMap(), violations = emptyList())
+        whenever(client.modelEdit(batch)).thenReturn(response)
         var exitCode = Int.MIN_VALUE
         var stdout = ""
 
@@ -43,16 +43,16 @@ class EditApplyCommandTest {
         }
 
         assertEquals(0, exitCode)
-        verify(client).editApply(batch)
-        assertEquals(response, GsonCodec.fromJson(stdout, EditApplyResponse::class.java))
+        verify(client).modelEdit(batch)
+        assertEquals(response, GsonCodec.fromJson(stdout, ModelEditResponse::class.java))
     }
 
     @Test
     fun `model edit reads batch from file`() {
         val client = mock<DaemonClient>()
         val batch = sampleBatch()
-        val response = EditApplyResponse(created = emptyMap(), violations = emptyList())
-        whenever(client.editApply(batch)).thenReturn(response)
+        val response = ModelEditResponse(created = emptyMap(), violations = emptyList())
+        whenever(client.modelEdit(batch)).thenReturn(response)
         val batchFile = tempDir.resolve("batch.json").apply {
             writeText(GsonCodec.toJson(batch))
         }
@@ -65,7 +65,7 @@ class EditApplyCommandTest {
         }
 
         assertEquals(0, exitCode)
-        verify(client).editApply(batch)
+        verify(client).modelEdit(batch)
     }
 
     @Test

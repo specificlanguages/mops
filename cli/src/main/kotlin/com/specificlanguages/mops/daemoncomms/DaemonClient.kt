@@ -2,7 +2,7 @@ package com.specificlanguages.mops.daemoncomms
 
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindUsagesResponse
-import com.specificlanguages.mops.protocol.EditApplyResponse
+import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.ModelResaveResponse
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
@@ -20,6 +20,6 @@ interface DaemonClient {
     fun getNode(target: NodeTarget): ModelGetNodeResponse
     fun findUsages(target: NodeTarget, limit: Int): FindUsagesResponse
     fun findInstances(concept: String, exact: Boolean, limit: Int): FindInstancesResponse
-    fun editApply(batch: EditBatch): EditApplyResponse
+    fun modelEdit(batch: EditBatch): ModelEditResponse
     fun list(target: List<String>?, depth: Int): MpsListResponse
 }

@@ -62,11 +62,11 @@ data class FindInstancesRequest(
 /**
  * Request to apply one atomic batch of Edit Operations inside the project daemon.
  */
-data class EditApplyRequest(
+data class ModelEditRequest(
     override val token: String,
     val batch: EditBatch,
 ) : DaemonRequest {
-    override val type: String = "edit-apply"
+    override val type: String = "model-edit"
 }
 
 /**

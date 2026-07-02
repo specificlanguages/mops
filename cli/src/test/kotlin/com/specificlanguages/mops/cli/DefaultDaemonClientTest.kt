@@ -1,7 +1,7 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DefaultDaemonClient
-import com.specificlanguages.mops.protocol.EditApplyResponse
+import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
@@ -146,8 +146,8 @@ class DefaultDaemonClientTest {
     }
 
     @Test
-    fun `edit apply sends batch request`() {
-        val response = EditApplyResponse(created = emptyMap(), violations = emptyList())
+    fun `model edit sends batch request`() {
+        val response = ModelEditResponse(created = emptyMap(), violations = emptyList())
         val daemon = startPrerecordedDaemon(response)
         val batch = EditBatch(
             operations = listOf(
@@ -161,11 +161,11 @@ class DefaultDaemonClientTest {
             ),
         )
 
-        val actual = DefaultDaemonClient(daemon.port, "secret").editApply(batch)
+        val actual = DefaultDaemonClient(daemon.port, "secret").modelEdit(batch)
 
         daemon.join(5_000)
         assertEquals(response, actual)
-        assertContains(daemon.requestsReceived.single(), "\"type\":\"edit-apply\"")
+        assertContains(daemon.requestsReceived.single(), "\"type\":\"model-edit\"")
         assertContains(daemon.requestsReceived.single(), "\"operations\"")
         assertContains(daemon.requestsReceived.single(), "\"op\":\"setProperty\"")
         assertContains(daemon.requestsReceived.single(), "\"name\":\"name\"")

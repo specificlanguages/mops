@@ -43,8 +43,8 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
                 FindInstancesResponse(limit = it.limit, truncated = it.truncated, nodes = it.nodes)
             }
 
-            is EditApplyRequest -> writeResponse({
-                applyEdit(request.batch)
+            is ModelEditRequest -> writeResponse({
+                modelEdit(request.batch)
             }) { it }
 
             is ModelResaveRequest -> writeResponse({

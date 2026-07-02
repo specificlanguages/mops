@@ -99,10 +99,10 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
-    fun `edit apply request and response JSON carry set-property batches`() {
+    fun `model edit request and response JSON carry set-property batches`() {
         val nodeReference =
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
-        val request = EditApplyRequest(
+        val request = ModelEditRequest(
             token = "secret",
             batch = EditBatch(
                 operations = listOf(
@@ -124,7 +124,7 @@ class DaemonProtocolJsonTest {
         )
         val serializedRequest = GsonCodec.toJson(request, DaemonRequest::class.java)
 
-        assertContains(serializedRequest, """"type":"edit-apply"""")
+        assertContains(serializedRequest, """"type":"model-edit"""")
         assertContains(serializedRequest, """"op":"setProperty"""")
         assertContains(serializedRequest, """"target":"$nodeReference"""")
         assertContains(serializedRequest, """"target":{"model":"/project/models/main.mps","nodeId":"2110045694544566905"}""")
@@ -133,7 +133,7 @@ class DaemonProtocolJsonTest {
             GsonCodec.fromJson(serializedRequest, DaemonRequest::class.java),
         )
 
-        val response = EditApplyResponse(
+        val response = ModelEditResponse(
             created = mapOf("\$new" to "$nodeReference-copy"),
             violations = listOf(
                 EditConstraintViolation(
@@ -145,7 +145,7 @@ class DaemonProtocolJsonTest {
         )
         val serializedResponse = GsonCodec.toJson(response, DaemonResponse::class.java)
 
-        assertContains(serializedResponse, """"type":"edit-apply"""")
+        assertContains(serializedResponse, """"type":"model-edit"""")
         assertContains(serializedResponse, "\"created\":{\"\$new\":\"$nodeReference-copy\"}")
         assertEquals(
             response,

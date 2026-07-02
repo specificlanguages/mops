@@ -149,10 +149,10 @@ class JetBrainsMpsAccess(
     private inner class JetBrainsMpsWrite(
         private val writeScope: WriteTransaction.WriteScope,
     ) : JetBrainsMpsRead(), MpsWrite {
-        override fun applyEdit(batch: EditBatch): MpsResult<EditApplyResponse> =
+        override fun modelEdit(batch: EditBatch): MpsResult<ModelEditResponse> =
             when (val outcome = editBatchExecutor.apply(project, batch, writeScope)) {
-                is EditApplyOutcome.Success -> MpsResult.Ok(outcome.response)
-                is EditApplyOutcome.Failure -> MpsResult.ProtocolError(
+                is ModelEditOutcome.Success -> MpsResult.Ok(outcome.response)
+                is ModelEditOutcome.Failure -> MpsResult.ProtocolError(
                     code = outcome.code,
                     message = outcome.message,
                 )

@@ -1,6 +1,6 @@
 package com.specificlanguages.mops.daemon
 
-import com.specificlanguages.mops.protocol.EditApplyResponse
+import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
@@ -18,9 +18,9 @@ class EditBatchExecutor(
         project: Project,
         batch: EditBatch,
         writeScope: WriteTransaction.WriteScope,
-    ): EditApplyOutcome {
+    ): ModelEditOutcome {
         if (batch.operations.isEmpty()) {
-            return EditApplyOutcome.Failure(
+            return ModelEditOutcome.Failure(
                 code = "INVALID_REQUEST",
                 message = "edit batch must contain at least one operation",
             )
@@ -29,11 +29,11 @@ class EditBatchExecutor(
         val affectedModels = linkedSetOf<EditableSModel>()
         var mutated = false
 
-        fun fail(code: String, message: String): EditApplyOutcome.Failure {
+        fun fail(code: String, message: String): ModelEditOutcome.Failure {
             if (mutated) {
                 reload(affectedModels)
             }
-            return EditApplyOutcome.Failure(code = code, message = message)
+            return ModelEditOutcome.Failure(code = code, message = message)
         }
 
         for ((index, operation) in batch.operations.withIndex()) {
@@ -91,7 +91,7 @@ class EditBatchExecutor(
                         mutated = true
                     } catch (exception: Exception) {
                         return fail(
-                            "EDIT_APPLY_FAILED",
+                            "MODEL_EDIT_FAILED",
                             "operation $index failed: ${exception.message ?: exception.javaClass.name}",
                         )
                     }
@@ -100,14 +100,14 @@ class EditBatchExecutor(
         }
 
         return when (val saveOutcome = writeScope.saveWithResolveInfo(affectedModels)) {
-            SaveOutcome.Saved -> EditApplyOutcome.Success(
-                EditApplyResponse(created = emptyMap(), violations = emptyList()),
+            SaveOutcome.Saved -> ModelEditOutcome.Success(
+                ModelEditResponse(created = emptyMap(), violations = emptyList()),
             )
             is SaveOutcome.SaveFailed -> {
                 if (mutated) {
                     reload(affectedModels)
                 }
-                EditApplyOutcome.Failure(
+                ModelEditOutcome.Failure(
                     code = "SAVE_FAILED",
                     message = "model save failed for ${saveOutcome.model.name.longName}: ${saveOutcome.result}",
                 )
@@ -142,9 +142,9 @@ class EditBatchExecutor(
     }
 }
 
-sealed interface EditApplyOutcome {
-    data class Success(val response: EditApplyResponse) : EditApplyOutcome
-    data class Failure(val code: String, val message: String) : EditApplyOutcome
+sealed interface ModelEditOutcome {
+    data class Success(val response: ModelEditResponse) : ModelEditOutcome
+    data class Failure(val code: String, val message: String) : ModelEditOutcome
 }
 
 private sealed interface PropertyResolution {

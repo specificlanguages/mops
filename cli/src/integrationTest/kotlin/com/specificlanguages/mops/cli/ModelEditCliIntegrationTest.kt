@@ -1,6 +1,6 @@
 package com.specificlanguages.mops.cli
 
-import com.specificlanguages.mops.protocol.EditApplyResponse
+import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
@@ -21,7 +21,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 
 @ResourceLock("system-streams")
-class EditApplyCliIntegrationTest {
+class ModelEditCliIntegrationTest {
     @TempDir(cleanup = CleanupMode.ON_SUCCESS)
     lateinit var tempDir: Path
 
@@ -36,7 +36,7 @@ class EditApplyCliIntegrationTest {
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
 
         try {
-            val apply = runEditApply(
+            val apply = runModelEdit(
                 project,
                 daemonHome,
                 EditBatch(
@@ -52,8 +52,8 @@ class EditApplyCliIntegrationTest {
 
             assertEquals(0, apply.exitCode, apply.output)
             assertEquals(
-                EditApplyResponse(created = emptyMap(), violations = emptyList()),
-                GsonCodec.fromJson(apply.stdout, EditApplyResponse::class.java),
+                ModelEditResponse(created = emptyMap(), violations = emptyList()),
+                GsonCodec.fromJson(apply.stdout, ModelEditResponse::class.java),
             )
 
             val reread = runGetNode(project, daemonHome, model.pathString, "2110045694544566904")
@@ -74,7 +74,7 @@ class EditApplyCliIntegrationTest {
         val daemonHome = tempDir.resolve("daemon-home").createDirectories()
 
         try {
-            val apply = runEditApply(
+            val apply = runModelEdit(
                 project,
                 daemonHome,
                 EditBatch(
@@ -112,7 +112,7 @@ class EditApplyCliIntegrationTest {
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
 
         try {
-            val apply = runEditApply(
+            val apply = runModelEdit(
                 project,
                 daemonHome,
                 EditBatch(
@@ -158,7 +158,7 @@ class EditApplyCliIntegrationTest {
                 .target
             val libraryReference = "${extendsTarget.model}/${extendsTarget.node}"
 
-            val apply = runEditApply(
+            val apply = runModelEdit(
                 project,
                 daemonHome,
                 EditBatch(
@@ -179,7 +179,7 @@ class EditApplyCliIntegrationTest {
         }
     }
 
-    private fun runEditApply(project: Path, daemonHome: Path, batch: EditBatch): CliResult {
+    private fun runModelEdit(project: Path, daemonHome: Path, batch: EditBatch): CliResult {
         val batchFile = tempDir.resolve("batch-${System.nanoTime()}.json")
         batchFile.writeText(GsonCodec.toJson(batch))
         return runCommandLine(

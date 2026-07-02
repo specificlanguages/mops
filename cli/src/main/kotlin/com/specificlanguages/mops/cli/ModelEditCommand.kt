@@ -26,7 +26,7 @@ class ModelEditCommand(private val daemonClient: DaemonClient? = null) : Runnabl
         require(batch.operations.isNotEmpty()) { "edit batch must contain at least one operation" }
 
         val client = daemonClient ?: model.root.ensureDaemon()
-        val response = client.editApply(batch)
+        val response = client.modelEdit(batch)
         println(GsonCodec.toJson(response))
     }
 

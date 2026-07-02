@@ -65,7 +65,7 @@ private object DaemonRequestJsonAdapter : JsonSerializer<DaemonRequest>, JsonDes
             "model-get-node" -> ModelGetNodeRequest::class.java
             "find-usages" -> FindUsagesRequest::class.java
             "find-instances" -> FindInstancesRequest::class.java
-            "edit-apply" -> EditApplyRequest::class.java
+            "model-edit" -> ModelEditRequest::class.java
             "list" -> MpsListRequest::class.java
             else -> throw JsonParseException("unsupported request type $type")
         }
@@ -200,7 +200,7 @@ private object DaemonResponseJsonAdapter : JsonSerializer<DaemonResponse>, JsonD
                 "model-get-node" -> ModelGetNodeResponse::class.java
                 "usages" -> FindUsagesResponse::class.java
                 "nodes" -> FindInstancesResponse::class.java
-                "edit-apply" -> EditApplyResponse::class.java
+                "model-edit" -> ModelEditResponse::class.java
                 "list" -> MpsListResponse::class.java
                 "ready" -> ReadyMessage::class.java
                 else -> throw JsonParseException("unsupported response type $type")
