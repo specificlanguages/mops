@@ -33,15 +33,11 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
 
             is FindUsagesRequest -> readResponse({
                 findUsages(request.target, request.limit)
-            }) {
-                FindUsagesResponse(limit = it.limit, truncated = it.truncated, usages = it.usages)
-            }
+            }) { it }
 
             is FindInstancesRequest -> readResponse({
                 findInstances(request.concept, request.exact, request.limit)
-            }) {
-                FindInstancesResponse(limit = it.limit, truncated = it.truncated, nodes = it.nodes)
-            }
+            }) { it }
 
             is ModelEditRequest -> writeResponse({
                 modelEdit(request.batch)

@@ -1,8 +1,8 @@
 package com.specificlanguages.mops.daemon
 
-import com.specificlanguages.mops.daemon.core.FindInstancesPayload
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsResult
+import com.specificlanguages.mops.protocol.FindInstancesResponse
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -36,7 +36,7 @@ class FindInstancesSemanticsTest {
             findInstances(ABSTRACT_CONCEPT_DECLARATION, exact = true, limit = DEFAULT_LIMIT)
         }
 
-        assertEquals(FindInstancesPayload(limit = DEFAULT_LIMIT, truncated = false, nodes = emptyList()), assertOk(result))
+        assertEquals(FindInstancesResponse(limit = DEFAULT_LIMIT, truncated = false, nodes = emptyList()), assertOk(result))
     }
 
     @Test

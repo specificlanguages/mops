@@ -67,7 +67,7 @@ class JetBrainsMpsAccess(
                 MpsResult.Ok(jsonNodeExporter.export(node))
             }
 
-        override fun findUsages(target: NodeTarget, limit: Int): MpsResult<FindUsagesPayload> =
+        override fun findUsages(target: NodeTarget, limit: Int): MpsResult<FindUsagesResponse> =
             withResolvedNode(target) { node ->
                 val scope = EditableFilteringScope(project.scope)
                 val collected = CollectConsumer<SReference>()
@@ -77,7 +77,7 @@ class JetBrainsMpsAccess(
                 val selected = if (limit > 0) references.take(limit) else references
 
                 MpsResult.Ok(
-                    FindUsagesPayload(
+                    FindUsagesResponse(
                         limit = limit,
                         truncated = selected.size < references.size,
                         usages = selected.map {
@@ -87,7 +87,7 @@ class JetBrainsMpsAccess(
                 )
             }
 
-        override fun findInstances(concept: String, exact: Boolean, limit: Int): MpsResult<FindInstancesPayload> =
+        override fun findInstances(concept: String, exact: Boolean, limit: Int): MpsResult<FindInstancesResponse> =
             try {
                 val mpsConcept = ConceptRegistry.getInstance().getConceptByName(concept)
                 if (!mpsConcept.isValid) {
@@ -106,7 +106,7 @@ class JetBrainsMpsAccess(
                 val selected = if (limit > 0) instances.take(limit) else instances
 
                 MpsResult.Ok(
-                    FindInstancesPayload(
+                    FindInstancesResponse(
                         limit = limit,
                         truncated = selected.size < instances.size,
                         nodes = selected.map { nodeSummary(it) },
