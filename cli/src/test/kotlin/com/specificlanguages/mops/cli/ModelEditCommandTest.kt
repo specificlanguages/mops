@@ -3,10 +3,12 @@ package com.specificlanguages.mops.cli
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.github.stefanbirkner.systemlambda.SystemLambda.withTextFromSystemIn
 import com.specificlanguages.mops.daemoncomms.DaemonClient
+import com.specificlanguages.mops.protocol.ChildPosition
 import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
+import com.specificlanguages.mops.protocol.MpsNodePropertyJson
 import com.specificlanguages.mops.protocol.ProtocolJson
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.api.parallel.ResourceLock
@@ -62,6 +64,42 @@ class ModelEditCommandTest {
             exitCode = CommandLine(ModelEditCommand(client))
                 .setExecutionExceptionHandler(PrintErrorAndExit)
                 .execute("--file", batchFile.toString())
+        }
+
+        assertEquals(0, exitCode)
+        verify(client).modelEdit(batch)
+    }
+
+    @Test
+    fun `model edit parses structural operations from stdin and forwards them`() {
+        val client = mock<DaemonClient>()
+        val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
+        val batch = EditBatch(
+            operations = listOf(
+                EditOperation.AddChild(
+                    target = EditTarget.NodeReference("$model/1"),
+                    role = "propertyDeclaration",
+                    concept = "jetbrains.mps.lang.structure.structure.PropertyDeclaration",
+                    properties = listOf(MpsNodePropertyJson(name = "name", value = "added")),
+                ),
+                EditOperation.MoveNode(
+                    target = EditTarget.NodeReference("$model/2"),
+                    into = EditTarget.NodeReference("$model/3"),
+                    role = "propertyDeclaration",
+                    position = ChildPosition.First,
+                ),
+                EditOperation.Delete(target = EditTarget.NodeReference("$model/4")),
+            ),
+        )
+        whenever(client.modelEdit(batch)).thenReturn(ModelEditResponse(created = emptyMap(), violations = emptyList()))
+        var exitCode = Int.MIN_VALUE
+
+        withTextFromSystemIn(ProtocolJson.encodeBatch(batch)).execute {
+            tapSystemOut {
+                exitCode = CommandLine(ModelEditCommand(client))
+                    .setExecutionExceptionHandler(PrintErrorAndExit)
+                    .execute()
+            }
         }
 
         assertEquals(0, exitCode)
