@@ -1,6 +1,8 @@
 package com.specificlanguages.mops.protocol
 
 import java.nio.file.Files
+import java.nio.file.Files.move
+import java.nio.file.Files.writeString
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
@@ -16,7 +18,7 @@ import kotlin.io.path.pathString
 class DaemonRecordStore(val paths: DaemonPaths) {
     fun write(record: DaemonRecord) {
         val projectPath = record.context.realProjectPath
-        paths.workspace(projectPath).recordWriter().write(record)
+        paths.workspace(projectPath).writeDaemonRecord(record)
     }
 
     fun read(projectPath: Path): StoredDaemonRecord? = paths.workspace(projectPath).readDaemonRecord()
@@ -60,20 +62,6 @@ class DaemonRecordStore(val paths: DaemonPaths) {
     }
 }
 
-class DaemonRecordWriter(val path: Path) {
-    fun write(record: DaemonRecord) {
-        path.parent.createDirectories()
-        val temporary = path.resolveSibling("${path.fileName}.tmp")
-        Files.writeString(temporary, GsonCodec.toJson(record))
-        Files.move(
-            temporary,
-            path,
-            StandardCopyOption.ATOMIC_MOVE,
-            StandardCopyOption.REPLACE_EXISTING,
-        )
-    }
-}
-
 class DaemonPaths(root: Path) {
     val projects: Path = root.resolve("projects")
 
@@ -95,7 +83,18 @@ class DaemonPaths(root: Path) {
 class DaemonWorkspace(val path: Path) {
     fun recordPath(): Path = path.resolve("daemon.json")
 
-    fun recordWriter(): DaemonRecordWriter = DaemonRecordWriter(recordPath())
+    fun writeDaemonRecord(record: DaemonRecord) {
+        val recordPath = recordPath()
+        recordPath.parent.createDirectories()
+        val temporary = recordPath.resolveSibling("${recordPath.fileName}.tmp")
+        writeString(temporary, GsonCodec.toJson(record))
+        move(
+            temporary,
+            recordPath,
+            StandardCopyOption.ATOMIC_MOVE,
+            StandardCopyOption.REPLACE_EXISTING,
+        )
+    }
 
     fun readDaemonRecord(): StoredDaemonRecord? {
         val path = recordPath()
