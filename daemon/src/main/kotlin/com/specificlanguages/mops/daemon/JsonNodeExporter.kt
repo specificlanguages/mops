@@ -4,7 +4,9 @@ import com.specificlanguages.mops.protocol.MpsNodeJson
 import com.specificlanguages.mops.protocol.MpsNodePropertyJson
 import com.specificlanguages.mops.protocol.MpsNodeReferenceJson
 import com.specificlanguages.mops.protocol.MpsNodeReferenceTargetJson
+import jetbrains.mps.smodel.SNodeUtil
 import org.jetbrains.mps.openapi.model.SNode
+import org.jetbrains.mps.openapi.model.SNodeAccessUtil
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 
 class JsonNodeExporter(
@@ -27,6 +29,9 @@ class JsonNodeExporter(
         val references = node.references
             .map { reference ->
                 val targetModel = reference.targetSModelReference
+                // Best-effort resolution: a resolved target contributes its name and concept, an unresolvable one
+                // (unloaded model, dangling reference) leaves them null while the address is still exported.
+                val targetNode = reference.targetNode
                 MpsNodeReferenceJson(
                     role = reference.link.name,
                     target = MpsNodeReferenceTargetJson(
@@ -34,6 +39,8 @@ class JsonNodeExporter(
                             ?.takeIf { it != model?.reference }
                             ?.let(persistence::asString),
                         node = reference.targetNodeId?.let(persistence::asString),
+                        name = targetNode?.let(::nodeName),
+                        concept = targetNode?.concept?.qualifiedName,
                     ),
                 )
             }
@@ -59,4 +66,7 @@ class JsonNodeExporter(
             children = children,
         )
     }
+
+    private fun nodeName(node: SNode): String? =
+        SNodeAccessUtil.getPropertyValue(node, SNodeUtil.property_INamedConcept_name) as String?
 }

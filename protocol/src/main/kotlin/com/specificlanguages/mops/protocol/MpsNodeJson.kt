@@ -29,4 +29,6 @@ data class MpsNodeReferenceJson(
 data class MpsNodeReferenceTargetJson(
     val model: String? = null,
     val node: String? = null,
+    val name: String? = null,
+    val concept: String? = null,
 )

@@ -3,6 +3,7 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.MpsNodeJson
+import com.specificlanguages.mops.protocol.MpsNodeReferenceTargetJson
 import com.specificlanguages.mops.protocol.NodeTarget
 import kotlin.io.path.pathString
 import kotlin.io.path.readText
@@ -30,6 +31,44 @@ class GetNodeSemanticsTest {
         assertNotNull(extendsReference.target.node)
         assertTrue(requireNotNull(node.children).isNotEmpty())
         assertTrue(requireNotNull(node.children).any { it.role == "implements" })
+    }
+
+    @Test
+    fun `enriches reference targets with the target name and concept`() {
+        val node = getNodeInSharedProject(NodeTarget.InModel(structureModelPath(), JSON_FILE_NODE_ID))
+
+        // Cross-model target: extends points at BaseConcept in jetbrains.mps.lang.core.structure.
+        val extends = requireNotNull(node.references).single { it.role == "extends" }
+        assertEquals(CORE_STRUCTURE_MODEL_REFERENCE, extends.target.model)
+        assertEquals("BaseConcept", extends.target.name)
+        assertEquals("jetbrains.mps.lang.structure.structure.ConceptDeclaration", extends.target.concept)
+
+        // Same-model target: the content link declaration references IJsonValue in this model, so the model address
+        // is omitted while the name and concept are still filled.
+        val target = contentLinkTargetReference(node)
+        assertNull(target.model)
+        assertEquals("IJsonValue", target.name)
+        assertEquals("jetbrains.mps.lang.structure.structure.InterfaceConceptDeclaration", target.concept)
+    }
+
+    @Test
+    fun `leaves an unresolvable reference target name and concept null while keeping the address`() {
+        SharedMpsEnvironment.withProjectCopy(
+            prepare = { project ->
+                val model = project.resolve(STRUCTURE_MODEL_PATH)
+                // Repoint references to IJsonValue at a node id that no longer exists, leaving them dangling. Only the
+                // ref sites use node="...", the IJsonValue definition uses id="...", so it stays intact.
+                model.writeText(model.readText().replace("""node="1P8oQ4NaXDX"""", """node="1P8oQ4NbZZZ0""""))
+            },
+        ) { mpsAccess, _ ->
+            val node = mpsAccess.read {
+                getNode(NodeTarget.InModel("com.specificlanguages.json.structure", JSON_FILE_NODE_ID))
+            }
+            val target = contentLinkTargetReference(node)
+            assertNotNull(target.node)
+            assertNull(target.name)
+            assertNull(target.concept)
+        }
     }
 
     @Test
@@ -114,6 +153,12 @@ class GetNodeSemanticsTest {
 
     private fun getNodeInSharedProject(target: NodeTarget): MpsNodeJson =
         SharedMpsEnvironment.sharedMpsAccess.read { getNode(target) }
+
+    private fun contentLinkTargetReference(node: MpsNodeJson): MpsNodeReferenceTargetJson {
+        val linkDeclaration = requireNotNull(node.children)
+            .single { it.concept == "jetbrains.mps.lang.structure.structure.LinkDeclaration" }
+        return requireNotNull(linkDeclaration.references).single { it.role == "target" }.target
+    }
 
     private fun structureModelPath(): String =
         SharedMpsEnvironment.sharedProjectPath.resolve(STRUCTURE_MODEL_PATH).pathString

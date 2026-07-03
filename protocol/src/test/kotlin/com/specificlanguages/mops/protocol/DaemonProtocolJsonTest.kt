@@ -340,6 +340,49 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `get-node response JSON carries enriched and bare reference targets`() {
+        val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
+        val response = ModelGetNodeResponse(
+            node = MpsNodeJson(
+                model = model,
+                concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                id = "2110045694544566904",
+                references = listOf(
+                    MpsNodeReferenceJson(
+                        role = "extends",
+                        target = MpsNodeReferenceTargetJson(
+                            model = "r:00000000-0000-4000-0000-011c89590288(jetbrains.mps.lang.core.structure)",
+                            node = "1169194658468",
+                            name = "BaseConcept",
+                            concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                        ),
+                    ),
+                    MpsNodeReferenceJson(
+                        role = "dangling",
+                        target = MpsNodeReferenceTargetJson(node = "404"),
+                    ),
+                ),
+            ),
+        )
+
+        val serialized = ProtocolJson.encodeResponse(response)
+
+        assertContains(serialized, """"name":"BaseConcept"""")
+        assertContains(serialized, """"concept":"jetbrains.mps.lang.structure.structure.ConceptDeclaration"""")
+        assertEquals(response, ProtocolJson.decodeResponse(serialized))
+    }
+
+    @Test
+    fun `reference target JSON keeps name and concept optional`() {
+        assertEquals(
+            MpsNodeReferenceTargetJson(model = "m", node = "1"),
+            ProtocolJson.decodeResponse(
+                """{"type":"model-get-node","node":{"concept":"c","references":[{"role":"r","target":{"model":"m","node":"1"}}]}}""",
+            ).let { (it as ModelGetNodeResponse).node.references!!.single().target },
+        )
+    }
+
+    @Test
     fun `list request and response JSON carry a semantic list tree`() {
         assertEquals(
             MpsListRequest(token = "secret", target = null, depth = 1),
