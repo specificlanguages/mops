@@ -20,6 +20,6 @@ interface DaemonClient {
     fun getNode(target: NodeTarget): ModelGetNodeResponse
     fun findUsages(target: NodeTarget, limit: Int): FindUsagesResponse
     fun findInstances(concept: String, exact: Boolean, limit: Int): FindInstancesResponse
-    fun modelEdit(batch: EditBatch): ModelEditResponse
+    fun modelEdit(batch: EditBatch, force: Boolean = false): ModelEditResponse
     fun list(target: List<String>?, depth: Int): MpsListResponse
 }

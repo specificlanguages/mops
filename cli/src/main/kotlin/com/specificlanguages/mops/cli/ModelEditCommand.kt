@@ -22,12 +22,18 @@ class ModelEditCommand(private val daemonClient: DaemonClient? = null) : Runnabl
     )
     var file: String? = null
 
+    @Option(
+        names = ["--no-constraints"],
+        description = ["Apply the batch even if it violates constraints; violations are still reported."],
+    )
+    var noConstraints: Boolean = false
+
     override fun run() {
         val batch = readBatch()
         require(batch.operations.isNotEmpty()) { "edit batch must contain at least one operation" }
 
         val client = daemonClient ?: model.root.ensureDaemon()
-        val response = client.modelEdit(batch)
+        val response = client.modelEdit(batch, force = noConstraints)
         println(ProtocolJson.encodeResponse(response))
     }
 

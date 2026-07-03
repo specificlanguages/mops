@@ -48,6 +48,7 @@ dependencies {
         include("lib/mps-platform.jar")
         include("lib/mps-openapi.jar")
         include("lib/mps-references.jar")
+        include("lib/mps-constraints-runtime.jar")
         include("lib/util.jar")
         include("lib/util-8.jar")
         include("lib/util_rt.jar")

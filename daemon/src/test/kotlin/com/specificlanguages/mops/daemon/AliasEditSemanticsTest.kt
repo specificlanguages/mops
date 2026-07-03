@@ -41,7 +41,9 @@ class AliasEditSemanticsTest {
 
             val jsonFile = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_REF)) }
             assertNotNull(childrenInRole(jsonFile, "propertyDeclaration").singleOrNull { propertyValueOrNull(it, "name") == "aliased" })
-            assertFalse(structureModel(projectPath).readText().contains("\$p"))
+            // The alias is batch-local: it is never written as a persisted attribute value. (A raw substring search
+            // would be flaky, since MPS's random base-encoded node ids can contain "$p" by chance.)
+            assertFalse(structureModel(projectPath).readText().contains("\"\$p\""))
         }
     }
 

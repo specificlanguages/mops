@@ -78,9 +78,9 @@ class DefaultDaemonClient(
             FindInstancesResponse::class.java
         )
 
-    override fun modelEdit(batch: EditBatch): ModelEditResponse =
+    override fun modelEdit(batch: EditBatch, force: Boolean): ModelEditResponse =
         exchange(
-            ModelEditRequest(token = token, batch = batch),
+            ModelEditRequest(token = token, batch = batch, force = force),
             ModelEditResponse::class.java
         )
 

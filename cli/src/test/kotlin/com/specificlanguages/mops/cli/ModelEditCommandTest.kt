@@ -50,6 +50,26 @@ class ModelEditCommandTest {
     }
 
     @Test
+    fun `model edit passes --no-constraints as force to the daemon`() {
+        val client = mock<DaemonClient>()
+        val batch = sampleBatch()
+        val response = ModelEditResponse(created = emptyMap(), violations = emptyList())
+        whenever(client.modelEdit(batch, force = true)).thenReturn(response)
+        var exitCode = Int.MIN_VALUE
+
+        withTextFromSystemIn(ProtocolJson.encodeBatch(batch)).execute {
+            tapSystemOut {
+                exitCode = CommandLine(ModelEditCommand(client))
+                    .setExecutionExceptionHandler(PrintErrorAndExit)
+                    .execute("--no-constraints")
+            }
+        }
+
+        assertEquals(0, exitCode)
+        verify(client).modelEdit(batch, force = true)
+    }
+
+    @Test
     fun `model edit reads batch from file`() {
         val client = mock<DaemonClient>()
         val batch = sampleBatch()

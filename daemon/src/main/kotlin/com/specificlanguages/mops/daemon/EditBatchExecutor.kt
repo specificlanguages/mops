@@ -4,6 +4,7 @@ import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.ChildPosition
 import com.specificlanguages.mops.protocol.EditBatch
+import com.specificlanguages.mops.protocol.EditConstraintViolation
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
 import com.specificlanguages.mops.protocol.ModelEditResponse
@@ -11,8 +12,11 @@ import com.specificlanguages.mops.protocol.MpsNodeJson
 import com.specificlanguages.mops.protocol.MpsNodeReferenceJson
 import com.specificlanguages.mops.protocol.MpsNodePropertyJson
 import com.specificlanguages.mops.protocol.NodeTarget
+import jetbrains.mps.core.aspects.constraints.rules.kinds.CanBeAncestorContext
+import jetbrains.mps.core.aspects.constraints.rules.kinds.ContainmentContext
 import jetbrains.mps.project.Project
 import jetbrains.mps.smodel.CopyUtil
+import jetbrains.mps.smodel.constraints.ConstraintsCanBeFacade
 import jetbrains.mps.smodel.language.ConceptRegistry
 import org.jetbrains.mps.openapi.language.SConcept
 import org.jetbrains.mps.openapi.language.SContainmentLink
@@ -32,6 +36,7 @@ class EditBatchExecutor(
         project: Project,
         batch: EditBatch,
         writeScope: WriteTransaction.WriteScope,
+        force: Boolean = false,
     ): ModelEditResponse {
         if (batch.operations.isEmpty()) {
             throw MpsRequestException(
@@ -42,6 +47,7 @@ class EditBatchExecutor(
 
         val affectedModels = linkedSetOf<EditableSModel>()
         val aliases = linkedMapOf<String, SNode>()
+        val placements = mutableListOf<Placement>()
         var mutated = false
 
         fun fail(code: MpsErrorCode, message: String): Nothing {
@@ -217,6 +223,7 @@ class EditBatchExecutor(
                 val link = resolveContainmentOrFail(index, node, role)
                 val childNode = model.createNode(resolveConceptOrFail(index, childSpec.concept))
                 node.addChild(link, childNode)
+                placements.add(Placement(index, node, link, childNode))
                 populate(index, model, childNode, childSpec.properties, childSpec.references, childSpec.children)
             }
         }
@@ -260,6 +267,7 @@ class EditBatchExecutor(
                     mutated = true
                     val child = model.createNode(concept)
                     attach(index, node, link, child, operation.position)
+                    placements.add(Placement(index, node, link, child))
                     populate(index, model, child, operation.properties, operation.references, operation.children)
                     bindAlias(index, operation.alias, child)
                 }
@@ -285,6 +293,7 @@ class EditBatchExecutor(
                         node.model?.removeRootNode(node)
                     }
                     attach(index, newParent, link, node, operation.position)
+                    placements.add(Placement(index, newParent, link, node))
                 }
 
                 is EditOperation.SetReference -> {
@@ -300,15 +309,25 @@ class EditBatchExecutor(
                     mutated = true
                     val copy = CopyUtil.copy(source)
                     attach(index, node, link, copy, operation.position)
+                    placements.add(Placement(index, node, link, copy))
                     bindAlias(index, operation.alias, copy)
                 }
             }
         }
 
+        val violations = evaluateConstraints(placements)
+        if (violations.isNotEmpty() && !force) {
+            // Block: revert the in-memory batch and report the violations without saving.
+            if (mutated) {
+                reload(affectedModels)
+            }
+            return ModelEditResponse(created = emptyMap(), violations = violations)
+        }
+
         return when (val saveOutcome = writeScope.saveWithResolveInfo(affectedModels)) {
             SaveOutcome.Saved -> ModelEditResponse(
                 created = aliases.mapValues { (_, node) -> persistence.asString(node.reference) },
-                violations = emptyList(),
+                violations = violations,
             )
             is SaveOutcome.SaveFailed -> fail(
                 MpsErrorCode.SAVE_FAILED,
@@ -355,10 +374,122 @@ class EditBatchExecutor(
         }
     }
 
+    /**
+     * Evaluates the Constraints a batch would violate, using only the cheap constraints/structural APIs (never the
+     * typesystem or full Model Check). Covers the structural allowed-child concept, language-defined
+     * can-be-child/parent/ancestor rules, and containment cardinality. Reference-scope Constraints are deliberately not
+     * evaluated (they run arbitrary language code); property-value Constraints are a later addition.
+     */
+    private fun evaluateConstraints(placements: List<Placement>): List<EditConstraintViolation> {
+        val violations = mutableListOf<EditConstraintViolation>()
+        val cardinalityChecked = hashSetOf<String>()
+
+        for (placement in placements) {
+            val childConcept = placement.child.concept
+            val link = placement.link
+
+            // Structural integrity: the child's concept must be a subconcept of the link's target concept. The can-be
+            // facade below covers only language-defined rules, not this, so it is checked directly.
+            if (!childConcept.isSubConceptOf(link.targetConcept)) {
+                violations.add(
+                    EditConstraintViolation(
+                        operation = placement.opIndex,
+                        constraint = "containment",
+                        message = "concept ${childConcept.qualifiedName} is not allowed under role ${link.name} " +
+                            "(expected ${link.targetConcept.qualifiedName})",
+                    ),
+                )
+            }
+
+            val containmentContext = ContainmentContext.Builder()
+                .parentNode(placement.parent)
+                .childNode(placement.child)
+                .childConcept(childConcept)
+                .link(link)
+                .build()
+            if (ConstraintsCanBeFacade.checkCanBeChild(containmentContext).isNotEmpty()) {
+                violations.add(
+                    EditConstraintViolation(
+                        placement.opIndex,
+                        "canBeChild",
+                        "concept ${childConcept.qualifiedName} cannot be a child under role ${link.name}",
+                    ),
+                )
+            }
+            if (ConstraintsCanBeFacade.checkCanBeParent(containmentContext).isNotEmpty()) {
+                violations.add(
+                    EditConstraintViolation(
+                        placement.opIndex,
+                        "canBeParent",
+                        "${placement.parent.concept.qualifiedName} cannot be the parent of ${childConcept.qualifiedName}",
+                    ),
+                )
+            }
+            // can-be-ancestor rules apply to every ancestor of the insertion point, so walk up from the parent.
+            var ancestor: SNode? = placement.parent
+            while (ancestor != null) {
+                val ancestorContext = CanBeAncestorContext.Builder()
+                    .ancestorNode(ancestor)
+                    .parentNode(placement.parent)
+                    .childConcept(childConcept)
+                    .link(link)
+                    .build()
+                if (ConstraintsCanBeFacade.checkCanBeAncestor(ancestorContext).isNotEmpty()) {
+                    violations.add(
+                        EditConstraintViolation(
+                            placement.opIndex,
+                            "canBeAncestor",
+                            "concept ${childConcept.qualifiedName} cannot be a descendant of " +
+                                ancestor.concept.qualifiedName,
+                        ),
+                    )
+                    break
+                }
+                ancestor = ancestor.parent
+            }
+
+            // Cardinality: a single-valued role may hold at most one child, evaluated once per touched parent+link.
+            val cardinalityKey = "${persistence.asString(placement.parent.reference)}#${link.name}"
+            if (cardinalityChecked.add(cardinalityKey) && !link.isMultiple) {
+                val count = placement.parent.getChildren(link).count()
+                if (count > 1) {
+                    violations.add(
+                        EditConstraintViolation(
+                            placement.opIndex,
+                            "cardinality",
+                            "role ${link.name} is single-valued but would hold $count children",
+                        ),
+                    )
+                }
+            }
+
+            // An obligatory containment role on a created node must not be left empty.
+            for (childLink in childConcept.containmentLinks) {
+                if (!childLink.isOptional && placement.child.getChildren(childLink).none()) {
+                    violations.add(
+                        EditConstraintViolation(
+                            placement.opIndex,
+                            "cardinality",
+                            "obligatory role ${childLink.name} on ${childConcept.qualifiedName} is empty",
+                        ),
+                    )
+                }
+            }
+        }
+        return violations
+    }
+
     private fun reload(models: Iterable<EditableSModel>) {
         models.forEach { it.reloadFromSource() }
     }
 }
+
+private class Placement(
+    val opIndex: Int,
+    val parent: SNode,
+    val link: SContainmentLink,
+    val child: SNode,
+)
 
 private sealed interface PropertyResolution {
     data class Found(val property: SProperty) : PropertyResolution

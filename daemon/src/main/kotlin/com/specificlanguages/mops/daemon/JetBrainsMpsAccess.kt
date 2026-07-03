@@ -121,8 +121,8 @@ class JetBrainsMpsAccess(
     private inner class JetBrainsMpsWrite(
         private val writeScope: WriteTransaction.WriteScope,
     ) : JetBrainsMpsRead(), MpsWrite {
-        override fun modelEdit(batch: EditBatch): ModelEditResponse =
-            editBatchExecutor.apply(project, batch, writeScope)
+        override fun modelEdit(batch: EditBatch, force: Boolean): ModelEditResponse =
+            editBatchExecutor.apply(project, batch, writeScope, force)
 
         override fun resave(modelTarget: String) {
             val model = modelNodeResolver.findModel(project, modelTarget)

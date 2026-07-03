@@ -144,6 +144,26 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `model edit request JSON carries the force flag and defaults it to false`() {
+        val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
+        val batch = EditBatch(operations = listOf(EditOperation.Delete(EditTarget.NodeReference("$model/1"))))
+
+        val forced = ProtocolJson.encodeRequest(ModelEditRequest(token = "secret", batch = batch, force = true))
+        assertContains(forced, """"force":true""")
+        assertEquals(
+            ModelEditRequest(token = "secret", batch = batch, force = true),
+            ProtocolJson.decodeRequest(forced),
+        )
+
+        assertEquals(
+            ModelEditRequest(token = "secret", batch = batch, force = false),
+            ProtocolJson.decodeRequest(
+                """{"type":"model-edit","token":"secret","batch":{"operations":[{"op":"delete","target":"$model/1"}]}}""",
+            ),
+        )
+    }
+
+    @Test
     fun `model edit request JSON round-trips structural operations and inline subtrees`() {
         val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
         val request = ModelEditRequest(

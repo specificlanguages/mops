@@ -19,7 +19,7 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
                     findInstances(request.concept, request.exact, request.limit)
                 }
 
-                is ModelEditRequest -> mpsAccess.write { modelEdit(request.batch) }
+                is ModelEditRequest -> mpsAccess.write { modelEdit(request.batch, request.force) }
 
                 is ModelResaveRequest -> {
                     mpsAccess.write { resave(request.modelTarget) }
