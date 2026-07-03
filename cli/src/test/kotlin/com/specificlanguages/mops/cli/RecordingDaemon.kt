@@ -1,7 +1,7 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.protocol.DaemonResponse
-import com.specificlanguages.mops.protocol.GsonCodec
+import com.specificlanguages.mops.protocol.ProtocolJson
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintWriter
@@ -30,11 +30,10 @@ internal class RecordingDaemon(val responseIterator: Iterator<DaemonResponse>) :
                             requestsReceived.add(requestLine)
                             val response = responseIterator.next()
 
-                            GsonCodec.toJson(response, writer)
-                            writer.println()
+                            writer.println(ProtocolJson.encodeResponse(response))
 
                             println("request: $requestLine")
-                            println(" -> response: ${GsonCodec.toJson(response)}")
+                            println(" -> response: ${ProtocolJson.encodeResponse(response)}")
                         } while (true)
                     }
                 }

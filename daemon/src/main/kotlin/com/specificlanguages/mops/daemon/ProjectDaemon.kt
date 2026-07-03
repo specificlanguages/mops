@@ -6,7 +6,7 @@ import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.DaemonRecord
 import com.specificlanguages.mops.protocol.DaemonRequest
 import com.specificlanguages.mops.protocol.DaemonWorkspace
-import com.specificlanguages.mops.protocol.GsonCodec
+import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.PingRequest
 import com.specificlanguages.mops.protocol.PongResponse
 import com.specificlanguages.mops.protocol.StopRequest
@@ -81,18 +81,17 @@ class ProjectDaemon(
 
         val response = run {
             val request = try {
-                GsonCodec.fromJson(requestLine, DaemonRequest::class.java)
+                if (requestLine == null) {
+                    return@run errorResponse(
+                        "INVALID_REQUEST",
+                        "request must be one newline-delimited JSON object"
+                    )
+                }
+                ProtocolJson.decodeRequest(requestLine)
             } catch (exception: RuntimeException) {
                 return@run errorResponse(
                     "INVALID_REQUEST",
                     invalidRequestMessage(exception)
-                )
-            }
-
-            if (request == null) {
-                return@run errorResponse(
-                    "INVALID_REQUEST",
-                    "request must be one newline-delimited JSON object"
                 )
             }
 
@@ -113,7 +112,7 @@ class ProjectDaemon(
         }
 
         PrintWriter(socket.getOutputStream(), true).use { writer ->
-            writer.println(GsonCodec.toJson(response))
+            writer.println(ProtocolJson.encodeResponse(response))
         }
         if (response is StoppedResponse) {
             done = true
@@ -124,8 +123,6 @@ class ProjectDaemon(
         DaemonErrorResponse(errorCode = code, message = message, workspacePath = workspace.path.pathString)
 
     private fun invalidRequestMessage(exception: RuntimeException): String =
-        exception.message
-            ?.takeIf { it == "request type is required" || it.startsWith("unsupported request type ") }
-            ?: "request must be one newline-delimited JSON object"
+        exception.message ?: "request must be one newline-delimited JSON object"
 
 }

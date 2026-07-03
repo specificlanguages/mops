@@ -7,7 +7,7 @@ import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
-import com.specificlanguages.mops.protocol.GsonCodec
+import com.specificlanguages.mops.protocol.ProtocolJson
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.api.parallel.ResourceLock
 import org.mockito.kotlin.mock
@@ -34,7 +34,7 @@ class ModelEditCommandTest {
         var exitCode = Int.MIN_VALUE
         var stdout = ""
 
-        withTextFromSystemIn(GsonCodec.toJson(batch)).execute {
+        withTextFromSystemIn(ProtocolJson.encodeBatch(batch)).execute {
             stdout = tapSystemOut {
                 exitCode = CommandLine(ModelEditCommand(client))
                     .setExecutionExceptionHandler(PrintErrorAndExit)
@@ -44,7 +44,7 @@ class ModelEditCommandTest {
 
         assertEquals(0, exitCode)
         verify(client).modelEdit(batch)
-        assertEquals(response, GsonCodec.fromJson(stdout, ModelEditResponse::class.java))
+        assertEquals(response, ProtocolJson.decodeResponse(stdout))
     }
 
     @Test
@@ -54,7 +54,7 @@ class ModelEditCommandTest {
         val response = ModelEditResponse(created = emptyMap(), violations = emptyList())
         whenever(client.modelEdit(batch)).thenReturn(response)
         val batchFile = tempDir.resolve("batch.json").apply {
-            writeText(GsonCodec.toJson(batch))
+            writeText(ProtocolJson.encodeBatch(batch))
         }
         var exitCode = Int.MIN_VALUE
 

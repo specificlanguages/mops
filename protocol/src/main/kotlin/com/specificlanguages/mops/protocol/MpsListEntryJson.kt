@@ -1,5 +1,8 @@
 package com.specificlanguages.mops.protocol
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class MpsListEntryJson(
     val type: String,
     val name: String?,

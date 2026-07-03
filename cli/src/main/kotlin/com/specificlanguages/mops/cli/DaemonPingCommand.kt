@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.cli
 
-import com.specificlanguages.mops.protocol.GsonCodec
+import com.specificlanguages.mops.protocol.DaemonResponse
+import com.specificlanguages.mops.protocol.ProtocolJson
 import picocli.CommandLine.Command
 import picocli.CommandLine.ParentCommand
 
@@ -15,6 +16,6 @@ class DaemonPingCommand : Runnable {
     override fun run() {
         val root = parent.root
         val response = root.ensureDaemon().ping()
-        println(GsonCodec.toJson(response))
+        println(ProtocolJson.encodeResponse(response))
     }
 }

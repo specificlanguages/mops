@@ -1,7 +1,8 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DaemonClient
-import com.specificlanguages.mops.protocol.GsonCodec
+import com.specificlanguages.mops.protocol.DaemonResponse
+import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
@@ -45,7 +46,7 @@ class FindInstancesCommand(private val daemonClient: DaemonClient? = null) : Run
         val client = daemonClient ?: find.root.ensureDaemon()
         val response = client.findInstances(concept = concept, exact = exact, limit = limit)
         if (json) {
-            println(GsonCodec.toJson(response))
+            println(ProtocolJson.encodeResponse(response))
         } else {
             response.nodes.forEach(::renderText)
             if (response.truncated) {

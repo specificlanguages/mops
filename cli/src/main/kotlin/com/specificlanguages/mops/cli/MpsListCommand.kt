@@ -1,7 +1,7 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DaemonClient
-import com.specificlanguages.mops.protocol.GsonCodec
+import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
@@ -49,7 +49,7 @@ class MpsListCommand(private val daemonClient: DaemonClient? = null) : Runnable 
         val client = daemonClient ?: root.ensureDaemon()
         val response = client.list(target = requestedTarget, depth = depth)
         if (json) {
-            println(GsonCodec.toJson(response.root))
+            println(ProtocolJson.encodeListEntry(response.root))
         } else {
             renderText(response.root, indent = 0)
         }

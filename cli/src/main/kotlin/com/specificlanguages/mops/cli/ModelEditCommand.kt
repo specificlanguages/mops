@@ -2,7 +2,8 @@ package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.EditBatch
-import com.specificlanguages.mops.protocol.GsonCodec
+import com.specificlanguages.mops.protocol.DaemonResponse
+import com.specificlanguages.mops.protocol.ProtocolJson
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.ParentCommand
@@ -27,11 +28,11 @@ class ModelEditCommand(private val daemonClient: DaemonClient? = null) : Runnabl
 
         val client = daemonClient ?: model.root.ensureDaemon()
         val response = client.modelEdit(batch)
-        println(GsonCodec.toJson(response))
+        println(ProtocolJson.encodeResponse(response))
     }
 
     private fun readBatch(): EditBatch =
-        GsonCodec.fromJson(inputText(), EditBatch::class.java)
+        ProtocolJson.decodeBatch(inputText())
             ?: throw IllegalArgumentException("edit batch is required")
 
     private fun inputText(): String =

@@ -1,10 +1,12 @@
 package com.specificlanguages.mops.protocol
 
+import kotlinx.serialization.Serializable
 import java.nio.file.Path
 
 /**
  * Contact information and metadata of a running mops daemon.
  */
+@Serializable
 data class DaemonRecord(
     // Contact information
     val port: Int,
@@ -18,6 +20,7 @@ data class DaemonRecord(
     val context: DaemonContext,
 
     // Runtime information
+    @Serializable(with = PathAsStringSerializer::class)
     val workspace: Path,
     val startupTime: String,
 )

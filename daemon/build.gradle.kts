@@ -1,3 +1,16 @@
+import java.util.zip.ZipFile
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        // Used by checkDaemonRelocation to walk live class references without tripping over dead constant-pool strings.
+        classpath("org.ow2.asm:asm:9.7.1")
+        classpath("org.ow2.asm:asm-commons:9.7.1")
+    }
+}
+
 plugins {
     id("mops.kotlin-jvm-conventions")
     application
@@ -121,4 +134,69 @@ tasks.test {
 
 val dist = configurations.consumable("dist") {
     outgoing.artifact(tasks.installDist)
+}
+
+// Enforce that nothing on the daemon's runtime classpath carries a non-relocated kotlinx.serialization. On the daemon's
+// flat classpath (our jars first, then MPS's), a stray non-relocated copy would shadow MPS's own serialization runtime.
+// Our copy must only ever appear under the relocated `com.specificlanguages.mops.shaded.kotlinx.serialization` package.
+val checkDaemonRelocation by tasks.registering {
+    val runtimeClasspath = configurations.runtimeClasspath
+    inputs.files(runtimeClasspath).withNormalizer(ClasspathNormalizer::class)
+
+    doLast {
+        val forbiddenPrefix = "kotlinx/serialization/"
+        val violations = mutableListOf<String>()
+
+        runtimeClasspath.get().files.filter { it.name.endsWith(".jar") }.forEach { jar ->
+            ZipFile(jar).use { zip ->
+                zip.entries().asSequence().filter { it.name.endsWith(".class") }.forEach { entry ->
+                    // A leaked non-relocated runtime jar would carry class files under the forbidden package.
+                    if (entry.name.startsWith(forbiddenPrefix)) {
+                        violations += "${jar.name}: ships non-relocated class ${entry.name}"
+                        return@forEach
+                    }
+
+                    val referenced = sortedSetOf<String>()
+                    val remapper = object : org.objectweb.asm.commons.Remapper() {
+                        override fun map(internalName: String): String {
+                            if (internalName.startsWith(forbiddenPrefix)) {
+                                referenced += internalName
+                            }
+                            return internalName
+                        }
+                    }
+                    try {
+                        zip.getInputStream(entry).use { input ->
+                            org.objectweb.asm.ClassReader(input).accept(
+                                org.objectweb.asm.commons.ClassRemapper(
+                                    org.objectweb.asm.ClassWriter(0),
+                                    remapper,
+                                ),
+                                0,
+                            )
+                        }
+                    } catch (e: Exception) {
+                        // Skip anything ASM cannot parse (e.g. non-standard or future-version class files).
+                    }
+                    referenced.forEach { name ->
+                        violations += "${jar.name}: ${entry.name} references non-relocated $name"
+                    }
+                }
+            }
+        }
+
+        if (violations.isNotEmpty()) {
+            throw GradleException(
+                buildString {
+                    appendLine("Non-relocated kotlinx.serialization found on the daemon runtime classpath:")
+                    violations.sorted().forEach { appendLine("  - $it") }
+                    appendLine("All kotlinx.serialization usage must be relocated under the shaded package.")
+                }
+            )
+        }
+    }
+}
+
+tasks.named("check") {
+    dependsOn(checkDaemonRelocation)
 }

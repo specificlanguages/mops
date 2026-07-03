@@ -3,7 +3,7 @@ package com.specificlanguages.mops.cli
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.FindInstancesResponse
-import com.specificlanguages.mops.protocol.GsonCodec
+import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import org.junit.jupiter.api.parallel.ResourceLock
 import org.mockito.kotlin.mock
@@ -91,7 +91,7 @@ class FindInstancesCommandTest {
         }
 
         assertEquals(0, exitCode)
-        assertEquals(response, GsonCodec.fromJson(stdout, FindInstancesResponse::class.java))
+        assertEquals(response, ProtocolJson.decodeResponse(stdout))
     }
 
     @Test

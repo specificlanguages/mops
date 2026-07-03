@@ -12,7 +12,7 @@ import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindUsagesRequest
 import com.specificlanguages.mops.protocol.FindUsagesResponse
 import com.specificlanguages.mops.protocol.NodeTarget
-import com.specificlanguages.mops.protocol.GsonCodec
+import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.ModelGetNodeRequest
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
 import com.specificlanguages.mops.protocol.ModelResaveRequest
@@ -91,14 +91,14 @@ class DefaultDaemonClient(
         )
 
     private fun <T : DaemonResponse> exchange(request: DaemonRequest, responseType: Class<T>): T {
-        val response = GsonCodec.fromJson(exchangeLine(request), DaemonResponse::class.java)
+        val response = ProtocolJson.decodeResponse(exchangeLine(request))
 
         if (response is DaemonErrorResponse) {
             throw IllegalStateException(response.message)
         }
 
         if (!responseType.isInstance(response)) {
-            throw IllegalStateException("daemon returned unexpected response type ${response.type}")
+            throw IllegalStateException("daemon returned unexpected response type ${response::class.simpleName}")
         }
 
         return responseType.cast(response)
@@ -109,7 +109,7 @@ class DefaultDaemonClient(
             socket.soTimeout = timeout.toMillis().toInt()
             PrintWriter(socket.getOutputStream(), true).use { writer ->
                 BufferedReader(InputStreamReader(socket.getInputStream())).use { reader ->
-                    writer.println(GsonCodec.toJson(request))
+                    writer.println(ProtocolJson.encodeRequest(request))
                     reader.readLine() ?: throw IllegalStateException("daemon closed connection")
                 }
             }

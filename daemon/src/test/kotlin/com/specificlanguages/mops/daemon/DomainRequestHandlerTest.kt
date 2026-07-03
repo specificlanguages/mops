@@ -122,7 +122,7 @@ class DomainRequestHandlerTest {
     fun `unsupported request type yields an error response without touching MPS`() {
         val response = handler.handleDomainRequest(PingRequest(TOKEN))
 
-        assertEquals(errorResponse("UNSUPPORTED_REQUEST", "unsupported request type: ping"), response)
+        assertEquals(errorResponse("UNSUPPORTED_REQUEST", "unsupported request type: PingRequest"), response)
         verifyNoInteractions(operations)
     }
 

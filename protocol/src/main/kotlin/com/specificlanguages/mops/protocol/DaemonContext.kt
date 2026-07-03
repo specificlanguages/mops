@@ -1,11 +1,17 @@
 package com.specificlanguages.mops.protocol
 
+import kotlinx.serialization.Serializable
 import java.io.IOException
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
+@Serializable
 @ConsistentCopyVisibility
-data class DaemonContext internal constructor(val realProjectPath: Path, val realMpsHome: Path, val realJavaHome: Path) {
+data class DaemonContext internal constructor(
+    @Serializable(with = PathAsStringSerializer::class) val realProjectPath: Path,
+    @Serializable(with = PathAsStringSerializer::class) val realMpsHome: Path,
+    @Serializable(with = PathAsStringSerializer::class) val realJavaHome: Path,
+) {
     companion object {
         fun fromLivePaths(projectPath: Path, mpsHome: Path, javaHome: Path) =
             DaemonContext(

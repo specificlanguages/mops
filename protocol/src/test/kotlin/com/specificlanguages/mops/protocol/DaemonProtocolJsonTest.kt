@@ -1,6 +1,6 @@
 package com.specificlanguages.mops.protocol
 
-import com.google.gson.JsonParseException
+import kotlinx.serialization.SerializationException
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -12,23 +12,16 @@ class DaemonProtocolJsonTest {
     fun `request JSON decodes to concrete daemon request messages`() {
         assertEquals(
             PingRequest(token = "secret"),
-            GsonCodec.fromJson(
-                """{"type":"ping","token":"secret"}""",
-                DaemonRequest::class.java,
-            ),
+            ProtocolJson.decodeRequest("""{"type":"ping","token":"secret"}"""),
         )
         assertEquals(
             StopRequest(token = "secret"),
-            GsonCodec.fromJson(
-                """{"type":"stop","token":"secret"}""",
-                DaemonRequest::class.java,
-            ),
+            ProtocolJson.decodeRequest("""{"type":"stop","token":"secret"}"""),
         )
         assertEquals(
             ModelResaveRequest(token = "secret", modelTarget = "/project/models/main.mps"),
-            GsonCodec.fromJson(
+            ProtocolJson.decodeRequest(
                 """{"type":"model-resave","token":"secret","modelTarget":"/project/models/main.mps"}""",
-                DaemonRequest::class.java,
             ),
         )
         assertEquals(
@@ -39,16 +32,15 @@ class DaemonProtocolJsonTest {
                     nodeId = "2110045694544566904",
                 ),
             ),
-            GsonCodec.fromJson(
-                """{"type":"model-get-node","token":"secret","target":{"modelTarget":"/project/models/main.mps","nodeId":"2110045694544566904"}}""",
-                DaemonRequest::class.java,
+            ProtocolJson.decodeRequest(
+                """{"type":"model-get-node","token":"secret","target":{"type":"inModel","modelTarget":"/project/models/main.mps","nodeId":"2110045694544566904"}}""",
             ),
         )
     }
 
     @Test
     fun `get-node target JSON is nested under the daemon request`() {
-        val inModelRequest = GsonCodec.toJson(
+        val inModelRequest = ProtocolJson.encodeRequest(
             ModelGetNodeRequest(
                 token = "secret",
                 target = NodeTarget.InModel(
@@ -56,7 +48,6 @@ class DaemonProtocolJsonTest {
                     nodeId = "2110045694544566904",
                 ),
             ),
-            DaemonRequest::class.java,
         )
         assertContains(inModelRequest, """"type":"model-get-node"""")
         assertContains(inModelRequest, """"target"""")
@@ -70,17 +61,16 @@ class DaemonProtocolJsonTest {
                     nodeId = "2110045694544566904",
                 ),
             ),
-            GsonCodec.fromJson(inModelRequest, DaemonRequest::class.java),
+            ProtocolJson.decodeRequest(inModelRequest),
         )
 
-        val nodeReferenceRequest = GsonCodec.toJson(
+        val nodeReferenceRequest = ProtocolJson.encodeRequest(
             ModelGetNodeRequest(
                 token = "secret",
                 target = NodeTarget.NodeReference(
                     "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
                 ),
             ),
-            DaemonRequest::class.java,
         )
         assertContains(nodeReferenceRequest, """"target"""")
         assertContains(
@@ -94,7 +84,7 @@ class DaemonProtocolJsonTest {
                     "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
                 ),
             ),
-            GsonCodec.fromJson(nodeReferenceRequest, DaemonRequest::class.java),
+            ProtocolJson.decodeRequest(nodeReferenceRequest),
         )
     }
 
@@ -122,7 +112,7 @@ class DaemonProtocolJsonTest {
                 ),
             ),
         )
-        val serializedRequest = GsonCodec.toJson(request, DaemonRequest::class.java)
+        val serializedRequest = ProtocolJson.encodeRequest(request)
 
         assertContains(serializedRequest, """"type":"model-edit"""")
         assertContains(serializedRequest, """"op":"setProperty"""")
@@ -130,7 +120,7 @@ class DaemonProtocolJsonTest {
         assertContains(serializedRequest, """"target":{"model":"/project/models/main.mps","nodeId":"2110045694544566905"}""")
         assertEquals(
             request,
-            GsonCodec.fromJson(serializedRequest, DaemonRequest::class.java),
+            ProtocolJson.decodeRequest(serializedRequest),
         )
 
         val response = ModelEditResponse(
@@ -143,13 +133,13 @@ class DaemonProtocolJsonTest {
                 ),
             ),
         )
-        val serializedResponse = GsonCodec.toJson(response, DaemonResponse::class.java)
+        val serializedResponse = ProtocolJson.encodeResponse(response)
 
         assertContains(serializedResponse, """"type":"model-edit"""")
         assertContains(serializedResponse, "\"created\":{\"\$new\":\"$nodeReference-copy\"}")
         assertEquals(
             response,
-            GsonCodec.fromJson(serializedResponse, DaemonResponse::class.java),
+            ProtocolJson.decodeResponse(serializedResponse),
         )
     }
 
@@ -157,10 +147,7 @@ class DaemonProtocolJsonTest {
     fun `response JSON decodes to concrete daemon response messages`() {
         assertEquals(
             ReadyMessage(port = 3210),
-            GsonCodec.fromJson(
-                """{"type":"ready","port":3210}""",
-                DaemonResponse::class.java,
-            ),
+            ProtocolJson.decodeResponse("""{"type":"ready","port":3210}"""),
         )
         assertEquals(
             DaemonErrorResponse(
@@ -168,9 +155,8 @@ class DaemonProtocolJsonTest {
                 message = "not wired yet",
                 workspacePath = "/state",
             ),
-            GsonCodec.fromJson(
+            ProtocolJson.decodeResponse(
                 """{"type":"error","errorCode":"NOT_IMPLEMENTED","message":"not wired yet","workspacePath":"/state"}""",
-                DaemonResponse::class.java,
             ),
         )
         assertEquals(
@@ -181,9 +167,8 @@ class DaemonProtocolJsonTest {
                     id = "2110045694544566904",
                 ),
             ),
-            GsonCodec.fromJson(
+            ProtocolJson.decodeResponse(
                 """{"type":"model-get-node","node":{"model":"r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)","concept":"jetbrains.mps.lang.structure.structure.ConceptDeclaration","id":"2110045694544566904"}}""",
-                DaemonResponse::class.java,
             ),
         )
     }
@@ -192,18 +177,14 @@ class DaemonProtocolJsonTest {
     fun `list request and response JSON carry a semantic list tree`() {
         assertEquals(
             MpsListRequest(token = "secret", target = null, depth = 1),
-            GsonCodec.fromJson(
-                """{"type":"list","token":"secret","depth":1}""",
-                DaemonRequest::class.java,
-            ),
+            ProtocolJson.decodeRequest("""{"type":"list","token":"secret","depth":1}"""),
         )
-        val serializedRequest = GsonCodec.toJson(
+        val serializedRequest = ProtocolJson.encodeRequest(
             MpsListRequest(
                 token = "secret",
                 target = listOf("com.specificlanguages.json", "com.specificlanguages.json.structure"),
                 depth = 1,
             ),
-            DaemonRequest::class.java,
         )
         assertEquals(
             MpsListRequest(
@@ -211,7 +192,7 @@ class DaemonProtocolJsonTest {
                 target = listOf("com.specificlanguages.json", "com.specificlanguages.json.structure"),
                 depth = 1,
             ),
-            GsonCodec.fromJson(serializedRequest, DaemonRequest::class.java),
+            ProtocolJson.decodeRequest(serializedRequest),
         )
         assertEquals(
             MpsListResponse(
@@ -228,9 +209,8 @@ class DaemonProtocolJsonTest {
                     ),
                 ),
             ),
-            GsonCodec.fromJson(
+            ProtocolJson.decodeResponse(
                 """{"type":"list","root":{"type":"project","name":"mps-json","children":[{"type":"module","name":"com.specificlanguages.json","moduleKind":"language","reference":"f3f42ddf-d692-4c29-90fb-7360196f01ab(com.specificlanguages.json)"}]}}""",
-                DaemonResponse::class.java,
             ),
         )
     }
@@ -241,13 +221,13 @@ class DaemonProtocolJsonTest {
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
         )
         val request = FindUsagesRequest(token = "secret", target = target, limit = 100)
-        val serializedRequest = GsonCodec.toJson(request, DaemonRequest::class.java)
+        val serializedRequest = ProtocolJson.encodeRequest(request)
 
         assertContains(serializedRequest, """"type":"find-usages"""")
         assertContains(serializedRequest, """"limit":100""")
         assertEquals(
             request,
-            GsonCodec.fromJson(serializedRequest, DaemonRequest::class.java),
+            ProtocolJson.decodeRequest(serializedRequest),
         )
 
         assertEquals(
@@ -266,9 +246,8 @@ class DaemonProtocolJsonTest {
                     ),
                 ),
             ),
-            GsonCodec.fromJson(
+            ProtocolJson.decodeResponse(
                 """{"type":"usages","limit":100,"truncated":false,"usages":[{"role":"concept","owner":{"type":"node","name":"JsonObject","concept":"jetbrains.mps.lang.structure.structure.ConceptDeclaration","reference":"r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905"}}]}""",
-                DaemonResponse::class.java,
             ),
         )
     }
@@ -281,7 +260,7 @@ class DaemonProtocolJsonTest {
             exact = true,
             limit = 100,
         )
-        val serializedRequest = GsonCodec.toJson(request, DaemonRequest::class.java)
+        val serializedRequest = ProtocolJson.encodeRequest(request)
 
         assertContains(serializedRequest, """"type":"find-instances"""")
         assertContains(serializedRequest, """"concept":"jetbrains.mps.lang.structure.structure.ConceptDeclaration"""")
@@ -289,7 +268,7 @@ class DaemonProtocolJsonTest {
         assertContains(serializedRequest, """"limit":100""")
         assertEquals(
             request,
-            GsonCodec.fromJson(serializedRequest, DaemonRequest::class.java),
+            ProtocolJson.decodeRequest(serializedRequest),
         )
 
         val response = FindInstancesResponse(
@@ -304,23 +283,38 @@ class DaemonProtocolJsonTest {
                 ),
             ),
         )
-        val serializedResponse = GsonCodec.toJson(response, DaemonResponse::class.java)
+        val serializedResponse = ProtocolJson.encodeResponse(response)
 
         assertContains(serializedResponse, """"type":"nodes"""")
         assertFalse(serializedResponse.contains(""""id"""), "node summary must omit model-local id: $serializedResponse")
         assertFalse(serializedResponse.contains(""""model"""), "node summary must omit separate model: $serializedResponse")
         assertEquals(
             response,
-            GsonCodec.fromJson(serializedResponse, DaemonResponse::class.java),
+            ProtocolJson.decodeResponse(serializedResponse),
         )
     }
 
     @Test
-    fun `message adapters require a type discriminator`() {
-        val exception = assertFailsWith<JsonParseException> {
-            GsonCodec.fromJson("""{"token":"secret"}""", DaemonRequest::class.java)
+    fun `decoding a request without a type discriminator fails`() {
+        assertFailsWith<SerializationException> {
+            ProtocolJson.decodeRequest("""{"token":"secret"}""")
         }
+    }
 
-        assertEquals("request type is required", exception.message)
+    @Test
+    fun `decoding a request that omits a required non-null field is rejected`() {
+        // Gson's reflective adapter left modelTarget null here; kotlinx.serialization rejects the missing field.
+        val exception = assertFailsWith<SerializationException> {
+            ProtocolJson.decodeRequest("""{"type":"model-resave","token":"secret"}""")
+        }
+        assertContains(exception.message ?: "", "modelTarget")
+    }
+
+    @Test
+    fun `list request target stays optional`() {
+        assertEquals(
+            MpsListRequest(token = "secret", target = null, depth = 1),
+            ProtocolJson.decodeRequest("""{"type":"list","token":"secret","depth":1}"""),
+        )
     }
 }

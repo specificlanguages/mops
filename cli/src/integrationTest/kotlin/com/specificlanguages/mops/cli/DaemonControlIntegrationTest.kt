@@ -4,7 +4,7 @@ import com.specificlanguages.mops.protocol.DaemonContext
 import com.specificlanguages.mops.protocol.DaemonRecord
 import com.specificlanguages.mops.protocol.DaemonResponse
 import com.specificlanguages.mops.protocol.DaemonRecordStore
-import com.specificlanguages.mops.protocol.GsonCodec
+import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.PongResponse
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
@@ -86,7 +86,7 @@ class DaemonControlIntegrationTest {
             assertEquals(0, ping.exitCode, ping.output)
 
             val response = try {
-                GsonCodec.fromJson(ping.stdout, DaemonResponse::class.java)
+                ProtocolJson.decodeResponse(ping.stdout)
             } catch (exception: RuntimeException) {
                 throw AssertionError(
                     "daemon ping stdout should be parseable as a single JSON response, but was:\n${ping.stdout}",

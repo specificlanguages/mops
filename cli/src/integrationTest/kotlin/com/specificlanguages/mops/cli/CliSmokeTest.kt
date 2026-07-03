@@ -4,7 +4,7 @@ import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
 import com.specificlanguages.mops.protocol.FindInstancesResponse
-import com.specificlanguages.mops.protocol.GsonCodec
+import com.specificlanguages.mops.protocol.ProtocolJson
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.api.parallel.ResourceLock
@@ -47,7 +47,7 @@ class CliSmokeTest {
             )
 
             assertEquals(0, result.exitCode, result.output)
-            val response = GsonCodec.fromJson(result.stdout, FindInstancesResponse::class.java)
+            val response = ProtocolJson.decodeResponse(result.stdout) as FindInstancesResponse
             assertTrue(response.nodes.isNotEmpty(), result.output)
         } finally {
             stopDaemons(project, daemonHome)
@@ -66,7 +66,7 @@ class CliSmokeTest {
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
         val batchFile = tempDir.resolve("batch.json")
         batchFile.writeText(
-            GsonCodec.toJson(
+            ProtocolJson.encodeBatch(
                 EditBatch(
                     operations = listOf(
                         EditOperation.SetProperty(

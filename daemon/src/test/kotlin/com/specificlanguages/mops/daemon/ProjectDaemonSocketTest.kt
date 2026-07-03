@@ -6,7 +6,7 @@ import com.specificlanguages.mops.protocol.DaemonResponse
 import com.specificlanguages.mops.protocol.DaemonWorkspace
 import com.specificlanguages.mops.protocol.FindInstancesRequest
 import com.specificlanguages.mops.protocol.FindInstancesResponse
-import com.specificlanguages.mops.protocol.GsonCodec
+import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.PingRequest
 import com.specificlanguages.mops.protocol.PongResponse
 import com.specificlanguages.mops.daemon.core.MpsWrite
@@ -181,7 +181,7 @@ class ProjectDaemonSocketTest {
     ) : AutoCloseable {
 
         fun exchange(request: DaemonRequest): DaemonResponse =
-            parse(exchangeRaw(GsonCodec.toJson(request)))
+            parse(exchangeRaw(ProtocolJson.encodeRequest(request)))
 
         fun exchangeRawParsed(requestLine: String): DaemonResponse =
             parse(exchangeRaw(requestLine))
@@ -221,7 +221,7 @@ class ProjectDaemonSocketTest {
                 ?: throw AssertionError("daemon closed the connection without a response")
 
         private fun parse(responseLine: String): DaemonResponse =
-            GsonCodec.fromJson(responseLine, DaemonResponse::class.java)
+            ProtocolJson.decodeResponse(responseLine)
     }
 
     private companion object {

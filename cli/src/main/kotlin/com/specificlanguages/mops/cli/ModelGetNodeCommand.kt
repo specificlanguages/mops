@@ -2,7 +2,7 @@ package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.NodeTarget
-import com.specificlanguages.mops.protocol.GsonCodec
+import com.specificlanguages.mops.protocol.ProtocolJson
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 import picocli.CommandLine.ParentCommand
@@ -28,6 +28,6 @@ class ModelGetNodeCommand(private val daemonClient: DaemonClient? = null) : Runn
             else -> error("expected one node reference or model target plus node id")
         }
 
-        println(GsonCodec.toJson(response.node))
+        println(ProtocolJson.encodeNode(response.node))
     }
 }

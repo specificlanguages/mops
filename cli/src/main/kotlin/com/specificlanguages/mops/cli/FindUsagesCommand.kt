@@ -1,7 +1,8 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DaemonClient
-import com.specificlanguages.mops.protocol.GsonCodec
+import com.specificlanguages.mops.protocol.DaemonResponse
+import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.MpsNodeUsageJson
 import com.specificlanguages.mops.protocol.NodeTarget
 import picocli.CommandLine.Command
@@ -40,7 +41,7 @@ class FindUsagesCommand(private val daemonClient: DaemonClient? = null) : Runnab
         val client = daemonClient ?: find.root.ensureDaemon()
         val response = client.findUsages(target = nodeTarget(), limit = limit)
         if (json) {
-            println(GsonCodec.toJson(response))
+            println(ProtocolJson.encodeResponse(response))
         } else {
             response.usages.forEach(::renderText)
             if (response.truncated) {

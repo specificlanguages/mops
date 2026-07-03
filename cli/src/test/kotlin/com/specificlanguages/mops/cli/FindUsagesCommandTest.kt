@@ -3,7 +3,7 @@ package com.specificlanguages.mops.cli
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.FindUsagesResponse
-import com.specificlanguages.mops.protocol.GsonCodec
+import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import com.specificlanguages.mops.protocol.MpsNodeUsageJson
 import com.specificlanguages.mops.protocol.NodeTarget
@@ -78,7 +78,7 @@ class FindUsagesCommandTest {
         }
 
         assertEquals(0, exitCode)
-        assertEquals(response, GsonCodec.fromJson(stdout, FindUsagesResponse::class.java))
+        assertEquals(response, ProtocolJson.decodeResponse(stdout))
     }
 
     @Test

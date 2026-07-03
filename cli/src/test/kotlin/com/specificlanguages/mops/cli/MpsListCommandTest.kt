@@ -3,7 +3,7 @@ package com.specificlanguages.mops.cli
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.daemoncomms.DaemonClient
-import com.specificlanguages.mops.protocol.GsonCodec
+import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import com.specificlanguages.mops.protocol.MpsListResponse
 import org.mockito.Mockito.verifyNoInteractions
@@ -57,7 +57,7 @@ class MpsListCommandTest {
 
         assertEquals(0, exitCode)
         verify(client).list(isNull(), eq(1))
-        assertEquals(response.root, GsonCodec.fromJson(stdout, MpsListEntryJson::class.java))
+        assertEquals(response.root, ProtocolJson.decodeListEntry(stdout))
     }
 
     @Test
