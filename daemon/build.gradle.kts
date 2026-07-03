@@ -24,6 +24,7 @@ dependencies {
     jbr("com.jetbrains.jdk:jbr_jcef:21.0.8-b895.146")
 
     testImplementation("com.github.stefanbirkner:system-lambda:1.2.1")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:6.3.0")
 
     mpsRuntime(zipTree({ mpsZip.singleFile }).matching {
         include("lib/mps-core.jar")
