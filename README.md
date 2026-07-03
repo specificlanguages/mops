@@ -37,10 +37,7 @@ per-project daemon, and asks that daemon to persist the target model.
 mops --mps-home <path> model edit [--file PATH]
 ```
 
-Applies a JSON batch of edit operations through the daemon. The current schema and examples live in
-[docs/model-edit.md](docs/model-edit.md), with the machine-readable schema in
-[docs/model-edit.schema.json](docs/model-edit.schema.json).
-The first supported operation is `setProperty`, where `value` omitted or `null` clears the property.
+Applies a JSON batch of edit operations through the daemon. Run `mops explain edit` for the operation reference.
 
 ```sh
 mops --mps-home <path> find instances [--exact] [--limit N] [--json] <concept>

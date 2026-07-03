@@ -1,8 +1,8 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DaemonClient
+import com.specificlanguages.mops.protocol.BatchDecodeResult
 import com.specificlanguages.mops.protocol.EditBatch
-import com.specificlanguages.mops.protocol.DaemonResponse
 import com.specificlanguages.mops.protocol.ProtocolJson
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
@@ -10,7 +10,11 @@ import picocli.CommandLine.ParentCommand
 import java.nio.file.Path
 import kotlin.io.path.readText
 
-@Command(name = "edit", description = ["Apply a JSON batch of edit operations."])
+@Command(
+    name = "edit",
+    description = ["Apply a JSON batch of edit operations."],
+    footer = ["Operation reference: mops explain edit"],
+)
 class ModelEditCommand(private val daemonClient: DaemonClient? = null) : CliCommand() {
     @ParentCommand
     lateinit var model: ModelOperations
@@ -38,8 +42,10 @@ class ModelEditCommand(private val daemonClient: DaemonClient? = null) : CliComm
     }
 
     private fun readBatch(): EditBatch =
-        ProtocolJson.decodeBatch(inputText())
-            ?: throw IllegalArgumentException("edit batch is required")
+        when (val result = ProtocolJson.decodeBatchOrError(inputText())) {
+            is BatchDecodeResult.Success -> result.batch
+            is BatchDecodeResult.Failure -> throw IllegalArgumentException(result.detail)
+        }
 
     private fun inputText(): String =
         file?.let { fileName ->

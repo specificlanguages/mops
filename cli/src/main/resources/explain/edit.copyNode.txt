@@ -1,0 +1,37 @@
+edit.copyNode — copy a Node Subtree under a Containment Role.
+
+FIELDS
+  op        "copyNode"
+  target    (required) the destination parent node — see target
+  source    (required) the node whose Node Subtree is copied — see target
+  role      (required) the Containment Role for the copy
+  position  (optional, default last) placement among children — see position
+  as        (optional) batch-local alias bound to the copy
+
+SEMANTICS
+  Deep-copies the source Node Subtree (Containment Links only) under the
+  destination parent's Role. The copy gets fresh node ids. References inside the
+  subtree keep their targets, but the referenced nodes are not themselves copied.
+
+EXAMPLE
+{
+  "operations": [
+    {
+      "op": "copyNode",
+      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+      "source": {"model": "solutions/app.mps", "nodeId": "8007894750083424799"},
+      "role": "members",
+      "position": 3,
+      "as": "copy"
+    },
+    {
+      "op": "setProperty",
+      "target": "$copy",
+      "name": "name",
+      "value": "CopiedMember"
+    }
+  ]
+}
+
+SEE ALSO
+  edit, target, position, node-ref

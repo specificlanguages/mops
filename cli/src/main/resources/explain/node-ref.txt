@@ -1,0 +1,28 @@
+node-ref — the Node Reference Notation.
+
+FORMS
+  r:<model-id>(<model-name>)/<node-id>
+
+  A Node Reference is a globally usable handle to one MPS node. Decompose it to
+  orient yourself:
+    <model-id>    the model's stable UUID
+    <model-name>  the model's qualified name, in parentheses
+    <node-id>     the node's id within that model, after the slash
+
+  It is half-opaque: read the parts to understand what you are looking at, but
+  copy a Node Reference WHOLE from mops output. Never construct one from pieces.
+
+EXAMPLE
+{
+  "operations": [
+    {
+      "op": "setProperty",
+      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+      "name": "name",
+      "value": "Renamed"
+    }
+  ]
+}
+
+SEE ALSO
+  target, edit

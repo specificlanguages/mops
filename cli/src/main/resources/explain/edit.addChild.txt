@@ -1,0 +1,33 @@
+edit.addChild — create a new child node under a Containment Role.
+
+FIELDS
+  op          "addChild"
+  target      (required) the parent node — see target
+  role        (required) the Containment Role to add the Child under
+  concept     (required) qualified concept name of the new node
+  properties  (optional) inline properties for the new node
+  references  (optional) inline References to existing nodes
+  children    (optional) nested child nodes (a Node Subtree)
+  position    (optional, default last) placement among children — see position
+  as          (optional) batch-local alias bound to the created node
+
+SEMANTICS
+  Creates one node of concept and inserts it under the parent's Containment Role
+  at position. Nested children build a whole Node Subtree in one operation.
+
+EXAMPLE
+{
+  "operations": [
+    {
+      "op": "addChild",
+      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+      "role": "members",
+      "concept": "com.specificlanguages.json.structure.JsonMember",
+      "position": "first",
+      "as": "newMember"
+    }
+  ]
+}
+
+SEE ALSO
+  edit, target, position, node-ref

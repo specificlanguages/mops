@@ -21,6 +21,8 @@ import kotlin.io.path.isDirectory
         FindOperations::class,
         MpsListCommand::class,
         ModelOperations::class,
+        ExplainCommand::class,
+        RecursiveHelpCommand::class,
     ],
 )
 class MopsCommand(

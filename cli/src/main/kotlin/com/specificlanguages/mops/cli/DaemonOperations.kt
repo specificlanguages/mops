@@ -12,6 +12,7 @@ import picocli.CommandLine
         DaemonPingCommand::class,
         DaemonStatusCommand::class,
         DaemonStopCommand::class,
+        RecursiveHelpCommand::class,
     ],
 )
 class DaemonOperations : CliCommand() {

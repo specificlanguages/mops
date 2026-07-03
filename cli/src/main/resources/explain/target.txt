@@ -1,0 +1,23 @@
+target — how an Edit Operation names a node.
+
+FORMS
+  1. Node Reference string:
+       "r:<model-id>(<model-name>)/<node-id>"
+     Anatomy: the r: tag, the model id, the (model name), a slash, the node id.
+  2. Model plus node id object:
+       {"model": "<model file or path>", "nodeId": "<node-id>"}
+  3. Batch-local alias:
+       "$name" — a node created earlier in the same batch via an "as" alias.
+
+EXAMPLE
+{
+  "operations": [
+    {
+      "op": "delete",
+      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
+    }
+  ]
+}
+
+SEE ALSO
+  node-ref, position, edit

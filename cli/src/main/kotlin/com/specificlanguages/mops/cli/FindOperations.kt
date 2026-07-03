@@ -7,7 +7,7 @@ import picocli.CommandLine.ParentCommand
 @Command(
     name = "find",
     description = ["Search editable MPS project sources."],
-    subcommands = [FindInstancesCommand::class, FindUsagesCommand::class],
+    subcommands = [FindInstancesCommand::class, FindUsagesCommand::class, RecursiveHelpCommand::class],
 )
 class FindOperations : CliCommand() {
     @ParentCommand

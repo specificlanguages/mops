@@ -14,6 +14,7 @@ import picocli.CommandLine.ParentCommand
         ModelGetNodeCommand::class,
         ModelEditCommand::class,
         ModelResaveCommand::class,
+        RecursiveHelpCommand::class,
     ],
 )
 class ModelOperations : CliCommand() {

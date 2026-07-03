@@ -1,0 +1,31 @@
+edit — the edit-batch Notation: an ordered batch of Edit Operations applied atomically.
+
+SHAPE
+  {"operations": [ <operation>, ... ]}
+
+  Each <operation> is a JSON object tagged by an "op" field. mops reads the batch
+  from stdin or --file (see: mops model edit --help).
+
+OPERATIONS
+  setProperty   set or clear a node's property
+  setReference  point or clear a node's Reference (by Role)
+  addChild      create a child node under a Containment Role
+  copyNode      copy a Node Subtree under a Containment Role
+  moveNode      move an existing node to a new parent Role
+  delete        delete a node
+  deleteChild   delete a child selected by Role and position
+
+NOTES
+  Atomic: the batch applies all-or-nothing; if any operation fails, nothing is
+  committed.
+  Aliases: a creating operation (addChild, copyNode) may bind its new node to a
+  batch-local "as" alias that later operations target as "$name".
+  Constraints: edits are checked against MPS Constraints. A Constraint Violation
+  blocks the batch and is reported. --no-constraints forces the edit through but
+  still reports every violation.
+
+DRILL DOWN
+  edit.setProperty, edit.setReference, edit.addChild, edit.copyNode,
+  edit.moveNode, edit.delete, edit.deleteChild
+  target, position, node-ref
+  Run `mops explain edit --schema` for the generated JSON Schema of the batch.

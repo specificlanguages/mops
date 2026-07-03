@@ -71,6 +71,14 @@ object ProtocolJson {
 
     fun decodeBatch(text: String): EditBatch = json.decodeFromString(text)
 
+    /**
+     * Decodes an edit batch through a two-pass, notation-level path, returning either the batch or a structured
+     * [BatchDecodeResult.Failure] that already carries a self-correcting message (what is wrong, at which operation, the
+     * expected shape, and the `mops explain` page to read). Nothing here reaches the daemon; the CLI surfaces the
+     * failure's detail verbatim.
+     */
+    fun decodeBatchOrError(text: String): BatchDecodeResult = BatchNotationDecoder.decode(json, text)
+
     fun encodeNode(node: MpsNodeJson): String = json.encodeToString(node)
 
     fun decodeNode(text: String): MpsNodeJson = json.decodeFromString(text)

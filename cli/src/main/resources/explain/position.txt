@@ -1,0 +1,26 @@
+position — where a child sits among the children of a Containment Role.
+
+FORMS
+  "first"   before all existing children
+  "last"    after all existing children
+  "only"    the single child of a single-valued Role
+  3         a bare integer: the zero-based index among existing children
+
+  Accepted by addChild, copyNode and moveNode (default "last") and by
+  deleteChild (default "only").
+
+EXAMPLE
+{
+  "operations": [
+    {
+      "op": "addChild",
+      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+      "role": "members",
+      "concept": "com.specificlanguages.json.structure.JsonMember",
+      "position": "first"
+    }
+  ]
+}
+
+SEE ALSO
+  edit.addChild, edit.copyNode, edit.moveNode, edit.deleteChild

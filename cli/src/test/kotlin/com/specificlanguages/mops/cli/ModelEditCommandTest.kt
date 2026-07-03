@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.cli
 
+import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.github.stefanbirkner.systemlambda.SystemLambda.withTextFromSystemIn
 import com.specificlanguages.mops.daemoncomms.DaemonClient
@@ -20,7 +21,9 @@ import picocli.CommandLine
 import java.nio.file.Path
 import kotlin.io.path.writeText
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 
 @ResourceLock("system-streams")
 class ModelEditCommandTest {
@@ -158,6 +161,72 @@ class ModelEditCommandTest {
 
         assertEquals(1, exitCode)
         verifyNoInteractions(client)
+    }
+
+    @Test
+    fun `model edit reports unknown op with derived list and explain pointer, no daemon`() {
+        val stderr = assertRejected(
+            """{"operations":[{"op":"addNode","target":"m/1"}]}""",
+        )
+        assertContains(stderr, """operations[0]: unknown op "addNode"""")
+        assertContains(stderr, "supported: addChild, copyNode, delete, deleteChild, moveNode, setProperty, setReference")
+        assertContains(stderr, """Did you mean "addChild"?""")
+        assertContains(stderr, "See: mops explain edit")
+    }
+
+    @Test
+    fun `model edit reports missing required field with op explain pointer, no daemon`() {
+        val stderr = assertRejected(
+            """{"operations":[{"op":"copyNode","target":"m/1","source":"m/2"}]}""",
+        )
+        assertContains(stderr, """operations[0]: copyNode requires "role" — see: mops explain edit.copyNode""")
+    }
+
+    @Test
+    fun `model edit reports unknown field with op explain pointer, no daemon`() {
+        val stderr = assertRejected(
+            """{"operations":[{"op":"copyNode","target":"m/1","source":"m/2","role":"r","roel":"x"}]}""",
+        )
+        assertContains(stderr, """operations[0]: copyNode has unknown field "roel" — see: mops explain edit.copyNode""")
+    }
+
+    @Test
+    fun `model edit reports invalid target with target explain pointer, no daemon`() {
+        val stderr = assertRejected(
+            """{"operations":[{"op":"moveNode","target":"m/1","into":{"bogus":true},"role":"r"}]}""",
+        )
+        assertContains(stderr, """operations[0]: moveNode field "into" is not a valid target — see: mops explain target""")
+    }
+
+    @Test
+    fun `model edit reports invalid position with position explain pointer, no daemon`() {
+        val stderr = assertRejected(
+            """{"operations":[{"op":"addChild","target":"m/1","role":"r","concept":"c","position":"middle"}]}""",
+        )
+        assertContains(stderr, """operations[0]: addChild field "position" is not a valid position — see: mops explain position""")
+    }
+
+    @Test
+    fun `model edit reports batch-shape error with edit explain pointer, no daemon`() {
+        val stderr = assertRejected("""[1,2,3]""")
+        assertContains(stderr, """edit batch must be a JSON object with an "operations" array — see: mops explain edit""")
+    }
+
+    // Drives the command with bad batch text and asserts it exits non-zero without touching the daemon, returning stderr.
+    private fun assertRejected(badJson: String): String {
+        val client = mock<DaemonClient>()
+        var exitCode = Int.MIN_VALUE
+        var stderr = ""
+        withTextFromSystemIn(badJson).execute {
+            stderr = tapSystemErr {
+                exitCode = CommandLine(ModelEditCommand(client))
+                    .setExecutionExceptionHandler(PrintErrorAndExit)
+                    .execute()
+            }
+        }
+        assertNotEquals(0, exitCode)
+        verifyNoInteractions(client)
+        return stderr
     }
 
     private fun sampleBatch(): EditBatch =

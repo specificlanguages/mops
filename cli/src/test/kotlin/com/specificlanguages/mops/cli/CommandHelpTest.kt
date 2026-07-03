@@ -51,6 +51,48 @@ class CommandHelpTest {
     }
 
     @Test
+    fun `help verb prints root usage`() {
+        val output = runHelp("help")
+
+        assertContains(output, "Usage:")
+        assertContains(output, "model")
+    }
+
+    @Test
+    fun `help verb prints group usage`() {
+        val output = runHelp("help", "model")
+
+        assertContains(output, "Usage:")
+        assertContains(output, "edit")
+    }
+
+    @Test
+    fun `help verb prints leaf usage`() {
+        val output = runHelp("help", "model", "edit")
+
+        assertContains(output, "Usage:")
+        assertContains(output, "--file")
+        assertContains(output, "--no-constraints")
+        assertContains(output, "Operation reference: mops explain edit")
+    }
+
+    @Test
+    fun `group help verb prints leaf usage`() {
+        val output = runHelp("model", "help", "edit")
+
+        assertContains(output, "Usage:")
+        assertContains(output, "--file")
+    }
+
+    @Test
+    fun `daemon help verb prints ping usage`() {
+        val output = runHelp("daemon", "help", "ping")
+
+        assertContains(output, "Usage:")
+        assertContains(output, "ping")
+    }
+
+    @Test
     fun `every leaf command supports --help`() {
         val leafCommands = listOf(
             arrayOf("list"),

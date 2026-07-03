@@ -1,0 +1,26 @@
+edit.setReference — point or clear a node's Reference.
+
+FIELDS
+  op       "setReference"
+  target   (required) the node holding the Reference — see target
+  role     (required) the Role of the Reference Link to set
+  to       (optional) the node to point at; omit or null to clear the Reference
+
+SEMANTICS
+  Sets the Reference under role on the target node to point at the "to" node,
+  which may live in another model. Omitting "to" (or null) clears the Reference.
+
+EXAMPLE
+{
+  "operations": [
+    {
+      "op": "setReference",
+      "target": {"model": "solutions/app.mps", "nodeId": "2110045694544566904"},
+      "role": "type",
+      "to": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/8007894750083424799"
+    }
+  ]
+}
+
+SEE ALSO
+  edit, target, node-ref
