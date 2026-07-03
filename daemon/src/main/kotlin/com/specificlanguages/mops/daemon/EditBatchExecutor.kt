@@ -2,6 +2,7 @@ package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
+import com.specificlanguages.mops.protocol.ChildPosition
 import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
@@ -39,9 +40,7 @@ class EditBatchExecutor(
         }
 
         for ((index, operation) in batch.operations.withIndex()) {
-            val target = when (operation) {
-                is EditOperation.SetProperty -> operation.target
-            }
+            val target = operation.target
             if (target is EditTarget.Alias) {
                 fail(
                     MpsErrorCode.UNSUPPORTED_TARGET,
@@ -82,10 +81,11 @@ class EditBatchExecutor(
                             MpsErrorCode.PROPERTY_NOT_FOUND,
                             "operation $index property not found: ${operation.name} on ${node.concept.qualifiedName}",
                         )
+
                         is PropertyResolution.Ambiguous -> fail(
                             MpsErrorCode.AMBIGUOUS_PROPERTY,
                             "operation $index ambiguous property ${operation.name} on ${node.concept.qualifiedName}: " +
-                                resolution.properties.joinToString { it.name },
+                                    resolution.properties.joinToString { it.name },
                         )
                     }
                     try {
@@ -97,6 +97,21 @@ class EditBatchExecutor(
                             "operation $index failed: ${exception.message ?: exception.javaClass.name}",
                         )
                     }
+                }
+
+                is EditOperation.Delete -> {
+                    node.delete()
+                    mutated = true
+                }
+
+                is EditOperation.DeleteChild -> {
+                    val child = locateChild(node, operation.role, operation.position)
+                        ?: fail(
+                            MpsErrorCode.NODE_NOT_FOUND,
+                            "operation $index child not found: role ${operation.role}, position ${operation.position}"
+                        )
+                    child.delete()
+                    mutated = true
                 }
             }
         }
@@ -110,6 +125,28 @@ class EditBatchExecutor(
         }
     }
 
+    private fun locateChild(
+        node: SNode,
+        role: String,
+        position: ChildPosition
+    ): SNode? {
+        val children = sequence {
+            var child = node.firstChild
+            while (child != null) {
+                yield(child)
+                child = child.nextSibling
+            }
+        }
+        val childrenInRole = children.filter { it.containmentLink?.name == role }
+
+        return when (position) {
+            is ChildPosition.First -> childrenInRole.firstOrNull()
+            is ChildPosition.Last -> childrenInRole.lastOrNull()
+            is ChildPosition.Only -> childrenInRole.singleOrNull()
+            is ChildPosition.Index -> childrenInRole.elementAtOrNull(position.index)
+        }
+    }
+
     private fun resolveTarget(project: Project, target: EditTarget): SNode? =
         when (target) {
             is EditTarget.Alias -> error("alias targets must be rejected before resolution")
@@ -117,6 +154,7 @@ class EditBatchExecutor(
                 project,
                 NodeTarget.InModel(modelTarget = target.modelTarget, nodeId = target.nodeId),
             )
+
             is EditTarget.NodeReference -> modelNodeResolver.findNode(
                 project,
                 NodeTarget.NodeReference(target.nodeReference),

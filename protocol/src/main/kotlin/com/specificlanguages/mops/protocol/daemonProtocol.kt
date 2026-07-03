@@ -2,16 +2,19 @@ package com.specificlanguages.mops.protocol
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.elementNames
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import java.nio.file.Path
 import kotlin.io.path.invariantSeparatorsPathString
 
@@ -104,3 +107,41 @@ class ProtocolJsonException(message: String) : SerializationException(message)
  */
 internal class UnsupportedJsonOnlySerializerException(typeName: String) :
     SerializationException("$typeName can only be serialized as JSON")
+
+
+object ChildPositionSerializer : KSerializer<ChildPosition> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("ChildPosition", PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: ChildPosition) {
+        when (value) {
+            ChildPosition.First -> encoder.encodeString("first")
+            ChildPosition.Last -> encoder.encodeString("last")
+            ChildPosition.Only -> encoder.encodeString("only")
+            is ChildPosition.Index -> encoder.encodeInt(value.index)
+        }
+    }
+
+    override fun deserialize(decoder: Decoder): ChildPosition {
+        val jsonDecoder = decoder as? JsonDecoder
+            ?: throw SerializationException("ChildPositionSerializer only supports JSON")
+
+        val primitive = jsonDecoder.decodeJsonElement().jsonPrimitive
+
+        return if (primitive is JsonNull) ChildPosition.Only else if (primitive.isString) {
+            when (val value = primitive.contentOrNull) {
+                null, "only" -> ChildPosition.Only
+                "first" -> ChildPosition.First
+                "last" -> ChildPosition.Last
+                else -> throw SerializationException(
+                    "Expected \"first\", \"last\", or integer, got \"$value\""
+                )
+            }
+        } else {
+            primitive.intOrNull?.let { ChildPosition.Index(it) }
+                ?: throw SerializationException(
+                    "Expected \"first\", \"last\", or integer, got $primitive"
+                )
+        }
+    }
+}

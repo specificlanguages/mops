@@ -29,13 +29,38 @@ data class EditBatch(
 @OptIn(ExperimentalSerializationApi::class)
 @JsonClassDiscriminator("op")
 sealed interface EditOperation {
+
+    val target: EditTarget
+
     @Serializable
     @SerialName("setProperty")
     data class SetProperty(
-        val target: EditTarget,
+        override val target: EditTarget,
         val name: String,
         val value: String? = null,
     ) : EditOperation
+
+    @Serializable
+    @SerialName("delete")
+    data class Delete(override val target: EditTarget) : EditOperation
+
+    @Serializable
+    @SerialName("deleteChild")
+    data class DeleteChild(
+        override val target: EditTarget,
+        val role: String,
+        val position: ChildPosition = ChildPosition.Only
+    ) : EditOperation
+
+}
+
+@Serializable(with = ChildPositionSerializer::class)
+sealed interface ChildPosition {
+    object First : ChildPosition
+    object Last : ChildPosition
+    object Only : ChildPosition
+
+    class Index(val index: Int) : ChildPosition
 }
 
 /**
