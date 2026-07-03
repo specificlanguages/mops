@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.daemoncomms
 
+import com.specificlanguages.mops.protocol.ConstraintEnforcement
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindUsagesResponse
 import com.specificlanguages.mops.protocol.ModelEditResponse
@@ -20,6 +21,6 @@ interface DaemonClient {
     fun getNode(target: NodeTarget): ModelGetNodeResponse
     fun findUsages(target: NodeTarget, limit: Int): FindUsagesResponse
     fun findInstances(concept: String, exact: Boolean, limit: Int): FindInstancesResponse
-    fun modelEdit(batch: EditBatch, force: Boolean = false): ModelEditResponse
+    fun modelEdit(batch: EditBatch, constraints: ConstraintEnforcement = ConstraintEnforcement.BEST_EFFORT): ModelEditResponse
     fun list(target: List<String>?, depth: Int): MpsListResponse
 }

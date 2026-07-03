@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.daemon
 
+import com.specificlanguages.mops.protocol.ConstraintEnforcement
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
@@ -40,7 +41,7 @@ class ConstraintEditSemanticsTest {
     }
 
     @Test
-    fun `no-constraints applies a disallowed child and still reports the violation`() {
+    fun `advisory applies a disallowed child and still reports the violation`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
             val response = mpsAccess.write {
                 modelEdit(
@@ -52,7 +53,7 @@ class ConstraintEditSemanticsTest {
                             properties = listOf(MpsNodePropertyJson(name = "role", value = "forced")),
                         ),
                     ),
-                    force = true,
+                    constraints = ConstraintEnforcement.ADVISORY,
                 )
             }
 

@@ -3,6 +3,7 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.ChildPosition
+import com.specificlanguages.mops.protocol.ConstraintEnforcement
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditConstraintViolation
 import com.specificlanguages.mops.protocol.EditOperation
@@ -36,7 +37,7 @@ class EditBatchExecutor(
         project: Project,
         batch: EditBatch,
         writeScope: WriteTransaction.WriteScope,
-        force: Boolean = false,
+        enforcement: ConstraintEnforcement = ConstraintEnforcement.BEST_EFFORT,
     ): ModelEditResponse {
         if (batch.operations.isEmpty()) {
             throw MpsRequestException(
@@ -48,6 +49,7 @@ class EditBatchExecutor(
         val affectedModels = linkedSetOf<EditableSModel>()
         val aliases = linkedMapOf<String, SNode>()
         val placements = mutableListOf<Placement>()
+        val uncheckable = UncheckableLanguages()
         var mutated = false
 
         fun fail(code: MpsErrorCode, message: String): Nothing {
@@ -75,7 +77,17 @@ class EditBatchExecutor(
                     "operation $index target could not be resolved: ${exception.message ?: exception.javaClass.name}",
                 )
             }
-            return node ?: fail(MpsErrorCode.NODE_NOT_FOUND, "operation $index target node not found")
+            val resolved = node ?: fail(MpsErrorCode.NODE_NOT_FOUND, "operation $index target node not found")
+            // A node whose concept did not resolve (uncompiled language) carries only placeholder concept information.
+            // Under strict enforcement that aborts the batch; otherwise it is recorded as an unchecked language and the
+            // operation proceeds (and typically fails later at property/role resolution, which is fine).
+            if (!resolved.concept.isValid) {
+                if (enforcement == ConstraintEnforcement.STRICT) {
+                    fail(MpsErrorCode.LANGUAGE_NOT_LOADED, "operation $index target: ${ConceptValidityGuard.messageFor(resolved)}")
+                }
+                uncheckable.add(resolved.concept)
+            }
+            return resolved
         }
 
         // Binds a created node to a batch-local alias; a duplicate alias name fails.
@@ -315,19 +327,29 @@ class EditBatchExecutor(
             }
         }
 
-        val violations = evaluateConstraints(placements)
-        if (violations.isNotEmpty() && !force) {
+        val violations = evaluateConstraints(placements, uncheckable)
+
+        // Strict enforcement refuses to apply anything it could not fully check.
+        if (enforcement == ConstraintEnforcement.STRICT && !uncheckable.isEmpty) {
+            fail(MpsErrorCode.LANGUAGE_NOT_LOADED, uncheckable.strictFailureMessage())
+        }
+
+        val warnings = uncheckable.warnings()
+
+        // Advisory applies and saves despite violations; best-effort and strict block on any violation.
+        if (violations.isNotEmpty() && enforcement != ConstraintEnforcement.ADVISORY) {
             // Block: revert the in-memory batch and report the violations without saving.
             if (mutated) {
                 reload(affectedModels)
             }
-            return ModelEditResponse(created = emptyMap(), violations = violations)
+            return ModelEditResponse(created = emptyMap(), violations = violations, warnings = warnings)
         }
 
         return when (val saveOutcome = writeScope.saveWithResolveInfo(affectedModels)) {
             SaveOutcome.Saved -> ModelEditResponse(
                 created = aliases.mapValues { (_, node) -> persistence.asString(node.reference) },
                 violations = violations,
+                warnings = warnings,
             )
             is SaveOutcome.SaveFailed -> fail(
                 MpsErrorCode.SAVE_FAILED,
@@ -380,12 +402,21 @@ class EditBatchExecutor(
      * can-be-child/parent/ancestor rules, and containment cardinality. Reference-scope Constraints are deliberately not
      * evaluated (they run arbitrary language code); property-value Constraints are a later addition.
      */
-    private fun evaluateConstraints(placements: List<Placement>): List<EditConstraintViolation> {
+    private fun evaluateConstraints(
+        placements: List<Placement>,
+        uncheckable: UncheckableLanguages,
+    ): List<EditConstraintViolation> {
         val violations = mutableListOf<EditConstraintViolation>()
         val cardinalityChecked = hashSetOf<String>()
 
         for (placement in placements) {
             val childConcept = placement.child.concept
+            // A created node whose concept did not load (e.g. a copy of a node from an uncompiled language) cannot be
+            // checked against the containment rules, so record its language and skip this placement's checks.
+            if (!childConcept.isValid) {
+                uncheckable.add(childConcept)
+                continue
+            }
             val link = placement.link
 
             // Structural integrity: the child's concept must be a subconcept of the link's target concept. The can-be
@@ -428,6 +459,12 @@ class EditBatchExecutor(
             // can-be-ancestor rules apply to every ancestor of the insertion point, so walk up from the parent.
             var ancestor: SNode? = placement.parent
             while (ancestor != null) {
+                // An ancestor whose concept did not load cannot run its can-be-ancestor rule; record its language and
+                // stop walking, since ancestors above it cannot be checked reliably either.
+                if (!ancestor.concept.isValid) {
+                    uncheckable.add(ancestor.concept)
+                    break
+                }
                 val ancestorContext = CanBeAncestorContext.Builder()
                     .ancestorNode(ancestor)
                     .parentNode(placement.parent)
@@ -490,6 +527,44 @@ private class Placement(
     val link: SContainmentLink,
     val child: SNode,
 )
+
+/**
+ * Collects the languages whose constraints an edit batch could not check because they are not loaded, deduplicated so
+ * each language is reported once.
+ */
+private class UncheckableLanguages {
+    private val languages = linkedSetOf<String>()
+
+    fun add(concept: SConcept) {
+        languages.add(ConceptValidityGuard.languageName(concept))
+    }
+
+    val isEmpty: Boolean get() = languages.isEmpty()
+
+    fun strictFailureMessage(): String =
+        "constraints could not be checked because these languages are not loaded: " +
+            "${languages.joinToString()} — compile them, or rerun with --constraints=best-effort to skip " +
+            "the unchecked constraints"
+
+    fun warnings(): List<String> = uncheckableLanguageWarnings(languages.toList())
+}
+
+/**
+ * Formats one warning per language whose constraints were skipped, capped at [MAX_DETAILED_LANGUAGE_WARNINGS] with a
+ * final summary line when more languages were affected.
+ */
+internal fun uncheckableLanguageWarnings(languages: List<String>): List<String> {
+    val shown = languages.take(MAX_DETAILED_LANGUAGE_WARNINGS).map {
+        "constraints for language '$it' were not checked because it is not loaded"
+    }
+    return if (languages.size > MAX_DETAILED_LANGUAGE_WARNINGS) {
+        shown + "…and ${languages.size - MAX_DETAILED_LANGUAGE_WARNINGS} more languages could not be checked because they are not loaded"
+    } else {
+        shown
+    }
+}
+
+private const val MAX_DETAILED_LANGUAGE_WARNINGS = 5
 
 private sealed interface PropertyResolution {
     data class Found(val property: SProperty) : PropertyResolution

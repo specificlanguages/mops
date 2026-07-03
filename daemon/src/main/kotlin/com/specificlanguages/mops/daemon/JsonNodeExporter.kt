@@ -29,8 +29,10 @@ class JsonNodeExporter(
         val references = node.references
             .map { reference ->
                 val targetModel = reference.targetSModelReference
-                // Best-effort resolution: a resolved target contributes its name and concept, an unresolvable one
-                // (unloaded model, dangling reference) leaves them null while the address is still exported.
+                // Best-effort resolution, never failing: a resolved target contributes its name and concept; an
+                // unresolvable one (unloaded model, dangling reference) is marked resolved=false with only the address;
+                // a target whose own concept did not load keeps its address and placeholder name/concept but is marked
+                // conceptValid=false so callers can tell it apart from a fully resolved target.
                 val targetNode = reference.targetNode
                 MpsNodeReferenceJson(
                     role = reference.link.name,
@@ -41,6 +43,8 @@ class JsonNodeExporter(
                         node = reference.targetNodeId?.let(persistence::asString),
                         name = targetNode?.let(::nodeName),
                         concept = targetNode?.concept?.qualifiedName,
+                        resolved = targetNode != null,
+                        conceptValid = targetNode?.concept?.isValid ?: true,
                     ),
                 )
             }
@@ -60,6 +64,7 @@ class JsonNodeExporter(
                 ?.takeIf { includeRole }
                 ?.role,
             concept = node.concept.qualifiedName,
+            conceptValid = node.concept.isValid,
             id = persistence.asString(node.nodeId),
             properties = properties,
             references = references,

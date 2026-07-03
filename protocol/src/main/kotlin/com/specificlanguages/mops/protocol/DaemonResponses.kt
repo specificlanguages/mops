@@ -85,6 +85,9 @@ data class FindInstancesResponse(
 data class ModelEditResponse(
     val created: Map<String, String>,
     val violations: List<EditConstraintViolation>,
+    // Non-fatal notices, e.g. constraints skipped because a concept's language was not loaded. One line per language,
+    // capped, with a final summary line when more languages were affected.
+    val warnings: List<String> = emptyList(),
 ) : DaemonResponse
 
 /**

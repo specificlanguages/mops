@@ -72,7 +72,7 @@ class CommandHelpTest {
 
         assertContains(output, "Usage:")
         assertContains(output, "--file")
-        assertContains(output, "--no-constraints")
+        assertContains(output, "--constraints")
         assertContains(output, "Operation reference: mops explain edit")
     }
 

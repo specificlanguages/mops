@@ -2,6 +2,7 @@ package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.BatchDecodeResult
+import com.specificlanguages.mops.protocol.ConstraintEnforcement
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.ProtocolJson
 import picocli.CommandLine.Command
@@ -27,18 +28,31 @@ class ModelEditCommand(private val daemonClient: DaemonClient? = null) : CliComm
     var file: String? = null
 
     @Option(
-        names = ["--no-constraints"],
-        description = ["Apply the batch even if it violates constraints; violations are still reported."],
+        names = ["--constraints"],
+        paramLabel = "MODE",
+        description = [
+            "How to enforce constraints: advisory (evaluate, report, and apply anyway), " +
+                "best-effort (block on violations, warn about concepts that could not be checked; default), " +
+                "or strict (fail on violations or on a concept that could not be checked).",
+        ],
     )
-    var noConstraints: Boolean = false
+    var constraintsMode: String? = null
 
     override fun run() {
         val batch = readBatch()
         require(batch.operations.isNotEmpty()) { "edit batch must contain at least one operation" }
 
         val client = daemonClient ?: model.root.ensureDaemon()
-        val response = client.modelEdit(batch, force = noConstraints)
+        val response = client.modelEdit(batch, resolveConstraints())
         println(ProtocolJson.encodeResponse(response))
+    }
+
+    private fun resolveConstraints(): ConstraintEnforcement {
+        val mode = constraintsMode ?: return ConstraintEnforcement.BEST_EFFORT
+        return ConstraintEnforcement.fromWireName(mode)
+            ?: throw IllegalArgumentException(
+                "unknown --constraints value '$mode'; expected advisory, best-effort, or strict",
+            )
     }
 
     private fun readBatch(): EditBatch =

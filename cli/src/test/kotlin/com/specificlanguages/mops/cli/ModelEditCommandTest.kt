@@ -5,6 +5,7 @@ import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.github.stefanbirkner.systemlambda.SystemLambda.withTextFromSystemIn
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.ChildPosition
+import com.specificlanguages.mops.protocol.ConstraintEnforcement
 import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
@@ -53,23 +54,23 @@ class ModelEditCommandTest {
     }
 
     @Test
-    fun `model edit passes --no-constraints as force to the daemon`() {
+    fun `model edit passes the --constraints mode to the daemon`() {
         val client = mock<DaemonClient>()
         val batch = sampleBatch()
         val response = ModelEditResponse(created = emptyMap(), violations = emptyList())
-        whenever(client.modelEdit(batch, force = true)).thenReturn(response)
+        whenever(client.modelEdit(batch, ConstraintEnforcement.STRICT)).thenReturn(response)
         var exitCode = Int.MIN_VALUE
 
         withTextFromSystemIn(ProtocolJson.encodeBatch(batch)).execute {
             tapSystemOut {
                 exitCode = CommandLine(ModelEditCommand(client))
                     .setExecutionExceptionHandler(PrintErrorAndExit)
-                    .execute("--no-constraints")
+                    .execute("--constraints", "strict")
             }
         }
 
         assertEquals(0, exitCode)
-        verify(client).modelEdit(batch, force = true)
+        verify(client).modelEdit(batch, ConstraintEnforcement.STRICT)
     }
 
     @Test

@@ -110,6 +110,7 @@ class JetBrainsMpsAccess(
                 type = if (node.parent == null) "root" else "node",
                 name = nodeName(node),
                 concept = node.concept.qualifiedName,
+                conceptValid = node.concept.isValid,
                 reference = persistence.asString(node.reference),
             )
 
@@ -121,8 +122,8 @@ class JetBrainsMpsAccess(
     private inner class JetBrainsMpsWrite(
         private val writeScope: WriteTransaction.WriteScope,
     ) : JetBrainsMpsRead(), MpsWrite {
-        override fun modelEdit(batch: EditBatch, force: Boolean): ModelEditResponse =
-            editBatchExecutor.apply(project, batch, writeScope, force)
+        override fun modelEdit(batch: EditBatch, constraints: ConstraintEnforcement): ModelEditResponse =
+            editBatchExecutor.apply(project, batch, writeScope, constraints)
 
         override fun resave(modelTarget: String) {
             val model = modelNodeResolver.findModel(project, modelTarget)
