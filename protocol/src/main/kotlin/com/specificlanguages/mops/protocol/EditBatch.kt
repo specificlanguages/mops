@@ -52,15 +52,48 @@ sealed interface EditOperation {
         val position: ChildPosition = ChildPosition.Only
     ) : EditOperation
 
+    /**
+     * Adds a child of [concept] under the [target] parent's containment [role]. The new node may carry inline
+     * [properties], [references] to existing nodes, and a nested [children] subtree in the same shape `get-node` emits.
+     * [position] is the insertion point among the role's existing children.
+     */
+    @Serializable
+    @SerialName("addChild")
+    data class AddChild(
+        override val target: EditTarget,
+        val role: String,
+        val concept: String,
+        val properties: List<MpsNodePropertyJson>? = null,
+        val references: List<MpsNodeReferenceJson>? = null,
+        val children: List<MpsNodeJson>? = null,
+        val position: ChildPosition = ChildPosition.Last,
+    ) : EditOperation
+
+    /**
+     * Moves the [target] node under the [into] parent's containment [role] at [position], detaching it from its
+     * current location.
+     */
+    @Serializable
+    @SerialName("moveNode")
+    data class MoveNode(
+        override val target: EditTarget,
+        val into: EditTarget,
+        val role: String,
+        val position: ChildPosition = ChildPosition.Last,
+    ) : EditOperation
 }
 
+/**
+ * Position of a child among the existing children in a containment role. [First], [Last], and [Index] address an
+ * insertion point or an existing child by order; [Only] addresses the single child in a single-valued role.
+ */
 @Serializable(with = ChildPositionSerializer::class)
 sealed interface ChildPosition {
     object First : ChildPosition
     object Last : ChildPosition
     object Only : ChildPosition
 
-    class Index(val index: Int) : ChildPosition
+    data class Index(val index: Int) : ChildPosition
 }
 
 /**

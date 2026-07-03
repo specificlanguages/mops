@@ -144,6 +144,85 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `model edit request JSON round-trips structural operations and inline subtrees`() {
+        val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
+        val request = ModelEditRequest(
+            token = "secret",
+            batch = EditBatch(
+                operations = listOf(
+                    EditOperation.AddChild(
+                        target = EditTarget.NodeReference("$model/100"),
+                        role = "members",
+                        concept = "com.acme.Block",
+                        properties = listOf(MpsNodePropertyJson(name = "name", value = "b")),
+                        references = listOf(
+                            MpsNodeReferenceJson(
+                                role = "type",
+                                target = MpsNodeReferenceTargetJson(model = model, node = "77"),
+                            ),
+                        ),
+                        children = listOf(
+                            MpsNodeJson(
+                                role = "statements",
+                                concept = "com.acme.Return",
+                                properties = listOf(MpsNodePropertyJson(name = "label", value = "r")),
+                            ),
+                        ),
+                    ),
+                    EditOperation.Delete(target = EditTarget.InModel(modelTarget = model, nodeId = "200")),
+                    EditOperation.DeleteChild(
+                        target = EditTarget.NodeReference("$model/300"),
+                        role = "members",
+                        position = ChildPosition.Index(2),
+                    ),
+                    EditOperation.MoveNode(
+                        target = EditTarget.NodeReference("$model/400"),
+                        into = EditTarget.NodeReference("$model/500"),
+                        role = "members",
+                        position = ChildPosition.First,
+                    ),
+                ),
+            ),
+        )
+
+        val serialized = ProtocolJson.encodeRequest(request)
+
+        assertContains(serialized, """"op":"addChild"""")
+        assertContains(serialized, """"op":"delete"""")
+        assertContains(serialized, """"op":"deleteChild"""")
+        assertContains(serialized, """"op":"moveNode"""")
+        assertContains(serialized, """"position":2""")
+        assertContains(serialized, """"position":"first"""")
+        assertEquals(request, ProtocolJson.decodeRequest(serialized))
+    }
+
+    @Test
+    fun `child position JSON encodes ordinals as strings and index as an integer`() {
+        val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
+        fun roundTrip(position: ChildPosition): EditOperation {
+            val request = ModelEditRequest(
+                token = "secret",
+                batch = EditBatch(
+                    operations = listOf(
+                        EditOperation.DeleteChild(
+                            target = EditTarget.NodeReference("$model/1"),
+                            role = "members",
+                            position = position,
+                        ),
+                    ),
+                ),
+            )
+            return (ProtocolJson.decodeRequest(ProtocolJson.encodeRequest(request)) as ModelEditRequest)
+                .batch.operations.single()
+        }
+
+        assertEquals(ChildPosition.First, (roundTrip(ChildPosition.First) as EditOperation.DeleteChild).position)
+        assertEquals(ChildPosition.Last, (roundTrip(ChildPosition.Last) as EditOperation.DeleteChild).position)
+        assertEquals(ChildPosition.Only, (roundTrip(ChildPosition.Only) as EditOperation.DeleteChild).position)
+        assertEquals(ChildPosition.Index(3), (roundTrip(ChildPosition.Index(3)) as EditOperation.DeleteChild).position)
+    }
+
+    @Test
     fun `response JSON decodes to concrete daemon response messages`() {
         assertEquals(
             ReadyMessage(port = 3210),

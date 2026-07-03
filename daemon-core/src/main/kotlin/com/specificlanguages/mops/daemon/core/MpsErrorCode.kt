@@ -2,6 +2,7 @@ package com.specificlanguages.mops.daemon.core
 
 enum class MpsErrorCode {
     AMBIGUOUS_PROPERTY,
+    AMBIGUOUS_ROLE,
     AMBIGUOUS_TARGET,
     CONCEPT_NOT_FOUND,
     GENERIC_FAILURE,
@@ -12,6 +13,7 @@ enum class MpsErrorCode {
     MODEL_READ_ONLY,
     NODE_NOT_FOUND,
     PROPERTY_NOT_FOUND,
+    ROLE_NOT_FOUND,
     SAVE_FAILED,
     TARGET_NOT_FOUND,
     TARGET_RESOLUTION_FAILED,

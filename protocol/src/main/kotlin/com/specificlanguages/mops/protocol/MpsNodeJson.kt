@@ -7,7 +7,7 @@ data class MpsNodeJson(
     val model: String? = null,
     val role: String? = null,
     val concept: String,
-    val id: String,
+    val id: String? = null,
     val properties: List<MpsNodePropertyJson>? = null,
     val references: List<MpsNodeReferenceJson>? = null,
     val children: List<MpsNodeJson>? = null,
