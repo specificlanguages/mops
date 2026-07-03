@@ -12,6 +12,7 @@ import com.specificlanguages.mops.protocol.MpsNodeReferenceJson
 import com.specificlanguages.mops.protocol.MpsNodePropertyJson
 import com.specificlanguages.mops.protocol.NodeTarget
 import jetbrains.mps.project.Project
+import jetbrains.mps.smodel.CopyUtil
 import jetbrains.mps.smodel.language.ConceptRegistry
 import org.jetbrains.mps.openapi.language.SConcept
 import org.jetbrains.mps.openapi.language.SContainmentLink
@@ -136,6 +137,26 @@ class EditBatchExecutor(
                         resolution.properties.joinToString { it.name },
                 )
             }
+
+        // Resolves a non-alias target to a node without requiring its model to be editable; used for read-only
+        // referents (a reference `to`, a copy `source`) that the batch points at or copies from but does not mutate.
+        fun resolveReadonlyNode(index: Int, target: EditTarget): SNode {
+            if (target is EditTarget.Alias) {
+                fail(
+                    MpsErrorCode.UNSUPPORTED_TARGET,
+                    "operation $index alias targets are not supported by this edit slice: ${target.alias}",
+                )
+            }
+            val node = try {
+                resolveTarget(project, target)
+            } catch (exception: Exception) {
+                fail(
+                    MpsErrorCode.TARGET_RESOLUTION_FAILED,
+                    "operation $index target could not be resolved: ${exception.message ?: exception.javaClass.name}",
+                )
+            }
+            return node ?: fail(MpsErrorCode.NODE_NOT_FOUND, "operation $index target node not found")
+        }
 
         fun resolveReferenceTargetOrFail(index: Int, ownerModel: SModel, reference: MpsNodeReferenceJson): SNode {
             val targetModel = reference.target.model
@@ -264,6 +285,21 @@ class EditBatchExecutor(
                         node.model?.removeRootNode(node)
                     }
                     attach(index, newParent, link, node, operation.position)
+                }
+
+                is EditOperation.SetReference -> {
+                    val link = resolveReferenceLinkOrFail(index, node, operation.role)
+                    val to = operation.to?.let { resolveReadonlyNode(index, it) }
+                    mutated = true
+                    node.setReferenceTarget(link, to)
+                }
+
+                is EditOperation.CopyNode -> {
+                    val link = resolveContainmentOrFail(index, node, operation.role)
+                    val source = resolveReadonlyNode(index, operation.source)
+                    mutated = true
+                    val copy = CopyUtil.copy(source)
+                    attach(index, node, link, copy, operation.position)
                 }
             }
         }

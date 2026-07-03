@@ -81,6 +81,31 @@ sealed interface EditOperation {
         val role: String,
         val position: ChildPosition = ChildPosition.Last,
     ) : EditOperation
+
+    /**
+     * Sets the [target] node's reference [role] to point at [to], or clears it when [to] is null. The [to] node may
+     * live in another model.
+     */
+    @Serializable
+    @SerialName("setReference")
+    data class SetReference(
+        override val target: EditTarget,
+        val role: String,
+        val to: EditTarget? = null,
+    ) : EditOperation
+
+    /**
+     * Deep-copies [source] into the [target] parent's containment [role] at [position], assigning the copy fresh node
+     * ids so it is a distinct node rather than a duplicate identity. [source] may live in a read-only model.
+     */
+    @Serializable
+    @SerialName("copyNode")
+    data class CopyNode(
+        override val target: EditTarget,
+        val source: EditTarget,
+        val role: String,
+        val position: ChildPosition = ChildPosition.Last,
+    ) : EditOperation
 }
 
 /**

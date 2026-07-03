@@ -197,6 +197,42 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `model edit request JSON round-trips reference and copy operations`() {
+        val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
+        val request = ModelEditRequest(
+            token = "secret",
+            batch = EditBatch(
+                operations = listOf(
+                    EditOperation.SetReference(
+                        target = EditTarget.NodeReference("$model/1"),
+                        role = "dataType",
+                        to = EditTarget.NodeReference("$model/2"),
+                    ),
+                    EditOperation.SetReference(
+                        target = EditTarget.InModel(modelTarget = model, nodeId = "3"),
+                        role = "dataType",
+                        to = null,
+                    ),
+                    EditOperation.CopyNode(
+                        target = EditTarget.NodeReference("$model/4"),
+                        source = EditTarget.NodeReference("$model/5"),
+                        role = "propertyDeclaration",
+                        position = ChildPosition.Last,
+                    ),
+                ),
+            ),
+        )
+
+        val serialized = ProtocolJson.encodeRequest(request)
+
+        assertContains(serialized, """"op":"setReference"""")
+        assertContains(serialized, """"op":"copyNode"""")
+        assertContains(serialized, """"to":"$model/2"""")
+        assertContains(serialized, """"source":"$model/5"""")
+        assertEquals(request, ProtocolJson.decodeRequest(serialized))
+    }
+
+    @Test
     fun `child position JSON encodes ordinals as strings and index as an integer`() {
         val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
         fun roundTrip(position: ChildPosition): EditOperation {
