@@ -2,6 +2,7 @@
 
 ## 0.3.0 (Unreleased)
 
+- Made daemon startup reject an empty or module-less project (no `.mps/modules.xml`, or zero project modules) so every request surfaces the startup error rather than returning nothing.
 - Pivoted the prototype to Kotlin application subprojects for `cli` and `daemon`.
 - Added a persistent per-project daemon lifecycle behind `mops --mps-home <path> daemon ping`.
 - Added `mops daemon status` and `mops daemon stop` for inspecting and stopping known project daemons.

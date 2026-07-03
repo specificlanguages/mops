@@ -50,13 +50,22 @@ object SharedMpsEnvironment {
      * the shared project is open, a copy's identical modules would resolve to the already-loaded instances and the
      * copy's file mutations would be invisible.
      */
-    fun <T> withProjectCopy(prepare: (Path) -> Unit = {}, block: (MpsAccess, Path) -> T): T {
+    fun <T> withProjectCopy(prepare: (Path) -> Unit = {}, block: (MpsAccess, Path) -> T): T =
+        withOpenProjectCopy(prepare) { project, projectPath ->
+            block(JetBrainsMpsAccess(project, DaemonLogger()), projectPath)
+        }
+
+    /**
+     * Like [withProjectCopy] but hands [block] the opened [Project] directly, for tests that need project-level state
+     * (such as its **Project Modules**) rather than the [MpsAccess] read/write surface.
+     */
+    fun <T> withOpenProjectCopy(prepare: (Path) -> Unit = {}, block: (Project, Path) -> T): T {
         closeSharedProject()
         val projectPath = copyFixtureProject(Files.createTempDirectory("mops-project-copy"))
         prepare(projectPath)
         val project = openProject(projectPath)
         try {
-            return block(JetBrainsMpsAccess(project, DaemonLogger()), projectPath)
+            return block(project, projectPath)
         } finally {
             environment.closeProject(project)
         }
