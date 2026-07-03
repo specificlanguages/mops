@@ -111,7 +111,7 @@ An identifier for an **MPS Node** that is unique only within its **MPS Model**.
 _Related_: Node Reference
 
 **Node Reference**:
-A globally usable reference to an **MPS Node** that combines a **Model Reference** with a **Node ID**.
+A globally usable reference to an **MPS Node** that combines a **Model Reference** with a **Node ID**. A serialized **Node Reference** is half-opaque: users and agents read its parts to orient themselves but copy it whole from mops output rather than constructing it from pieces.
 _Related_: Node ID, path
 
 **Module Reference**:
@@ -143,6 +143,22 @@ _Related_: Constraint
 The full validation of an **MPS Model**, including typesystem and checking rules. It is distinct from the cheaper **Constraint** evaluation and is performed as its own operation because it may be costly.
 _Avoid_: validation, type check
 _Related_: Constraint
+
+### CLI Help
+
+**Command Help**:
+Usage text for a CLI command: its options, arguments, and subcommands. Requesting **Command Help** always succeeds and never requires a daemon or project.
+_Related_: Explain Topic
+
+**Notation**:
+A textual format that mops exchanges with users and agents, such as the edit batch JSON or the serialized **Node Reference** syntax. Notations are what `mops explain` documents; CLI options belong to **Command Help** instead.
+_Avoid_: format, syntax when precision matters
+_Related_: Explain Topic
+
+**Explain Topic**:
+A named reference page about a **Notation** or a part of one, addressable by a dot path such as `edit` or `edit.copyNode`. An **Explain Topic** is small, self-contained, and names the related topics a reader may drill into.
+_Avoid_: help topic, doc page
+_Related_: Notation, Command Help
 
 ## Example Dialogue
 
