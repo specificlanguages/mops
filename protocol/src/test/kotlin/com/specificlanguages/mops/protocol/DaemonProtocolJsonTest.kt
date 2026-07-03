@@ -233,6 +233,37 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `model edit request JSON round-trips aliases as declaration and target`() {
+        val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
+        val request = ModelEditRequest(
+            token = "secret",
+            batch = EditBatch(
+                operations = listOf(
+                    EditOperation.AddChild(
+                        target = EditTarget.NodeReference("$model/1"),
+                        role = "propertyDeclaration",
+                        concept = "jetbrains.mps.lang.structure.structure.PropertyDeclaration",
+                        alias = "\$p",
+                    ),
+                    EditOperation.SetProperty(target = EditTarget.Alias("\$p"), name = "name", value = "aliased"),
+                    EditOperation.SetReference(
+                        target = EditTarget.NodeReference("$model/2"),
+                        role = "dataType",
+                        to = EditTarget.Alias("\$p"),
+                    ),
+                ),
+            ),
+        )
+
+        val serialized = ProtocolJson.encodeRequest(request)
+
+        assertContains(serialized, """"as":"${'$'}p"""")
+        assertContains(serialized, """"target":"${'$'}p"""")
+        assertContains(serialized, """"to":"${'$'}p"""")
+        assertEquals(request, ProtocolJson.decodeRequest(serialized))
+    }
+
+    @Test
     fun `child position JSON encodes ordinals as strings and index as an integer`() {
         val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
         fun roundTrip(position: ChildPosition): EditOperation {

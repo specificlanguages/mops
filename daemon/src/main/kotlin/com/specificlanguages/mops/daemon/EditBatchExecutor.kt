@@ -41,6 +41,7 @@ class EditBatchExecutor(
         }
 
         val affectedModels = linkedSetOf<EditableSModel>()
+        val aliases = linkedMapOf<String, SNode>()
         var mutated = false
 
         fun fail(code: MpsErrorCode, message: String): Nothing {
@@ -50,13 +51,15 @@ class EditBatchExecutor(
             throw MpsRequestException(code = code, message = message)
         }
 
-        // Resolves a non-alias target to a node whose model is editable, clean at batch start, and tracked as affected.
-        fun requireEditableNode(index: Int, target: EditTarget): SNode {
+        // Resolves any target form to a node: a batch-local alias (must already be bound), a serialized node reference,
+        // or a model plus node id. A forward reference to an unbound alias fails.
+        fun resolveNode(index: Int, target: EditTarget): SNode {
             if (target is EditTarget.Alias) {
-                fail(
-                    MpsErrorCode.UNSUPPORTED_TARGET,
-                    "operation $index alias targets are not supported by this edit slice: ${target.alias}",
-                )
+                return aliases[target.alias]
+                    ?: fail(
+                        MpsErrorCode.TARGET_RESOLUTION_FAILED,
+                        "operation $index alias is not defined earlier in the batch: ${target.alias}",
+                    )
             }
             val node = try {
                 resolveTarget(project, target)
@@ -65,7 +68,23 @@ class EditBatchExecutor(
                     MpsErrorCode.TARGET_RESOLUTION_FAILED,
                     "operation $index target could not be resolved: ${exception.message ?: exception.javaClass.name}",
                 )
-            } ?: fail(MpsErrorCode.NODE_NOT_FOUND, "operation $index target node not found")
+            }
+            return node ?: fail(MpsErrorCode.NODE_NOT_FOUND, "operation $index target node not found")
+        }
+
+        // Binds a created node to a batch-local alias; a duplicate alias name fails.
+        fun bindAlias(index: Int, alias: String?, node: SNode) {
+            if (alias == null) {
+                return
+            }
+            if (aliases.putIfAbsent(alias, node) != null) {
+                fail(MpsErrorCode.INVALID_REQUEST, "operation $index alias is already defined: $alias")
+            }
+        }
+
+        // Resolves a target whose model must be editable, clean at batch start, and tracked as affected.
+        fun requireEditableNode(index: Int, target: EditTarget): SNode {
+            val node = resolveNode(index, target)
             val model = node.model
                 ?: fail(MpsErrorCode.NODE_NOT_FOUND, "operation $index target node is detached from a model")
             val editableModel = writeScope.asEditable(model)
@@ -137,26 +156,6 @@ class EditBatchExecutor(
                         resolution.properties.joinToString { it.name },
                 )
             }
-
-        // Resolves a non-alias target to a node without requiring its model to be editable; used for read-only
-        // referents (a reference `to`, a copy `source`) that the batch points at or copies from but does not mutate.
-        fun resolveReadonlyNode(index: Int, target: EditTarget): SNode {
-            if (target is EditTarget.Alias) {
-                fail(
-                    MpsErrorCode.UNSUPPORTED_TARGET,
-                    "operation $index alias targets are not supported by this edit slice: ${target.alias}",
-                )
-            }
-            val node = try {
-                resolveTarget(project, target)
-            } catch (exception: Exception) {
-                fail(
-                    MpsErrorCode.TARGET_RESOLUTION_FAILED,
-                    "operation $index target could not be resolved: ${exception.message ?: exception.javaClass.name}",
-                )
-            }
-            return node ?: fail(MpsErrorCode.NODE_NOT_FOUND, "operation $index target node not found")
-        }
 
         fun resolveReferenceTargetOrFail(index: Int, ownerModel: SModel, reference: MpsNodeReferenceJson): SNode {
             val targetModel = reference.target.model
@@ -262,6 +261,7 @@ class EditBatchExecutor(
                     val child = model.createNode(concept)
                     attach(index, node, link, child, operation.position)
                     populate(index, model, child, operation.properties, operation.references, operation.children)
+                    bindAlias(index, operation.alias, child)
                 }
 
                 is EditOperation.MoveNode -> {
@@ -289,23 +289,27 @@ class EditBatchExecutor(
 
                 is EditOperation.SetReference -> {
                     val link = resolveReferenceLinkOrFail(index, node, operation.role)
-                    val to = operation.to?.let { resolveReadonlyNode(index, it) }
+                    val to = operation.to?.let { resolveNode(index, it) }
                     mutated = true
                     node.setReferenceTarget(link, to)
                 }
 
                 is EditOperation.CopyNode -> {
                     val link = resolveContainmentOrFail(index, node, operation.role)
-                    val source = resolveReadonlyNode(index, operation.source)
+                    val source = resolveNode(index, operation.source)
                     mutated = true
                     val copy = CopyUtil.copy(source)
                     attach(index, node, link, copy, operation.position)
+                    bindAlias(index, operation.alias, copy)
                 }
             }
         }
 
         return when (val saveOutcome = writeScope.saveWithResolveInfo(affectedModels)) {
-            SaveOutcome.Saved -> ModelEditResponse(created = emptyMap(), violations = emptyList())
+            SaveOutcome.Saved -> ModelEditResponse(
+                created = aliases.mapValues { (_, node) -> persistence.asString(node.reference) },
+                violations = emptyList(),
+            )
             is SaveOutcome.SaveFailed -> fail(
                 MpsErrorCode.SAVE_FAILED,
                 "model save failed for ${saveOutcome.model.name.longName}: ${saveOutcome.result}",

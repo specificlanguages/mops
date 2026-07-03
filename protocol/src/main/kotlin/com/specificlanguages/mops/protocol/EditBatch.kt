@@ -67,7 +67,8 @@ sealed interface EditOperation {
         val references: List<MpsNodeReferenceJson>? = null,
         val children: List<MpsNodeJson>? = null,
         val position: ChildPosition = ChildPosition.Last,
-    ) : EditOperation
+        @SerialName("as") override val alias: String? = null,
+    ) : EditOperation, CreatingOperation
 
     /**
      * Moves the [target] node under the [into] parent's containment [role] at [position], detaching it from its
@@ -105,7 +106,16 @@ sealed interface EditOperation {
         val source: EditTarget,
         val role: String,
         val position: ChildPosition = ChildPosition.Last,
-    ) : EditOperation
+        @SerialName("as") override val alias: String? = null,
+    ) : EditOperation, CreatingOperation
+}
+
+/**
+ * An [EditOperation] that creates a node and may bind it to a batch-local [alias] (a `$`-prefixed name) that later
+ * operations can target and that the response reports under `created`.
+ */
+interface CreatingOperation {
+    val alias: String?
 }
 
 /**
