@@ -1,12 +1,13 @@
 package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
-import com.specificlanguages.mops.daemon.core.MpsResult
+import com.specificlanguages.mops.daemon.core.MpsRequestException
 import kotlin.io.path.pathString
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -27,9 +28,8 @@ class ModelResaveSemanticsTest {
         ) { mpsAccess, projectPath ->
             val model = projectPath.resolve(STRUCTURE_MODEL_PATH)
 
-            val result = mpsAccess.write { resave(model.pathString) }
+            mpsAccess.write { resave(model.pathString) }
 
-            assertOk(result)
             assertEquals(original, model.readText())
         }
     }
@@ -43,15 +43,12 @@ class ModelResaveSemanticsTest {
         ) { mpsAccess, projectPath ->
             val unknownModel = projectPath.resolve("not-a-project-model.mps")
 
-            val result = mpsAccess.write { resave(unknownModel.pathString) }
+            val exception = assertFailsWith<MpsRequestException> {
+                mpsAccess.write { resave(unknownModel.pathString) }
+            }
 
-            assertEquals(
-                MpsResult.Error(
-                    code = MpsErrorCode.MODEL_NOT_FOUND,
-                    message = "model not found: ${unknownModel.pathString}",
-                ),
-                result,
-            )
+            assertEquals(MpsErrorCode.MODEL_NOT_FOUND, exception.code)
+            assertEquals("model not found: ${unknownModel.pathString}", exception.message)
         }
     }
 

@@ -8,11 +8,9 @@ class FindUsagesSemanticsTest {
 
     @Test
     fun `finds reference usages of a node reference`() {
-        val payload = assertOk(
-            SharedMpsEnvironment.sharedMpsAccess.read {
-                findUsages(NodeTarget.NodeReference(IJSON_VALUE_REFERENCE), limit = DEFAULT_LIMIT)
-            },
-        )
+        val payload = SharedMpsEnvironment.sharedMpsAccess.read {
+            findUsages(NodeTarget.NodeReference(IJSON_VALUE_REFERENCE), limit = DEFAULT_LIMIT)
+        }
 
         assertTrue(payload.usages.isNotEmpty())
         assertTrue(payload.usages.any { it.role == "intfc" }, "expected an implements usage, got: ${payload.usages}")
@@ -24,14 +22,12 @@ class FindUsagesSemanticsTest {
 
     @Test
     fun `finds reference usages of a model target and node id`() {
-        val payload = assertOk(
-            SharedMpsEnvironment.sharedMpsAccess.read {
-                findUsages(
-                    NodeTarget.InModel(modelTarget = "com.specificlanguages.json.structure", nodeId = IJSON_VALUE_NODE_ID),
-                    limit = DEFAULT_LIMIT,
-                )
-            },
-        )
+        val payload = SharedMpsEnvironment.sharedMpsAccess.read {
+            findUsages(
+                NodeTarget.InModel(modelTarget = "com.specificlanguages.json.structure", nodeId = IJSON_VALUE_NODE_ID),
+                limit = DEFAULT_LIMIT,
+            )
+        }
 
         assertTrue(payload.usages.isNotEmpty())
         assertTrue(payload.usages.any { it.role == "intfc" }, "expected an implements usage, got: ${payload.usages}")

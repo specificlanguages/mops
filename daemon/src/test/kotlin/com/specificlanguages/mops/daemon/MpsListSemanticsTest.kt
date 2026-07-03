@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
+import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import kotlin.io.path.createDirectories
 import kotlin.io.path.readText
@@ -8,6 +9,7 @@ import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
@@ -15,14 +17,14 @@ class MpsListSemanticsTest {
 
     @Test
     fun `lists current project entity`() {
-        val root = assertOk(SharedMpsEnvironment.sharedMpsAccess.read { list(null, depth = 0) })
+        val root = SharedMpsEnvironment.sharedMpsAccess.read { list(null, depth = 0) }
 
         assertEquals(MpsListEntryJson(type = "project", name = "mps-json"), root)
     }
 
     @Test
     fun `lists project modules by default`() {
-        val root = assertOk(SharedMpsEnvironment.sharedMpsAccess.read { list(null, depth = 1) })
+        val root = SharedMpsEnvironment.sharedMpsAccess.read { list(null, depth = 1) }
 
         assertEquals(
             MpsListEntryJson(
@@ -49,14 +51,14 @@ class MpsListSemanticsTest {
 
     @Test
     fun `lists repository entity`() {
-        val root = assertOk(SharedMpsEnvironment.sharedMpsAccess.read { list(listOf("/"), depth = 0) })
+        val root = SharedMpsEnvironment.sharedMpsAccess.read { list(listOf("/"), depth = 0) }
 
         assertEquals(MpsListEntryJson(type = "repository", name = "/"), root)
     }
 
     @Test
     fun `lists repository modules`() {
-        val root = assertOk(SharedMpsEnvironment.sharedMpsAccess.read { list(listOf("/"), depth = 1) })
+        val root = SharedMpsEnvironment.sharedMpsAccess.read { list(listOf("/"), depth = 1) }
 
         assertEquals("repository", root.type)
         val modules = assertNotNull(root.children)
@@ -67,9 +69,7 @@ class MpsListSemanticsTest {
 
     @Test
     fun `lists models owned by project module`() {
-        val module = assertOk(
-            SharedMpsEnvironment.sharedMpsAccess.read { list(listOf("com.specificlanguages.json"), depth = 1) },
-        )
+        val module = SharedMpsEnvironment.sharedMpsAccess.read { list(listOf("com.specificlanguages.json"), depth = 1) }
 
         assertEquals("module", module.type)
         assertEquals("com.specificlanguages.json", module.name)
@@ -90,11 +90,9 @@ class MpsListSemanticsTest {
 
     @Test
     fun `lists root nodes owned by model path`() {
-        val model = assertOk(
-            SharedMpsEnvironment.sharedMpsAccess.read {
-                list(listOf("com.specificlanguages.json", "com.specificlanguages.json.structure"), depth = 1)
-            },
-        )
+        val model = SharedMpsEnvironment.sharedMpsAccess.read {
+            list(listOf("com.specificlanguages.json", "com.specificlanguages.json.structure"), depth = 1)
+        }
 
         assertEquals("model", model.type)
         assertEquals("com.specificlanguages.json.structure", model.name)
@@ -119,11 +117,9 @@ class MpsListSemanticsTest {
         val moduleTargets = listOf("com.specificlanguages.json", LANGUAGE_MODULE_REFERENCE)
 
         for (moduleTarget in moduleTargets) {
-            val root = assertOk(
-                SharedMpsEnvironment.sharedMpsAccess.read {
-                    list(listOf(moduleTarget, ".structure", "JsonFile"), depth = 1)
-                },
-            )
+            val root = SharedMpsEnvironment.sharedMpsAccess.read {
+                list(listOf(moduleTarget, ".structure", "JsonFile"), depth = 1)
+            }
 
             assertEquals("root", root.type)
             assertEquals("JsonFile", root.name)
@@ -134,9 +130,7 @@ class MpsListSemanticsTest {
 
     @Test
     fun `lists root nodes owned by serialized model reference`() {
-        val model = assertOk(
-            SharedMpsEnvironment.sharedMpsAccess.read { list(listOf(STRUCTURE_MODEL_REFERENCE), depth = 1) },
-        )
+        val model = SharedMpsEnvironment.sharedMpsAccess.read { list(listOf(STRUCTURE_MODEL_REFERENCE), depth = 1) }
 
         assertEquals("model", model.type)
         assertEquals("com.specificlanguages.json.structure", model.name)
@@ -150,11 +144,9 @@ class MpsListSemanticsTest {
 
     @Test
     fun `lists child node addressed below serialized model reference`() {
-        val node = assertOk(
-            SharedMpsEnvironment.sharedMpsAccess.read {
-                list(listOf(BUILD_MODEL_REFERENCE, "com.specificlanguages.json", "version"), depth = 1)
-            },
-        )
+        val node = SharedMpsEnvironment.sharedMpsAccess.read {
+            list(listOf(BUILD_MODEL_REFERENCE, "com.specificlanguages.json", "version"), depth = 1)
+        }
 
         assertEquals("node", node.type)
         assertEquals("version", node.name)
@@ -166,11 +158,9 @@ class MpsListSemanticsTest {
 
     @Test
     fun `lists containment children owned by root node path`() {
-        val root = assertOk(
-            SharedMpsEnvironment.sharedMpsAccess.read {
-                list(listOf("com.specificlanguages.json", "com.specificlanguages.json.structure", "JsonFile"), depth = 1)
-            },
-        )
+        val root = SharedMpsEnvironment.sharedMpsAccess.read {
+            list(listOf("com.specificlanguages.json", "com.specificlanguages.json.structure", "JsonFile"), depth = 1)
+        }
 
         assertEquals("root", root.type)
         assertEquals("JsonFile", root.name)
@@ -188,11 +178,9 @@ class MpsListSemanticsTest {
 
     @Test
     fun `lists root node addressed by compact node id`() {
-        val root = assertOk(
-            SharedMpsEnvironment.sharedMpsAccess.read {
-                list(listOf("com.specificlanguages.json", "com.specificlanguages.json.structure", "1P8oQ4NaXDS"), depth = 1)
-            },
-        )
+        val root = SharedMpsEnvironment.sharedMpsAccess.read {
+            list(listOf("com.specificlanguages.json", "com.specificlanguages.json.structure", "1P8oQ4NaXDS"), depth = 1)
+        }
 
         assertEquals("root", root.type)
         assertEquals("JsonFile", root.name)
@@ -202,9 +190,7 @@ class MpsListSemanticsTest {
 
     @Test
     fun `lists root node addressed by serialized node reference`() {
-        val root = assertOk(
-            SharedMpsEnvironment.sharedMpsAccess.read { list(listOf(JSON_FILE_NODE_REFERENCE), depth = 1) },
-        )
+        val root = SharedMpsEnvironment.sharedMpsAccess.read { list(listOf(JSON_FILE_NODE_REFERENCE), depth = 1) }
 
         assertEquals("root", root.type)
         assertEquals("JsonFile", root.name)
@@ -215,19 +201,17 @@ class MpsListSemanticsTest {
 
     @Test
     fun `lists containment children owned by child node path`() {
-        val node = assertOk(
-            SharedMpsEnvironment.sharedMpsAccess.read {
-                list(
-                    listOf(
-                        "com.specificlanguages.json.build",
-                        "com.specificlanguages.json.build",
-                        "com.specificlanguages.json",
-                        "version",
-                    ),
-                    depth = 1,
-                )
-            },
-        )
+        val node = SharedMpsEnvironment.sharedMpsAccess.read {
+            list(
+                listOf(
+                    "com.specificlanguages.json.build",
+                    "com.specificlanguages.json.build",
+                    "com.specificlanguages.json",
+                    "version",
+                ),
+                depth = 1,
+            )
+        }
 
         assertEquals("node", node.type)
         assertNull(node.role)
@@ -248,9 +232,9 @@ class MpsListSemanticsTest {
 
     @Test
     fun `limits depth across module model root and child traversal`() {
-        val module = assertOk(
-            SharedMpsEnvironment.sharedMpsAccess.read { list(listOf("com.specificlanguages.json.build"), depth = 4) },
-        )
+        val module = SharedMpsEnvironment.sharedMpsAccess.read {
+            list(listOf("com.specificlanguages.json.build"), depth = 4)
+        }
 
         assertEquals("module", module.type)
         val models = assertNotNull(module.children)
@@ -276,15 +260,16 @@ class MpsListSemanticsTest {
                 )
             },
         ) { mpsAccess, _ ->
-            val result = mpsAccess.read {
-                list(listOf("com.specificlanguages.json", "com.specificlanguages.json.structure"), depth = 1)
+            val exception = assertFailsWith<MpsRequestException> {
+                mpsAccess.read {
+                    list(listOf("com.specificlanguages.json", "com.specificlanguages.json.structure"), depth = 1)
+                }
             }
 
-            val error = assertError(result)
-            assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, error.code)
-            assertContains(error.message, "ambiguous model target")
-            assertContains(error.message, STRUCTURE_MODEL_REFERENCE)
-            assertContains(error.message, duplicateReference)
+            assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, exception.code)
+            assertContains(exception.message, "ambiguous model target")
+            assertContains(exception.message, STRUCTURE_MODEL_REFERENCE)
+            assertContains(exception.message, duplicateReference)
         }
     }
 
@@ -314,13 +299,14 @@ class MpsListSemanticsTest {
                 )
             },
         ) { mpsAccess, _ ->
-            val result = mpsAccess.read { list(listOf("com.specificlanguages.json.build"), depth = 1) }
+            val exception = assertFailsWith<MpsRequestException> {
+                mpsAccess.read { list(listOf("com.specificlanguages.json.build"), depth = 1) }
+            }
 
-            val error = assertError(result)
-            assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, error.code)
-            assertContains(error.message, "ambiguous module target com.specificlanguages.json.build")
-            assertContains(error.message, BUILD_MODULE_REFERENCE)
-            assertContains(error.message, duplicateReference)
+            assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, exception.code)
+            assertContains(exception.message, "ambiguous module target com.specificlanguages.json.build")
+            assertContains(exception.message, BUILD_MODULE_REFERENCE)
+            assertContains(exception.message, duplicateReference)
         }
     }
 
@@ -337,15 +323,16 @@ class MpsListSemanticsTest {
                 )
             },
         ) { mpsAccess, _ ->
-            val result = mpsAccess.read {
-                list(listOf("com.specificlanguages.json", "com.specificlanguages.json.structure", "JsonFile"), depth = 1)
+            val exception = assertFailsWith<MpsRequestException> {
+                mpsAccess.read {
+                    list(listOf("com.specificlanguages.json", "com.specificlanguages.json.structure", "JsonFile"), depth = 1)
+                }
             }
 
-            val error = assertError(result)
-            assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, error.code)
-            assertContains(error.message, "ambiguous root node target JsonFile")
-            assertContains(error.message, JSON_FILE_NODE_REFERENCE)
-            assertContains(error.message, "$STRUCTURE_MODEL_REFERENCE/2110045694544567020")
+            assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, exception.code)
+            assertContains(exception.message, "ambiguous root node target JsonFile")
+            assertContains(exception.message, JSON_FILE_NODE_REFERENCE)
+            assertContains(exception.message, "$STRUCTURE_MODEL_REFERENCE/2110045694544567020")
         }
     }
 
@@ -362,23 +349,24 @@ class MpsListSemanticsTest {
                 )
             },
         ) { mpsAccess, _ ->
-            val result = mpsAccess.read {
-                list(
-                    listOf(
-                        "com.specificlanguages.json.build",
-                        "com.specificlanguages.json.build",
-                        "com.specificlanguages.json",
-                        "version",
-                    ),
-                    depth = 1,
-                )
+            val exception = assertFailsWith<MpsRequestException> {
+                mpsAccess.read {
+                    list(
+                        listOf(
+                            "com.specificlanguages.json.build",
+                            "com.specificlanguages.json.build",
+                            "com.specificlanguages.json",
+                            "version",
+                        ),
+                        depth = 1,
+                    )
+                }
             }
 
-            val error = assertError(result)
-            assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, error.code)
-            assertContains(error.message, "ambiguous child node target version")
-            assertContains(error.message, "$BUILD_MODEL_REFERENCE/48805613928016575")
-            assertContains(error.message, "$BUILD_MODEL_REFERENCE/48805613928016630")
+            assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, exception.code)
+            assertContains(exception.message, "ambiguous child node target version")
+            assertContains(exception.message, "$BUILD_MODEL_REFERENCE/48805613928016575")
+            assertContains(exception.message, "$BUILD_MODEL_REFERENCE/48805613928016630")
         }
     }
 

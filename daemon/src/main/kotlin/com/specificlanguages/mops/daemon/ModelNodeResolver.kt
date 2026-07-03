@@ -1,5 +1,7 @@
 package com.specificlanguages.mops.daemon
 
+import com.specificlanguages.mops.daemon.core.MpsErrorCode
+import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.NodeTarget
 import jetbrains.mps.extapi.persistence.FileDataSource
 import jetbrains.mps.project.Project
@@ -23,7 +25,10 @@ class ModelNodeResolver(
 
             is NodeTarget.InModel -> {
                 val model = findSingleModel(project, target.modelTarget)
-                    ?: throw IllegalArgumentException("model not found: ${target.modelTarget}")
+                    ?: throw MpsRequestException(
+                        code = MpsErrorCode.MODEL_NOT_FOUND,
+                        message = "model not found: ${target.modelTarget}",
+                    )
                 model.getNode(parseNodeId(target.nodeId))
             }
         }
@@ -49,8 +54,9 @@ class ModelNodeResolver(
     private fun findSingleModel(project: Project, modelTarget: String): SModel? {
         val candidates = matchingModels(project, modelTarget)
         if (candidates.size > 1) {
-            throw IllegalArgumentException(
-                "ambiguous model target $modelTarget: " +
+            throw MpsRequestException(
+                code = MpsErrorCode.AMBIGUOUS_TARGET,
+                message = "ambiguous model target $modelTarget: " +
                     candidates.joinToString { "${it.name.longName} [${it.filePath()}]" },
             )
         }

@@ -35,18 +35,18 @@ class JetBrainsMpsAccess(
         }
 
     private open inner class JetBrainsMpsRead : MpsRead {
-        override fun list(target: List<String>?, depth: Int): MpsResult<MpsListEntryJson> {
-            val root = when (target) {
+        override fun list(target: List<String>?, depth: Int): MpsListEntryJson =
+            when (target) {
                 null -> mpsListExporter.exportProject(project, depth)
                 listOf("/") -> mpsListExporter.exportRepository(project.repository, depth)
                 else -> {
                     val root = when (val resolution = resolveListTarget(target)) {
                         is ListTargetResolution.Found -> resolution.target
-                        is ListTargetResolution.Ambiguous -> return MpsResult.Error(
+                        is ListTargetResolution.Ambiguous -> throw MpsRequestException(
                             code = MpsErrorCode.AMBIGUOUS_TARGET,
                             message = resolution.message,
                         )
-                        ListTargetResolution.Missing -> return MpsResult.Error(
+                        ListTargetResolution.Missing -> throw MpsRequestException(
                             code = MpsErrorCode.TARGET_NOT_FOUND,
                             message = "target not found: ${target.joinToString(" ")}",
                         )
@@ -59,65 +59,51 @@ class JetBrainsMpsAccess(
                     }
                 }
             }
-            return MpsResult.Ok(root)
+
+        override fun getNode(target: NodeTarget): MpsNodeJson =
+            jsonNodeExporter.export(resolveNode(target))
+
+        override fun findUsages(target: NodeTarget, limit: Int): FindUsagesResponse {
+            val node = resolveNode(target)
+            val scope = EditableFilteringScope(project.scope)
+            val collected = CollectConsumer<SReference>()
+            FindUsagesFacade.getInstance().findUsages(scope, setOf(node), collected, EmptyProgressMonitor())
+
+            val references = collected.result
+            val selected = if (limit > 0) references.take(limit) else references
+
+            return FindUsagesResponse(
+                limit = limit,
+                truncated = selected.size < references.size,
+                usages = selected.map {
+                    MpsNodeUsageJson(role = it.link.name, owner = nodeSummary(it.sourceNode))
+                },
+            )
         }
 
-        override fun getNode(target: NodeTarget): MpsResult<MpsNodeJson> =
-            withResolvedNode(target) { node ->
-                MpsResult.Ok(jsonNodeExporter.export(node))
-            }
-
-        override fun findUsages(target: NodeTarget, limit: Int): MpsResult<FindUsagesResponse> =
-            withResolvedNode(target) { node ->
-                val scope = EditableFilteringScope(project.scope)
-                val collected = CollectConsumer<SReference>()
-                FindUsagesFacade.getInstance().findUsages(scope, setOf(node), collected, EmptyProgressMonitor())
-
-                val references = collected.result
-                val selected = if (limit > 0) references.take(limit) else references
-
-                MpsResult.Ok(
-                    FindUsagesResponse(
-                        limit = limit,
-                        truncated = selected.size < references.size,
-                        usages = selected.map {
-                            MpsNodeUsageJson(role = it.link.name, owner = nodeSummary(it.sourceNode))
-                        },
-                    ),
+        override fun findInstances(concept: String, exact: Boolean, limit: Int): FindInstancesResponse {
+            val mpsConcept = ConceptRegistry.getInstance().getConceptByName(concept)
+            if (!mpsConcept.isValid) {
+                throw MpsRequestException(
+                    code = MpsErrorCode.CONCEPT_NOT_FOUND,
+                    message = "concept not found: $concept",
                 )
             }
 
-        override fun findInstances(concept: String, exact: Boolean, limit: Int): MpsResult<FindInstancesResponse> =
-            try {
-                val mpsConcept = ConceptRegistry.getInstance().getConceptByName(concept)
-                if (!mpsConcept.isValid) {
-                    return MpsResult.Error(
-                        code = MpsErrorCode.CONCEPT_NOT_FOUND,
-                        message = "concept not found: $concept",
-                    )
-                }
+            val scope = EditableFilteringScope(project.scope)
+            val collected = CollectConsumer<SNode>()
+            FindUsagesFacade.getInstance()
+                .findInstances(scope, setOf(mpsConcept), exact, collected, EmptyProgressMonitor())
 
-                val scope = EditableFilteringScope(project.scope)
-                val collected = CollectConsumer<SNode>()
-                FindUsagesFacade.getInstance()
-                    .findInstances(scope, setOf(mpsConcept), exact, collected, EmptyProgressMonitor())
+            val instances = collected.result
+            val selected = if (limit > 0) instances.take(limit) else instances
 
-                val instances = collected.result
-                val selected = if (limit > 0) instances.take(limit) else instances
-
-                MpsResult.Ok(
-                    FindInstancesResponse(
-                        limit = limit,
-                        truncated = selected.size < instances.size,
-                        nodes = selected.map { nodeSummary(it) },
-                    ),
-                )
-            } catch (exception: Exception) {
-                MpsResult.Error(
-                    code = MpsErrorCode.GENERIC_FAILURE,
-                    message = exception.message ?: exception.javaClass.name,
-                )
-            }
+            return FindInstancesResponse(
+                limit = limit,
+                truncated = selected.size < instances.size,
+                nodes = selected.map { nodeSummary(it) },
+            )
+        }
 
         protected fun nodeSummary(node: SNode): MpsNodeSummaryJson =
             MpsNodeSummaryJson(
@@ -127,61 +113,34 @@ class JetBrainsMpsAccess(
                 reference = persistence.asString(node.reference),
             )
 
-        private fun <T> withResolvedNode(
-            target: NodeTarget,
-            body: (SNode) -> MpsResult<T>,
-        ): MpsResult<T> =
-            try {
-                val node = modelNodeResolver.findNode(project, target)
-                    ?: return MpsResult.Error(
-                        code = MpsErrorCode.NODE_NOT_FOUND,
-                        message = "node not found",
-                    )
-                body(node)
-            } catch (exception: Exception) {
-                MpsResult.Error(
-                    code = MpsErrorCode.GENERIC_FAILURE,
-                    message = exception.message ?: exception.javaClass.name,
-                )
-            }
+        private fun resolveNode(target: NodeTarget): SNode =
+            modelNodeResolver.findNode(project, target)
+                ?: throw MpsRequestException(code = MpsErrorCode.NODE_NOT_FOUND, message = "node not found")
     }
 
     private inner class JetBrainsMpsWrite(
         private val writeScope: WriteTransaction.WriteScope,
     ) : JetBrainsMpsRead(), MpsWrite {
-        override fun modelEdit(batch: EditBatch): MpsResult<ModelEditResponse> =
-            when (val outcome = editBatchExecutor.apply(project, batch, writeScope)) {
-                is ModelEditOutcome.Success -> MpsResult.Ok(outcome.response)
-                is ModelEditOutcome.Failure -> MpsResult.ProtocolError(
-                    code = outcome.code,
-                    message = outcome.message,
+        override fun modelEdit(batch: EditBatch): ModelEditResponse =
+            editBatchExecutor.apply(project, batch, writeScope)
+
+        override fun resave(modelTarget: String) {
+            val model = modelNodeResolver.findModel(project, modelTarget)
+                ?: throw MpsRequestException(
+                    code = MpsErrorCode.MODEL_NOT_FOUND,
+                    message = "model not found: $modelTarget",
                 )
-            }
+            val editable = writeScope.asEditable(model)
+                ?: throw MpsRequestException(
+                    code = MpsErrorCode.MODEL_READ_ONLY,
+                    message = "model is not editable: ${model.name.longName}",
+                )
 
-        override fun resave(modelTarget: String): MpsResult<Unit> {
-            return try {
-                val model = modelNodeResolver.findModel(project, modelTarget)
-                    ?: return MpsResult.Error(
-                        code = MpsErrorCode.MODEL_NOT_FOUND,
-                        message = "model not found: $modelTarget",
-                    )
-                val editable = writeScope.asEditable(model)
-                    ?: return MpsResult.Error(
-                        code = MpsErrorCode.MODEL_READ_ONLY,
-                        message = "model is not editable: ${model.name.longName}",
-                    )
-
-                when (val outcome = writeScope.saveWithResolveInfo(listOf(editable))) {
-                    SaveOutcome.Saved -> MpsResult.Ok(Unit)
-                    is SaveOutcome.SaveFailed -> MpsResult.Error(
-                        code = MpsErrorCode.SAVE_FAILED,
-                        message = "model save failed for ${outcome.model.name.longName}: ${outcome.result}",
-                    )
-                }
-            } catch (throwable: Throwable) {
-                MpsResult.Error(
+            when (val outcome = writeScope.saveWithResolveInfo(listOf(editable))) {
+                SaveOutcome.Saved -> Unit
+                is SaveOutcome.SaveFailed -> throw MpsRequestException(
                     code = MpsErrorCode.SAVE_FAILED,
-                    message = throwable.message ?: throwable.javaClass.name,
+                    message = "model save failed for ${outcome.model.name.longName}: ${outcome.result}",
                 )
             }
         }

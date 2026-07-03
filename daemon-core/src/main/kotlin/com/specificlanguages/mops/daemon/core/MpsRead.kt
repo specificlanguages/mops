@@ -6,12 +6,16 @@ import com.specificlanguages.mops.protocol.MpsListEntryJson
 import com.specificlanguages.mops.protocol.MpsNodeJson
 import com.specificlanguages.mops.protocol.NodeTarget
 
+/**
+ * Read operations on the MPS repository. Operations throw [MpsRequestException] on failures that
+ * carry a specific error code.
+ */
 interface MpsRead {
-    fun list(target: List<String>?, depth: Int): MpsResult<MpsListEntryJson>
+    fun list(target: List<String>?, depth: Int): MpsListEntryJson
 
-    fun getNode(target: NodeTarget): MpsResult<MpsNodeJson>
+    fun getNode(target: NodeTarget): MpsNodeJson
 
-    fun findInstances(concept: String, exact: Boolean, limit: Int): MpsResult<FindInstancesResponse>
+    fun findInstances(concept: String, exact: Boolean, limit: Int): FindInstancesResponse
 
-    fun findUsages(target: NodeTarget, limit: Int): MpsResult<FindUsagesResponse>
+    fun findUsages(target: NodeTarget, limit: Int): FindUsagesResponse
 }

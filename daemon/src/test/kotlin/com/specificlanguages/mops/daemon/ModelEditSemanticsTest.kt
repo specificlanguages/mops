@@ -1,5 +1,7 @@
 package com.specificlanguages.mops.daemon
 
+import com.specificlanguages.mops.daemon.core.MpsErrorCode
+import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
@@ -10,6 +12,7 @@ import kotlin.io.path.readText
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 
@@ -32,8 +35,8 @@ class ModelEditSemanticsTest {
                 )
             }
 
-            assertEquals(ModelEditResponse(created = emptyMap(), violations = emptyList()), assertOk(response))
-            val node = assertOk(mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_NODE_REFERENCE)) })
+            assertEquals(ModelEditResponse(created = emptyMap(), violations = emptyList()), response)
+            val node = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_NODE_REFERENCE)) }
             assertEquals("RenamedJsonFile", propertyValue(node, "name"))
             assertContains(projectPath.resolve(STRUCTURE_MODEL_PATH).readText(), """value="RenamedJsonFile"""")
         }
@@ -44,7 +47,7 @@ class ModelEditSemanticsTest {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
             val model = projectPath.resolve(STRUCTURE_MODEL_PATH)
 
-            val response = mpsAccess.write {
+            mpsAccess.write {
                 modelEdit(
                     EditBatch(
                         operations = listOf(
@@ -57,10 +60,9 @@ class ModelEditSemanticsTest {
                 )
             }
 
-            assertOk(response)
-            val node = assertOk(
-                mpsAccess.read { getNode(NodeTarget.InModel(modelTarget = model.pathString, nodeId = JSON_FILE_NODE_ID)) },
-            )
+            val node = mpsAccess.read {
+                getNode(NodeTarget.InModel(modelTarget = model.pathString, nodeId = JSON_FILE_NODE_ID))
+            }
             assertNull(propertyValueOrNull(node, "conceptAlias"))
             val persisted = model.readText()
             assertContains(persisted, """value="JsonFile"""")
@@ -71,29 +73,30 @@ class ModelEditSemanticsTest {
     @Test
     fun `failed later operation rolls back earlier property edit`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
-            val result = mpsAccess.write {
-                modelEdit(
-                    EditBatch(
-                        operations = listOf(
-                            EditOperation.SetProperty(
-                                target = EditTarget.NodeReference(JSON_FILE_NODE_REFERENCE),
-                                name = "name",
-                                value = "ShouldRollback",
-                            ),
-                            EditOperation.SetProperty(
-                                target = EditTarget.NodeReference(JSON_FILE_NODE_REFERENCE),
-                                name = "doesNotExist",
-                                value = "boom",
+            val exception = assertFailsWith<MpsRequestException> {
+                mpsAccess.write {
+                    modelEdit(
+                        EditBatch(
+                            operations = listOf(
+                                EditOperation.SetProperty(
+                                    target = EditTarget.NodeReference(JSON_FILE_NODE_REFERENCE),
+                                    name = "name",
+                                    value = "ShouldRollback",
+                                ),
+                                EditOperation.SetProperty(
+                                    target = EditTarget.NodeReference(JSON_FILE_NODE_REFERENCE),
+                                    name = "doesNotExist",
+                                    value = "boom",
+                                ),
                             ),
                         ),
-                    ),
-                )
+                    )
+                }
             }
 
-            val error = assertProtocolError(result)
-            assertEquals("PROPERTY_NOT_FOUND", error.code)
-            assertContains(error.message, "property not found: doesNotExist")
-            val node = assertOk(mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_NODE_REFERENCE)) })
+            assertEquals(MpsErrorCode.PROPERTY_NOT_FOUND, exception.code)
+            assertContains(exception.message, "property not found: doesNotExist")
+            val node = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_NODE_REFERENCE)) }
             assertEquals("JsonFile", propertyValue(node, "name"))
             assertFalse(projectPath.resolve(STRUCTURE_MODEL_PATH).readText().contains("ShouldRollback"))
         }
@@ -102,27 +105,28 @@ class ModelEditSemanticsTest {
     @Test
     fun `targeting non-editable model fails`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
-            val existing = assertOk(mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_NODE_REFERENCE)) })
+            val existing = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_NODE_REFERENCE)) }
             val extendsTarget = requireNotNull(existing.references).single { it.role == "extends" }.target
             val libraryReference = "${extendsTarget.model}/${extendsTarget.node}"
 
-            val result = mpsAccess.write {
-                modelEdit(
-                    EditBatch(
-                        operations = listOf(
-                            EditOperation.SetProperty(
-                                target = EditTarget.NodeReference(libraryReference),
-                                name = "name",
-                                value = "EditedBaseConcept",
+            val exception = assertFailsWith<MpsRequestException> {
+                mpsAccess.write {
+                    modelEdit(
+                        EditBatch(
+                            operations = listOf(
+                                EditOperation.SetProperty(
+                                    target = EditTarget.NodeReference(libraryReference),
+                                    name = "name",
+                                    value = "EditedBaseConcept",
+                                ),
                             ),
                         ),
-                    ),
-                )
+                    )
+                }
             }
 
-            val error = assertProtocolError(result)
-            assertEquals("MODEL_READ_ONLY", error.code)
-            assertContains(error.message, "not editable")
+            assertEquals(MpsErrorCode.MODEL_READ_ONLY, exception.code)
+            assertContains(exception.message, "not editable")
         }
     }
 
