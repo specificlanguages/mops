@@ -11,7 +11,7 @@ import picocli.CommandLine.Parameters
 import picocli.CommandLine.ParentCommand
 
 @Command(name = "usages", description = ["Find references to one MPS node."])
-class FindUsagesCommand(private val daemonClient: DaemonClient? = null) : Runnable {
+class FindUsagesCommand(private val daemonClient: DaemonClient? = null) : CliCommand() {
     @ParentCommand
     lateinit var find: FindOperations
 

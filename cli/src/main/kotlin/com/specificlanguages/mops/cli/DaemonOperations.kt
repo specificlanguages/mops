@@ -7,7 +7,6 @@ import picocli.CommandLine
  */
 @CommandLine.Command(
     name = "daemon",
-    mixinStandardHelpOptions = true,
     description = ["Inspect or control mops daemon processes."],
     subcommands = [
         DaemonPingCommand::class,
@@ -15,7 +14,7 @@ import picocli.CommandLine
         DaemonStopCommand::class,
     ],
 )
-class DaemonOperations : Runnable {
+class DaemonOperations : CliCommand() {
     @CommandLine.ParentCommand
     lateinit var root: MopsCommand
 

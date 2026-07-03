@@ -12,7 +12,7 @@ import picocli.CommandLine.ParentCommand
  * normalized model path to the daemon. The actual MPS write action is performed in the daemon process.
  */
 @Command(name = "resave", description = ["Resave one model through the mops daemon."])
-class ModelResaveCommand : Runnable {
+class ModelResaveCommand : CliCommand() {
     @ParentCommand
     lateinit var model: ModelOperations
 

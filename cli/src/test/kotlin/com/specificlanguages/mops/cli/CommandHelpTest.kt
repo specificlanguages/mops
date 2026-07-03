@@ -42,6 +42,36 @@ class CommandHelpTest {
         assertContains(output, "resave")
     }
 
+    @Test
+    fun `find help lists find subcommands`() {
+        val output = runHelp("find", "--help")
+
+        assertContains(output, "instances")
+        assertContains(output, "usages")
+    }
+
+    @Test
+    fun `every leaf command supports --help`() {
+        val leafCommands = listOf(
+            arrayOf("list"),
+            arrayOf("find", "instances"),
+            arrayOf("find", "usages"),
+            arrayOf("model", "get-node"),
+            arrayOf("model", "edit"),
+            arrayOf("model", "resave"),
+            arrayOf("daemon", "ping"),
+            arrayOf("daemon", "status"),
+            arrayOf("daemon", "stop"),
+        )
+
+        for (command in leafCommands) {
+            val output = runHelp(*command, "--help")
+
+            assertContains(output, "Usage:", message = "help for '${command.joinToString(" ")}' should print usage")
+            assertContains(output, command.last())
+        }
+    }
+
     private fun runHelp(vararg args: String): String {
         var exitCode = Int.MIN_VALUE
         val stdout = tapSystemOut {

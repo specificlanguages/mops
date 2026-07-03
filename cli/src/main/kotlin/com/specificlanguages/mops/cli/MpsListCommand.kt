@@ -13,7 +13,7 @@ import picocli.CommandLine.ParentCommand
     aliases = ["ls"],
     description = ["List an MPS navigation target as a bounded tree."],
 )
-class MpsListCommand(private val daemonClient: DaemonClient? = null) : Runnable {
+class MpsListCommand(private val daemonClient: DaemonClient? = null) : CliCommand() {
     @ParentCommand
     lateinit var root: MopsCommand
 

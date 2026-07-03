@@ -8,7 +8,7 @@ import picocli.CommandLine.Parameters
 import picocli.CommandLine.ParentCommand
 
 @Command(name = "get-node", description = ["Export one MPS node as JSON."])
-class ModelGetNodeCommand(private val daemonClient: DaemonClient? = null) : Runnable {
+class ModelGetNodeCommand(private val daemonClient: DaemonClient? = null) : CliCommand() {
     @ParentCommand
     lateinit var model: ModelOperations
 

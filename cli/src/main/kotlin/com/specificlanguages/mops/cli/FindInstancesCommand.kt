@@ -10,7 +10,7 @@ import picocli.CommandLine.Parameters
 import picocli.CommandLine.ParentCommand
 
 @Command(name = "instances", description = ["Find instances of one MPS concept in editable project sources."])
-class FindInstancesCommand(private val daemonClient: DaemonClient? = null) : Runnable {
+class FindInstancesCommand(private val daemonClient: DaemonClient? = null) : CliCommand() {
     @ParentCommand
     lateinit var find: FindOperations
 

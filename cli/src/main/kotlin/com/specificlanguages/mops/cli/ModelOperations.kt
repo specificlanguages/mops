@@ -9,7 +9,6 @@ import picocli.CommandLine.ParentCommand
  */
 @Command(
     name = "model",
-    mixinStandardHelpOptions = true,
     description = ["Run model operations through the mops daemon."],
     subcommands = [
         ModelGetNodeCommand::class,
@@ -17,7 +16,7 @@ import picocli.CommandLine.ParentCommand
         ModelResaveCommand::class,
     ],
 )
-class ModelOperations : Runnable {
+class ModelOperations : CliCommand() {
     @ParentCommand
     lateinit var root: MopsCommand
 

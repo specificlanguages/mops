@@ -11,7 +11,7 @@ import java.nio.file.Path
 import kotlin.io.path.readText
 
 @Command(name = "edit", description = ["Apply a JSON batch of edit operations."])
-class ModelEditCommand(private val daemonClient: DaemonClient? = null) : Runnable {
+class ModelEditCommand(private val daemonClient: DaemonClient? = null) : CliCommand() {
     @ParentCommand
     lateinit var model: ModelOperations
 

@@ -9,7 +9,7 @@ import picocli.CommandLine.ParentCommand
     description = ["Search editable MPS project sources."],
     subcommands = [FindInstancesCommand::class, FindUsagesCommand::class],
 )
-class FindOperations : Runnable {
+class FindOperations : CliCommand() {
     @ParentCommand
     lateinit var root: MopsCommand
 

@@ -12,7 +12,7 @@ import picocli.CommandLine.ParentCommand
  * Status is intentionally record-based: it does not start a daemon or require an MPS home.
  */
 @Command(name = "status", description = ["Print daemon status."])
-class DaemonStatusCommand : Runnable {
+class DaemonStatusCommand : CliCommand() {
     @ParentCommand
     lateinit var parent: DaemonOperations
 

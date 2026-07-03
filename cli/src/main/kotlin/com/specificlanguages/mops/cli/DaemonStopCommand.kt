@@ -11,7 +11,7 @@ import picocli.CommandLine.*
  * stale process because the record is no longer useful for future autostart decisions.
  */
 @Command(name = "stop", description = ["Stop a daemon process."])
-class DaemonStopCommand : Runnable {
+class DaemonStopCommand : CliCommand() {
     @ParentCommand
     lateinit var parent: DaemonOperations
 
