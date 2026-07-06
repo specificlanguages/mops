@@ -27,15 +27,19 @@ class JetBrainsMpsAccess(
     private val persistence: PersistenceFacade = PersistenceFacade.getInstance(),
     private val writeTransaction: WriteTransaction = WriteTransaction(),
 ) : MpsAccess {
+    // An MpsRequestException is an expected client error, not a defect. Capture it inside the model action and rethrow
+    // it on the calling thread once the action has returned: if it escaped the action directly, MPS's ActionDispatcher
+    // would log it as a SEVERE "Action dispatch failed" before rethrowing, drowning the daemon log in stack traces for
+    // routine failures like an unresolved concept or a missing target.
     override fun <T> read(block: MpsRead.() -> T): T =
         project.modelAccess.computeReadAction {
-            JetBrainsMpsRead().block()
-        }
+            captureRequestErrors { JetBrainsMpsRead().block() }
+        }.getOrThrow()
 
     override fun <T> write(block: MpsWrite.() -> T): T =
         writeTransaction.run(project) {
-            JetBrainsMpsWrite(this).block()
-        }
+            captureRequestErrors { JetBrainsMpsWrite(this).block() }
+        }.getOrThrow()
 
     private open inner class JetBrainsMpsRead : MpsRead {
         override fun list(target: List<String>?, depth: Int): MpsListEntryJson =
@@ -344,6 +348,23 @@ class JetBrainsMpsAccess(
         } else {
             ListTarget.Node(node)
         }
+
+    private inline fun <T> captureRequestErrors(block: () -> T): RequestOutcome<T> =
+        try {
+            RequestOutcome.Success(block())
+        } catch (exception: MpsRequestException) {
+            RequestOutcome.Failure(exception)
+        }
+
+    private sealed interface RequestOutcome<out T> {
+        data class Success<out T>(val value: T) : RequestOutcome<T>
+        data class Failure(val exception: MpsRequestException) : RequestOutcome<Nothing>
+
+        fun getOrThrow(): T = when (this) {
+            is Success -> value
+            is Failure -> throw exception
+        }
+    }
 
     private sealed interface ListTarget {
         data class Module(val module: SModule) : ListTarget
