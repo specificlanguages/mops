@@ -10,10 +10,12 @@ import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
 import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.MpsNodeJson
+import com.specificlanguages.mops.protocol.ModelDestination
 import com.specificlanguages.mops.protocol.MpsNodeReferenceJson
 import com.specificlanguages.mops.protocol.MpsNodePropertyJson
 import com.specificlanguages.mops.protocol.NodeTarget
 import jetbrains.mps.core.aspects.constraints.rules.kinds.CanBeAncestorContext
+import jetbrains.mps.core.aspects.constraints.rules.kinds.CanBeRootContext
 import jetbrains.mps.core.aspects.constraints.rules.kinds.ContainmentContext
 import jetbrains.mps.project.Project
 import jetbrains.mps.smodel.CopyUtil
@@ -49,6 +51,7 @@ class EditBatchExecutor(
         val affectedModels = linkedSetOf<EditableSModel>()
         val aliases = linkedMapOf<String, SNode>()
         val placements = mutableListOf<Placement>()
+        val rootPlacements = mutableListOf<RootPlacement>()
         val uncheckable = UncheckableLanguages()
         var mutated = false
 
@@ -120,6 +123,37 @@ class EditBatchExecutor(
                 affectedModels.add(editableModel)
             }
             return node
+        }
+
+        // Resolves a root operation's destination model, which must resolve uniquely, be editable, clean at batch start,
+        // and tracked as affected. Mirrors requireEditableNode but addresses a model rather than a node.
+        fun requireEditableModel(index: Int, destination: ModelDestination): SModel {
+            val model = try {
+                modelNodeResolver.findModelUnique(project, destination.modelTarget)
+            } catch (exception: MpsRequestException) {
+                fail(exception.code, "operation $index destination model: ${exception.message}")
+            } catch (exception: Exception) {
+                fail(
+                    MpsErrorCode.TARGET_RESOLUTION_FAILED,
+                    "operation $index destination model could not be resolved: ${exception.message ?: exception.javaClass.name}",
+                )
+            } ?: fail(MpsErrorCode.MODEL_NOT_FOUND, "operation $index destination model not found: ${destination.modelTarget}")
+
+            val editableModel = writeScope.asEditable(model)
+                ?: fail(
+                    MpsErrorCode.MODEL_READ_ONLY,
+                    "operation $index destination model is not editable: ${model.name.longName}",
+                )
+            if (editableModel !in affectedModels) {
+                if (editableModel.isChanged) {
+                    fail(
+                        MpsErrorCode.MODEL_CHANGED,
+                        "operation $index destination model has unsaved changes: ${editableModel.name.longName}",
+                    )
+                }
+                affectedModels.add(editableModel)
+            }
+            return model
         }
 
         fun resolveConceptOrFail(index: Int, fqn: String): SConcept {
@@ -241,10 +275,9 @@ class EditBatchExecutor(
         }
 
         for ((index, operation) in batch.operations.withIndex()) {
-            val node = requireEditableNode(index, operation.target)
-
             when (operation) {
                 is EditOperation.SetProperty -> {
+                    val node = requireEditableNode(index, operation.target)
                     val property = resolvePropertyOrFail(index, node, operation.name)
                     try {
                         SNodeAccessUtil.setPropertyValue(node, property, operation.value)
@@ -258,11 +291,13 @@ class EditBatchExecutor(
                 }
 
                 is EditOperation.Delete -> {
+                    val node = requireEditableNode(index, operation.target)
                     mutated = true
                     node.delete()
                 }
 
                 is EditOperation.DeleteChild -> {
+                    val node = requireEditableNode(index, operation.target)
                     val child = locateChild(node, operation.role, operation.position)
                         ?: fail(
                             MpsErrorCode.NODE_NOT_FOUND,
@@ -273,6 +308,7 @@ class EditBatchExecutor(
                 }
 
                 is EditOperation.AddChild -> {
+                    val node = requireEditableNode(index, operation.target)
                     val link = resolveContainmentOrFail(index, node, operation.role)
                     val concept = resolveConceptOrFail(index, operation.concept)
                     val model = node.model!!
@@ -285,6 +321,7 @@ class EditBatchExecutor(
                 }
 
                 is EditOperation.MoveNode -> {
+                    val node = requireEditableNode(index, operation.target)
                     val newParent = requireEditableNode(index, operation.into)
                     var ancestor: SNode? = newParent
                     while (ancestor != null) {
@@ -309,6 +346,7 @@ class EditBatchExecutor(
                 }
 
                 is EditOperation.SetReference -> {
+                    val node = requireEditableNode(index, operation.target)
                     val link = resolveReferenceLinkOrFail(index, node, operation.role)
                     val to = operation.to?.let { resolveNode(index, it) }
                     mutated = true
@@ -316,6 +354,7 @@ class EditBatchExecutor(
                 }
 
                 is EditOperation.CopyNode -> {
+                    val node = requireEditableNode(index, operation.target)
                     val link = resolveContainmentOrFail(index, node, operation.role)
                     val source = resolveNode(index, operation.source)
                     mutated = true
@@ -324,10 +363,45 @@ class EditBatchExecutor(
                     placements.add(Placement(index, node, link, copy))
                     bindAlias(index, operation.alias, copy)
                 }
+
+                is EditOperation.AddRoot -> {
+                    val model = requireEditableModel(index, operation.model)
+                    val concept = resolveConceptOrFail(index, operation.concept)
+                    mutated = true
+                    val root = model.createNode(concept)
+                    model.addRootNode(root)
+                    rootPlacements.add(RootPlacement(index, model, root))
+                    populate(index, model, root, operation.properties, operation.references, operation.children)
+                    bindAlias(index, operation.alias, root)
+                }
+
+                is EditOperation.CopyRoot -> {
+                    val model = requireEditableModel(index, operation.model)
+                    val source = resolveNode(index, operation.source)
+                    mutated = true
+                    val copy = CopyUtil.copy(source)
+                    model.addRootNode(copy)
+                    rootPlacements.add(RootPlacement(index, model, copy))
+                    bindAlias(index, operation.alias, copy)
+                }
+
+                is EditOperation.MoveToRoot -> {
+                    val node = requireEditableNode(index, operation.target)
+                    val model = requireEditableModel(index, operation.model)
+                    mutated = true
+                    val oldParent = node.parent
+                    if (oldParent != null) {
+                        oldParent.removeChild(node)
+                    } else {
+                        node.model?.removeRootNode(node)
+                    }
+                    model.addRootNode(node)
+                    rootPlacements.add(RootPlacement(index, model, node))
+                }
             }
         }
 
-        val violations = evaluateConstraints(placements, uncheckable)
+        val violations = evaluateConstraints(placements, rootPlacements, uncheckable)
 
         // Strict enforcement refuses to apply anything it could not fully check.
         if (enforcement == ConstraintEnforcement.STRICT && !uncheckable.isEmpty) {
@@ -404,10 +478,31 @@ class EditBatchExecutor(
      */
     private fun evaluateConstraints(
         placements: List<Placement>,
+        rootPlacements: List<RootPlacement>,
         uncheckable: UncheckableLanguages,
     ): List<EditConstraintViolation> {
         val violations = mutableListOf<EditConstraintViolation>()
         val cardinalityChecked = hashSetOf<String>()
+
+        for (rootPlacement in rootPlacements) {
+            val rootConcept = rootPlacement.node.concept
+            // A created/moved root whose concept did not load cannot run its can-be-root rule; record its language and
+            // skip, mirroring the child-placement handling.
+            if (!rootConcept.isValid) {
+                uncheckable.add(rootConcept)
+                continue
+            }
+            // The can-be-root path: only language-defined rules, never the typesystem or a full Model Check.
+            if (ConstraintsCanBeFacade.checkCanBeRoot(CanBeRootContext(rootConcept, rootPlacement.model)).isNotEmpty()) {
+                violations.add(
+                    EditConstraintViolation(
+                        rootPlacement.opIndex,
+                        "canBeRoot",
+                        "concept ${rootConcept.qualifiedName} cannot be a root of model ${rootPlacement.model.name.value}",
+                    ),
+                )
+            }
+        }
 
         for (placement in placements) {
             val childConcept = placement.child.concept
@@ -526,6 +621,15 @@ private class Placement(
     val parent: SNode,
     val link: SContainmentLink,
     val child: SNode,
+)
+
+/**
+ * A node placed into Root Node position of [model] by a root Edit Operation, checked against the can-be-root Constraint.
+ */
+private class RootPlacement(
+    val opIndex: Int,
+    val model: SModel,
+    val node: SNode,
 )
 
 /**

@@ -30,24 +30,22 @@ data class EditBatch(
 @JsonClassDiscriminator("op")
 sealed interface EditOperation {
 
-    val target: EditTarget
-
     @Serializable
     @SerialName("setProperty")
     data class SetProperty(
-        override val target: EditTarget,
+        val target: EditTarget,
         val name: String,
         val value: String? = null,
     ) : EditOperation
 
     @Serializable
     @SerialName("delete")
-    data class Delete(override val target: EditTarget) : EditOperation
+    data class Delete(val target: EditTarget) : EditOperation
 
     @Serializable
     @SerialName("deleteChild")
     data class DeleteChild(
-        override val target: EditTarget,
+        val target: EditTarget,
         val role: String,
         val position: ChildPosition = ChildPosition.Only
     ) : EditOperation
@@ -60,7 +58,7 @@ sealed interface EditOperation {
     @Serializable
     @SerialName("addChild")
     data class AddChild(
-        override val target: EditTarget,
+        val target: EditTarget,
         val role: String,
         val concept: String,
         val properties: List<MpsNodePropertyJson>? = null,
@@ -77,7 +75,7 @@ sealed interface EditOperation {
     @Serializable
     @SerialName("moveNode")
     data class MoveNode(
-        override val target: EditTarget,
+        val target: EditTarget,
         val into: EditTarget,
         val role: String,
         val position: ChildPosition = ChildPosition.Last,
@@ -90,7 +88,7 @@ sealed interface EditOperation {
     @Serializable
     @SerialName("setReference")
     data class SetReference(
-        override val target: EditTarget,
+        val target: EditTarget,
         val role: String,
         val to: EditTarget? = null,
     ) : EditOperation
@@ -102,12 +100,51 @@ sealed interface EditOperation {
     @Serializable
     @SerialName("copyNode")
     data class CopyNode(
-        override val target: EditTarget,
+        val target: EditTarget,
         val source: EditTarget,
         val role: String,
         val position: ChildPosition = ChildPosition.Last,
         @SerialName("as") override val alias: String? = null,
     ) : EditOperation, CreatingOperation
+
+    /**
+     * Creates a new Root Node of [concept] directly under the destination [model]. Unlike [AddChild], a Root Node is
+     * owned by the model rather than a containing link, so there is no role and no position. The new node may carry an
+     * inline [properties] / [references] / [children] subtree in the same shape `get-node` emits.
+     */
+    @Serializable
+    @SerialName("addRoot")
+    data class AddRoot(
+        val model: ModelDestination,
+        val concept: String,
+        val properties: List<MpsNodePropertyJson>? = null,
+        val references: List<MpsNodeReferenceJson>? = null,
+        val children: List<MpsNodeJson>? = null,
+        @SerialName("as") override val alias: String? = null,
+    ) : EditOperation, CreatingOperation
+
+    /**
+     * Deep-copies [source] into the destination [model] as a new Root Node, assigning the copy fresh node ids. [source]
+     * may be a root or a child and may live in a read-only model.
+     */
+    @Serializable
+    @SerialName("copyRoot")
+    data class CopyRoot(
+        val model: ModelDestination,
+        val source: EditTarget,
+        @SerialName("as") override val alias: String? = null,
+    ) : EditOperation, CreatingOperation
+
+    /**
+     * Moves the [target] node — a child or an existing root — to Root Node position of the destination [model],
+     * detaching it from its current location.
+     */
+    @Serializable
+    @SerialName("moveToRoot")
+    data class MoveToRoot(
+        val target: EditTarget,
+        val model: ModelDestination,
+    ) : EditOperation
 }
 
 /**
@@ -186,6 +223,44 @@ internal object EditTargetSerializer : KSerializer<EditTarget> {
         }
 
         throw ProtocolJsonException("edit target requires a node reference string or model plus nodeId")
+    }
+}
+
+/**
+ * Destination model of a root Edit Operation. Encoded either as a bare model target string (a serialized model
+ * reference, model name, or file path) or as a `{model: <model target>}` object; decoding mirrors that shape. This is
+ * the same model grammar `get-node` and `find` accept, restricted to the model part (a root has no node target).
+ */
+@Serializable(with = ModelDestinationSerializer::class)
+data class ModelDestination(val modelTarget: String)
+
+internal object ModelDestinationSerializer : KSerializer<ModelDestination> {
+    override val descriptor: SerialDescriptor = buildClassSerialDescriptor("ModelDestination")
+
+    override fun serialize(encoder: Encoder, value: ModelDestination) {
+        val jsonEncoder = encoder as? JsonEncoder
+            ?: throw UnsupportedJsonOnlySerializerException("ModelDestination")
+        jsonEncoder.encodeJsonElement(JsonPrimitive(value.modelTarget))
+    }
+
+    override fun deserialize(decoder: Decoder): ModelDestination {
+        val jsonDecoder = decoder as? JsonDecoder
+            ?: throw UnsupportedJsonOnlySerializerException("ModelDestination")
+        val element = jsonDecoder.decodeJsonElement()
+
+        (element as? JsonPrimitive)?.takeIf { it.isString }?.let { primitive ->
+            return ModelDestination(primitive.content)
+        }
+
+        val destinationObject = element as? JsonObject
+            ?: throw ProtocolJsonException("model destination must be a model target string or JSON object, got: $element")
+
+        val modelTarget = destinationObject.stringField("model") ?: destinationObject.stringField("modelTarget")
+        if (!modelTarget.isNullOrBlank()) {
+            return ModelDestination(modelTarget)
+        }
+
+        throw ProtocolJsonException("model destination requires a model target string or a model field")
     }
 }
 

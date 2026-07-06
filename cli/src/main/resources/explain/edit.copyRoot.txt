@@ -1,0 +1,29 @@
+edit.copyRoot — copy a Node Subtree into a model as a new Root Node.
+
+FIELDS
+  op          "copyRoot"
+  model       (required) the destination model — a model reference string or a
+              {"model": <target>} object (see node-ref)
+  source      (required) the node to copy — see target
+  as          (optional) batch-local alias bound to the created root
+
+SEMANTICS
+  Deep-copies source and attaches the copy as a Root Node of the destination
+  model, assigning fresh Node IDs so the copy is a distinct node rather than a
+  duplicate identity. source may be a root or a child and may live in a read-only
+  model. The placement is checked against the can-be-root Constraint.
+
+EXAMPLE
+{
+  "operations": [
+    {
+      "op": "copyRoot",
+      "model": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
+      "source": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+      "as": "jsonFileCopy"
+    }
+  ]
+}
+
+SEE ALSO
+  edit, edit.copyNode, target, node-ref

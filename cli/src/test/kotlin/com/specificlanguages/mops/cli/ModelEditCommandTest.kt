@@ -170,8 +170,12 @@ class ModelEditCommandTest {
             """{"operations":[{"op":"addNode","target":"m/1"}]}""",
         )
         assertContains(stderr, """operations[0]: unknown op "addNode"""")
-        assertContains(stderr, "supported: addChild, copyNode, delete, deleteChild, moveNode, setProperty, setReference")
-        assertContains(stderr, """Did you mean "addChild"?""")
+        assertContains(
+            stderr,
+            "supported: addChild, addRoot, copyNode, copyRoot, delete, deleteChild, moveNode, moveToRoot, " +
+                "setProperty, setReference",
+        )
+        assertContains(stderr, """Did you mean "addRoot"?""")
         assertContains(stderr, "See: mops explain edit")
     }
 

@@ -36,12 +36,12 @@ class EditSchemaTest {
     }
 
     @Test
-    fun `operations items are a oneOf of the seven ops keyed by an op const`() {
+    fun `operations items are a oneOf of the ops keyed by an op const`() {
         val consts = opSchemas().map {
             it["properties"]!!.jsonObject["op"]!!.jsonObject["const"]!!.jsonPrimitive.content
         }
         assertEquals(EditNotation.operationNames.toSet(), consts.toSet())
-        assertEquals(7, consts.size)
+        assertEquals(EditNotation.operationNames.size, consts.size)
     }
 
     @Test

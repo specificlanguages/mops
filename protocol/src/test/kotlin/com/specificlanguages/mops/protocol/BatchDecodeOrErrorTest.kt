@@ -63,7 +63,7 @@ class BatchDecodeOrErrorTest {
         val f = failure("""{"operations":[{"op":"addNode","target":"m/1"}]}""")
         val supported = EditNotation.operationNames.joinToString(", ")
         assertEquals(
-            """operations[0]: unknown op "addNode" — supported: $supported. Did you mean "addChild"? See: mops explain edit""",
+            """operations[0]: unknown op "addNode" — supported: $supported. Did you mean "addRoot"? See: mops explain edit""",
             f.detail,
         )
     }

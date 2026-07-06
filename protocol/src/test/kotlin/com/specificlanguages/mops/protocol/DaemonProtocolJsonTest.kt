@@ -318,6 +318,56 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `model edit request JSON round-trips root operations and model destinations`() {
+        val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
+        val request = ModelEditRequest(
+            token = "secret",
+            batch = EditBatch(
+                operations = listOf(
+                    EditOperation.AddRoot(
+                        model = ModelDestination(model),
+                        concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                        properties = listOf(MpsNodePropertyJson(name = "name", value = "JsonComment")),
+                        alias = "\$c",
+                    ),
+                    EditOperation.CopyRoot(
+                        model = ModelDestination(model),
+                        source = EditTarget.NodeReference("$model/1"),
+                    ),
+                    EditOperation.MoveToRoot(
+                        target = EditTarget.InModel(modelTarget = model, nodeId = "2"),
+                        model = ModelDestination(model),
+                    ),
+                ),
+            ),
+        )
+
+        val serialized = ProtocolJson.encodeRequest(request)
+
+        assertContains(serialized, """"op":"addRoot"""")
+        assertContains(serialized, """"op":"copyRoot"""")
+        assertContains(serialized, """"op":"moveToRoot"""")
+        // The model destination encodes as a bare model target string, not a nested object.
+        assertContains(serialized, """"model":"$model"""")
+        assertEquals(request, ProtocolJson.decodeRequest(serialized))
+    }
+
+    @Test
+    fun `a model destination decodes from both a bare string and a model object`() {
+        val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
+        val fromObject = ProtocolJson.decodeBatch(
+            """{"operations":[{"op":"addRoot","model":{"model":"$model"},"concept":"com.acme.Foo"}]}""",
+        )
+        val fromString = ProtocolJson.decodeBatch(
+            """{"operations":[{"op":"addRoot","model":"$model","concept":"com.acme.Foo"}]}""",
+        )
+
+        val expected = ModelDestination(model)
+        assertEquals(expected, (fromObject.operations.single() as EditOperation.AddRoot).model)
+        assertEquals(expected, (fromString.operations.single() as EditOperation.AddRoot).model)
+    }
+
+    @Test
     fun `child position JSON encodes ordinals as strings and index as an integer`() {
         val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
         fun roundTrip(position: ChildPosition): EditOperation {

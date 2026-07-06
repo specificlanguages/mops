@@ -1,0 +1,33 @@
+edit.addRoot — create a new Root Node directly in a model.
+
+FIELDS
+  op          "addRoot"
+  model       (required) the destination model — a model reference string or a
+              {"model": <target>} object (see node-ref)
+  concept     (required) qualified concept name of the new root
+  properties  (optional) inline properties for the new root
+  references  (optional) inline References to existing nodes
+  children    (optional) nested child nodes (a Node Subtree)
+  as          (optional) batch-local alias bound to the created root
+
+SEMANTICS
+  Creates one node of concept and attaches it as a Root Node of the destination
+  model, which is owned by the model itself rather than a Containment Role — so
+  there is no role and no position. Nested children build a whole Node Subtree in
+  one operation. The placement is checked against the can-be-root Constraint.
+
+EXAMPLE
+{
+  "operations": [
+    {
+      "op": "addRoot",
+      "model": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
+      "concept": "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+      "properties": [ { "name": "name", "value": "JsonComment" } ],
+      "as": "newConcept"
+    }
+  ]
+}
+
+SEE ALSO
+  edit, edit.addChild, node-ref

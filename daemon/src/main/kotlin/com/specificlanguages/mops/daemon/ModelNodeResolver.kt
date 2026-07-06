@@ -42,6 +42,13 @@ class ModelNodeResolver(
         return model
     }
 
+    /**
+     * Resolves a model target to a single model, failing with [MpsErrorCode.AMBIGUOUS_TARGET] when more than one model
+     * matches. Used where addressing a wrong model would be a mutation, so an ambiguous target must never silently pick
+     * one (unlike [findModel]).
+     */
+    fun findModelUnique(project: Project, modelTarget: String): SModel? = findSingleModel(project, modelTarget)
+
     private fun parseNodeId(nodeId: String): SNodeId {
         if (nodeId.all(Char::isDigit)) {
             return requireNotNull(persistence.createNodeId(nodeId)) {

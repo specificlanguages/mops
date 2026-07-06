@@ -19,14 +19,15 @@ import kotlinx.serialization.json.putJsonObject
  * descriptors so it cannot drift from the wire format. The whole surface is a single [generate] returning the schema as
  * a string, so the CLI module consumes it through the thin protocol jar without touching serialization types.
  *
- * Two element types whose custom serializers hide their real wire shape — [EditTarget] and [ChildPosition] — are the
- * only hand-authored fragments (see [EDIT_TARGET_FRAGMENT] and [CHILD_POSITION_FRAGMENT]); they are spliced in wherever
- * a field's element descriptor carries their serial name.
+ * Three element types whose custom serializers hide their real wire shape — [EditTarget], [ChildPosition], and
+ * [ModelDestination] — are the only hand-authored fragments (see [EDIT_TARGET_FRAGMENT], [CHILD_POSITION_FRAGMENT], and
+ * [MODEL_DESTINATION_FRAGMENT]); they are spliced in wherever a field's element descriptor carries their serial name.
  */
 @OptIn(ExperimentalSerializationApi::class)
 object EditSchema {
     private const val EDIT_TARGET_SERIAL_NAME = "EditTarget"
     private const val CHILD_POSITION_SERIAL_NAME = "ChildPosition"
+    private const val MODEL_DESTINATION_SERIAL_NAME = "ModelDestination"
 
     // The two hand-authored union fragments: EditTarget's custom serializer accepts a bare reference string (a node
     // reference or a $alias) or a {model, nodeId} object; ChildPosition's accepts the "first"/"last"/"only" keywords or
@@ -52,6 +53,22 @@ object EditSchema {
                 putJsonArray("enum") { add("first"); add("last"); add("only") }
             }
             addJsonObject { put("type", "integer") }
+        }
+    }
+
+    // ModelDestination's custom serializer accepts a bare model target string (a serialized model reference, model name,
+    // or file path) or a {model} object.
+    private val MODEL_DESTINATION_FRAGMENT: JsonObject = buildJsonObject {
+        putJsonArray("anyOf") {
+            addJsonObject { put("type", "string") }
+            addJsonObject {
+                put("type", "object")
+                putJsonObject("properties") {
+                    putJsonObject("model") { put("type", "string") }
+                }
+                putJsonArray("required") { add("model") }
+                put("additionalProperties", false)
+            }
         }
     }
 
@@ -122,6 +139,7 @@ object EditSchema {
         when (descriptor.serialName.removeSuffix("?")) {
             EDIT_TARGET_SERIAL_NAME -> return EDIT_TARGET_FRAGMENT
             CHILD_POSITION_SERIAL_NAME -> return CHILD_POSITION_FRAGMENT
+            MODEL_DESTINATION_SERIAL_NAME -> return MODEL_DESTINATION_FRAGMENT
         }
 
         return when (descriptor.kind) {

@@ -10,7 +10,10 @@ class EditNotationTest {
     @Test
     fun `operation names cover the seven edit operations`() {
         assertEquals(
-            setOf("setProperty", "setReference", "addChild", "copyNode", "moveNode", "delete", "deleteChild"),
+            setOf(
+                "setProperty", "setReference", "addChild", "copyNode", "moveNode", "delete", "deleteChild",
+                "addRoot", "copyRoot", "moveToRoot",
+            ),
             EditNotation.operationNames.toSet(),
         )
     }

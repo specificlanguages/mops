@@ -76,7 +76,7 @@ class ExplainCommandTest {
         }
 
         assertNotEquals(0, exitCode)
-        assertContains(stderr, "did you mean edit.addChild")
+        assertContains(stderr, "did you mean edit.addRoot")
         assertContains(stderr, "edit.setProperty")
         assertContains(stderr, "edit.deleteChild")
     }
@@ -144,10 +144,16 @@ class ExplainCommandTest {
     }
 
     private fun targetsOf(op: EditOperation): List<EditTarget> = when (op) {
+        is EditOperation.SetProperty -> listOf(op.target)
+        is EditOperation.Delete -> listOf(op.target)
+        is EditOperation.DeleteChild -> listOf(op.target)
+        is EditOperation.AddChild -> listOf(op.target)
         is EditOperation.SetReference -> listOfNotNull(op.target, op.to)
         is EditOperation.CopyNode -> listOf(op.target, op.source)
         is EditOperation.MoveNode -> listOf(op.target, op.into)
-        else -> listOf(op.target)
+        is EditOperation.CopyRoot -> listOf(op.source)
+        is EditOperation.MoveToRoot -> listOf(op.target)
+        is EditOperation.AddRoot -> emptyList()
     }
 
     private fun positionOf(op: EditOperation): ChildPosition? = when (op) {
