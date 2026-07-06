@@ -1,9 +1,11 @@
 package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.protocol.DaemonErrorResponse
+import com.specificlanguages.mops.protocol.DaemonRecord
 import com.specificlanguages.mops.protocol.DaemonRequest
 import com.specificlanguages.mops.protocol.DaemonResponse
 import com.specificlanguages.mops.protocol.DaemonWorkspace
+import com.specificlanguages.mops.protocol.StoredDaemonRecord
 import com.specificlanguages.mops.protocol.FindInstancesRequest
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.ProtocolJson
@@ -29,6 +31,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -135,6 +138,43 @@ class ProjectDaemonSocketTest {
         assertTrue(daemon.awaitTermination(), "daemon loop should exit after the idle timeout elapses")
     }
 
+    @Test
+    fun `a stopped daemon removes its own record so the next run does not trip over it`() {
+        val daemon = start()
+        assertTrue(daemon.hasRecord(), "the running daemon should have published its record")
+
+        daemon.exchange(StopRequest(TOKEN))
+
+        assertTrue(daemon.awaitTermination(), "daemon loop should exit after a stop request")
+        assertNull(daemon.readRecord(), "a stopped daemon must delete its own record")
+    }
+
+    @Test
+    fun `an idle daemon removes its own record on shutdown`() {
+        val daemon = start(idleTimeout = Duration.ofMillis(200))
+
+        assertTrue(daemon.awaitTermination(), "daemon loop should exit after the idle timeout elapses")
+        assertNull(daemon.readRecord(), "an idle-timed-out daemon must delete its own record")
+    }
+
+    @Test
+    fun `a daemon leaves a record written by a newer daemon in place`() {
+        val daemon = start()
+        // Simulate a newer daemon taking over the same project by overwriting the record with a different token.
+        DaemonWorkspace(daemon.workspacePath).writeDaemonRecord(
+            daemon.record().copy(token = "newer-daemon-token"),
+        )
+
+        daemon.exchange(StopRequest(TOKEN))
+        assertTrue(daemon.awaitTermination(), "daemon loop should exit after a stop request")
+
+        assertEquals(
+            "newer-daemon-token",
+            daemon.readRecord()?.record?.token,
+            "a daemon must not delete a record another daemon now owns",
+        )
+    }
+
     private fun start(idleTimeout: Duration = Duration.ofSeconds(30)): RunningDaemon {
         val projectPath = tempDir.resolve("project").createDirectories()
         val mpsHome = tempDir.resolve("mps").createDirectories()
@@ -205,6 +245,13 @@ class ProjectDaemonSocketTest {
             thread.join(5_000)
             return !thread.isAlive
         }
+
+        fun readRecord(): StoredDaemonRecord? = DaemonWorkspace(workspacePath).readDaemonRecord()
+
+        fun hasRecord(): Boolean = readRecord() != null
+
+        fun record(): DaemonRecord =
+            readRecord()?.record ?: throw AssertionError("daemon has not published a record")
 
         override fun close() {
             if (thread.isAlive) {

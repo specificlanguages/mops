@@ -32,8 +32,13 @@ class DefaultDaemonPool(
             val existingResponse = try {
                 client.ping()
             } catch (e: Exception) {
-                System.err.println("Received exception pinging an existing daemon, deleting the daemon record")
-                e.printStackTrace()
+                // A recorded daemon that no longer answers has simply exited or crashed. This is routine, so note it
+                // in one line on stderr and start a fresh daemon, rather than dumping a stack trace the caller has to
+                // filter out of otherwise-clean output.
+                System.err.println(
+                    "mops: recorded daemon for ${context.realProjectPath} is not responding " +
+                        "(${e.message}); starting a new one",
+                )
                 records.deleteRecord(existing.recordPath)
                 null
             }

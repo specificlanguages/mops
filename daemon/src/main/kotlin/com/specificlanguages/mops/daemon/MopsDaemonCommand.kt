@@ -40,7 +40,7 @@ class MopsDaemonCommand : Runnable {
     lateinit var token: String
 
     @Option(names = ["--idle-timeout-ms"])
-    var idleTimeoutMillis: Long = Duration.ofMinutes(3).toMillis()
+    var idleTimeoutMillis: Long = Duration.ofMinutes(30).toMillis()
 
     override fun run() {
         val logger = DaemonLogger()

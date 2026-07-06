@@ -104,6 +104,17 @@ class DaemonWorkspace(val path: Path) {
         return StoredDaemonRecord(path, ProtocolJson.decodeRecord(Files.readString(path)))
     }
 
+    /**
+     * Removes the daemon record only if the one currently on disk still belongs to [token]. A daemon calls this as it
+     * exits so it does not leave a dangling record behind; the token guard prevents it from deleting a record a newer
+     * daemon has since written for the same project.
+     */
+    fun deleteDaemonRecordOwnedBy(token: String) {
+        if (readDaemonRecord()?.record?.token == token) {
+            Files.deleteIfExists(recordPath())
+        }
+    }
+
     fun daemonWorkingDir(): Path = path.resolve("daemon")
     fun ideaConfigDir(): Path = daemonWorkingDir().resolve("config")
     fun ideaSystemDir(): Path = daemonWorkingDir().resolve("system")

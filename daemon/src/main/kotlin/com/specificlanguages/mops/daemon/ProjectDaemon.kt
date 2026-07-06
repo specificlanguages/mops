@@ -63,15 +63,22 @@ class ProjectDaemon(
 
             server.soTimeout = idleTimeout.toMillis().toInt()
 
-            while (!done) {
-                val socket = try {
-                    server.accept()
-                } catch (_: SocketTimeoutException) {
-                    break
+            try {
+                while (!done) {
+                    val socket = try {
+                        server.accept()
+                    } catch (_: SocketTimeoutException) {
+                        logger.log("idle for ${idleTimeout.toMinutes()} min with no requests, shutting down")
+                        break
+                    }
+                    socket.use {
+                        connection(socket, mpsAccess)
+                    }
                 }
-                socket.use {
-                    connection(socket, mpsAccess)
-                }
+            } finally {
+                // Remove our own record so the next CLI invocation starts a fresh daemon instead of tripping over a
+                // dangling record, pinging a dead port, and reporting the failure.
+                workspace.deleteDaemonRecordOwnedBy(token)
             }
         }
     }
