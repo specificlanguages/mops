@@ -78,6 +78,17 @@ data class FindInstancesResponse(
 ) : DaemonResponse
 
 /**
+ * Successful response carrying bounded name-pattern search results, ordered best match first.
+ */
+@Serializable
+@SerialName("named-nodes")
+data class FindByNameResponse(
+    val limit: Int,
+    val truncated: Boolean,
+    val nodes: List<MpsNodeSummaryJson>,
+) : DaemonResponse
+
+/**
  * Successful response for an applied Edit Operation batch.
  */
 @Serializable

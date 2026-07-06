@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.daemon
 
+import com.intellij.psi.codeStyle.NameUtil
 import com.specificlanguages.mops.daemon.core.*
 import com.specificlanguages.mops.protocol.*
 import jetbrains.mps.progress.EmptyProgressMonitor
@@ -103,6 +104,41 @@ class JetBrainsMpsAccess(
             return FindInstancesResponse(
                 limit = limit,
                 truncated = selected.size < instances.size,
+                nodes = selected.map { nodeSummary(it) },
+            )
+        }
+
+        override fun findByName(pattern: String, limit: Int, all: Boolean): FindByNameResponse {
+            // The leading '*' reproduces MPS Go-to-Node's "search in any place": the pattern matches anywhere within a
+            // name, not only as a prefix. The MinusculeMatcher then supports camel-hump and '*' wildcards, and
+            // matchingDegree ranks prefix and contiguous matches above scattered middle matches.
+            val matcher = NameUtil.buildMatcher("*$pattern")
+                .withCaseSensitivity(NameUtil.MatchingCaseSensitivity.NONE)
+                .build()
+
+            val scope = searchScope(all)
+            val matches = mutableListOf<Pair<SNode, Int>>()
+            for (model in scope.models) {
+                for (root in model.rootNodes) {
+                    val name = nodeName(root) ?: continue
+                    if (matcher.matches(name)) {
+                        matches.add(root to matcher.matchingDegree(name))
+                    }
+                }
+            }
+
+            val ordered = matches
+                .sortedWith(
+                    compareByDescending<Pair<SNode, Int>> { it.second }
+                        .thenBy { nodeName(it.first) }
+                        .thenBy { persistence.asString(it.first.reference) },
+                )
+                .map { it.first }
+            val selected = if (limit > 0) ordered.take(limit) else ordered
+
+            return FindByNameResponse(
+                limit = limit,
+                truncated = selected.size < ordered.size,
                 nodes = selected.map { nodeSummary(it) },
             )
         }

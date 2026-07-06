@@ -1,0 +1,38 @@
+name-pattern — the Name Pattern Notation for `mops find by-name`.
+
+A name pattern matches a Root Node by its Node Name, using the same matcher as
+MPS's Go-to-Node navigation. The whole pattern is treated as one name; it is
+never split on dots or other separators. Matching is case-insensitive, and the
+pattern matches anywhere within a name, not only at its start.
+
+SYNTAX
+  abc        A run of letters matches those letters in order, allowing extra
+             characters between them at word boundaries (camel-hump matching).
+             `jo` and `json` both match JsonObject.
+
+  CamelHump  Upper-case letters anchor to word starts. `JO` matches JsonObject
+             and JsonArray-style names by their humps; `JN` matches JsonNumber
+             and JsonNull.
+
+  *          Wildcard for any run of characters. `Json*Type` matches
+             JsonNumberDatatype.
+
+  <trailing  A trailing space anchors the end of the name, so `JsonNull ` (with
+   space>    the space) matches JsonNull but not JsonNullable.
+
+RANKING
+  Results are ordered best match first: prefix and contiguous matches rank
+  above scattered middle matches. Use --limit to bound the result count.
+
+SCOPE
+  by-name searches Root Nodes in Editable Project Sources. Pass --all to widen
+  the search to the whole MPS Repository, including read-only library and stub
+  models.
+
+EXAMPLE
+  mops find by-name Json
+  mops find by-name 'Json*Type'
+  mops find by-name --all --limit 10 Concept
+
+SEE ALSO
+  node-ref, target

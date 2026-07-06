@@ -68,6 +68,20 @@ data class FindInstancesRequest(
 ) : DaemonRequest
 
 /**
+ * Request to find root nodes whose name matches [pattern], using MPS's Go-to-Node name-pattern matching. Searches
+ * editable project sources by default, or the whole repository (including read-only library and stub models) when
+ * [all] is set.
+ */
+@Serializable
+@SerialName("find-by-name")
+data class FindByNameRequest(
+    override val token: String,
+    val pattern: String,
+    val limit: Int,
+    val all: Boolean = false,
+) : DaemonRequest
+
+/**
  * Request to apply one atomic batch of Edit Operations inside the project daemon.
  */
 @Serializable

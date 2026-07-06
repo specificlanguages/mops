@@ -8,6 +8,8 @@ import com.specificlanguages.mops.protocol.DaemonResponse
 import com.specificlanguages.mops.protocol.ModelEditRequest
 import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.EditBatch
+import com.specificlanguages.mops.protocol.FindByNameRequest
+import com.specificlanguages.mops.protocol.FindByNameResponse
 import com.specificlanguages.mops.protocol.FindInstancesRequest
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindUsagesRequest
@@ -77,6 +79,12 @@ class DefaultDaemonClient(
         exchange(
             FindInstancesRequest(token = token, concept = concept, exact = exact, limit = limit, all = all),
             FindInstancesResponse::class.java
+        )
+
+    override fun findByName(pattern: String, limit: Int, all: Boolean): FindByNameResponse =
+        exchange(
+            FindByNameRequest(token = token, pattern = pattern, limit = limit, all = all),
+            FindByNameResponse::class.java
         )
 
     override fun modelEdit(batch: EditBatch, constraints: ConstraintEnforcement): ModelEditResponse =

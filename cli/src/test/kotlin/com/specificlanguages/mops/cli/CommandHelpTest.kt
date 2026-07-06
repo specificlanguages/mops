@@ -48,6 +48,7 @@ class CommandHelpTest {
 
         assertContains(output, "instances")
         assertContains(output, "usages")
+        assertContains(output, "by-name")
     }
 
     @Test
@@ -98,6 +99,7 @@ class CommandHelpTest {
             arrayOf("list"),
             arrayOf("find", "instances"),
             arrayOf("find", "usages"),
+            arrayOf("find", "by-name"),
             arrayOf("model", "get-node"),
             arrayOf("model", "edit"),
             arrayOf("model", "resave"),

@@ -588,6 +588,34 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `find-by-name request and named-nodes response JSON carry node results`() {
+        val request = FindByNameRequest(token = "secret", pattern = "Json*", limit = 100)
+        val serializedRequest = ProtocolJson.encodeRequest(request)
+
+        assertContains(serializedRequest, """"type":"find-by-name"""")
+        assertContains(serializedRequest, """"pattern":"Json*"""")
+        assertContains(serializedRequest, """"limit":100""")
+        assertEquals(request, ProtocolJson.decodeRequest(serializedRequest))
+
+        val response = FindByNameResponse(
+            limit = 100,
+            truncated = false,
+            nodes = listOf(
+                MpsNodeSummaryJson(
+                    type = "root",
+                    name = "JsonObject",
+                    concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                    reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905",
+                ),
+            ),
+        )
+        val serializedResponse = ProtocolJson.encodeResponse(response)
+
+        assertContains(serializedResponse, """"type":"named-nodes"""")
+        assertEquals(response, ProtocolJson.decodeResponse(serializedResponse))
+    }
+
+    @Test
     fun `find request JSON carries the all-models flag and defaults it to false`() {
         val usagesTarget = NodeTarget.NodeReference(
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",

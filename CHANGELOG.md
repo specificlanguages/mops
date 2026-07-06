@@ -2,6 +2,7 @@
 
 ## 0.3.0 (Unreleased)
 
+- Added `mops find by-name <pattern>`, which finds root nodes by name using MPS's Go-to-Node pattern matching (camel-hump and `*` wildcards, case-insensitive, matches anywhere in the name), ranked best match first. Searches editable project sources by default, or the whole repository with `--all`. See `mops explain name-pattern`.
 - Added `mops model edit --constraints=advisory|best-effort|strict` (default `best-effort`). `best-effort` blocks on constraint violations and warns (once per language) about constraints it could not check because a language was not loaded; `strict` fails on such a case; `advisory` evaluates, reports, and applies anyway.
 - Made reads report a node whose MPS concept could not be resolved (usually an uncompiled language) with `conceptValid: false` instead of failing, and marked an unresolvable `get-node` reference target with `resolved: false`.
 - Made daemon startup reject an empty or module-less project (no `.mps/modules.xml`, or zero project modules) so every request surfaces the startup error rather than returning nothing.

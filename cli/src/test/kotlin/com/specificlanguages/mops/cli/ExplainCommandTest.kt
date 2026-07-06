@@ -17,9 +17,12 @@ import kotlin.test.assertTrue
 
 @ResourceLock("system-streams")
 class ExplainCommandTest {
-    private val topLevelTopics = listOf("edit", "target", "position", "node-ref")
+    private val topLevelTopics = listOf("edit", "target", "position", "node-ref", "name-pattern")
     private val operationTopics = EditNotation.operationNames.map { "edit.$it" }
     private val allTopics = topLevelTopics + operationTopics
+
+    // Topics whose EXAMPLE is a shell command rather than an edit-batch JSON object; excluded from batch parsing.
+    private val nonBatchTopics = setOf("edit", "name-pattern")
     private val sectionHeaders =
         setOf("FIELDS", "SEMANTICS", "EXAMPLE", "SEE ALSO", "SHAPE", "OPERATIONS", "NOTES", "DRILL DOWN", "FORMS")
 
@@ -130,7 +133,7 @@ class ExplainCommandTest {
         val targetForms = mutableSetOf<String>()
         val positionForms = mutableSetOf<String>()
 
-        for (topic in allTopics.filter { it != "edit" }) {
+        for (topic in allTopics.filter { it !in nonBatchTopics }) {
             val json = exampleJson(pageText(topic))
             val batch = ProtocolJson.decodeBatch(json)
             for (op in batch.operations) {

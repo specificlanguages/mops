@@ -5,6 +5,8 @@ import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.daemon.core.MpsWrite
 import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.EditBatch
+import com.specificlanguages.mops.protocol.FindByNameRequest
+import com.specificlanguages.mops.protocol.FindByNameResponse
 import com.specificlanguages.mops.protocol.FindInstancesRequest
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindUsagesRequest
@@ -87,6 +89,20 @@ class DomainRequestHandlerTest {
         handler.handleDomainRequest(FindUsagesRequest(TOKEN, target, limit = 5, all = true))
 
         verify(operations).findUsages(target, 5, true)
+    }
+
+    @Test
+    fun `find-by-name reads and returns the response directly`() {
+        val expected = FindByNameResponse(limit = 10, truncated = false, nodes = emptyList())
+        whenever(operations.findByName("Json", 10, true)).thenReturn(expected)
+
+        val response = handler.handleDomainRequest(
+            FindByNameRequest(TOKEN, pattern = "Json", limit = 10, all = true),
+        )
+
+        assertEquals(expected, response)
+        verify(operations).findByName("Json", 10, true)
+        verifyNoMoreInteractions(operations)
     }
 
     @Test
