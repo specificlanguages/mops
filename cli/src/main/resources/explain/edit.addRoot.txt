@@ -8,7 +8,8 @@ FIELDS
   properties  (optional) inline properties for the new root
   references  (optional) inline References to existing nodes
   children    (optional) nested child nodes (a Node Subtree)
-  as          (optional) batch-local alias bound to the created root
+  as          (optional) batch-local alias bound to the created root; reference it
+              in later operations as $name (the leading $ is required in references)
 
 SEMANTICS
   Creates one node of concept and attaches it as a Root Node of the destination
@@ -17,6 +18,7 @@ SEMANTICS
   one operation. The placement is checked against the can-be-root Constraint.
 
 EXAMPLE
+  Create a concept, then give it an alias through the same batch's alias:
 {
   "operations": [
     {
@@ -25,6 +27,12 @@ EXAMPLE
       "concept": "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
       "properties": [ { "name": "name", "value": "JsonComment" } ],
       "as": "newConcept"
+    },
+    {
+      "op": "setProperty",
+      "target": "$newConcept",
+      "name": "conceptAlias",
+      "value": "comment"
     }
   ]
 }

@@ -70,7 +70,7 @@ class EditBatchExecutor(
         // or a model plus node id. A forward reference to an unbound alias fails.
         fun resolveNode(index: Int, target: EditTarget): SNode {
             if (target is EditTarget.Alias) {
-                return aliases[target.alias]
+                return aliases[aliasName(target.alias)]
                     ?: fail(
                         MpsErrorCode.TARGET_RESOLUTION_FAILED,
                         "operation $index alias is not defined earlier in the batch: ${target.alias}",
@@ -97,12 +97,13 @@ class EditBatchExecutor(
             return resolved
         }
 
-        // Binds a created node to a batch-local alias; a duplicate alias name fails.
+        // Binds a created node to a batch-local alias; a duplicate alias name fails. The name is stored without its
+        // reference sigil, so binding as "$root" and binding as "root" collide.
         fun bindAlias(index: Int, alias: String?, node: SNode) {
             if (alias == null) {
                 return
             }
-            if (aliases.putIfAbsent(alias, node) != null) {
+            if (aliases.putIfAbsent(aliasName(alias), node) != null) {
                 fail(MpsErrorCode.INVALID_REQUEST, "operation $index alias is already defined: $alias")
             }
         }
@@ -468,6 +469,13 @@ class EditBatchExecutor(
                 NodeTarget.NodeReference(target.nodeReference),
             )
         }
+
+    /**
+     * The name of a batch-local alias, without its reference sigil. A single leading '$' — required when referencing an
+     * alias, and how a target string is recognized as an alias rather than a node reference — is not part of the name,
+     * so "$root" and "root" denote the same alias whether written in "as" or in a reference.
+     */
+    private fun aliasName(alias: String): String = alias.removePrefix("$")
 
     private fun resolveProperty(node: SNode, name: String): PropertyResolution {
         val properties = node.concept.properties.filter { it.name == name }.toList()

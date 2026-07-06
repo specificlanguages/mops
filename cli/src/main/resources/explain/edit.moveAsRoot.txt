@@ -15,12 +15,25 @@ SEMANTICS
   The reverse — moving a root into a parent's Containment Role — needs no special
   operation: moveAsChild already accepts a root as its target and detaches it.
 
+  moveAsRoot binds no alias of its own, but its target may be a $alias a creating
+  operation bound earlier in the same batch — reference it as $name (the leading $
+  is required in references).
+
 EXAMPLE
+  Copy a node under a parent, then promote that copy to a standalone root through
+  its alias:
 {
   "operations": [
     {
+      "op": "copyAsChild",
+      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+      "source": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544569338",
+      "role": "members",
+      "as": "extracted"
+    },
+    {
       "op": "moveAsRoot",
-      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544569338",
+      "target": "$extracted",
       "model": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
     }
   ]

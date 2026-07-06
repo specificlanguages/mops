@@ -9,13 +9,15 @@ FIELDS
   references  (optional) inline References to existing nodes
   children    (optional) nested child nodes (a Node Subtree)
   position    (optional, default last) placement among children — see position
-  as          (optional) batch-local alias bound to the created node
+  as          (optional) batch-local alias bound to the created node; reference it
+              in later operations as $name (the leading $ is required in references)
 
 SEMANTICS
   Creates one node of concept and inserts it under the parent's Containment Role
   at position. Nested children build a whole Node Subtree in one operation.
 
 EXAMPLE
+  Add a member, then set a property on it through its alias:
 {
   "operations": [
     {
@@ -25,6 +27,12 @@ EXAMPLE
       "concept": "com.specificlanguages.json.structure.JsonMember",
       "position": "first",
       "as": "newMember"
+    },
+    {
+      "op": "setProperty",
+      "target": "$newMember",
+      "name": "name",
+      "value": "newMember"
     }
   ]
 }

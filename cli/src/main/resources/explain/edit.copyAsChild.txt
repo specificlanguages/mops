@@ -6,7 +6,8 @@ FIELDS
   source    (required) the node whose Node Subtree is copied — see target
   role      (required) the Containment Role for the copy
   position  (optional, default last) placement among children — see position
-  as        (optional) batch-local alias bound to the copy
+  as        (optional) batch-local alias bound to the copy; reference it in later
+            operations as $name (the leading $ is required in references)
 
 SEMANTICS
   Deep-copies the source Node Subtree (Containment Links only) under the

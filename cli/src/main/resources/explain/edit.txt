@@ -22,7 +22,9 @@ NOTES
   Atomic: the batch applies all-or-nothing; if any operation fails, nothing is
   committed.
   Aliases: a creating operation (addChild, copyAsChild, addRoot, copyAsRoot) may bind
-  its new node to a batch-local "as" alias that later operations target as "$name".
+  its new node to a batch-local "as" alias (e.g. "as": "root") that later operations
+  target as "$root". The leading $ is the reference sigil — required when targeting an
+  alias, and not part of the name.
   Constraints: edits are checked against MPS Constraints. A Constraint Violation
   blocks the batch and is reported. --no-constraints forces the edit through but
   still reports every violation.

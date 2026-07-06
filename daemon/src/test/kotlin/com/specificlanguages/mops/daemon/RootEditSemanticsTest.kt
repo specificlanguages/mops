@@ -38,7 +38,7 @@ class RootEditSemanticsTest {
                 )
             }
 
-            val createdRef = response.created.getValue("\$c")
+            val createdRef = response.created.getValue("c")
             val created = mpsAccess.read { getNode(NodeTarget.NodeReference(createdRef)) }
             assertEquals(CONCEPT_DECLARATION, created.concept)
             assertEquals("JsonComment", propertyValueOrNull(created, "name"))
@@ -62,7 +62,7 @@ class RootEditSemanticsTest {
                 )
             }
 
-            val copyRef = response.created.getValue("\$copy")
+            val copyRef = response.created.getValue("copy")
             assertNotEquals(JSON_FILE_REF, copyRef, "the copy must receive a fresh node id")
 
             val copy = mpsAccess.read { getNode(NodeTarget.NodeReference(copyRef)) }
@@ -156,7 +156,7 @@ class RootEditSemanticsTest {
                 )
             }
 
-            val createdRef = response.created.getValue("\$c")
+            val createdRef = response.created.getValue("c")
             val created = mpsAccess.read { getNode(NodeTarget.NodeReference(createdRef)) }
             assertEquals("Renamed", propertyValueOrNull(created, "name"))
         }
@@ -197,7 +197,7 @@ class RootEditSemanticsTest {
                 )
             }
             assertTrue(forced.violations.any { it.constraint == "canBeRoot" })
-            assertTrue(forced.created.containsKey("\$c"))
+            assertTrue(forced.created.containsKey("c"))
             assertTrue(editorModel(projectPath).readText().contains("DisallowedRoot"))
         }
     }

@@ -5,6 +5,7 @@ import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
+import com.specificlanguages.mops.protocol.ModelDestination
 import com.specificlanguages.mops.protocol.MpsNodeJson
 import com.specificlanguages.mops.protocol.MpsNodePropertyJson
 import com.specificlanguages.mops.protocol.NodeTarget
@@ -35,7 +36,7 @@ class AliasEditSemanticsTest {
                 )
             }
 
-            val createdReference = assertNotNull(response.created["\$p"])
+            val createdReference = assertNotNull(response.created["p"])
             val added = mpsAccess.read { getNode(NodeTarget.NodeReference(createdReference)) }
             assertEquals("aliased", propertyValueOrNull(added, "name"))
 
@@ -48,17 +49,42 @@ class AliasEditSemanticsTest {
     }
 
     @Test
-    fun `setReference points at a node created earlier in the same batch`() {
+    fun `an alias bound without a leading dollar is targeted with one`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
             val response = mpsAccess.write {
                 modelEdit(
                     batchOf(
+                        // The '$' is the reference sigil, not part of the name: bound bare here, targeted as "$p".
                         EditOperation.AddChild(
                             target = EditTarget.NodeReference(JSON_FILE_REF),
                             role = "propertyDeclaration",
                             concept = PROPERTY_DECLARATION,
-                            properties = listOf(MpsNodePropertyJson(name = "name", value = "target")),
-                            alias = "\$p",
+                            alias = "p",
+                        ),
+                        EditOperation.SetProperty(target = EditTarget.Alias("\$p"), name = "name", value = "aliased"),
+                    ),
+                )
+            }
+
+            val createdReference = assertNotNull(response.created["p"])
+            val added = mpsAccess.read { getNode(NodeTarget.NodeReference(createdReference)) }
+            assertEquals("aliased", propertyValueOrNull(added, "name"))
+        }
+    }
+
+    @Test
+    fun `setReference points at a node created earlier in the same batch`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
+            // A LinkDeclaration's "target" references a concept, so point it at a concept created in the same batch;
+            // that also keeps the reference within its language-defined scope.
+            val response = mpsAccess.write {
+                modelEdit(
+                    batchOf(
+                        EditOperation.AddRoot(
+                            model = ModelDestination(STRUCTURE_MODEL),
+                            concept = CONCEPT_DECLARATION,
+                            properties = listOf(MpsNodePropertyJson(name = "name", value = "TargetConcept")),
+                            alias = "\$c",
                         ),
                         EditOperation.AddChild(
                             target = EditTarget.NodeReference(JSON_FILE_REF),
@@ -70,17 +96,17 @@ class AliasEditSemanticsTest {
                         EditOperation.SetReference(
                             target = EditTarget.Alias("\$l"),
                             role = "target",
-                            to = EditTarget.Alias("\$p"),
+                            to = EditTarget.Alias("\$c"),
                         ),
                     ),
                 )
             }
 
-            val propertyId = assertNotNull(response.created["\$p"]).substringAfterLast("/")
+            val conceptId = assertNotNull(response.created["c"]).substringAfterLast("/")
             val jsonFile = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_REF)) }
             val link = childrenInRole(jsonFile, "linkDeclaration").single { propertyValueOrNull(it, "role") == "link" }
             val linkTarget = link.references?.single { it.role == "target" }?.target
-            assertEquals(propertyId, linkTarget?.node)
+            assertEquals(conceptId, linkTarget?.node)
         }
     }
 
@@ -137,6 +163,35 @@ class AliasEditSemanticsTest {
         }
     }
 
+    @Test
+    fun `binding an alias with and without a leading dollar collides as the same name`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
+            val before = structureModel(projectPath).readText()
+            val exception = assertFailsWith<MpsRequestException> {
+                mpsAccess.write {
+                    modelEdit(
+                        batchOf(
+                            EditOperation.AddChild(
+                                target = EditTarget.NodeReference(JSON_FILE_REF),
+                                role = "propertyDeclaration",
+                                concept = PROPERTY_DECLARATION,
+                                alias = "\$p",
+                            ),
+                            EditOperation.AddChild(
+                                target = EditTarget.NodeReference(JSON_FILE_REF),
+                                role = "propertyDeclaration",
+                                concept = PROPERTY_DECLARATION,
+                                alias = "p",
+                            ),
+                        ),
+                    )
+                }
+            }
+            assertEquals(MpsErrorCode.INVALID_REQUEST, exception.code)
+            assertEquals(before, structureModel(projectPath).readText())
+        }
+    }
+
     private fun batchOf(vararg operations: EditOperation): EditBatch = EditBatch(operations.toList())
 
     private fun childrenInRole(node: MpsNodeJson, role: String): List<MpsNodeJson> =
@@ -151,6 +206,7 @@ class AliasEditSemanticsTest {
 
         const val PROPERTY_DECLARATION = "jetbrains.mps.lang.structure.structure.PropertyDeclaration"
         const val LINK_DECLARATION = "jetbrains.mps.lang.structure.structure.LinkDeclaration"
+        const val CONCEPT_DECLARATION = "jetbrains.mps.lang.structure.structure.ConceptDeclaration"
 
         const val JSON_FILE_REF = "$STRUCTURE_MODEL/2110045694544566904"
     }

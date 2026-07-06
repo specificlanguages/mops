@@ -147,7 +147,7 @@ class ReferenceAndCopyEditSemanticsTest {
                 )
             }
 
-            val copyRef = response.created.getValue("\$copy")
+            val copyRef = response.created.getValue("copy")
             val copy = mpsAccess.read { getNode(NodeTarget.NodeReference(copyRef)) }
             val copiedLinkTarget = childrenInRole(copy, "linkDeclaration").single()
                 .references!!.single { it.role == "target" }.target
