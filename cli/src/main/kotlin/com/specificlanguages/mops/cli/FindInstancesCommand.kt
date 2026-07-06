@@ -21,6 +21,12 @@ class FindInstancesCommand(private val daemonClient: DaemonClient? = null) : Cli
     var json: Boolean = false
 
     @Option(
+        names = ["--all"],
+        description = ["Search all models, including read-only libraries and stubs, not just editable project sources."],
+    )
+    var all: Boolean = false
+
+    @Option(
         names = ["--exact"],
         description = ["Match only nodes whose direct concept is the queried concept."],
     )
@@ -44,7 +50,7 @@ class FindInstancesCommand(private val daemonClient: DaemonClient? = null) : Cli
     override fun run() {
         require(limit >= 0) { "limit must not be negative" }
         val client = daemonClient ?: find.root.ensureDaemon()
-        val response = client.findInstances(concept = concept, exact = exact, limit = limit)
+        val response = client.findInstances(concept = concept, exact = exact, limit = limit, all = all)
         if (json) {
             println(ProtocolJson.encodeResponse(response))
         } else {

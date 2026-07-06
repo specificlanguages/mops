@@ -588,6 +588,43 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `find request JSON carries the all-models flag and defaults it to false`() {
+        val usagesTarget = NodeTarget.NodeReference(
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+        )
+        val allUsages = ProtocolJson.encodeRequest(
+            FindUsagesRequest(token = "secret", target = usagesTarget, limit = 100, all = true),
+        )
+        assertContains(allUsages, """"all":true""")
+        assertEquals(
+            FindUsagesRequest(token = "secret", target = usagesTarget, limit = 100, all = true),
+            ProtocolJson.decodeRequest(allUsages),
+        )
+        assertEquals(
+            FindUsagesRequest(token = "secret", target = usagesTarget, limit = 100, all = false),
+            ProtocolJson.decodeRequest(
+                """{"type":"find-usages","token":"secret","target":{"type":"nodeReference","nodeReference":"r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"},"limit":100}""",
+            ),
+        )
+
+        val concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration"
+        val allInstances = ProtocolJson.encodeRequest(
+            FindInstancesRequest(token = "secret", concept = concept, exact = false, limit = 100, all = true),
+        )
+        assertContains(allInstances, """"all":true""")
+        assertEquals(
+            FindInstancesRequest(token = "secret", concept = concept, exact = false, limit = 100, all = true),
+            ProtocolJson.decodeRequest(allInstances),
+        )
+        assertEquals(
+            FindInstancesRequest(token = "secret", concept = concept, exact = false, limit = 100, all = false),
+            ProtocolJson.decodeRequest(
+                """{"type":"find-instances","token":"secret","concept":"$concept","exact":false,"limit":100}""",
+            ),
+        )
+    }
+
+    @Test
     fun `decoding a request without a type discriminator fails`() {
         assertFailsWith<SerializationException> {
             ProtocolJson.decodeRequest("""{"token":"secret"}""")

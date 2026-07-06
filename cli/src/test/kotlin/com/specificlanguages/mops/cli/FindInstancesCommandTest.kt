@@ -78,6 +78,22 @@ class FindInstancesCommandTest {
     }
 
     @Test
+    fun `find instances passes all flag to the daemon`() {
+        val client = mock<DaemonClient>()
+        whenever(client.findInstances(CONCEPT, false, 100, true)).thenReturn(sampleInstancesResponse())
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(FindInstancesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("--all", CONCEPT)
+        }
+
+        assertEquals(0, exitCode)
+        verify(client).findInstances(CONCEPT, false, 100, true)
+    }
+
+    @Test
     fun `find instances prints response object as json when requested`() {
         val client = mock<DaemonClient>()
         val response = sampleInstancesResponse()

@@ -15,7 +15,7 @@ interface MpsRead {
 
     fun getNode(target: NodeTarget): MpsNodeJson
 
-    fun findInstances(concept: String, exact: Boolean, limit: Int): FindInstancesResponse
+    fun findInstances(concept: String, exact: Boolean, limit: Int, all: Boolean = false): FindInstancesResponse
 
-    fun findUsages(target: NodeTarget, limit: Int): FindUsagesResponse
+    fun findUsages(target: NodeTarget, limit: Int, all: Boolean = false): FindUsagesResponse
 }

@@ -19,8 +19,8 @@ interface DaemonClient {
     fun ping(): PongResponse
     fun resave(modelTarget: Path): ModelResaveResponse
     fun getNode(target: NodeTarget): ModelGetNodeResponse
-    fun findUsages(target: NodeTarget, limit: Int): FindUsagesResponse
-    fun findInstances(concept: String, exact: Boolean, limit: Int): FindInstancesResponse
+    fun findUsages(target: NodeTarget, limit: Int, all: Boolean = false): FindUsagesResponse
+    fun findInstances(concept: String, exact: Boolean, limit: Int, all: Boolean = false): FindInstancesResponse
     fun modelEdit(batch: EditBatch, constraints: ConstraintEnforcement = ConstraintEnforcement.BEST_EFFORT): ModelEditResponse
     fun list(target: List<String>?, depth: Int): MpsListResponse
 }

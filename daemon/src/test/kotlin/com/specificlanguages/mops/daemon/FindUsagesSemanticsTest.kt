@@ -33,7 +33,33 @@ class FindUsagesSemanticsTest {
         assertTrue(payload.usages.any { it.role == "intfc" }, "expected an implements usage, got: ${payload.usages}")
     }
 
+    @Test
+    fun `all searches library models beyond editable project sources`() {
+        val editable = SharedMpsEnvironment.sharedMpsAccess.read {
+            findUsages(NodeTarget.NodeReference(BASE_CONCEPT_REFERENCE), limit = 0, all = false)
+        }
+        val all = SharedMpsEnvironment.sharedMpsAccess.read {
+            findUsages(NodeTarget.NodeReference(BASE_CONCEPT_REFERENCE), limit = 0, all = true)
+        }
+
+        val editableUsages = editable.usages.map { it.role to it.owner.reference }.toSet()
+        val allUsages = all.usages.map { it.role to it.owner.reference }.toSet()
+
+        assertTrue(
+            allUsages.size > editableUsages.size,
+            "searching all models should reach library usages the editable search excludes",
+        )
+        assertTrue(
+            editableUsages.all { it in allUsages },
+            "editable results must remain a subset of the all-models results",
+        )
+    }
+
     private companion object {
+        // BaseConcept is extended across the whole platform, so the all-models search finds far more usages than the
+        // handful in editable project sources.
+        const val BASE_CONCEPT_REFERENCE =
+            "r:00000000-0000-4000-0000-011c89590288(jetbrains.mps.lang.core.structure)/1169194658468"
         const val IJSON_VALUE_NODE_ID = "2110045694544566909"
         const val IJSON_VALUE_REFERENCE =
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/$IJSON_VALUE_NODE_ID"

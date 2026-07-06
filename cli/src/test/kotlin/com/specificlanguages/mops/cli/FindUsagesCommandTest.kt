@@ -63,6 +63,24 @@ class FindUsagesCommandTest {
     }
 
     @Test
+    fun `find usages passes all flag to the daemon`() {
+        val client = mock<DaemonClient>()
+        val nodeReference =
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
+        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), 100, true)).thenReturn(sampleUsagesResponse())
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(FindUsagesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("--all", nodeReference)
+        }
+
+        assertEquals(0, exitCode)
+        verify(client).findUsages(NodeTarget.NodeReference(nodeReference), 100, true)
+    }
+
+    @Test
     fun `find usages prints response object as json when requested`() {
         val client = mock<DaemonClient>()
         val nodeReference =

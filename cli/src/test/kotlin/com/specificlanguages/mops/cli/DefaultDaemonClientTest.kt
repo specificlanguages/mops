@@ -146,6 +146,38 @@ class DefaultDaemonClientTest {
     }
 
     @Test
+    fun `find sends the all-models flag when requested`() {
+        val instancesResponse = FindInstancesResponse(limit = 100, truncated = false, nodes = emptyList())
+        val instancesDaemon = startPrerecordedDaemon(instancesResponse)
+
+        DefaultDaemonClient(instancesDaemon.port, "secret").findInstances(
+            concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+            exact = false,
+            limit = 100,
+            all = true,
+        )
+
+        instancesDaemon.join(5_000)
+        assertContains(instancesDaemon.requestsReceived.single(), "\"type\":\"find-instances\"")
+        assertContains(instancesDaemon.requestsReceived.single(), "\"all\":true")
+
+        val usagesResponse = FindUsagesResponse(limit = 100, truncated = false, usages = emptyList())
+        val usagesDaemon = startPrerecordedDaemon(usagesResponse)
+        val nodeReference =
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
+
+        DefaultDaemonClient(usagesDaemon.port, "secret").findUsages(
+            target = NodeTarget.NodeReference(nodeReference),
+            limit = 100,
+            all = true,
+        )
+
+        usagesDaemon.join(5_000)
+        assertContains(usagesDaemon.requestsReceived.single(), "\"type\":\"find-usages\"")
+        assertContains(usagesDaemon.requestsReceived.single(), "\"all\":true")
+    }
+
+    @Test
     fun `model edit sends batch request`() {
         val response = ModelEditResponse(created = emptyMap(), violations = emptyList())
         val daemon = startPrerecordedDaemon(response)

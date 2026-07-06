@@ -40,6 +40,29 @@ class FindInstancesSemanticsTest {
     }
 
     @Test
+    fun `all searches library models beyond editable project sources`() {
+        val editable = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances(CONCEPT_DECLARATION, exact = false, limit = 0, all = false)
+        }
+        val all = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances(CONCEPT_DECLARATION, exact = false, limit = 0, all = true)
+        }
+
+        val editableReferences = editable.nodes.map { it.reference }.toSet()
+        val allReferences = all.nodes.map { it.reference }.toSet()
+
+        assertTrue(editableReferences.isNotEmpty(), "fixture should hold editable concept declarations")
+        assertTrue(
+            allReferences.size > editableReferences.size,
+            "searching all models should reach library instances the editable search excludes",
+        )
+        assertTrue(
+            editableReferences.all { it in allReferences },
+            "editable results must remain a subset of the all-models results",
+        )
+    }
+
+    @Test
     fun `reports an unresolved concept as not found`() {
         val exception = assertFailsWith<MpsRequestException> {
             SharedMpsEnvironment.sharedMpsAccess.read {

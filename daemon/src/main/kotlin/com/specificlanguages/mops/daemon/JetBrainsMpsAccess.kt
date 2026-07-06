@@ -4,6 +4,7 @@ import com.specificlanguages.mops.daemon.core.*
 import com.specificlanguages.mops.protocol.*
 import jetbrains.mps.progress.EmptyProgressMonitor
 import jetbrains.mps.project.EditableFilteringScope
+import jetbrains.mps.project.GlobalScope
 import jetbrains.mps.project.Project
 import jetbrains.mps.smodel.SNodeUtil
 import jetbrains.mps.smodel.language.ConceptRegistry
@@ -12,6 +13,7 @@ import jetbrains.mps.util.CollectConsumer
 import org.jetbrains.mps.openapi.model.*
 import org.jetbrains.mps.openapi.module.FindUsagesFacade
 import org.jetbrains.mps.openapi.module.SModule
+import org.jetbrains.mps.openapi.module.SearchScope
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 
 class JetBrainsMpsAccess(
@@ -63,9 +65,9 @@ class JetBrainsMpsAccess(
         override fun getNode(target: NodeTarget): MpsNodeJson =
             jsonNodeExporter.export(resolveNode(target))
 
-        override fun findUsages(target: NodeTarget, limit: Int): FindUsagesResponse {
+        override fun findUsages(target: NodeTarget, limit: Int, all: Boolean): FindUsagesResponse {
             val node = resolveNode(target)
-            val scope = EditableFilteringScope(project.scope)
+            val scope = searchScope(all)
             val collected = CollectConsumer<SReference>()
             FindUsagesFacade.getInstance().findUsages(scope, setOf(node), collected, EmptyProgressMonitor())
 
@@ -81,7 +83,7 @@ class JetBrainsMpsAccess(
             )
         }
 
-        override fun findInstances(concept: String, exact: Boolean, limit: Int): FindInstancesResponse {
+        override fun findInstances(concept: String, exact: Boolean, limit: Int, all: Boolean): FindInstancesResponse {
             val mpsConcept = ConceptRegistry.getInstance().getConceptByName(concept)
             if (!mpsConcept.isValid) {
                 throw MpsRequestException(
@@ -90,7 +92,7 @@ class JetBrainsMpsAccess(
                 )
             }
 
-            val scope = EditableFilteringScope(project.scope)
+            val scope = searchScope(all)
             val collected = CollectConsumer<SNode>()
             FindUsagesFacade.getInstance()
                 .findInstances(scope, setOf(mpsConcept), exact, collected, EmptyProgressMonitor())
@@ -104,6 +106,11 @@ class JetBrainsMpsAccess(
                 nodes = selected.map { nodeSummary(it) },
             )
         }
+
+        // Editable Project Sources are the default find scope; `all` widens to the whole repository, including the
+        // read-only library and stub models the editable filter otherwise excludes.
+        private fun searchScope(all: Boolean): SearchScope =
+            if (all) GlobalScope(project.repository) else EditableFilteringScope(project.scope)
 
         protected fun nodeSummary(node: SNode): MpsNodeSummaryJson =
             MpsNodeSummaryJson(

@@ -22,6 +22,12 @@ class FindUsagesCommand(private val daemonClient: DaemonClient? = null) : CliCom
     var json: Boolean = false
 
     @Option(
+        names = ["--all"],
+        description = ["Search all models, including read-only libraries and stubs, not just editable project sources."],
+    )
+    var all: Boolean = false
+
+    @Option(
         names = ["--limit"],
         paramLabel = "N",
         description = ["Maximum usages to return. Defaults to 100; 0 means unlimited."],
@@ -39,7 +45,7 @@ class FindUsagesCommand(private val daemonClient: DaemonClient? = null) : CliCom
     override fun run() {
         require(limit >= 0) { "limit must not be negative" }
         val client = daemonClient ?: find.root.ensureDaemon()
-        val response = client.findUsages(target = nodeTarget(), limit = limit)
+        val response = client.findUsages(target = nodeTarget(), limit = limit, all = all)
         if (json) {
             println(ProtocolJson.encodeResponse(response))
         } else {

@@ -41,7 +41,8 @@ data class ModelGetNodeRequest(
 ) : DaemonRequest
 
 /**
- * Request to find references to one resolved MPS node in editable project sources.
+ * Request to find references to one resolved MPS node. Searches editable project sources by default, or the whole
+ * repository (including read-only library and stub models) when [all] is set.
  */
 @Serializable
 @SerialName("find-usages")
@@ -49,10 +50,12 @@ data class FindUsagesRequest(
     override val token: String,
     val target: NodeTarget,
     val limit: Int,
+    val all: Boolean = false,
 ) : DaemonRequest
 
 /**
- * Request to find instances of one MPS concept in editable project sources.
+ * Request to find instances of one MPS concept. Searches editable project sources by default, or the whole repository
+ * (including read-only library and stub models) when [all] is set.
  */
 @Serializable
 @SerialName("find-instances")
@@ -61,6 +64,7 @@ data class FindInstancesRequest(
     val concept: String,
     val exact: Boolean,
     val limit: Int,
+    val all: Boolean = false,
 ) : DaemonRequest
 
 /**
