@@ -208,4 +208,4 @@ Domain expert: No. mops reports **Constraint Violations** whether or not they bl
 
 Dev: Does copying a node bring its references along?
 
-Domain expert: Copying a node copies its **Node Subtree**, which follows **Containment Links** only. Each **Reference** in the subtree still records its target, but the referenced nodes are not themselves copied.
+Domain expert: Copying a node copies its **Node Subtree**, which follows **Containment Links** only. A **Reference** whose target lies inside the copied subtree is rewired to point at the corresponding copied node, so the copy is self-contained. A **Reference** to a node outside the subtree keeps pointing at that original target, since it is not itself copied.

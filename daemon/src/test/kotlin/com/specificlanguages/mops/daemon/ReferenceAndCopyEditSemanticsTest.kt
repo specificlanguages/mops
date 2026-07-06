@@ -5,6 +5,7 @@ import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
+import com.specificlanguages.mops.protocol.ModelDestination
 import com.specificlanguages.mops.protocol.MpsNodeJson
 import com.specificlanguages.mops.protocol.NodeTarget
 import java.nio.file.Path
@@ -124,6 +125,47 @@ class ReferenceAndCopyEditSemanticsTest {
     }
 
     @Test
+    fun `copyNode rewires a reference within the copied subtree to point at the copy`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
+            // The fixture has no multi-node subtree with an internal reference, so build one: point JsonArray's
+            // `items` link at JsonArray itself, giving the subtree a reference back into itself. Then copy the
+            // whole subtree and confirm the copy's reference follows the copy, not the original.
+            val response = mpsAccess.write {
+                modelEdit(
+                    batchOf(
+                        EditOperation.SetReference(
+                            target = EditTarget.NodeReference(JSON_ARRAY_ITEMS_LINK_REF),
+                            role = "target",
+                            to = EditTarget.NodeReference(JSON_ARRAY_REF),
+                        ),
+                        EditOperation.CopyRoot(
+                            model = ModelDestination(STRUCTURE_MODEL),
+                            source = EditTarget.NodeReference(JSON_ARRAY_REF),
+                            alias = "\$copy",
+                        ),
+                    ),
+                )
+            }
+
+            val copyRef = response.created.getValue("\$copy")
+            val copy = mpsAccess.read { getNode(NodeTarget.NodeReference(copyRef)) }
+            val copiedLinkTarget = childrenInRole(copy, "linkDeclaration").single()
+                .references!!.single { it.role == "target" }.target
+
+            // The copied link resolves within the copy, not back into the original subtree.
+            assertNull(copiedLinkTarget.model, "an internal reference stays within the same model")
+            assertEquals(copy.id, copiedLinkTarget.node, "the copy's reference must target the copy")
+            assertNotEquals(JSON_ARRAY_ID, copiedLinkTarget.node, "the copy must not reference the original")
+
+            // The original subtree is untouched: its link still points at the original array.
+            val source = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_ARRAY_REF)) }
+            val sourceLinkTarget = childrenInRole(source, "linkDeclaration").single()
+                .references!!.single { it.role == "target" }.target
+            assertEquals(JSON_ARRAY_ID, sourceLinkTarget.node, "the original reference is unchanged")
+        }
+    }
+
+    @Test
     fun `setReference with an unknown role fails and changes nothing`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
             val before = structureModel(projectPath).readText()
@@ -196,7 +238,11 @@ class ReferenceAndCopyEditSemanticsTest {
 
         const val JSON_STRING_VALUE_ID = "2110045694544569338"
         const val JSON_STRING_VALUE_REF = "$STRUCTURE_MODEL/$JSON_STRING_VALUE_ID"
-        const val JSON_ARRAY_REF = "$STRUCTURE_MODEL/2110045694544569357"
+        const val JSON_ARRAY_ID = "2110045694544569357"
+        const val JSON_ARRAY_REF = "$STRUCTURE_MODEL/$JSON_ARRAY_ID"
+
+        // JsonArray's `items` LinkDeclaration child.
+        const val JSON_ARRAY_ITEMS_LINK_REF = "$STRUCTURE_MODEL/2110045694544569360"
         const val JSON_NUMBER_REF = "$STRUCTURE_MODEL/2110045694544569437"
     }
 }
