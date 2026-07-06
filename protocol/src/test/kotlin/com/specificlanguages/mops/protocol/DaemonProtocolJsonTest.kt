@@ -229,7 +229,7 @@ class DaemonProtocolJsonTest {
                         role = "members",
                         position = ChildPosition.Index(2),
                     ),
-                    EditOperation.MoveNode(
+                    EditOperation.MoveAsChild(
                         target = EditTarget.NodeReference("$model/400"),
                         into = EditTarget.NodeReference("$model/500"),
                         role = "members",
@@ -244,7 +244,7 @@ class DaemonProtocolJsonTest {
         assertContains(serialized, """"op":"addChild"""")
         assertContains(serialized, """"op":"delete"""")
         assertContains(serialized, """"op":"deleteChild"""")
-        assertContains(serialized, """"op":"moveNode"""")
+        assertContains(serialized, """"op":"moveAsChild"""")
         assertContains(serialized, """"position":2""")
         assertContains(serialized, """"position":"first"""")
         assertEquals(request, ProtocolJson.decodeRequest(serialized))
@@ -267,7 +267,7 @@ class DaemonProtocolJsonTest {
                         role = "dataType",
                         to = null,
                     ),
-                    EditOperation.CopyNode(
+                    EditOperation.CopyAsChild(
                         target = EditTarget.NodeReference("$model/4"),
                         source = EditTarget.NodeReference("$model/5"),
                         role = "propertyDeclaration",
@@ -280,7 +280,7 @@ class DaemonProtocolJsonTest {
         val serialized = ProtocolJson.encodeRequest(request)
 
         assertContains(serialized, """"op":"setReference"""")
-        assertContains(serialized, """"op":"copyNode"""")
+        assertContains(serialized, """"op":"copyAsChild"""")
         assertContains(serialized, """"to":"$model/2"""")
         assertContains(serialized, """"source":"$model/5"""")
         assertEquals(request, ProtocolJson.decodeRequest(serialized))
@@ -330,11 +330,11 @@ class DaemonProtocolJsonTest {
                         properties = listOf(MpsNodePropertyJson(name = "name", value = "JsonComment")),
                         alias = "\$c",
                     ),
-                    EditOperation.CopyRoot(
+                    EditOperation.CopyAsRoot(
                         model = ModelDestination(model),
                         source = EditTarget.NodeReference("$model/1"),
                     ),
-                    EditOperation.MoveToRoot(
+                    EditOperation.MoveAsRoot(
                         target = EditTarget.InModel(modelTarget = model, nodeId = "2"),
                         model = ModelDestination(model),
                     ),
@@ -345,8 +345,8 @@ class DaemonProtocolJsonTest {
         val serialized = ProtocolJson.encodeRequest(request)
 
         assertContains(serialized, """"op":"addRoot"""")
-        assertContains(serialized, """"op":"copyRoot"""")
-        assertContains(serialized, """"op":"moveToRoot"""")
+        assertContains(serialized, """"op":"copyAsRoot"""")
+        assertContains(serialized, """"op":"moveAsRoot"""")
         // The model destination encodes as a bare model target string, not a nested object.
         assertContains(serialized, """"model":"$model"""")
         assertEquals(request, ProtocolJson.decodeRequest(serialized))

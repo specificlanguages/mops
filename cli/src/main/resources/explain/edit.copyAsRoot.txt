@@ -1,7 +1,7 @@
-edit.copyRoot — copy a Node Subtree into a model as a new Root Node.
+edit.copyAsRoot — copy a Node Subtree into a model as a new Root Node.
 
 FIELDS
-  op          "copyRoot"
+  op          "copyAsRoot"
   model       (required) the destination model — a model reference string or a
               {"model": <target>} object (see node-ref)
   source      (required) the node to copy — see target
@@ -17,7 +17,7 @@ EXAMPLE
 {
   "operations": [
     {
-      "op": "copyRoot",
+      "op": "copyAsRoot",
       "model": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
       "source": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
       "as": "jsonFileCopy"
@@ -26,4 +26,4 @@ EXAMPLE
 }
 
 SEE ALSO
-  edit, edit.copyNode, target, node-ref
+  edit, edit.copyAsChild, target, node-ref

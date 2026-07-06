@@ -6,7 +6,7 @@ FORMS
   "only"    the single child of a single-valued Role
   3         a bare integer: the zero-based index among existing children
 
-  Accepted by addChild, copyNode and moveNode (default "last") and by
+  Accepted by addChild, copyAsChild and moveAsChild (default "last") and by
   deleteChild (default "only").
 
 EXAMPLE
@@ -23,4 +23,4 @@ EXAMPLE
 }
 
 SEE ALSO
-  edit.addChild, edit.copyNode, edit.moveNode, edit.deleteChild
+  edit.addChild, edit.copyAsChild, edit.moveAsChild, edit.deleteChild

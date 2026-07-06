@@ -324,7 +324,7 @@ class EditBatchExecutor(
                     bindAlias(index, operation.alias, child)
                 }
 
-                is EditOperation.MoveNode -> {
+                is EditOperation.MoveAsChild -> {
                     val node = requireEditableNode(index, operation.target)
                     val newParent = requireEditableNode(index, operation.into)
                     var ancestor: SNode? = newParent
@@ -361,7 +361,7 @@ class EditBatchExecutor(
                     }
                 }
 
-                is EditOperation.CopyNode -> {
+                is EditOperation.CopyAsChild -> {
                     val node = requireEditableNode(index, operation.target)
                     val link = resolveContainmentOrFail(index, node, operation.role)
                     val source = resolveNode(index, operation.source)
@@ -383,7 +383,7 @@ class EditBatchExecutor(
                     bindAlias(index, operation.alias, root)
                 }
 
-                is EditOperation.CopyRoot -> {
+                is EditOperation.CopyAsRoot -> {
                     val model = requireEditableModel(index, operation.model)
                     val source = resolveNode(index, operation.source)
                     mutated = true
@@ -393,7 +393,7 @@ class EditBatchExecutor(
                     bindAlias(index, operation.alias, copy)
                 }
 
-                is EditOperation.MoveToRoot -> {
+                is EditOperation.MoveAsRoot -> {
                     val node = requireEditableNode(index, operation.target)
                     val model = requireEditableModel(index, operation.model)
                     mutated = true

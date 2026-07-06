@@ -156,7 +156,7 @@ _Avoid_: format, syntax when precision matters
 _Related_: Explain Topic
 
 **Explain Topic**:
-A named reference page about a **Notation** or a part of one, addressable by a dot path such as `edit` or `edit.copyNode`. An **Explain Topic** is small, self-contained, and names the related topics a reader may drill into.
+A named reference page about a **Notation** or a part of one, addressable by a dot path such as `edit` or `edit.copyAsChild`. An **Explain Topic** is small, self-contained, and names the related topics a reader may drill into.
 _Avoid_: help topic, doc page
 _Related_: Notation, Command Help
 

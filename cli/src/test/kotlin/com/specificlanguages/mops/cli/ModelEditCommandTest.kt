@@ -106,7 +106,7 @@ class ModelEditCommandTest {
                     concept = "jetbrains.mps.lang.structure.structure.PropertyDeclaration",
                     properties = listOf(MpsNodePropertyJson(name = "name", value = "added")),
                 ),
-                EditOperation.MoveNode(
+                EditOperation.MoveAsChild(
                     target = EditTarget.NodeReference("$model/2"),
                     into = EditTarget.NodeReference("$model/3"),
                     role = "propertyDeclaration",
@@ -172,7 +172,7 @@ class ModelEditCommandTest {
         assertContains(stderr, """operations[0]: unknown op "addNode"""")
         assertContains(
             stderr,
-            "supported: addChild, addRoot, copyNode, copyRoot, delete, deleteChild, moveNode, moveToRoot, " +
+            "supported: addChild, addRoot, copyAsChild, copyAsRoot, delete, deleteChild, moveAsChild, moveAsRoot, " +
                 "setProperty, setReference",
         )
         assertContains(stderr, """Did you mean "addRoot"?""")
@@ -182,25 +182,25 @@ class ModelEditCommandTest {
     @Test
     fun `model edit reports missing required field with op explain pointer, no daemon`() {
         val stderr = assertRejected(
-            """{"operations":[{"op":"copyNode","target":"m/1","source":"m/2"}]}""",
+            """{"operations":[{"op":"copyAsChild","target":"m/1","source":"m/2"}]}""",
         )
-        assertContains(stderr, """operations[0]: copyNode requires "role" — see: mops explain edit.copyNode""")
+        assertContains(stderr, """operations[0]: copyAsChild requires "role" — see: mops explain edit.copyAsChild""")
     }
 
     @Test
     fun `model edit reports unknown field with op explain pointer, no daemon`() {
         val stderr = assertRejected(
-            """{"operations":[{"op":"copyNode","target":"m/1","source":"m/2","role":"r","roel":"x"}]}""",
+            """{"operations":[{"op":"copyAsChild","target":"m/1","source":"m/2","role":"r","roel":"x"}]}""",
         )
-        assertContains(stderr, """operations[0]: copyNode has unknown field "roel" — see: mops explain edit.copyNode""")
+        assertContains(stderr, """operations[0]: copyAsChild has unknown field "roel" — see: mops explain edit.copyAsChild""")
     }
 
     @Test
     fun `model edit reports invalid target with target explain pointer, no daemon`() {
         val stderr = assertRejected(
-            """{"operations":[{"op":"moveNode","target":"m/1","into":{"bogus":true},"role":"r"}]}""",
+            """{"operations":[{"op":"moveAsChild","target":"m/1","into":{"bogus":true},"role":"r"}]}""",
         )
-        assertContains(stderr, """operations[0]: moveNode field "into" is not a valid target — see: mops explain target""")
+        assertContains(stderr, """operations[0]: moveAsChild field "into" is not a valid target — see: mops explain target""")
     }
 
     @Test

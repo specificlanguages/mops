@@ -1,7 +1,7 @@
-edit.moveToRoot — move an existing node to Root Node position of a model.
+edit.moveAsRoot — move an existing node to Root Node position of a model.
 
 FIELDS
-  op          "moveToRoot"
+  op          "moveAsRoot"
   target      (required) the node to move — a child or an existing root (see target)
   model       (required) the destination model — a model reference string or a
               {"model": <target>} object (see node-ref)
@@ -13,13 +13,13 @@ SEMANTICS
   Constraint.
 
   The reverse — moving a root into a parent's Containment Role — needs no special
-  operation: moveNode already accepts a root as its target and detaches it.
+  operation: moveAsChild already accepts a root as its target and detaches it.
 
 EXAMPLE
 {
   "operations": [
     {
-      "op": "moveToRoot",
+      "op": "moveAsRoot",
       "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544569338",
       "model": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
     }
@@ -27,4 +27,4 @@ EXAMPLE
 }
 
 SEE ALSO
-  edit, edit.moveNode, target, node-ref
+  edit, edit.moveAsChild, target, node-ref

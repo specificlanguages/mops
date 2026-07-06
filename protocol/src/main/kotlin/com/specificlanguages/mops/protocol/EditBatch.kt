@@ -73,8 +73,8 @@ sealed interface EditOperation {
      * current location.
      */
     @Serializable
-    @SerialName("moveNode")
-    data class MoveNode(
+    @SerialName("moveAsChild")
+    data class MoveAsChild(
         val target: EditTarget,
         val into: EditTarget,
         val role: String,
@@ -98,8 +98,8 @@ sealed interface EditOperation {
      * ids so it is a distinct node rather than a duplicate identity. [source] may live in a read-only model.
      */
     @Serializable
-    @SerialName("copyNode")
-    data class CopyNode(
+    @SerialName("copyAsChild")
+    data class CopyAsChild(
         val target: EditTarget,
         val source: EditTarget,
         val role: String,
@@ -128,8 +128,8 @@ sealed interface EditOperation {
      * may be a root or a child and may live in a read-only model.
      */
     @Serializable
-    @SerialName("copyRoot")
-    data class CopyRoot(
+    @SerialName("copyAsRoot")
+    data class CopyAsRoot(
         val model: ModelDestination,
         val source: EditTarget,
         @SerialName("as") override val alias: String? = null,
@@ -140,8 +140,8 @@ sealed interface EditOperation {
      * detaching it from its current location.
      */
     @Serializable
-    @SerialName("moveToRoot")
-    data class MoveToRoot(
+    @SerialName("moveAsRoot")
+    data class MoveAsRoot(
         val target: EditTarget,
         val model: ModelDestination,
     ) : EditOperation

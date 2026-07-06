@@ -114,12 +114,12 @@ class StructuralEditSemanticsTest {
     }
 
     @Test
-    fun `moveNode relocates a node to a new parent and role`() {
+    fun `moveAsChild relocates a node to a new parent and role`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
             mpsAccess.write {
                 modelEdit(
                     batchOf(
-                        EditOperation.MoveNode(
+                        EditOperation.MoveAsChild(
                             target = EditTarget.InModel(modelTarget = STRUCTURE_MODEL, nodeId = JSON_STRING_VALUE_ID),
                             into = EditTarget.NodeReference(JSON_ARRAY_REF),
                             role = "propertyDeclaration",
@@ -188,7 +188,7 @@ class StructuralEditSemanticsTest {
                 mpsAccess.write {
                     modelEdit(
                         batchOf(
-                            EditOperation.MoveNode(
+                            EditOperation.MoveAsChild(
                                 target = EditTarget.NodeReference(JSON_FILE_REF),
                                 into = EditTarget.NodeReference(JSON_FILE_REF),
                                 role = "implements",

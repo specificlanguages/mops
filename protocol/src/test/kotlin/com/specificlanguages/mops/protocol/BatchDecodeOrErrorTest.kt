@@ -83,30 +83,30 @@ class BatchDecodeOrErrorTest {
 
     @Test
     fun `missing required field points at op page`() {
-        val f = failure("""{"operations":[{"op":"copyNode","target":"m/1","source":"m/2"}]}""")
+        val f = failure("""{"operations":[{"op":"copyAsChild","target":"m/1","source":"m/2"}]}""")
         assertEquals(BatchDecodeErrorCategory.MissingField, f.category)
         assertEquals(
-            """operations[0]: copyNode requires "role" — see: mops explain edit.copyNode""",
+            """operations[0]: copyAsChild requires "role" — see: mops explain edit.copyAsChild""",
             f.detail,
         )
     }
 
     @Test
     fun `unknown field points at op page`() {
-        val f = failure("""{"operations":[{"op":"copyNode","target":"m/1","source":"m/2","role":"r","roel":"x"}]}""")
+        val f = failure("""{"operations":[{"op":"copyAsChild","target":"m/1","source":"m/2","role":"r","roel":"x"}]}""")
         assertEquals(BatchDecodeErrorCategory.UnknownField, f.category)
         assertEquals(
-            """operations[0]: copyNode has unknown field "roel" — see: mops explain edit.copyNode""",
+            """operations[0]: copyAsChild has unknown field "roel" — see: mops explain edit.copyAsChild""",
             f.detail,
         )
     }
 
     @Test
     fun `invalid target points at target page`() {
-        val f = failure("""{"operations":[{"op":"moveNode","target":"m/1","into":{"bogus":true},"role":"r"}]}""")
+        val f = failure("""{"operations":[{"op":"moveAsChild","target":"m/1","into":{"bogus":true},"role":"r"}]}""")
         assertEquals(BatchDecodeErrorCategory.InvalidTarget, f.category)
         assertEquals(
-            """operations[0]: moveNode field "into" is not a valid target — see: mops explain target""",
+            """operations[0]: moveAsChild field "into" is not a valid target — see: mops explain target""",
             f.detail,
         )
     }

@@ -54,7 +54,7 @@ class EditSchemaTest {
 
     @Test
     fun `primitive field types follow the descriptor`() {
-        val position = opSchema("copyNode")["properties"]!!.jsonObject
+        val position = opSchema("copyAsChild")["properties"]!!.jsonObject
         assertEquals("string", position["role"]!!.jsonObject["type"]!!.jsonPrimitive.content)
     }
 

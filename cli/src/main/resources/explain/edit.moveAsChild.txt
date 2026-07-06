@@ -1,7 +1,7 @@
-edit.moveNode — move an existing node to a new parent Role.
+edit.moveAsChild — move an existing node to a new parent Role.
 
 FIELDS
-  op        "moveNode"
+  op        "moveAsChild"
   target    (required) the node to move — see target
   into      (required) the new parent node — see target
   role      (required) the Containment Role under the new parent
@@ -15,7 +15,7 @@ EXAMPLE
 {
   "operations": [
     {
-      "op": "moveNode",
+      "op": "moveAsChild",
       "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
       "into": {"model": "solutions/app.mps", "nodeId": "8007894750083424799"},
       "role": "members",

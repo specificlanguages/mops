@@ -48,12 +48,12 @@ class RootEditSemanticsTest {
     }
 
     @Test
-    fun `copyRoot copies a node into root position with fresh node ids and persists`() {
+    fun `copyAsRoot copies a node into root position with fresh node ids and persists`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
             val response = mpsAccess.write {
                 modelEdit(
                     batchOf(
-                        EditOperation.CopyRoot(
+                        EditOperation.CopyAsRoot(
                             model = ModelDestination(STRUCTURE_MODEL),
                             source = EditTarget.NodeReference(JSON_FILE_REF),
                             alias = "\$copy",
@@ -76,14 +76,14 @@ class RootEditSemanticsTest {
     }
 
     @Test
-    fun `moveToRoot moves a child into root position leaving its old parent`() {
+    fun `moveAsRoot moves a child into root position leaving its old parent`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
             // The fixture has no child whose concept is independently root-capable, so this exercises the move mechanics
             // under advisory enforcement; the can-be-root block itself is covered by the disallowed-root test.
             mpsAccess.write {
                 modelEdit(
                     batchOf(
-                        EditOperation.MoveToRoot(
+                        EditOperation.MoveAsRoot(
                             target = EditTarget.NodeReference("$STRUCTURE_MODEL/$JSON_STRING_VALUE_ID"),
                             model = ModelDestination(STRUCTURE_MODEL),
                         ),
@@ -102,14 +102,14 @@ class RootEditSemanticsTest {
     }
 
     @Test
-    fun `an existing root is moved into a parent by the existing moveNode operation`() {
+    fun `an existing root is moved into a parent by the existing moveAsChild operation`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
             // First promote a child to a persisted root (advisory, since PropertyDeclaration is not root-capable), so
-            // moveNode below operates on a genuine root node.
+            // moveAsChild below operates on a genuine root node.
             mpsAccess.write {
                 modelEdit(
                     batchOf(
-                        EditOperation.MoveToRoot(
+                        EditOperation.MoveAsRoot(
                             target = EditTarget.NodeReference("$STRUCTURE_MODEL/$JSON_STRING_VALUE_ID"),
                             model = ModelDestination(STRUCTURE_MODEL),
                         ),
@@ -121,7 +121,7 @@ class RootEditSemanticsTest {
             mpsAccess.write {
                 modelEdit(
                     batchOf(
-                        EditOperation.MoveNode(
+                        EditOperation.MoveAsChild(
                             target = EditTarget.NodeReference("$STRUCTURE_MODEL/$JSON_STRING_VALUE_ID"),
                             into = EditTarget.NodeReference(JSON_ARRAY_REF),
                             role = "propertyDeclaration",

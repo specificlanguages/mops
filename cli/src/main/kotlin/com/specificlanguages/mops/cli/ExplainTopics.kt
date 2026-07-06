@@ -59,7 +59,7 @@ object ExplainTopics {
             candidateParts.size == parts.size && candidateParts.dropLast(1).joinToString(".") == parentPrefix
         }.ifEmpty { allTopics }
         // Nearest sibling by edit distance, but credit a shared prefix so `edit.addNode` suggests `edit.addChild`
-        // (which shares the `edit.add` prefix) over an equidistant `edit.moveNode`.
+        // (which shares the `edit.add` prefix) over an equidistant `edit.moveAsChild`.
         val suggestion = siblings.minByOrNull { levenshtein(path, it) - commonPrefixLength(path, it) }
         val didYouMean = suggestion?.let { "did you mean $it? " }.orEmpty()
         return UnknownTopicException("unknown topic \"$path\" — ${didYouMean}valid: ${siblings.joinToString(", ")}")

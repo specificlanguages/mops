@@ -19,7 +19,7 @@ class ExplainCommand : CliCommand() {
         index = "0",
         arity = "0..1",
         paramLabel = "PATH",
-        description = ["Topic dot-path, e.g. edit or edit.copyNode. Omit to list topics."],
+        description = ["Topic dot-path, e.g. edit or edit.copyAsChild. Omit to list topics."],
     )
     var path: String? = null
 

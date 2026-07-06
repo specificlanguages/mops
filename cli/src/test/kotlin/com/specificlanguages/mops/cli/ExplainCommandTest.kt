@@ -41,10 +41,10 @@ class ExplainCommandTest {
     }
 
     @Test
-    fun `explain edit copyNode prints the operation page and exits zero`() {
-        val output = runExplain("edit.copyNode")
+    fun `explain edit copyAsChild prints the operation page and exits zero`() {
+        val output = runExplain("edit.copyAsChild")
 
-        assertContains(output, "copyNode")
+        assertContains(output, "copyAsChild")
         assertContains(output, "FIELDS")
     }
 
@@ -149,17 +149,17 @@ class ExplainCommandTest {
         is EditOperation.DeleteChild -> listOf(op.target)
         is EditOperation.AddChild -> listOf(op.target)
         is EditOperation.SetReference -> listOfNotNull(op.target, op.to)
-        is EditOperation.CopyNode -> listOf(op.target, op.source)
-        is EditOperation.MoveNode -> listOf(op.target, op.into)
-        is EditOperation.CopyRoot -> listOf(op.source)
-        is EditOperation.MoveToRoot -> listOf(op.target)
+        is EditOperation.CopyAsChild -> listOf(op.target, op.source)
+        is EditOperation.MoveAsChild -> listOf(op.target, op.into)
+        is EditOperation.CopyAsRoot -> listOf(op.source)
+        is EditOperation.MoveAsRoot -> listOf(op.target)
         is EditOperation.AddRoot -> emptyList()
     }
 
     private fun positionOf(op: EditOperation): ChildPosition? = when (op) {
         is EditOperation.AddChild -> op.position
-        is EditOperation.CopyNode -> op.position
-        is EditOperation.MoveNode -> op.position
+        is EditOperation.CopyAsChild -> op.position
+        is EditOperation.MoveAsChild -> op.position
         is EditOperation.DeleteChild -> op.position
         else -> null
     }

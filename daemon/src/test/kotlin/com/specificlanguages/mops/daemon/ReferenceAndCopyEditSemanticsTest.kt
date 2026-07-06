@@ -97,14 +97,14 @@ class ReferenceAndCopyEditSemanticsTest {
     }
 
     @Test
-    fun `copyNode duplicates a node with a fresh id and persists`() {
+    fun `copyAsChild duplicates a node with a fresh id and persists`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
             val propertyDeclarationsBefore = propertyDeclarationCount(projectPath)
 
             mpsAccess.write {
                 modelEdit(
                     batchOf(
-                        EditOperation.CopyNode(
+                        EditOperation.CopyAsChild(
                             target = EditTarget.NodeReference(JSON_ARRAY_REF),
                             source = EditTarget.NodeReference(JSON_STRING_VALUE_REF),
                             role = "propertyDeclaration",
@@ -125,7 +125,7 @@ class ReferenceAndCopyEditSemanticsTest {
     }
 
     @Test
-    fun `copyNode rewires a reference within the copied subtree to point at the copy`() {
+    fun `copyAsChild rewires a reference within the copied subtree to point at the copy`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
             // The fixture has no multi-node subtree with an internal reference, so build one: point JsonArray's
             // `items` link at JsonArray itself, giving the subtree a reference back into itself. Then copy the
@@ -138,7 +138,7 @@ class ReferenceAndCopyEditSemanticsTest {
                             role = "target",
                             to = EditTarget.NodeReference(JSON_ARRAY_REF),
                         ),
-                        EditOperation.CopyRoot(
+                        EditOperation.CopyAsRoot(
                             model = ModelDestination(STRUCTURE_MODEL),
                             source = EditTarget.NodeReference(JSON_ARRAY_REF),
                             alias = "\$copy",
@@ -188,14 +188,14 @@ class ReferenceAndCopyEditSemanticsTest {
     }
 
     @Test
-    fun `copyNode with an unresolvable source fails and changes nothing`() {
+    fun `copyAsChild with an unresolvable source fails and changes nothing`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
             val before = structureModel(projectPath).readText()
             val exception = assertFailsWith<MpsRequestException> {
                 mpsAccess.write {
                     modelEdit(
                         batchOf(
-                            EditOperation.CopyNode(
+                            EditOperation.CopyAsChild(
                                 target = EditTarget.NodeReference(JSON_ARRAY_REF),
                                 source = EditTarget.NodeReference("$STRUCTURE_MODEL/9999999999999999999"),
                                 role = "propertyDeclaration",

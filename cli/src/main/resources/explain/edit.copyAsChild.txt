@@ -1,7 +1,7 @@
-edit.copyNode — copy a Node Subtree under a Containment Role.
+edit.copyAsChild — copy a Node Subtree under a Containment Role.
 
 FIELDS
-  op        "copyNode"
+  op        "copyAsChild"
   target    (required) the destination parent node — see target
   source    (required) the node whose Node Subtree is copied — see target
   role      (required) the Containment Role for the copy
@@ -17,7 +17,7 @@ EXAMPLE
 {
   "operations": [
     {
-      "op": "copyNode",
+      "op": "copyAsChild",
       "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
       "source": {"model": "solutions/app.mps", "nodeId": "8007894750083424799"},
       "role": "members",
