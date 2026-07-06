@@ -4,8 +4,11 @@ import com.specificlanguages.mops.protocol.ConstraintEnforcement
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
+import com.specificlanguages.mops.protocol.ModelDestination
 import com.specificlanguages.mops.protocol.MpsNodeJson
 import com.specificlanguages.mops.protocol.MpsNodePropertyJson
+import com.specificlanguages.mops.protocol.MpsNodeReferenceJson
+import com.specificlanguages.mops.protocol.MpsNodeReferenceTargetJson
 import com.specificlanguages.mops.protocol.NodeTarget
 import java.nio.file.Path
 import kotlin.io.path.readText
@@ -118,6 +121,85 @@ class ConstraintEditSemanticsTest {
         }
     }
 
+    @Test
+    fun `a reference outside its language-defined scope is blocked by default and reported`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
+            val before = structureModel(projectPath).readText()
+
+            // A concept cannot extend itself: the structure language's `extends` scope excludes the concept (and its
+            // subconcepts) to prevent inheritance cycles, so this self-reference is out of scope.
+            val response = mpsAccess.write {
+                modelEdit(
+                    batchOf(
+                        EditOperation.SetReference(
+                            target = EditTarget.NodeReference(JSON_FILE_REF),
+                            role = "extends",
+                            to = EditTarget.NodeReference(JSON_FILE_REF),
+                        ),
+                    ),
+                )
+            }
+
+            assertTrue(response.violations.any { it.constraint == "referenceScope" && it.operation == 0 })
+            assertEquals(before, structureModel(projectPath).readText())
+        }
+    }
+
+    @Test
+    fun `advisory applies an out-of-scope reference and still reports the violation`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
+            val response = mpsAccess.write {
+                modelEdit(
+                    batchOf(
+                        EditOperation.SetReference(
+                            target = EditTarget.NodeReference(JSON_FILE_REF),
+                            role = "extends",
+                            to = EditTarget.NodeReference(JSON_FILE_REF),
+                        ),
+                    ),
+                    constraints = ConstraintEnforcement.ADVISORY,
+                )
+            }
+
+            assertTrue(response.violations.any { it.constraint == "referenceScope" })
+            val jsonFile = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_REF)) }
+            val extendsReference = jsonFile.references.orEmpty().single { it.role == "extends" }
+            assertEquals("JsonFile", extendsReference.target.name)
+        }
+    }
+
+    @Test
+    fun `a reference within its language-defined scope reports no scope violation`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
+            // A new concept may extend JsonFile: it is a visible concept and not an ancestor of the new one, so it is
+            // inside the `extends` scope. This exercises the passing side of the scope membership check.
+            val response = mpsAccess.write {
+                modelEdit(
+                    batchOf(
+                        EditOperation.AddRoot(
+                            model = ModelDestination(STRUCTURE_MODEL),
+                            concept = CONCEPT_DECLARATION,
+                            properties = listOf(MpsNodePropertyJson(name = "name", value = "ExtendsInScope")),
+                            references = listOf(
+                                MpsNodeReferenceJson(
+                                    role = "extends",
+                                    target = MpsNodeReferenceTargetJson(
+                                        model = STRUCTURE_MODEL,
+                                        node = JSON_FILE_NODE_ID,
+                                    ),
+                                ),
+                            ),
+                            alias = "new",
+                        ),
+                    ),
+                )
+            }
+
+            assertTrue(response.violations.none { it.constraint == "referenceScope" })
+            assertTrue(response.created.containsKey("new"))
+        }
+    }
+
     private fun batchOf(vararg operations: EditOperation): EditBatch = EditBatch(operations.toList())
 
     private fun childrenInRole(node: MpsNodeJson, role: String): List<MpsNodeJson> =
@@ -132,8 +214,10 @@ class ConstraintEditSemanticsTest {
 
         const val PROPERTY_DECLARATION = "jetbrains.mps.lang.structure.structure.PropertyDeclaration"
         const val LINK_DECLARATION = "jetbrains.mps.lang.structure.structure.LinkDeclaration"
+        const val CONCEPT_DECLARATION = "jetbrains.mps.lang.structure.structure.ConceptDeclaration"
         const val HELP_URL = "jetbrains.mps.lang.resources.structure.HelpURL"
 
-        const val JSON_FILE_REF = "$STRUCTURE_MODEL/2110045694544566904"
+        const val JSON_FILE_NODE_ID = "2110045694544566904"
+        const val JSON_FILE_REF = "$STRUCTURE_MODEL/$JSON_FILE_NODE_ID"
     }
 }

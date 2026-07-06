@@ -18,9 +18,12 @@ import jetbrains.mps.core.aspects.constraints.rules.kinds.CanBeAncestorContext
 import jetbrains.mps.core.aspects.constraints.rules.kinds.CanBeRootContext
 import jetbrains.mps.core.aspects.constraints.rules.kinds.ContainmentContext
 import jetbrains.mps.project.Project
+import jetbrains.mps.scope.ErrorScope
 import jetbrains.mps.smodel.CopyUtil
 import jetbrains.mps.smodel.constraints.ConstraintsCanBeFacade
+import jetbrains.mps.smodel.constraints.ModelConstraints
 import jetbrains.mps.smodel.language.ConceptRegistry
+import jetbrains.mps.smodel.runtime.ReferenceScopeProvider
 import org.jetbrains.mps.openapi.language.SConcept
 import org.jetbrains.mps.openapi.language.SContainmentLink
 import org.jetbrains.mps.openapi.language.SProperty
@@ -52,6 +55,7 @@ class EditBatchExecutor(
         val aliases = linkedMapOf<String, SNode>()
         val placements = mutableListOf<Placement>()
         val rootPlacements = mutableListOf<RootPlacement>()
+        val referencePlacements = mutableListOf<ReferencePlacement>()
         val uncheckable = UncheckableLanguages()
         var mutated = false
 
@@ -258,10 +262,10 @@ class EditBatchExecutor(
                 SNodeAccessUtil.setPropertyValue(node, resolvePropertyOrFail(index, node, property.name), property.value)
             }
             references?.forEach { reference ->
-                node.setReferenceTarget(
-                    resolveReferenceLinkOrFail(index, node, reference.role),
-                    resolveReferenceTargetOrFail(index, model, reference),
-                )
+                val link = resolveReferenceLinkOrFail(index, node, reference.role)
+                val target = resolveReferenceTargetOrFail(index, model, reference)
+                node.setReferenceTarget(link, target)
+                referencePlacements.add(ReferencePlacement(index, node, link, target))
             }
             children?.forEach { childSpec ->
                 val role = childSpec.role
@@ -351,6 +355,10 @@ class EditBatchExecutor(
                     val to = operation.to?.let { resolveNode(index, it) }
                     mutated = true
                     node.setReferenceTarget(link, to)
+                    // Clearing a reference (to == null) cannot violate a scope; only a concrete target is checked.
+                    if (to != null) {
+                        referencePlacements.add(ReferencePlacement(index, node, link, to))
+                    }
                 }
 
                 is EditOperation.CopyNode -> {
@@ -401,7 +409,7 @@ class EditBatchExecutor(
             }
         }
 
-        val violations = evaluateConstraints(placements, rootPlacements, uncheckable)
+        val violations = evaluateConstraints(placements, rootPlacements, referencePlacements, uncheckable)
 
         // Strict enforcement refuses to apply anything it could not fully check.
         if (enforcement == ConstraintEnforcement.STRICT && !uncheckable.isEmpty) {
@@ -473,12 +481,13 @@ class EditBatchExecutor(
     /**
      * Evaluates the Constraints a batch would violate, using only the cheap constraints/structural APIs (never the
      * typesystem or full Model Check). Covers the structural allowed-child concept, language-defined
-     * can-be-child/parent/ancestor rules, and containment cardinality. Reference-scope Constraints are deliberately not
-     * evaluated (they run arbitrary language code); property-value Constraints are a later addition.
+     * can-be-child/parent/ancestor rules, containment cardinality, and language-defined reference **scope** rules.
+     * Property-value Constraints are a later addition.
      */
     private fun evaluateConstraints(
         placements: List<Placement>,
         rootPlacements: List<RootPlacement>,
+        referencePlacements: List<ReferencePlacement>,
         uncheckable: UncheckableLanguages,
     ): List<EditConstraintViolation> {
         val violations = mutableListOf<EditConstraintViolation>()
@@ -608,7 +617,56 @@ class EditBatchExecutor(
                 }
             }
         }
+
+        for (referencePlacement in referencePlacements) {
+            val sourceConcept = referencePlacement.node.concept
+            // A node whose concept did not load cannot run its reference-scope rule; record its language and skip.
+            if (!sourceConcept.isValid) {
+                uncheckable.add(sourceConcept)
+                continue
+            }
+            val link = referencePlacement.link
+            // Only language-defined reference scopes are validated, mirroring the can-be-* rules: both run arbitrary
+            // language code, and both fire only where a language actually defines the rule. When no scope provider is
+            // defined MPS falls back to a global default scope; validating against that is a reference-resolution
+            // (Model Check) concern rather than a language Constraint, so it is left unchecked here.
+            if (!referenceScopeIsDefined(sourceConcept, link)) {
+                continue
+            }
+            val scope = ModelConstraints.getReferenceDescriptor(referencePlacement.node, link).scope
+            // The scope function threw: MPS returns an ErrorScope rather than a membership answer, so treat the
+            // reference as unable-to-check (a language defect) rather than fabricating a scope violation.
+            if (scope is ErrorScope) {
+                uncheckable.add(sourceConcept)
+                continue
+            }
+            if (!scope.contains(referencePlacement.target)) {
+                violations.add(
+                    EditConstraintViolation(
+                        referencePlacement.opIndex,
+                        "referenceScope",
+                        "target ${persistence.asString(referencePlacement.target.reference)} is not in the allowed " +
+                            "scope of reference ${link.name} on ${sourceConcept.qualifiedName}",
+                    ),
+                )
+            }
+        }
         return violations
+    }
+
+    /**
+     * Whether a language defines a scope for [link] on [sourceConcept], resolved exactly as MPS does: a reference-level
+     * scope provider takes precedence, otherwise the default scope provider registered on the link's target concept. A
+     * null result means only the global default search scope would apply, which this executor does not enforce.
+     */
+    private fun referenceScopeIsDefined(sourceConcept: SConcept, link: SReferenceLink): Boolean {
+        val registry = ConceptRegistry.getInstance()
+        val referenceProvider: ReferenceScopeProvider? =
+            registry.getConstraintsDescriptor(sourceConcept).getReference(link)?.scopeProvider
+        if (referenceProvider != null) {
+            return true
+        }
+        return registry.getConstraintsDescriptor(link.targetConcept).defaultScopeProvider != null
     }
 
     private fun reload(models: Iterable<EditableSModel>) {
@@ -630,6 +688,17 @@ private class RootPlacement(
     val opIndex: Int,
     val model: SModel,
     val node: SNode,
+)
+
+/**
+ * A concrete reference target set on [node] via [link] by an Edit Operation, checked against the language-defined
+ * reference-scope Constraint. Cleared references (null target) are not recorded.
+ */
+private class ReferencePlacement(
+    val opIndex: Int,
+    val node: SNode,
+    val link: SReferenceLink,
+    val target: SNode,
 )
 
 /**
