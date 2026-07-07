@@ -90,7 +90,12 @@ class FindInstancesSemanticsTest {
         }
 
         assertEquals(MpsErrorCode.CONCEPT_NOT_FOUND, exception.code)
-        assertEquals("concept not found: com.specificlanguages.json.structure.DoesNotExist", exception.message)
+        assertEquals(
+            "no valid MPS Concept resolved for \"com.specificlanguages.json.structure.DoesNotExist\" " +
+                "(probable owning language: com.specificlanguages.json) — either the name is wrong, or its owning " +
+                "language is not compiled or not loaded into the project; build the language and retry",
+            exception.message,
+        )
     }
 
     @Test

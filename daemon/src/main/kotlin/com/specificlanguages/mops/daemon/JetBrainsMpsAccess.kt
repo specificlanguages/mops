@@ -93,7 +93,7 @@ class JetBrainsMpsAccess(
             if (!mpsConcept.isValid) {
                 throw MpsRequestException(
                     code = MpsErrorCode.CONCEPT_NOT_FOUND,
-                    message = "concept not found: $concept",
+                    message = ConceptValidityGuard.messageForUnresolvedConcept(concept),
                 )
             }
 

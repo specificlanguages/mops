@@ -39,6 +39,18 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `warming up the request codec loads the stop request and round-trips it`() {
+        // Succeeds only if StopRequest and its serializer resolve; the daemon calls this at startup so a later stop is
+        // decodable even once the platform is tearing down.
+        ProtocolJson.warmUpRequestCodec()
+
+        assertEquals(
+            StopRequest(token = "secret"),
+            ProtocolJson.decodeRequest(ProtocolJson.encodeRequest(StopRequest(token = "secret"))),
+        )
+    }
+
+    @Test
     fun `get-node target JSON is nested under the daemon request`() {
         val inModelRequest = ProtocolJson.encodeRequest(
             ModelGetNodeRequest(

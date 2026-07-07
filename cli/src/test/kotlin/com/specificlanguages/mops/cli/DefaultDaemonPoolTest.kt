@@ -4,21 +4,27 @@ import com.specificlanguages.mops.daemoncomms.DefaultDaemonClient
 import com.specificlanguages.mops.daemoncomms.DefaultDaemonPool
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.daemoncomms.DaemonLauncher
+import com.specificlanguages.mops.daemoncomms.DaemonPool
 import com.specificlanguages.mops.protocol.DaemonContext
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.PongResponse
+import com.specificlanguages.mops.protocol.StoppedResponse
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.junit.jupiter.api.Assumptions.assumeFalse
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
+import java.time.Duration
 import kotlin.io.path.pathString
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 
 class DefaultDaemonPoolTest {
@@ -167,6 +173,60 @@ class DefaultDaemonPoolTest {
             )
         }
 
+        assertNull(store.read(project))
+    }
+
+    @Test
+    fun `stop force-kills a daemon that acknowledges the stop but does not exit`() {
+        assumeFalse(System.getProperty("os.name").startsWith("Windows"), "uses the POSIX sleep command")
+
+        val project = tempDir.mpsProject()
+        val mpsHome = tempDir.mpsHome()
+        val store = DaemonRecordStore.forDaemonHome(tempDir.resolve("daemon-home"))
+
+        // A real, long-lived process standing in for a daemon JVM that answers the stop but never terminates.
+        val stubborn = ProcessBuilder("sleep", "60").start()
+        try {
+            val fakeDaemon = startPrerecordedDaemon(StoppedResponse())
+            val record = daemonRecord(
+                port = fakeDaemon.port,
+                pid = stubborn.pid(),
+                project = project,
+                mpsHome = mpsHome,
+                workspace = Path.of("/project"),
+            )
+            store.write(record)
+
+            val outcome = DefaultDaemonPool(
+                store,
+                mock(),
+                stopGrace = Duration.ofMillis(200),
+                killGrace = Duration.ofSeconds(5),
+            ).stop(store.read(project)!!)
+
+            fakeDaemon.join(5_000)
+            assertEquals(DaemonPool.StopOutcome.STOPPED, outcome)
+            assertFalse(stubborn.isAlive, "the stubborn daemon process should have been force-killed")
+            assertNull(store.read(project), "a stopped daemon's record must be removed")
+        } finally {
+            stubborn.destroyForcibly()
+        }
+    }
+
+    @Test
+    fun `stop reports a stale record and removes it when the daemon is unreachable`() {
+        val project = tempDir.mpsProject()
+        val mpsHome = tempDir.mpsHome()
+        val store = DaemonRecordStore.forDaemonHome(tempDir.resolve("daemon-home"))
+
+        // Port 9 (discard) refuses the stop, and pid 999999 is not a live process.
+        store.write(
+            daemonRecord(port = 9, pid = 999_999L, project = project, mpsHome = mpsHome, workspace = Path.of("/x")),
+        )
+
+        val outcome = DefaultDaemonPool(store, mock()).stop(store.read(project)!!)
+
+        assertEquals(DaemonPool.StopOutcome.ALREADY_GONE, outcome)
         assertNull(store.read(project))
     }
 

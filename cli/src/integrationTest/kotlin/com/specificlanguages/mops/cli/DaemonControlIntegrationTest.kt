@@ -15,6 +15,7 @@ import kotlin.io.path.pathString
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 
@@ -39,6 +40,9 @@ class DaemonControlIntegrationTest {
         )
         assertEquals(0, ping.exitCode, ping.output)
 
+        val daemonPid = store.read(project)?.record?.pid
+            ?: throw AssertionError("a running daemon should have published its record")
+
         val stop = runCommandLine(
             project,
             *javaAndMpsHomeArgs(),
@@ -49,6 +53,12 @@ class DaemonControlIntegrationTest {
         assertEquals(0, stop.exitCode, stop.output)
         assertContains(stop.stdout, "stopped")
         assertNull(store.read(project))
+        // The daemon must actually terminate, not just drop its record: a surviving process would keep holding the
+        // MPS workspace lock and block the next start.
+        assertFalse(
+            ProcessHandle.of(daemonPid).map { it.isAlive }.orElse(false),
+            "daemon process pid=$daemonPid should have exited after stop",
+        )
     }
 
     @Test

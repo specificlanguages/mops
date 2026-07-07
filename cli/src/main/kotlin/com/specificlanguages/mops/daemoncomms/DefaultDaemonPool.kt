@@ -5,6 +5,7 @@ import com.specificlanguages.mops.protocol.DaemonRecord
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.StoredDaemonRecord
 import java.nio.file.Path
+import java.time.Duration
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
@@ -18,12 +19,25 @@ interface DaemonPool {
 
     fun findRecords(spec: Spec): List<StoredDaemonRecord>
 
-    fun stop(record: StoredDaemonRecord): Boolean
+    fun stop(record: StoredDaemonRecord): StopOutcome
+
+    enum class StopOutcome {
+        /** A live daemon acknowledged the stop request and its process is now gone. */
+        STOPPED,
+
+        /** The recorded daemon was not running; its stale record was removed. */
+        ALREADY_GONE,
+
+        /** The daemon acknowledged the stop but its process could not be terminated, even by force. */
+        NOT_TERMINATED,
+    }
 }
 
 class DefaultDaemonPool(
     private val records: DaemonRecordStore,
-    private val launcher: DaemonLauncher
+    private val launcher: DaemonLauncher,
+    private val stopGrace: Duration = Duration.ofSeconds(5),
+    private val killGrace: Duration = Duration.ofSeconds(5),
 ) : DaemonPool {
     override fun ensureDaemon(context: DaemonContext): DaemonClient {
         val existing = records.read(context.realProjectPath)
@@ -67,30 +81,62 @@ class DefaultDaemonPool(
         is DaemonPool.Spec.ForProject -> listOfNotNull(records.read(spec.projectPath))
     }
 
-    override fun stop(record: StoredDaemonRecord): Boolean {
-        records.deleteRecord(record.recordPath)
-        try {
+    override fun stop(record: StoredDaemonRecord): DaemonPool.StopOutcome {
+        val acknowledged = try {
             DefaultDaemonClient.fromRecord(record.record).stop()
-            waitForExit(record.record)
-            return true
-        } catch (e: Exception) {
-            System.err.println("Exception stopping daemon for project: ${record.record.context.realProjectPath}")
-            e.printStackTrace()
-            return false
+            true
+        } catch (_: Exception) {
+            // An unreachable daemon has already exited or crashed; its record is stale.
+            false
         }
+
+        if (!acknowledged) {
+            records.deleteRecord(record.recordPath)
+            return DaemonPool.StopOutcome.ALREADY_GONE
+        }
+
+        // A live daemon acknowledged the stop. It must actually terminate, or it keeps holding the MPS workspace
+        // directory lock and blocks the next start. Force-killing only ever targets a pid we just confirmed answered
+        // as our daemon, so there is no risk of killing an unrelated process that reused the pid.
+        if (!awaitExitOrKill(record.record)) {
+            System.err.println(
+                "mops: daemon pid=${record.record.pid} did not exit even after a force-kill; leaving its record " +
+                    "in place",
+            )
+            return DaemonPool.StopOutcome.NOT_TERMINATED
+        }
+
+        records.deleteRecord(record.recordPath)
+        return DaemonPool.StopOutcome.STOPPED
     }
 
-    private fun waitForExit(record: DaemonRecord) {
-        val handle = ProcessHandle.of(record.pid).orElse(null) ?: return
-        try {
-            handle.onExit().get(5, TimeUnit.SECONDS)
-        } catch (_: TimeoutException) {
-            System.err.println("Timed out waiting for daemon pid=${record.pid} to exit after stop request")
-        } catch (e: Exception) {
-            System.err.println("Unexpected error waiting for daemon pid=${record.pid} to exit after stop request")
-            e.printStackTrace()
+    /**
+     * Waits for the acknowledged daemon process to exit and, if it outlives the grace period, force-kills it. Returns
+     * whether the process is gone once this method returns.
+     */
+    private fun awaitExitOrKill(record: DaemonRecord): Boolean {
+        val handle = ProcessHandle.of(record.pid).orElse(null)
+            ?: return true // No such process: it has already exited.
+
+        if (awaitExit(handle, stopGrace)) {
+            return true
         }
+
+        System.err.println("mops: daemon pid=${record.pid} did not exit after the stop request; force-killing it")
+        handle.destroyForcibly()
+        return awaitExit(handle, killGrace)
     }
+
+    private fun awaitExit(handle: ProcessHandle, timeout: Duration): Boolean =
+        try {
+            handle.onExit().get(timeout.toMillis(), TimeUnit.MILLISECONDS)
+            true
+        } catch (_: TimeoutException) {
+            false
+        } catch (e: Exception) {
+            System.err.println("Unexpected error waiting for daemon pid=${handle.pid()} to exit: ${e.message}")
+            !handle.isAlive
+        }
 
     companion object {
         fun forDaemonHome(path: Path): DefaultDaemonPool {

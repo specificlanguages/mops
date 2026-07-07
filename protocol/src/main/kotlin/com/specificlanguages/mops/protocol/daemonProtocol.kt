@@ -44,6 +44,18 @@ object ProtocolJson {
     // compile against the thin protocol jar but run against the relocated shaded jar, so any inlined body or shaded type
     // in a public signature would fail to link. All serialization stays inside this (relocated) module.
 
+    /**
+     * Forces the request codec and the lifecycle request classes to load while the classloader is still healthy.
+     *
+     * A [StopRequest] is deserialized lazily, so its class is normally first loaded only when a stop actually arrives.
+     * By then the MPS/IntelliJ platform may be tearing down and unable to resolve a not-yet-loaded class, which would
+     * make the stop undecodable and leave the daemon unable to shut itself down. Round-tripping a stop request here
+     * loads those classes up front so a later stop is always decodable.
+     */
+    fun warmUpRequestCodec() {
+        decodeRequest(encodeRequest(StopRequest(token = "")))
+    }
+
     fun encodeRequest(request: DaemonRequest): String = json.encodeToString(request)
 
     /**

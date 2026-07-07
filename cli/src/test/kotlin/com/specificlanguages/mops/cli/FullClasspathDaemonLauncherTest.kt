@@ -100,6 +100,38 @@ class FullClasspathDaemonLauncherTest {
         assertEquals(expectedClasspath, launchedClasspath(fakeJava.argsFile))
     }
 
+    @Test
+    fun `workspace lock diagnostic names a live foreign lock holder`() {
+        val configDir = tempDir.resolve("config").createDirectories()
+        configDir.resolve(".lock").writeText("4242\n")
+
+        val message = FullClasspathDaemonLauncher.workspaceLockHolderMessage(
+            configDir = configDir,
+            ownPid = 100,
+            isAlive = { it == 4242L },
+        )
+
+        assertContains(message!!, "pid 4242")
+        assertContains(message, configDir.pathString)
+        assertContains(message, "mops daemon stop")
+    }
+
+    @Test
+    fun `workspace lock diagnostic is silent for our own pid, a dead holder, or no lock`() {
+        val configDir = tempDir.resolve("config").createDirectories()
+
+        // No lock file yet.
+        assertEquals(null, FullClasspathDaemonLauncher.workspaceLockHolderMessage(configDir, 100) { true })
+
+        configDir.resolve(".lock").writeText("100")
+        // The lock is held by our own daemon pid.
+        assertEquals(null, FullClasspathDaemonLauncher.workspaceLockHolderMessage(configDir, 100) { true })
+
+        configDir.resolve(".lock").writeText("999999")
+        // The holder is no longer running.
+        assertEquals(null, FullClasspathDaemonLauncher.workspaceLockHolderMessage(configDir, 100) { false })
+    }
+
     private fun launchedClasspath(argsFile: Path): String {
         assertTrue(argsFile.exists(), "daemon classpath should let launcher invoke the selected Java executable")
         val args = argsFile.readLines()

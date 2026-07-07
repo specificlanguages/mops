@@ -42,6 +42,10 @@ class ProjectDaemon(
     fun serve(mpsAccess: MpsAccess) {
         logger.log("environment ready for project ${projectPath.pathString}")
 
+        // Load the lifecycle request classes now, while the classloader is healthy, so a later stop is always
+        // decodable even if the platform is mid-teardown by then.
+        ProtocolJson.warmUpRequestCodec()
+
         ServerSocket(/* port = */ 0, /* backlog = */ 10, /* bindAddr = */ InetAddress.getLoopbackAddress()).use { server ->
             logger.log("ready on ${server.inetAddress.hostAddress}:${server.localPort}")
 
@@ -71,8 +75,15 @@ class ProjectDaemon(
                         logger.log("idle for ${idleTimeout.toMinutes()} min with no requests, shutting down")
                         break
                     }
-                    socket.use {
-                        connection(socket, mpsAccess)
+                    try {
+                        socket.use {
+                            connection(socket, mpsAccess)
+                        }
+                    } catch (throwable: Throwable) {
+                        // One request must never take the daemon down. In particular a linkage error while lazily
+                        // loading a request class is a Throwable rather than a RuntimeException; letting it escape the
+                        // loop would strand the JVM holding the MPS workspace lock. Log and keep serving instead.
+                        logger.log("request handling failed, continuing to serve: $throwable")
                     }
                 }
             } finally {
@@ -95,10 +106,13 @@ class ProjectDaemon(
                     )
                 }
                 ProtocolJson.decodeRequest(requestLine)
-            } catch (exception: RuntimeException) {
+            } catch (throwable: Throwable) {
+                // Report any decode failure to the client rather than dropping the connection. This includes linkage
+                // errors (an Error, not a RuntimeException) that can surface when a request class is first loaded while
+                // the platform is shutting down.
                 return@run errorResponse(
                     "INVALID_REQUEST",
-                    invalidRequestMessage(exception)
+                    invalidRequestMessage(throwable)
                 )
             }
 
@@ -129,7 +143,7 @@ class ProjectDaemon(
     private fun errorResponse(code: String, message: String): DaemonErrorResponse =
         DaemonErrorResponse(errorCode = code, message = message, workspacePath = workspace.path.pathString)
 
-    private fun invalidRequestMessage(exception: RuntimeException): String =
-        exception.message ?: "request must be one newline-delimited JSON object"
+    private fun invalidRequestMessage(throwable: Throwable): String =
+        throwable.message ?: "request must be one newline-delimited JSON object"
 
 }

@@ -164,7 +164,10 @@ class EditBatchExecutor(
         fun resolveConceptOrFail(index: Int, fqn: String): SConcept {
             val concept = ConceptRegistry.getInstance().getConceptByName(fqn)
             if (!concept.isValid) {
-                fail(MpsErrorCode.CONCEPT_NOT_FOUND, "operation $index concept not found: $fqn")
+                fail(
+                    MpsErrorCode.CONCEPT_NOT_FOUND,
+                    "operation $index: ${ConceptValidityGuard.messageForUnresolvedConcept(fqn)}",
+                )
             }
             return concept as? SConcept
                 ?: fail(MpsErrorCode.MODEL_EDIT_FAILED, "operation $index concept is not instantiable: $fqn")

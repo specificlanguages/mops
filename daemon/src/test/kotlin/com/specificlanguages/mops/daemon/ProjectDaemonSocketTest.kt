@@ -105,6 +105,18 @@ class ProjectDaemonSocketTest {
     }
 
     @Test
+    fun `the daemon keeps serving after a request it cannot handle`() {
+        val daemon = start()
+
+        val failed = daemon.exchangeRawParsed("not json")
+        assertEquals(error("INVALID_REQUEST", "request must be one newline-delimited JSON object"), failed)
+
+        // A single unhandled request must not take the loop down: the daemon still answers the next request.
+        val pong = daemon.exchange(PingRequest(TOKEN))
+        assertIs<PongResponse>(pong)
+    }
+
+    @Test
     fun `a request without a type is reported with the discriminator message`() {
         val daemon = start()
 

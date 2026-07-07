@@ -8,7 +8,9 @@ import java.nio.file.Path
 import java.time.Duration
 import java.util.*
 import kotlin.io.path.extension
+import kotlin.io.path.isRegularFile
 import kotlin.io.path.pathString
+import kotlin.io.path.readText
 
 /**
  * Production daemon launcher used by CLI commands. Computes the full classpath for the daemon JVM and starts it.
@@ -71,7 +73,7 @@ class FullClasspathDaemonLauncher(
 
         var startupSucceeded = false
         try {
-            val record = waitForDaemonRecord(process, context, token, logFile)
+            val record = waitForDaemonRecord(process, context, token, logFile, workspace)
             val client = DefaultDaemonClient(port = record.port, token = record.token, timeout = timeout)
 
             client.ping() // throws on error
@@ -90,6 +92,7 @@ class FullClasspathDaemonLauncher(
         context: DaemonContext,
         token: String,
         logPath: Path,
+        workspace: DaemonWorkspace,
     ): DaemonRecord {
         val timeoutMillis = timeout.toMillis()
         val startTime = System.currentTimeMillis()
@@ -100,15 +103,35 @@ class FullClasspathDaemonLauncher(
             }
 
             if (!process.isAlive) {
-                throw daemonStartupException("daemon exited before writing its project record", logPath)
+                throw daemonStartupException(
+                    "daemon exited before writing its project record",
+                    logPath,
+                    workspaceLockDiagnostic(workspace, ownPid = process.pid()),
+                )
             }
             Thread.sleep(25)
         }
         throw daemonStartupException("timed out waiting for daemon project record", logPath)
     }
 
-    private fun daemonStartupException(message: String, logPath: Path): IllegalStateException =
-        IllegalStateException("$message. Daemon log: ${logPath.pathString}")
+    /**
+     * When a foreign, still-running process holds the MPS workspace lock, that is the usual reason a fresh daemon dies
+     * during startup: the platform cannot lock the config directory a lingering daemon still owns. Naming that process
+     * turns an opaque "exited before writing its record" into an actionable message.
+     */
+    private fun workspaceLockDiagnostic(workspace: DaemonWorkspace, ownPid: Long): String? =
+        workspaceLockHolderMessage(workspace.ideaConfigDir(), ownPid) { pid ->
+            ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false)
+        }
+
+    private fun daemonStartupException(
+        message: String,
+        logPath: Path,
+        diagnostic: String? = null,
+    ): IllegalStateException {
+        val detail = if (diagnostic != null) "$message ($diagnostic)" else message
+        return IllegalStateException("$detail. Daemon log: ${logPath.pathString}")
+    }
 
     private fun javaExecutableFromJavaHome(javaHome: Path): Path =
         javaHome.resolve(
@@ -157,6 +180,37 @@ class FullClasspathDaemonLauncher(
 
     companion object {
         private const val DAEMON_CLASSPATH_FILE = "mops-daemon.classpath"
+
+        /**
+         * Builds a diagnostic when the IntelliJ workspace lock in [configDir] is held by a live process other than
+         * [ownPid], returning null when there is no lock, the lock is ours, or its holder is gone. [isAlive] decides
+         * whether a pid is a running process, injected so the logic is testable without a real orphan.
+         */
+        internal fun workspaceLockHolderMessage(
+            configDir: Path,
+            ownPid: Long,
+            isAlive: (Long) -> Boolean,
+        ): String? {
+            val lockFile = configDir.resolve(".lock")
+            if (!lockFile.isRegularFile()) {
+                return null
+            }
+            // IntelliJ's DirectoryLock writes the owning pid as the first whitespace-delimited token of the file.
+            val holderPid = runCatching { lockFile.readText() }.getOrNull()
+                ?.trim()
+                ?.substringBefore(' ')
+                ?.substringBefore('\n')
+                ?.toLongOrNull()
+                ?: return null
+
+            if (holderPid == ownPid || !isAlive(holderPid)) {
+                return null
+            }
+
+            return "another process (pid $holderPid) still holds the MPS workspace lock at $configDir, " +
+                "likely an earlier daemon that did not exit; stop it with `mops daemon stop` or `kill $holderPid`, " +
+                "then retry"
+        }
 
         private fun discoverApplicationHome(): Path? {
             val location = FullClasspathDaemonLauncher::class.java.protectionDomain.codeSource?.location

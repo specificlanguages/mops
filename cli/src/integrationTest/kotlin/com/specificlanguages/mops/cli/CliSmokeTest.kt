@@ -121,7 +121,8 @@ class CliSmokeTest {
             )
 
             assertTrue(result.exitCode != 0, result.output)
-            assertContains(result.output, "concept not found")
+            assertContains(result.output, "no valid MPS Concept resolved for")
+            assertContains(result.output, "com.specificlanguages.json.structure.DoesNotExist")
         } finally {
             stopDaemons(project, daemonHome)
         }

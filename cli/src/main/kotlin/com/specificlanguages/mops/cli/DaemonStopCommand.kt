@@ -33,10 +33,18 @@ class DaemonStopCommand : CliCommand() {
         } else {
             selected.forEach { storedRecord: StoredDaemonRecord ->
                 val record = storedRecord.record
-                if (pool.stop(storedRecord)) {
-                    println("stopped project=${record.context.realProjectPath} pid=${record.pid}")
-                } else {
-                    println("removed stale daemon record for project=${record.context.realProjectPath}")
+                when (pool.stop(storedRecord)) {
+                    DaemonPool.StopOutcome.STOPPED ->
+                        println("stopped project=${record.context.realProjectPath} pid=${record.pid}")
+
+                    DaemonPool.StopOutcome.ALREADY_GONE ->
+                        println("removed stale daemon record for project=${record.context.realProjectPath}")
+
+                    DaemonPool.StopOutcome.NOT_TERMINATED ->
+                        println(
+                            "could not stop project=${record.context.realProjectPath} pid=${record.pid}; " +
+                                "it is still running",
+                        )
                 }
             }
         }
