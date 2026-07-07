@@ -728,7 +728,7 @@ class DaemonProtocolJsonTest {
 
     @Test
     fun `decoding a request that omits a required non-null field is rejected`() {
-        // Gson's reflective adapter left modelTarget null here; kotlinx.serialization rejects the missing field.
+        // A required non-null field (modelTarget) omitted from the JSON is rejected rather than left null.
         val exception = assertFailsWith<SerializationException> {
             ProtocolJson.decodeRequest("""{"type":"model-resave","token":"secret"}""")
         }
