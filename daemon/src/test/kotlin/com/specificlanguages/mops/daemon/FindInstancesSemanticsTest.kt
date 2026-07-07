@@ -7,6 +7,8 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class FindInstancesSemanticsTest {
@@ -63,6 +65,23 @@ class FindInstancesSemanticsTest {
     }
 
     @Test
+    fun `non-root instances carry their immediate parent`() {
+        val payload = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances(LINK_DECLARATION, exact = false, limit = DEFAULT_LIMIT)
+        }
+
+        assertTrue(payload.nodes.isNotEmpty(), "fixture should hold link declarations")
+        assertTrue(payload.nodes.all { it.type == "node" }, "link declarations are children, not roots: ${payload.nodes}")
+        val instance = payload.nodes.first()
+        val parent = assertNotNull(instance.parent)
+        assertEquals("root", parent.type)
+        assertEquals("linkDeclaration", parent.role)
+        assertEquals(CONCEPT_DECLARATION, parent.concept)
+        // Find results carry only the immediate parent, never a nested chain.
+        assertNull(parent.parent)
+    }
+
+    @Test
     fun `reports an unresolved concept as not found`() {
         val exception = assertFailsWith<MpsRequestException> {
             SharedMpsEnvironment.sharedMpsAccess.read {
@@ -88,6 +107,7 @@ class FindInstancesSemanticsTest {
         const val CONCEPT_DECLARATION = "jetbrains.mps.lang.structure.structure.ConceptDeclaration"
         const val ABSTRACT_CONCEPT_DECLARATION = "jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration"
         const val INTERFACE_CONCEPT_DECLARATION = "jetbrains.mps.lang.structure.structure.InterfaceConceptDeclaration"
+        const val LINK_DECLARATION = "jetbrains.mps.lang.structure.structure.LinkDeclaration"
         const val DEFAULT_LIMIT = 100
     }
 }

@@ -14,7 +14,7 @@ import com.specificlanguages.mops.protocol.NodeTarget
 interface MpsRead {
     fun list(target: List<String>?, depth: Int): MpsListEntryJson
 
-    fun getNode(target: NodeTarget): MpsNodeJson
+    fun getNode(target: NodeTarget, ancestry: Boolean = false): MpsNodeJson
 
     fun findInstances(concept: String, exact: Boolean, limit: Int, all: Boolean = false): FindInstancesResponse
 

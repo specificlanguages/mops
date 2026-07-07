@@ -11,7 +11,8 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
     fun handleDomainRequest(request: DaemonRequest): DaemonResponse =
         try {
             when (request) {
-                is ModelGetNodeRequest -> ModelGetNodeResponse(node = mpsAccess.read { getNode(request.target) })
+                is ModelGetNodeRequest ->
+                    ModelGetNodeResponse(node = mpsAccess.read { getNode(request.target, request.ancestry) })
 
                 is FindUsagesRequest -> mpsAccess.read { findUsages(request.target, request.limit, request.all) }
 

@@ -67,8 +67,8 @@ class JetBrainsMpsAccess(
                 }
             }
 
-        override fun getNode(target: NodeTarget): MpsNodeJson =
-            jsonNodeExporter.export(resolveNode(target))
+        override fun getNode(target: NodeTarget, ancestry: Boolean): MpsNodeJson =
+            jsonNodeExporter.export(resolveNode(target), ancestry)
 
         override fun findUsages(target: NodeTarget, limit: Int, all: Boolean): FindUsagesResponse {
             val node = resolveNode(target)
@@ -159,6 +159,7 @@ class JetBrainsMpsAccess(
                 concept = node.concept.qualifiedName,
                 conceptValid = node.concept.isValid,
                 reference = persistence.asString(node.reference),
+                parent = nodeParent(node, fullChain = false, persistence),
             )
 
         private fun resolveNode(target: NodeTarget): SNode =

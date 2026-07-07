@@ -63,9 +63,9 @@ class DefaultDaemonClient(
             ModelResaveResponse::class.java
         )
 
-    override fun getNode(target: NodeTarget): ModelGetNodeResponse =
+    override fun getNode(target: NodeTarget, ancestry: Boolean): ModelGetNodeResponse =
         exchange(
-            ModelGetNodeRequest(token = token, target = target),
+            ModelGetNodeRequest(token = token, target = target, ancestry = ancestry),
             ModelGetNodeResponse::class.java
         )
 

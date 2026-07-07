@@ -38,6 +38,9 @@ data class ModelResaveRequest(
 data class ModelGetNodeRequest(
     override val token: String,
     val target: NodeTarget,
+    // When set, the exported node carries its full containment chain up to the Root Node; otherwise only the immediate
+    // parent.
+    val ancestry: Boolean = false,
 ) : DaemonRequest
 
 /**

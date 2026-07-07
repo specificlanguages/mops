@@ -63,11 +63,13 @@ class FindInstancesCommand(private val daemonClient: DaemonClient? = null) : Cli
 
     private fun renderText(node: MpsNodeSummaryJson) {
         println(
-            listOf(
-                node.type,
-                node.name ?: "<unnamed>",
-                node.concept,
-                node.reference,
+            (
+                listOf(
+                    node.type,
+                    node.name ?: "<unnamed>",
+                    node.concept,
+                    node.reference,
+                ) + parentColumns(node.parent)
             ).joinToString("\t"),
         )
     }

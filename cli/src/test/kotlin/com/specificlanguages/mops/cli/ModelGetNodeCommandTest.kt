@@ -96,4 +96,30 @@ class ModelGetNodeCommandTest {
         verify(client).getNode(target)
         assertContains(stdout, """"id":"2110045694544566904"""")
     }
+
+    @Test
+    fun `model get-node passes the ancestry flag to the daemon`() {
+        val client = mock<DaemonClient>()
+        val nodeReference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
+        val target = NodeTarget.NodeReference(nodeReference)
+        whenever(client.getNode(target, true)).thenReturn(
+            ModelGetNodeResponse(
+                node = MpsNodeJson(
+                    model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
+                    concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                    id = "2110045694544566904",
+                ),
+            ),
+        )
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(ModelGetNodeCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("--ancestry", nodeReference)
+        }
+
+        assertEquals(0, exitCode)
+        verify(client).getNode(target, true)
+    }
 }

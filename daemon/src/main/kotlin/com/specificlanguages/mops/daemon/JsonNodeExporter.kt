@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.protocol.MpsNodeJson
+import com.specificlanguages.mops.protocol.MpsNodeParentJson
 import com.specificlanguages.mops.protocol.MpsNodePropertyJson
 import com.specificlanguages.mops.protocol.MpsNodeReferenceJson
 import com.specificlanguages.mops.protocol.MpsNodeReferenceTargetJson
@@ -12,9 +13,20 @@ import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 class JsonNodeExporter(
     private val persistence: PersistenceFacade = PersistenceFacade.getInstance(),
 ) {
-    fun export(node: SNode): MpsNodeJson = export(node, includeModel = true, includeRole = false)
+    fun export(node: SNode, ancestry: Boolean = false): MpsNodeJson =
+        export(
+            node,
+            includeModel = true,
+            includeRole = false,
+            parent = nodeParent(node, fullChain = ancestry, persistence),
+        )
 
-    private fun export(node: SNode, includeModel: Boolean, includeRole: Boolean): MpsNodeJson {
+    private fun export(
+        node: SNode,
+        includeModel: Boolean,
+        includeRole: Boolean,
+        parent: MpsNodeParentJson? = null,
+    ): MpsNodeJson {
         val model = node.model
 
         val properties = node.properties
@@ -66,6 +78,7 @@ class JsonNodeExporter(
             concept = node.concept.qualifiedName,
             conceptValid = node.concept.isValid,
             id = persistence.asString(node.nodeId),
+            parent = parent,
             properties = properties,
             references = references,
             children = children,

@@ -4,6 +4,7 @@ import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.FindUsagesResponse
 import com.specificlanguages.mops.protocol.ProtocolJson
+import com.specificlanguages.mops.protocol.MpsNodeParentJson
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import com.specificlanguages.mops.protocol.MpsNodeUsageJson
 import com.specificlanguages.mops.protocol.NodeTarget
@@ -37,6 +38,46 @@ class FindUsagesCommandTest {
         assertEquals(
             "usage\tconcept\tJsonObject\tjetbrains.mps.lang.structure.structure.ConceptDeclaration\t" +
                 "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
+                System.lineSeparator(),
+            stdout,
+        )
+    }
+
+    @Test
+    fun `find usages appends parent columns when the owner has a parent`() {
+        val client = mock<DaemonClient>()
+        val nodeReference =
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
+        val owner = MpsNodeSummaryJson(
+            type = "node",
+            name = "JsonObject",
+            concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+            reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905",
+            parent = MpsNodeParentJson(
+                type = "root",
+                role = "members",
+                name = "JsonFile",
+                concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566800",
+            ),
+        )
+        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), 100)).thenReturn(
+            FindUsagesResponse(limit = 100, truncated = false, usages = listOf(MpsNodeUsageJson(role = "concept", owner = owner))),
+        )
+        var exitCode = Int.MIN_VALUE
+
+        val stdout = tapSystemOut {
+            exitCode = CommandLine(FindUsagesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(nodeReference)
+        }
+
+        assertEquals(0, exitCode)
+        assertEquals(
+            "usage\tconcept\tJsonObject\tjetbrains.mps.lang.structure.structure.ConceptDeclaration\t" +
+                "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905\t" +
+                "parent\tJsonFile\tjetbrains.mps.lang.structure.structure.ConceptDeclaration\t" +
+                "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566800" +
                 System.lineSeparator(),
             stdout,
         )

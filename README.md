@@ -40,6 +40,18 @@ mops --mps-home <path> model edit [--file PATH]
 Applies a JSON batch of edit operations through the daemon. Run `mops explain edit` for the operation reference.
 
 ```sh
+mops --mps-home <path> model get-node [--ancestry] <node-reference>
+mops --mps-home <path> model get-node [--ancestry] <model-target> <node-id>
+```
+
+Exports one resolved node as a JSON tree through the daemon, addressed by a serialized node reference or by a model
+target plus node id. An unresolved target fails with `NODE_NOT_FOUND`. The exported object carries the node's concept,
+id, properties, references, and child subtree, plus a `parent` object describing its immediate containing node: the
+containment `role` by which the node sits in it, a `type` of `root` or `node`, and the parent's name, concept, and
+reference. A Root Node has no `parent`. `--ancestry` nests `parent` recursively up to the Root Node instead of carrying
+only the immediate parent.
+
+```sh
 mops --mps-home <path> find instances [--exact] [--limit N] [--json] <concept>
 ```
 
@@ -47,7 +59,9 @@ Searches **Editable Project Sources** for nodes that are instances of a fully qu
 subconcepts and MPS interface matches by default. `--exact` restricts results to nodes whose direct concept is the
 queried one. An unresolved concept fails with `CONCEPT_NOT_FOUND`; an existing concept with no matches succeeds with no
 rows. Text output is tab-separated rows of `root` or `node`, the node name (or `<unnamed>`), the node's actual concept,
-and its serialized node reference. `--json` prints an object with `limit`, `truncated`, and a `nodes` array.
+and its serialized node reference; a non-root node appends its immediate parent as trailing `parent`, parent name (or
+`<unnamed>`), parent concept, and parent reference columns. `--json` prints an object with `limit`, `truncated`, and a
+`nodes` array whose non-root entries carry a nested `parent` summary.
 
 ```sh
 mops --mps-home <path> find usages [--limit N] [--json] <node-reference>
@@ -57,8 +71,10 @@ mops --mps-home <path> find usages [--limit N] [--json] <model-target> <node-id>
 Searches **Editable Project Sources** for references to one resolved target node, addressed the same way as
 `model get-node`. An unresolved target fails with `NODE_NOT_FOUND`. Text output is tab-separated rows of `usage`, the
 reference role, and the owning node's name (or `<unnamed>`), concept, and reference; the owner is typed `root` or `node`
-by its position in its model. `--json` prints an object with `limit`, `truncated`, and a `usages` array whose entries
-carry the reference `role` and a nested `owner` node summary. Both `find` modes default to `--limit 100`, treat
+by its position in its model. A non-root owner appends its immediate parent as trailing `parent`, parent name (or
+`<unnamed>`), parent concept, and parent reference columns. `--json` prints an object with `limit`, `truncated`, and a
+`usages` array whose entries carry the reference `role` and a nested `owner` node summary, itself carrying a nested
+`parent` summary for a non-root owner. Both `find` modes default to `--limit 100`, treat
 `--limit 0` as unlimited, reject negative limits, and append a `truncated` row (in text) or set `truncated` (in JSON)
 only when more matches exist than were returned.
 

@@ -2,6 +2,7 @@
 
 ## 0.3.0 (Unreleased)
 
+- Made `mops model get-node` report a node's containment context: the exported node carries a `parent` object for its immediate containing node (containment role, `root`/`node` type, name, concept, and reference), and `--ancestry` nests that `parent` recursively up to the root node. `find usages` and `find instances` now carry each result's immediate parent too, in both JSON (a nested `parent` summary) and text (trailing `parent` columns) for non-root results.
 - Added `mops find by-name <pattern>`, which finds root nodes by name using MPS's Go-to-Node pattern matching (camel-hump and `*` wildcards, case-insensitive, matches anywhere in the name), ranked best match first. Searches editable project sources by default, or the whole repository with `--all`. See `mops explain name-pattern`.
 - Added `mops model edit --constraints=advisory|best-effort|strict` (default `best-effort`). `best-effort` blocks on constraint violations and warns (once per language) about constraints it could not check because a language was not loaded; `strict` fails on such a case; `advisory` evaluates, reports, and applies anyway.
 - Made reads report a node whose MPS concept could not be resolved (usually an uncompiled language) with `conceptValid: false` instead of failing, and marked an unresolvable `get-node` reference target with `resolved: false`.

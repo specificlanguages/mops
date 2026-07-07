@@ -2,6 +2,9 @@ package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.protocol.NodeTarget
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class FindUsagesSemanticsTest {
@@ -31,6 +34,21 @@ class FindUsagesSemanticsTest {
 
         assertTrue(payload.usages.isNotEmpty())
         assertTrue(payload.usages.any { it.role == "intfc" }, "expected an implements usage, got: ${payload.usages}")
+    }
+
+    @Test
+    fun `usage owners carry their immediate parent`() {
+        val payload = SharedMpsEnvironment.sharedMpsAccess.read {
+            findUsages(NodeTarget.NodeReference(IJSON_VALUE_REFERENCE), limit = DEFAULT_LIMIT)
+        }
+
+        val implementsUsage = payload.usages.first { it.role == "intfc" }
+        val parent = assertNotNull(implementsUsage.owner.parent)
+        assertEquals("root", parent.type)
+        assertEquals("implements", parent.role)
+        assertEquals("jetbrains.mps.lang.structure.structure.ConceptDeclaration", parent.concept)
+        // Find results carry only the immediate parent, never a nested chain.
+        assertNull(parent.parent)
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.ProtocolJson
+import com.specificlanguages.mops.protocol.MpsNodeParentJson
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import org.junit.jupiter.api.parallel.ResourceLock
 import org.mockito.kotlin.mock
@@ -146,6 +147,44 @@ class FindInstancesCommandTest {
                 "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
                 System.lineSeparator() +
                 "truncated\t1\tmore results not shown" + System.lineSeparator(),
+            stdout,
+        )
+    }
+
+    @Test
+    fun `find instances appends parent columns when the node has a parent`() {
+        val client = mock<DaemonClient>()
+        val node = MpsNodeSummaryJson(
+            type = "node",
+            name = "content",
+            concept = "jetbrains.mps.lang.structure.structure.LinkDeclaration",
+            reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905",
+            parent = MpsNodeParentJson(
+                type = "root",
+                role = "linkDeclaration",
+                name = "JsonObject",
+                concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566800",
+            ),
+        )
+        whenever(client.findInstances(CONCEPT, false, 100)).thenReturn(
+            FindInstancesResponse(limit = 100, truncated = false, nodes = listOf(node)),
+        )
+        var exitCode = Int.MIN_VALUE
+
+        val stdout = tapSystemOut {
+            exitCode = CommandLine(FindInstancesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(CONCEPT)
+        }
+
+        assertEquals(0, exitCode)
+        assertEquals(
+            "node\tcontent\tjetbrains.mps.lang.structure.structure.LinkDeclaration\t" +
+                "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905\t" +
+                "parent\tJsonObject\tjetbrains.mps.lang.structure.structure.ConceptDeclaration\t" +
+                "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566800" +
+                System.lineSeparator(),
             stdout,
         )
     }

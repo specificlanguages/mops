@@ -198,6 +198,73 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `node parent chain round-trips on exported nodes and summaries`() {
+        val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
+        val node = MpsNodeJson(
+            model = model,
+            concept = "com.acme.Return",
+            id = "300",
+            parent = MpsNodeParentJson(
+                type = "node",
+                role = "statements",
+                name = "body",
+                concept = "com.acme.Block",
+                reference = "$model/200",
+                parent = MpsNodeParentJson(
+                    type = "root",
+                    role = "members",
+                    name = "Foo",
+                    concept = "com.acme.Class",
+                    reference = "$model/100",
+                ),
+            ),
+        )
+        val encodedNode = ProtocolJson.encodeResponse(ModelGetNodeResponse(node))
+        assertContains(encodedNode, """"parent":{""")
+        assertContains(encodedNode, """"role":"statements"""")
+        assertEquals(ModelGetNodeResponse(node), ProtocolJson.decodeResponse(encodedNode))
+
+        val summary = MpsNodeSummaryJson(
+            type = "node",
+            name = "child",
+            concept = "com.acme.Return",
+            reference = "$model/300",
+            parent = MpsNodeParentJson(
+                type = "node",
+                role = "statements",
+                name = "body",
+                concept = "com.acme.Block",
+                reference = "$model/200",
+            ),
+        )
+        val response = FindInstancesResponse(limit = 100, truncated = false, nodes = listOf(summary))
+        val encodedSummary = ProtocolJson.encodeResponse(response)
+        assertContains(encodedSummary, """"parent":{""")
+        assertEquals(response, ProtocolJson.decodeResponse(encodedSummary))
+    }
+
+    @Test
+    fun `model get-node request carries the ancestry flag and defaults it to false`() {
+        val target = NodeTarget.NodeReference(
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/300",
+        )
+        val withAncestry = ProtocolJson.encodeRequest(
+            ModelGetNodeRequest(token = "secret", target = target, ancestry = true),
+        )
+        assertContains(withAncestry, """"ancestry":true""")
+        assertEquals(
+            ModelGetNodeRequest(token = "secret", target = target, ancestry = true),
+            ProtocolJson.decodeRequest(withAncestry),
+        )
+        assertEquals(
+            ModelGetNodeRequest(token = "secret", target = target, ancestry = false),
+            ProtocolJson.decodeRequest(
+                """{"type":"model-get-node","token":"secret","target":{"type":"nodeReference","nodeReference":"r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/300"}}""",
+            ),
+        )
+    }
+
+    @Test
     fun `model edit request JSON round-trips structural operations and inline subtrees`() {
         val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
         val request = ModelEditRequest(

@@ -19,7 +19,7 @@ import java.nio.file.Path
 interface DaemonClient {
     fun ping(): PongResponse
     fun resave(modelTarget: Path): ModelResaveResponse
-    fun getNode(target: NodeTarget): ModelGetNodeResponse
+    fun getNode(target: NodeTarget, ancestry: Boolean = false): ModelGetNodeResponse
     fun findUsages(target: NodeTarget, limit: Int, all: Boolean = false): FindUsagesResponse
     fun findInstances(concept: String, exact: Boolean, limit: Int, all: Boolean = false): FindInstancesResponse
     fun findByName(pattern: String, limit: Int, all: Boolean = false): FindByNameResponse

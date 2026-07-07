@@ -66,12 +66,14 @@ class FindUsagesCommand(private val daemonClient: DaemonClient? = null) : CliCom
     private fun renderText(usage: MpsNodeUsageJson) {
         val owner = usage.owner
         println(
-            listOf(
-                "usage",
-                usage.role,
-                owner.name ?: "<unnamed>",
-                owner.concept,
-                owner.reference,
+            (
+                listOf(
+                    "usage",
+                    usage.role,
+                    owner.name ?: "<unnamed>",
+                    owner.concept,
+                    owner.reference,
+                ) + parentColumns(owner.parent)
             ).joinToString("\t"),
         )
     }

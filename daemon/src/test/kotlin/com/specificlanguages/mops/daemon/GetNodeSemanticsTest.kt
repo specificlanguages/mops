@@ -130,6 +130,55 @@ class GetNodeSemanticsTest {
     }
 
     @Test
+    fun `includes the immediate parent of an addressed node`() {
+        val node = getNodeInSharedProject(NodeTarget.InModel(structureModelPath(), "1P8oQ4NaXDT"))
+
+        val parent = assertNotNull(node.parent)
+        assertEquals("root", parent.type)
+        assertEquals("implements", parent.role)
+        assertEquals("JsonFile", parent.name)
+        assertEquals("jetbrains.mps.lang.structure.structure.ConceptDeclaration", parent.concept)
+        assertEquals(JSON_FILE_NODE_REFERENCE, parent.reference)
+        // Without an ancestry request only the immediate parent is carried, so the chain stops here.
+        assertNull(parent.parent)
+    }
+
+    @Test
+    fun `nests the full ancestry chain up to the root when requested`() {
+        val node = SharedMpsEnvironment.sharedMpsAccess.read {
+            getNode(NodeTarget.InModel(EDITOR_MODEL_REFERENCE, DEEP_STYLE_NODE_ID), ancestry = true)
+        }
+        assertEquals("jetbrains.mps.lang.editor.structure.PunctuationLeftStyleClassItem", node.concept)
+
+        val parent = assertNotNull(node.parent)
+        assertEquals("node", parent.type)
+        assertEquals("styleItem", parent.role)
+        assertEquals("jetbrains.mps.lang.editor.structure.CellModel_Constant", parent.concept)
+
+        val grandparent = assertNotNull(parent.parent)
+        assertEquals("node", grandparent.type)
+        assertEquals("childCellModel", grandparent.role)
+        assertEquals("jetbrains.mps.lang.editor.structure.CellModel_Collection", grandparent.concept)
+
+        val root = assertNotNull(grandparent.parent)
+        assertEquals("root", root.type)
+        assertEquals("cellModel", root.role)
+        assertEquals("jetbrains.mps.lang.editor.structure.ConceptEditorDeclaration", root.concept)
+        assertNull(root.parent)
+    }
+
+    @Test
+    fun `stops the parent chain at the immediate parent without an ancestry request`() {
+        val node = SharedMpsEnvironment.sharedMpsAccess.read {
+            getNode(NodeTarget.InModel(EDITOR_MODEL_REFERENCE, DEEP_STYLE_NODE_ID))
+        }
+
+        val parent = assertNotNull(node.parent)
+        assertEquals("jetbrains.mps.lang.editor.structure.CellModel_Constant", parent.concept)
+        assertNull(parent.parent)
+    }
+
+    @Test
     fun `fails instead of guessing when model target is ambiguous`() {
         SharedMpsEnvironment.withProjectCopy(
             prepare = { project ->
@@ -170,6 +219,10 @@ class GetNodeSemanticsTest {
         const val CORE_STRUCTURE_MODEL_REFERENCE = "r:00000000-0000-4000-0000-011c89590288(jetbrains.mps.lang.core.structure)"
         const val JSON_FILE_NODE_ID = "2110045694544566904"
         const val JSON_FILE_NODE_REFERENCE = "$STRUCTURE_MODEL_REFERENCE/$JSON_FILE_NODE_ID"
+        const val EDITOR_MODEL_REFERENCE = "r:4984d1ec-a1c9-4ad1-8af7-b206011783d5(com.specificlanguages.json.editor)"
+        // A style item three containment levels below its ConceptEditorDeclaration root: style item -> constant cell ->
+        // collection cell -> editor declaration.
+        const val DEEP_STYLE_NODE_ID = "1P8oQ4NaXEQ"
         const val STRUCTURE_MODEL_PATH = "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps"
     }
 }

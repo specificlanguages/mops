@@ -15,6 +15,9 @@ data class MpsNodeJson(
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val conceptValid: Boolean = true,
     val id: String? = null,
+    // The immediate containing node, or null when this is a Root Node. Nests up to the Root Node when the node was
+    // exported with a full ancestry chain; otherwise carries only the immediate parent.
+    val parent: MpsNodeParentJson? = null,
     val properties: List<MpsNodePropertyJson>? = null,
     val references: List<MpsNodeReferenceJson>? = null,
     val children: List<MpsNodeJson>? = null,
