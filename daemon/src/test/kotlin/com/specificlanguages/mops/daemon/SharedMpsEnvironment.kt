@@ -95,13 +95,17 @@ object SharedMpsEnvironment {
     }
 
     private fun boot(): Environment {
+        val mpsHome = requiredPathProperty("test.mpsHome")
         applyMpsSystemProperties()
 
         val handoff = SynchronousQueue<Any>()
         val environmentThread = Thread({
             try {
                 ProjectLoader
-                    .build { environmentKind = EnvironmentKind.IDEA }
+                    .build {
+                        environmentKind = EnvironmentKind.IDEA
+                        environmentConfig { addPluginsRecursivelyFrom(mpsHome.resolve("plugins")) }
+                    }
                     .execute { environment ->
                         handoff.put(environment)
                         shutdown.await()

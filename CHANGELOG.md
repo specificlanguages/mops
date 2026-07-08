@@ -2,6 +2,10 @@
 
 ## 0.3.0 (Unreleased)
 
+- Made the daemon load the MPS distribution's bundled plugins (from `<mps-home>/plugins`) at startup, so stock languages
+  that depend on plugin modules (editor tooltips, console, execution, debugger, ...) register their runtimes. Without
+  them a large share of the project's languages stayed unloaded and their concepts were invisible to name lookup, so
+  `find instances` reported `CONCEPT_NOT_FOUND` for concepts that were present and compiled.
 - Added `mops diagnose modules` and `mops diagnose module <ref>`, which report why the project's languages and
   Java-bearing modules did or did not load. Each unloaded module is classified — absent, no Java facet, classes disabled,
   not built, blocked by broken dependencies (reported recursively down to the root modules to fix), or a residual

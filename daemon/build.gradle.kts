@@ -32,7 +32,7 @@ dependencies {
     implementation(project(":protocol"))
     implementation(project(":launcher"))
     implementation("info.picocli:picocli:4.7.7")
-    implementation("de.itemis.mps.build-backends:project-loader:5.0.1.180.8e0fd7e")
+    implementation("de.itemis.mps.build-backends:project-loader:5.1.0.186.eda5913")
 
     jbr("com.jetbrains.jdk:jbr_jcef:21.0.8-b895.146")
 
@@ -113,6 +113,9 @@ val mpsAddOpens = listOf(
 
 tasks.test {
     javaLauncher = jbrToolchain.javaLauncher
+    // A full MPS environment with the distribution's bundled plugins needs more than Gradle's default 512m test heap.
+    // The production daemon runs on the JVM's (much larger) default heap, so this ceiling only bounds the test JVM.
+    maxHeapSize = "2g"
     // The MPS runtime jars come from the unpacked distribution, like the production daemon's classpath, so the
     // IntelliJ platform detects the MPS home from the jar locations and loads bundled plugins and languages from it.
     classpath += files(

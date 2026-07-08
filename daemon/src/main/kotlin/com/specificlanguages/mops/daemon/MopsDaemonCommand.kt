@@ -89,7 +89,13 @@ class DaemonRunner(
         logger.log("initializing MPS for project $projectPath")
 
         ProjectLoader
-            .build { environmentKind = EnvironmentKind.IDEA }
+            .build {
+                environmentKind = EnvironmentKind.IDEA
+                // Load the distribution's bundled plugins (mps-tooltips, mps-console, mps-execution, ...). Without them
+                // many stock languages leave their runtime unregistered, so their concepts vanish from name lookup and
+                // every language that depends on them fails to load. See docs/mps/language-runtime-loading.md.
+                environmentConfig { addPluginsRecursivelyFrom(mpsHome.resolve("plugins")) }
+            }
             .executeWithProject(projectPath.toFile()) { _, project ->
                 // A project can pass the filesystem checks yet open with no Project Modules; refuse to serve it so
                 // callers see the startup error instead of every navigation silently returning nothing.
