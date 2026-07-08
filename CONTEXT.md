@@ -107,7 +107,7 @@ _Avoid_: node reference when describing usage
 _Related_: Node Reference, Reference
 
 **Node ID**:
-An identifier for an **MPS Node** that is unique only within its **MPS Model**.
+An identifier for an **MPS Node** that is unique only within its **MPS Model**. A **Node ID** has two accepted spellings — the decimal form mops prints and the encoded form persisted in model files. Both name the same identifier and resolve wherever a **Node ID** appears.
 _Related_: Node Reference
 
 **Node Reference**:
@@ -118,12 +118,44 @@ _Related_: Node ID, path
 A globally usable reference to an **MPS Module**. mops does not assume a separate short module identifier.
 _Related_: module id
 
+**Concept Name**:
+A user-supplied name for an **MPS Concept**: its qualified name, the persisted spelling with a `.structure.` infix, or its bare short name. All spellings name the same concept; resolution counts matches across loaded languages rather than judging shape, and an ambiguous short name is reported with the qualified candidates.
+_Related_: MPS Concept, Navigation Target
+
+**Navigation Target**:
+A user-supplied path of segments that resolves to the **MPS Repository**, an **MPS Module**, an **MPS Model**, a **Root Node**, or an **MPS Node**. A segment may be a name or a serialized reference. Resolution counts actual matches rather than judging a segment's shape; an ambiguous segment is reported with each candidate's serialized reference, never guessed.
+_Avoid_: path, target when precision matters
+_Related_: Node Reference, Model Reference, Module Reference, Search Scope
+
+**Search Scope**:
+The portion of the **MPS Repository** that a search considers. The default **Search Scope** is **Editable Project Sources**. An explicit **Search Scope** is named by a **Navigation Target** and is searched exhaustively, including non-editable content within it.
+_Avoid_: search space, context
+_Related_: Editable Project Sources, Navigation Target
+
 ### Model Editing
 
 **Edit Operation**:
-A single primitive modification to an **MPS Node** in **Editable Project Sources**: setting a property, setting a **Reference**, or adding, deleting, moving, or copying a node.
+A single modification to an **MPS Node** in **Editable Project Sources**: a primitive change (setting a property, setting a **Reference**, adding, deleting, moving, or copying a node) or an **Intent Operation**.
 _Avoid_: mutation, change
-_Related_: Editable Project Sources, Node Subtree, Constraint
+_Related_: Editable Project Sources, Node Subtree, Constraint, Intent Operation
+
+**Intent Operation**:
+An **Edit Operation** that names a rearrangement — replacing a node, wrapping it, or unwrapping a survivor from it. Its guarantees: the result takes the replaced node's exact place, every **Move Leaf** and kept node is detached before anything is deleted, and a target **Root Node** yields a **Root Node** of the same model.
+_Avoid_: macro, compound edit
+_Related_: Edit Operation, Move Leaf, Inline Subtree
+
+**Inline Subtree**:
+The node-tree specification an **Edit Operation** accepts for building new structure, shaped like the tree `get-node` emits. A position in an **Inline Subtree** holds either a fresh-node spec, a **Move Leaf**, or a **Copy Leaf**.
+_Avoid_: nested children, template
+_Related_: Edit Operation, Move Leaf, Copy Leaf
+
+**Move Leaf**:
+A leaf in an **Inline Subtree** that adopts an existing **MPS Node** together with its **Node Subtree** into the new structure. The adopted node keeps its identity, so inbound **References** keep resolving. Every **Move Leaf** is detached from its old home before any node deletion in the same **Edit Operation**.
+_Related_: Inline Subtree, Copy Leaf, Node Subtree
+
+**Copy Leaf**:
+A leaf in an **Inline Subtree** that deep-copies an existing **MPS Node**'s **Node Subtree** into the new structure with fresh identities, rewiring intra-subtree **References** to the copy.
+_Related_: Inline Subtree, Move Leaf
 
 **Node Subtree**:
 An **MPS Node** together with all nodes reachable from it through **Containment Links**. Copying a node "with descendants" copies its **Node Subtree**.
@@ -198,6 +230,18 @@ Dev: Is a node reference the same thing as a usage?
 
 Domain expert: No. A **Node Reference** is a serialized identity for an **MPS Node**. A **Node Usage** is a **Reference** owned by a source node and pointing to the target node being searched for.
 
+Dev: If a search is scoped to a read-only library model, do we skip it because it is not editable?
+
+Domain expert: No. An explicit **Search Scope** is searched exhaustively. The **Editable Project Sources** restriction applies only to the default scope.
+
+Dev: If foo.bar.baz names both a module and a model, do we resolve to the module because it looks like a module name?
+
+Domain expert: No. **Navigation Target** resolution never decides by shape. It reports the ambiguity with each candidate's serialized reference so the user can retry unambiguously.
+
+Dev: An agent pasted a node id copied from a model file and we answered "node not found". Is that right?
+
+Domain expert: No. Both spellings of a **Node ID** name the same identifier and must resolve. And since a bare **Node ID** is unique only within its **MPS Model**, a lookup by bare id reports every matching node with its full **Node Reference** rather than guessing one.
+
 Dev: When we edit a model, do we run a full model check?
 
 Domain expert: No. An **Edit Operation** evaluates **Constraints**, which is cheap. A full **Model Check**, including the typesystem, is a separate operation because it may be costly.
@@ -205,6 +249,18 @@ Domain expert: No. An **Edit Operation** evaluates **Constraints**, which is che
 Dev: If an edit is forced through despite breaking a rule, do we stay quiet about it?
 
 Domain expert: No. mops reports **Constraint Violations** whether or not they block the **Edit Operation**.
+
+Dev: Is deleting a node a different act from detaching it?
+
+Domain expert: No. Deleting an **MPS Node** means detaching it so it is no longer reachable through its **MPS Model** — there is no separate destruction step. That is why a node adopted out of deleted structure by a **Move Leaf** simply survives, identity intact.
+
+Dev: When a replace deletes a node that something else references, do we hunt down the dangling references?
+
+Domain expert: No. Dangling references are a reference-resolution concern, which belongs to **Model Check**, not to **Constraint** evaluation — the same split we made for edits generally. A **Move Leaf** preserves node identity, so reusing a node instead of rebuilding it is how a caller keeps inbound references alive.
+
+Dev: When we wrap a node that carries an annotation, does the annotation end up on the wrapper?
+
+Domain expert: No. An annotation is a **Child** of the annotated node, so it travels with the wrapped node's **Node Subtree**. Moving it onto the wrapper is a separate, explicit edit.
 
 Dev: Does copying a node bring its references along?
 

@@ -12,6 +12,8 @@ Triage uses the default canonical labels. See `docs/agents/triage-labels.md`.
 
 This repo uses a single-context domain documentation layout. See `docs/agents/domain.md`.
 
+MPS API documentation is being written as needed under `docs/mps`.
+
 ### Coding conventions and guidelines
 
 - [Kotlin](docs/agents/kotlin-coding-guidelines.md)
