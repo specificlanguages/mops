@@ -4,6 +4,8 @@ import com.specificlanguages.mops.protocol.ConstraintEnforcement
 import com.specificlanguages.mops.protocol.FindByNameResponse
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindUsagesResponse
+import com.specificlanguages.mops.protocol.ModuleDiagnosticResponse
+import com.specificlanguages.mops.protocol.ModulesDiagnosticsResponse
 import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.ModelResaveResponse
@@ -25,4 +27,6 @@ interface DaemonClient {
     fun findByName(pattern: String, limit: Int, all: Boolean = false): FindByNameResponse
     fun modelEdit(batch: EditBatch, constraints: ConstraintEnforcement = ConstraintEnforcement.BEST_EFFORT): ModelEditResponse
     fun list(target: List<String>?, depth: Int): MpsListResponse
+    fun diagnoseModules(): ModulesDiagnosticsResponse
+    fun diagnoseModule(module: String): ModuleDiagnosticResponse
 }

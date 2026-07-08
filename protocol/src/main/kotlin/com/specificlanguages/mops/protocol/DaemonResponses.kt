@@ -109,6 +109,27 @@ data class ModelEditResponse(
 data class MpsListResponse(val root: MpsListEntryJson) : DaemonResponse
 
 /**
+ * Successful response carrying the load diagnosis for the project's diagnosable modules: the [summary] counts plus one
+ * [ModuleLoadDiagnosticJson] per module (all languages and every other project module with a Java facet), ordered by
+ * module name.
+ */
+@Serializable
+@SerialName("module-diagnostics")
+data class ModulesDiagnosticsResponse(
+    val summary: ModuleLoadSummary,
+    val modules: List<ModuleLoadDiagnosticJson>,
+) : DaemonResponse
+
+/**
+ * Successful response carrying the load diagnosis for one requested module.
+ */
+@Serializable
+@SerialName("module-diagnostic")
+data class ModuleDiagnosticResponse(
+    val module: ModuleLoadDiagnosticJson,
+) : DaemonResponse
+
+/**
  * Startup message emitted on daemon stdout when the loopback server is ready to accept authenticated requests.
  */
 @Serializable

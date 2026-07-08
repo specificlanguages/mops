@@ -35,6 +35,10 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
                     root = mpsAccess.read { list(target = request.target, depth = request.depth) },
                 )
 
+                is DiagnoseModulesRequest -> mpsAccess.read { diagnoseModules() }
+
+                is DiagnoseModuleRequest -> mpsAccess.read { diagnoseModule(request.module) }
+
                 else -> errorResponse("UNSUPPORTED_REQUEST", "unsupported request type: ${request::class.simpleName}")
             }
         } catch (exception: MpsRequestException) {

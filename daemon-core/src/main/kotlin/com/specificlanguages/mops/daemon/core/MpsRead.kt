@@ -3,6 +3,8 @@ package com.specificlanguages.mops.daemon.core
 import com.specificlanguages.mops.protocol.FindByNameResponse
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindUsagesResponse
+import com.specificlanguages.mops.protocol.ModuleDiagnosticResponse
+import com.specificlanguages.mops.protocol.ModulesDiagnosticsResponse
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import com.specificlanguages.mops.protocol.MpsNodeJson
 import com.specificlanguages.mops.protocol.NodeTarget
@@ -21,4 +23,16 @@ interface MpsRead {
     fun findByName(pattern: String, limit: Int, all: Boolean = false): FindByNameResponse
 
     fun findUsages(target: NodeTarget, limit: Int, all: Boolean = false): FindUsagesResponse
+
+    /**
+     * Diagnoses the load state of the project's languages and Java-bearing modules, reporting for each unloaded one why
+     * its runtime did not register.
+     */
+    fun diagnoseModules(): ModulesDiagnosticsResponse
+
+    /**
+     * Diagnoses the load state of one module addressed by name or serialized module reference, including whether it is
+     * present in the repository at all.
+     */
+    fun diagnoseModule(module: String): ModuleDiagnosticResponse
 }

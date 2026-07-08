@@ -14,6 +14,10 @@ import com.specificlanguages.mops.protocol.FindInstancesRequest
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindUsagesRequest
 import com.specificlanguages.mops.protocol.FindUsagesResponse
+import com.specificlanguages.mops.protocol.DiagnoseModuleRequest
+import com.specificlanguages.mops.protocol.DiagnoseModulesRequest
+import com.specificlanguages.mops.protocol.ModuleDiagnosticResponse
+import com.specificlanguages.mops.protocol.ModulesDiagnosticsResponse
 import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.ModelGetNodeRequest
@@ -97,6 +101,18 @@ class DefaultDaemonClient(
         exchange(
             MpsListRequest(token = token, target = target, depth = depth),
             MpsListResponse::class.java
+        )
+
+    override fun diagnoseModules(): ModulesDiagnosticsResponse =
+        exchange(
+            DiagnoseModulesRequest(token = token),
+            ModulesDiagnosticsResponse::class.java
+        )
+
+    override fun diagnoseModule(module: String): ModuleDiagnosticResponse =
+        exchange(
+            DiagnoseModuleRequest(token = token, module = module),
+            ModuleDiagnosticResponse::class.java
         )
 
     private fun <T : DaemonResponse> exchange(request: DaemonRequest, responseType: Class<T>): T {

@@ -105,3 +105,22 @@ data class MpsListRequest(
     val target: List<String>? = null,
     val depth: Int,
 ) : DaemonRequest
+
+/**
+ * Request to diagnose the load state of the project's languages and Java-bearing modules: which are loaded, and for
+ * each unloaded one, why.
+ */
+@Serializable
+@SerialName("diagnose-modules")
+data class DiagnoseModulesRequest(override val token: String) : DaemonRequest
+
+/**
+ * Request to diagnose the load state of one module addressed by [module] (a module name or serialized module
+ * reference), including whether it is present in the repository at all.
+ */
+@Serializable
+@SerialName("diagnose-module")
+data class DiagnoseModuleRequest(
+    override val token: String,
+    val module: String,
+) : DaemonRequest

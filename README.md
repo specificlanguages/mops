@@ -79,6 +79,34 @@ by its position in its model. A non-root owner appends its immediate parent as t
 only when more matches exist than were returned.
 
 ```sh
+mops --mps-home <path> diagnose modules [--all] [--json]
+```
+
+Reports the load state of the project's languages and every other project module that has a Java facet, so a
+`CONCEPT_NOT_FOUND` from `find instances` can be traced to its cause: a concept resolves by name only if its owning
+language's runtime is loaded. Text output starts with a `modules\t<loaded>/<total> loaded\t<failed> failed` summary,
+then one tab-separated row per failed module — its name, `kind`, and a reason code — followed, when the reason is
+`BROKEN_DEPENDENCIES`, by indented rows naming the root-cause modules to fix. It ends with a `note` line: modules
+without a Java facet are not listed and can be inspected individually with `diagnose module`. `--all` also lists the
+modules that loaded; `--json` prints the full structured diagnosis.
+
+```sh
+mops --mps-home <path> diagnose module [--json] <module>
+```
+
+Diagnoses one module, addressed by module name or serialized module reference, including modules not shown by
+`diagnose modules` (those without a Java facet, or absent from the repository). Text output is a header row (`module`,
+`kind`, `present=<bool>`, `loaded=<bool>`) followed by the module's load-problem tree, indented by depth so a
+dependency chain reads from the module down to its root causes; `--json` prints the structured diagnosis.
+
+Both commands classify an unloaded module with a reason code: `ABSENT` (not in the repository), `NOT_A_MODULE` (resolves
+to something that does not load classes), `NO_JAVA_FACET` (no Java facet — a defect for a language, informational for
+another module), `CLASSES_DISABLED` (the Java facet is configured not to load classes), `NOT_BUILT` (classes not
+generated/compiled yet), `BROKEN_DEPENDENCIES` (blocked by depended-on modules, reported recursively), and
+`RUNTIME_LOAD_FAILED` (everything present but the runtime still did not register — usually a class-link or version error
+in the daemon log).
+
+```sh
 mops daemon status [--all]
 mops daemon stop [--all]
 ```

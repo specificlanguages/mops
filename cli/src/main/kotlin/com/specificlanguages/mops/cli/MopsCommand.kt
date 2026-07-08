@@ -21,6 +21,7 @@ import kotlin.io.path.isDirectory
         FindOperations::class,
         MpsListCommand::class,
         ModelOperations::class,
+        DiagnoseOperations::class,
         ExplainCommand::class,
         RecursiveHelpCommand::class,
     ],

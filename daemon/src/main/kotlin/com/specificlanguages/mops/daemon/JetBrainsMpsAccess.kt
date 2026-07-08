@@ -147,6 +147,12 @@ class JetBrainsMpsAccess(
             )
         }
 
+        override fun diagnoseModules(): ModulesDiagnosticsResponse =
+            ModuleLoadDiagnostics(project).diagnoseModules()
+
+        override fun diagnoseModule(module: String): ModuleDiagnosticResponse =
+            ModuleLoadDiagnostics(project).diagnoseModule(module)
+
         // Editable Project Sources are the default find scope; `all` widens to the whole repository, including the
         // read-only library and stub models the editable filter otherwise excludes.
         private fun searchScope(all: Boolean): SearchScope =

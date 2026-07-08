@@ -2,6 +2,13 @@
 
 ## 0.3.0 (Unreleased)
 
+- Added `mops diagnose modules` and `mops diagnose module <ref>`, which report why the project's languages and
+  Java-bearing modules did or did not load. Each unloaded module is classified — absent, no Java facet, classes disabled,
+  not built, blocked by broken dependencies (reported recursively down to the root modules to fix), or a residual
+  runtime load failure. `diagnose modules` lists all languages and facet-bearing project modules with flattened root
+  causes; `diagnose module <ref>` inspects any single module (including ones absent or without a facet) and prints the
+  full dependency problem tree. This traces a `find instances` `CONCEPT_NOT_FOUND` to its cause, since a concept resolves
+  by name only when its owning language's runtime is loaded.
 - Made `mops model get-node` report a node's containment context: the exported node carries a `parent` object for its immediate containing node (containment role, `root`/`node` type, name, concept, and reference), and `--ancestry` nests that `parent` recursively up to the root node. `find usages` and `find instances` now carry each result's immediate parent too, in both JSON (a nested `parent` summary) and text (trailing `parent` columns) for non-root results.
 - Added `mops find by-name <pattern>`, which finds root nodes by name using MPS's Go-to-Node pattern matching (camel-hump and `*` wildcards, case-insensitive, matches anywhere in the name), ranked best match first. Searches editable project sources by default, or the whole repository with `--all`. See `mops explain name-pattern`.
 - Added `mops model edit --constraints=advisory|best-effort|strict` (default `best-effort`). `best-effort` blocks on constraint violations and warns (once per language) about constraints it could not check because a language was not loaded; `strict` fails on such a case; `advisory` evaluates, reports, and applies anyway.

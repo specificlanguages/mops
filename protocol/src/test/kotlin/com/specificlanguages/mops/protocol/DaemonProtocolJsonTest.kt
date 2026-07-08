@@ -754,4 +754,76 @@ class DaemonProtocolJsonTest {
             ProtocolJson.decodeRequest("""{"type":"list","token":"secret","depth":1}"""),
         )
     }
+
+    @Test
+    fun `diagnose-modules request and module-diagnostics response JSON round-trip with a problem tree`() {
+        val request = DiagnoseModulesRequest(token = "secret")
+        val serializedRequest = ProtocolJson.encodeRequest(request)
+
+        assertContains(serializedRequest, """"type":"diagnose-modules"""")
+        assertEquals(request, ProtocolJson.decodeRequest(serializedRequest))
+
+        val response = ModulesDiagnosticsResponse(
+            summary = ModuleLoadSummary(total = 2, loaded = 1, failed = 1),
+            modules = listOf(
+                ModuleLoadDiagnosticJson(module = "org.example.base", kind = "language", present = true, loaded = true),
+                ModuleLoadDiagnosticJson(
+                    module = "org.example.expr",
+                    kind = "language",
+                    present = true,
+                    loaded = false,
+                    problem = ModuleLoadProblemJson(
+                        module = "org.example.expr",
+                        reason = "BROKEN_DEPENDENCIES",
+                        detail = "modules it depends on are not loaded",
+                        causes = listOf(
+                            ModuleLoadProblemJson(module = "jetbrains.mps.lang.editor.tooltips", reason = "ABSENT"),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val serializedResponse = ProtocolJson.encodeResponse(response)
+
+        assertContains(serializedResponse, """"type":"module-diagnostics"""")
+        assertEquals(response, ProtocolJson.decodeResponse(serializedResponse))
+    }
+
+    @Test
+    fun `diagnose-module request and single module-diagnostic response JSON round-trip`() {
+        val request = DiagnoseModuleRequest(token = "secret", module = "org.example.expr")
+        val serializedRequest = ProtocolJson.encodeRequest(request)
+
+        assertContains(serializedRequest, """"type":"diagnose-module"""")
+        assertContains(serializedRequest, """"module":"org.example.expr"""")
+        assertEquals(request, ProtocolJson.decodeRequest(serializedRequest))
+
+        val response = ModuleDiagnosticResponse(
+            module = ModuleLoadDiagnosticJson(
+                module = "org.example.solution",
+                kind = "solution",
+                present = true,
+                loaded = false,
+                problem = ModuleLoadProblemJson(module = "org.example.solution", reason = "NOT_BUILT", detail = "not built yet"),
+            ),
+        )
+        val serializedResponse = ProtocolJson.encodeResponse(response)
+
+        assertContains(serializedResponse, """"type":"module-diagnostic"""")
+        assertEquals(response, ProtocolJson.decodeResponse(serializedResponse))
+    }
+
+    @Test
+    fun `a loaded module diagnostic omits the problem`() {
+        val decoded = ProtocolJson.decodeResponse(
+            """{"type":"module-diagnostic","module":{"module":"org.example.base","kind":"language",""" +
+                """"present":true,"loaded":true}}""",
+        )
+        assertEquals(
+            ModuleDiagnosticResponse(
+                module = ModuleLoadDiagnosticJson(module = "org.example.base", kind = "language", present = true, loaded = true),
+            ),
+            decoded,
+        )
+    }
 }
