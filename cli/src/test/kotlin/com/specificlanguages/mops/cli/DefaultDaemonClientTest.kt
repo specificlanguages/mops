@@ -146,7 +146,7 @@ class DefaultDaemonClientTest {
     }
 
     @Test
-    fun `find sends the all-models flag when requested`() {
+    fun `find sends the scope segments when requested`() {
         val instancesResponse = FindInstancesResponse(limit = 100, truncated = false, nodes = emptyList())
         val instancesDaemon = startPrerecordedDaemon(instancesResponse)
 
@@ -154,12 +154,15 @@ class DefaultDaemonClientTest {
             concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
             exact = false,
             limit = 100,
-            all = true,
+            scope = listOf("com.specificlanguages.json", ".structure"),
         )
 
         instancesDaemon.join(5_000)
         assertContains(instancesDaemon.requestsReceived.single(), "\"type\":\"find-instances\"")
-        assertContains(instancesDaemon.requestsReceived.single(), "\"all\":true")
+        assertContains(
+            instancesDaemon.requestsReceived.single(),
+            "\"scope\":[\"com.specificlanguages.json\",\".structure\"]",
+        )
 
         val usagesResponse = FindUsagesResponse(limit = 100, truncated = false, usages = emptyList())
         val usagesDaemon = startPrerecordedDaemon(usagesResponse)
@@ -169,12 +172,12 @@ class DefaultDaemonClientTest {
         DefaultDaemonClient(usagesDaemon.port, "secret").findUsages(
             target = NodeTarget.NodeReference(nodeReference),
             limit = 100,
-            all = true,
+            scope = listOf("/"),
         )
 
         usagesDaemon.join(5_000)
         assertContains(usagesDaemon.requestsReceived.single(), "\"type\":\"find-usages\"")
-        assertContains(usagesDaemon.requestsReceived.single(), "\"all\":true")
+        assertContains(usagesDaemon.requestsReceived.single(), "\"scope\":[\"/\"]")
     }
 
     @Test

@@ -18,11 +18,11 @@ interface MpsRead {
 
     fun getNode(target: NodeTarget, ancestry: Boolean = false): MpsNodeJson
 
-    fun findInstances(concept: String, exact: Boolean, limit: Int, all: Boolean = false): FindInstancesResponse
+    fun findInstances(concept: String, exact: Boolean, limit: Int, scope: List<String>? = null): FindInstancesResponse
 
     fun findByName(pattern: String, limit: Int, all: Boolean = false): FindByNameResponse
 
-    fun findUsages(target: NodeTarget, limit: Int, all: Boolean = false): FindUsagesResponse
+    fun findUsages(target: NodeTarget, limit: Int, scope: List<String>? = null): FindUsagesResponse
 
     /**
      * Diagnoses the load state of the project's languages and Java-bearing modules, reporting for each unloaded one why

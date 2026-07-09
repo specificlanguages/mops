@@ -73,15 +73,15 @@ class DefaultDaemonClient(
             ModelGetNodeResponse::class.java
         )
 
-    override fun findUsages(target: NodeTarget, limit: Int, all: Boolean): FindUsagesResponse =
+    override fun findUsages(target: NodeTarget, limit: Int, scope: List<String>?): FindUsagesResponse =
         exchange(
-            FindUsagesRequest(token = token, target = target, limit = limit, all = all),
+            FindUsagesRequest(token = token, target = target, limit = limit, scope = scope),
             FindUsagesResponse::class.java
         )
 
-    override fun findInstances(concept: String, exact: Boolean, limit: Int, all: Boolean): FindInstancesResponse =
+    override fun findInstances(concept: String, exact: Boolean, limit: Int, scope: List<String>?): FindInstancesResponse =
         exchange(
-            FindInstancesRequest(token = token, concept = concept, exact = exact, limit = limit, all = all),
+            FindInstancesRequest(token = token, concept = concept, exact = exact, limit = limit, scope = scope),
             FindInstancesResponse::class.java
         )
 

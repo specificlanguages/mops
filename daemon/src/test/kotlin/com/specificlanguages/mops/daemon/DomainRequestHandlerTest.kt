@@ -72,23 +72,24 @@ class DomainRequestHandlerTest {
     }
 
     @Test
-    fun `find requests forward the all-models flag`() {
+    fun `find requests forward the scope segments`() {
+        val scope = listOf("com.example", ".model")
         val instances = FindInstancesResponse(limit = 10, truncated = false, nodes = emptyList())
-        whenever(operations.findInstances("some.Concept", false, 10, true)).thenReturn(instances)
+        whenever(operations.findInstances("some.Concept", false, 10, scope)).thenReturn(instances)
 
         handler.handleDomainRequest(
-            FindInstancesRequest(TOKEN, concept = "some.Concept", exact = false, limit = 10, all = true),
+            FindInstancesRequest(TOKEN, concept = "some.Concept", exact = false, limit = 10, scope = scope),
         )
 
-        verify(operations).findInstances("some.Concept", false, 10, true)
+        verify(operations).findInstances("some.Concept", false, 10, scope)
 
         val usages = FindUsagesResponse(limit = 5, truncated = false, usages = emptyList())
         val target = NodeTarget.InModel("some.model", "7")
-        whenever(operations.findUsages(target, 5, true)).thenReturn(usages)
+        whenever(operations.findUsages(target, 5, listOf("/"))).thenReturn(usages)
 
-        handler.handleDomainRequest(FindUsagesRequest(TOKEN, target, limit = 5, all = true))
+        handler.handleDomainRequest(FindUsagesRequest(TOKEN, target, limit = 5, scope = listOf("/")))
 
-        verify(operations).findUsages(target, 5, true)
+        verify(operations).findUsages(target, 5, listOf("/"))
     }
 
     @Test

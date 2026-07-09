@@ -104,11 +104,67 @@ class FindUsagesCommandTest {
     }
 
     @Test
-    fun `find usages passes all flag to the daemon`() {
+    fun `find usages passes the in-clause scope after a node reference`() {
         val client = mock<DaemonClient>()
         val nodeReference =
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
-        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), 100, true)).thenReturn(sampleUsagesResponse())
+        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), 100, listOf("/")))
+            .thenReturn(sampleUsagesResponse())
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(FindUsagesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(nodeReference, "in", "/")
+        }
+
+        assertEquals(0, exitCode)
+        verify(client).findUsages(NodeTarget.NodeReference(nodeReference), 100, listOf("/"))
+    }
+
+    @Test
+    fun `find usages passes the in-clause scope after a model target and node id`() {
+        val client = mock<DaemonClient>()
+        val target = NodeTarget.InModel(
+            modelTarget = "com.specificlanguages.json.structure",
+            nodeId = "2110045694544566904",
+        )
+        val scope = listOf("com.specificlanguages.json")
+        whenever(client.findUsages(target, 100, scope)).thenReturn(sampleUsagesResponse())
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(FindUsagesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("com.specificlanguages.json.structure", "2110045694544566904", "in", "com.specificlanguages.json")
+        }
+
+        assertEquals(0, exitCode)
+        verify(client).findUsages(target, 100, scope)
+    }
+
+    @Test
+    fun `find usages rejects an in clause with no scope segments`() {
+        val client = mock<DaemonClient>()
+        val nodeReference =
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(FindUsagesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(nodeReference, "in")
+        }
+
+        assertEquals(1, exitCode)
+        verifyNoInteractions(client)
+    }
+
+    @Test
+    fun `find usages rejects the removed all option`() {
+        val client = mock<DaemonClient>()
+        val nodeReference =
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
         var exitCode = Int.MIN_VALUE
 
         tapSystemOut {
@@ -117,8 +173,8 @@ class FindUsagesCommandTest {
                 .execute("--all", nodeReference)
         }
 
-        assertEquals(0, exitCode)
-        verify(client).findUsages(NodeTarget.NodeReference(nodeReference), 100, true)
+        assertEquals(2, exitCode)
+        verifyNoInteractions(client)
     }
 
     @Test

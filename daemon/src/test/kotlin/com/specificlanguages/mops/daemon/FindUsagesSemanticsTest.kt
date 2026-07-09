@@ -52,24 +52,47 @@ class FindUsagesSemanticsTest {
     }
 
     @Test
-    fun `all searches library models beyond editable project sources`() {
+    fun `in slash searches library models beyond editable project sources`() {
         val editable = SharedMpsEnvironment.sharedMpsAccess.read {
-            findUsages(NodeTarget.NodeReference(BASE_CONCEPT_REFERENCE), limit = 0, all = false)
+            findUsages(NodeTarget.NodeReference(BASE_CONCEPT_REFERENCE), limit = 0)
         }
-        val all = SharedMpsEnvironment.sharedMpsAccess.read {
-            findUsages(NodeTarget.NodeReference(BASE_CONCEPT_REFERENCE), limit = 0, all = true)
+        val repository = SharedMpsEnvironment.sharedMpsAccess.read {
+            findUsages(NodeTarget.NodeReference(BASE_CONCEPT_REFERENCE), limit = 0, scope = listOf("/"))
         }
 
         val editableUsages = editable.usages.map { it.role to it.owner.reference }.toSet()
-        val allUsages = all.usages.map { it.role to it.owner.reference }.toSet()
+        val repositoryUsages = repository.usages.map { it.role to it.owner.reference }.toSet()
 
         assertTrue(
-            allUsages.size > editableUsages.size,
-            "searching all models should reach library usages the editable search excludes",
+            repositoryUsages.size > editableUsages.size,
+            "searching the whole repository should reach library usages the editable search excludes",
         )
         assertTrue(
-            editableUsages.all { it in allUsages },
-            "editable results must remain a subset of the all-models results",
+            editableUsages.all { it in repositoryUsages },
+            "editable results must remain a subset of the repository results",
+        )
+    }
+
+    @Test
+    fun `scopes a usages search to a module`() {
+        val inModule = SharedMpsEnvironment.sharedMpsAccess.read {
+            findUsages(NodeTarget.NodeReference(BASE_CONCEPT_REFERENCE), limit = 0, scope = listOf(LANGUAGE_MODULE))
+        }
+        val inRepository = SharedMpsEnvironment.sharedMpsAccess.read {
+            findUsages(NodeTarget.NodeReference(BASE_CONCEPT_REFERENCE), limit = 0, scope = listOf("/"))
+        }
+
+        val moduleUsages = inModule.usages.map { it.role to it.owner.reference }.toSet()
+        val repositoryUsages = inRepository.usages.map { it.role to it.owner.reference }.toSet()
+
+        assertTrue(moduleUsages.isNotEmpty(), "the language module should hold usages of BaseConcept")
+        assertTrue(
+            repositoryUsages.size > moduleUsages.size,
+            "the repository holds BaseConcept usages beyond the one module",
+        )
+        assertTrue(
+            moduleUsages.all { it in repositoryUsages },
+            "module-scoped usages must remain a subset of the repository results",
         )
     }
 
@@ -78,6 +101,7 @@ class FindUsagesSemanticsTest {
         // handful in editable project sources.
         const val BASE_CONCEPT_REFERENCE =
             "r:00000000-0000-4000-0000-011c89590288(jetbrains.mps.lang.core.structure)/1169194658468"
+        const val LANGUAGE_MODULE = "com.specificlanguages.json"
         const val IJSON_VALUE_NODE_ID = "2110045694544566909"
         const val IJSON_VALUE_REFERENCE =
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/$IJSON_VALUE_NODE_ID"

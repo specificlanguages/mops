@@ -1,0 +1,49 @@
+scope — the Search Scope clause on `mops find`.
+
+A find command searches Editable Project Sources by default. Append a scope
+clause to search somewhere else, exhaustively:
+
+    mops find instances <concept> in <segment>...
+    mops find usages    <node>    in <segment>...
+
+Everything after the first freestanding `in` argument is scope segments, so a
+query argument literally named `in` is never mistaken for the clause. `in` with
+no following segments is an error.
+
+DEFAULT VS EXPLICIT
+  No clause          Editable Project Sources — the editable models you may
+                     modify, excluding read-only libraries and stub models.
+  Explicit scope     Searched exhaustively, including read-only content within
+                     it. Naming a scope is already an intentional act.
+
+SEGMENTS
+  The segments are Navigation Target segments — the same grammar `mops list`
+  navigates. A scope resolves to one of:
+
+    /                        The whole MPS Repository (replaces the old --all).
+    <module>                 A module, by name or serialized module reference.
+    <module> <model>         A model within a module. A `.suffix` model segment
+                             expands against the module name.
+    <model-reference>        A model, by serialized model reference.
+    <node-reference>         A Root Node or nested node subtree, by serialized
+                             node reference.
+    <module> <model> <node>...
+                             A node subtree, addressed segment by segment by
+                             Node Name or Node ID.
+
+  A module, model, or repository scope maps to an MPS search scope directly. A
+  Root Node or nested-node scope searches the containing model and keeps only
+  matches within that node's subtree.
+
+RESOLUTION
+  Segments resolve by counting actual matches, never by shape. An ambiguous
+  segment fails with each candidate's serialized reference so you can retry
+  unambiguously; a segment that matches nothing fails as not found.
+
+EXAMPLE
+  mops find instances ConceptDeclaration in com.specificlanguages.json
+  mops find instances LinkDeclaration in com.specificlanguages.json .structure JsonObject
+  mops find usages r:fd75...(com.specificlanguages.json.structure)/2110... in /
+
+SEE ALSO
+  node-ref, name-pattern, target

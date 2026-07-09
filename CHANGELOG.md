@@ -2,6 +2,8 @@
 
 ## 0.3.0 (Unreleased)
 
+- Added a trailing `in <scope-segments>` Search Scope clause to `mops find instances` and `mops find usages`, using the same navigation-target grammar as `mops list`. A scope resolves to the repository (`in /`), a module, a model, or a node subtree, and is searched exhaustively (including read-only library and stub models within it); without a clause the search stays scoped to editable project sources. See `mops explain scope`.
+- **Breaking:** Removed `--all` from `mops find instances` and `mops find usages`; `in /` now searches the whole MPS repository instead.
 - Made the daemon load the MPS distribution's bundled plugins (from `<mps-home>/plugins`) at startup, so stock languages
   that depend on plugin modules (editor tooltips, console, execution, debugger, ...) register their runtimes. Without
   them a large share of the project's languages stayed unloaded and their concepts were invisible to name lookup, so

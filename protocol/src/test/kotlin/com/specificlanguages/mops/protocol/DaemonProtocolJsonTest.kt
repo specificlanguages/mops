@@ -695,38 +695,67 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
-    fun `find request JSON carries the all-models flag and defaults it to false`() {
+    fun `find request JSON carries the scope segments and defaults them to absent`() {
         val usagesTarget = NodeTarget.NodeReference(
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
         )
-        val allUsages = ProtocolJson.encodeRequest(
-            FindUsagesRequest(token = "secret", target = usagesTarget, limit = 100, all = true),
+        val scopedUsages = ProtocolJson.encodeRequest(
+            FindUsagesRequest(token = "secret", target = usagesTarget, limit = 100, scope = listOf("/")),
         )
-        assertContains(allUsages, """"all":true""")
+        assertContains(scopedUsages, """"scope":["/"]""")
         assertEquals(
-            FindUsagesRequest(token = "secret", target = usagesTarget, limit = 100, all = true),
-            ProtocolJson.decodeRequest(allUsages),
+            FindUsagesRequest(token = "secret", target = usagesTarget, limit = 100, scope = listOf("/")),
+            ProtocolJson.decodeRequest(scopedUsages),
         )
         assertEquals(
-            FindUsagesRequest(token = "secret", target = usagesTarget, limit = 100, all = false),
+            FindUsagesRequest(token = "secret", target = usagesTarget, limit = 100, scope = null),
             ProtocolJson.decodeRequest(
                 """{"type":"find-usages","token":"secret","target":{"type":"nodeReference","nodeReference":"r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"},"limit":100}""",
             ),
         )
 
         val concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration"
-        val allInstances = ProtocolJson.encodeRequest(
-            FindInstancesRequest(token = "secret", concept = concept, exact = false, limit = 100, all = true),
+        val scopedInstances = ProtocolJson.encodeRequest(
+            FindInstancesRequest(
+                token = "secret",
+                concept = concept,
+                exact = false,
+                limit = 100,
+                scope = listOf("com.specificlanguages.json", ".structure"),
+            ),
         )
-        assertContains(allInstances, """"all":true""")
+        assertContains(scopedInstances, """"scope":["com.specificlanguages.json",".structure"]""")
         assertEquals(
-            FindInstancesRequest(token = "secret", concept = concept, exact = false, limit = 100, all = true),
-            ProtocolJson.decodeRequest(allInstances),
+            FindInstancesRequest(
+                token = "secret",
+                concept = concept,
+                exact = false,
+                limit = 100,
+                scope = listOf("com.specificlanguages.json", ".structure"),
+            ),
+            ProtocolJson.decodeRequest(scopedInstances),
         )
         assertEquals(
-            FindInstancesRequest(token = "secret", concept = concept, exact = false, limit = 100, all = false),
+            FindInstancesRequest(token = "secret", concept = concept, exact = false, limit = 100, scope = null),
             ProtocolJson.decodeRequest(
                 """{"type":"find-instances","token":"secret","concept":"$concept","exact":false,"limit":100}""",
+            ),
+        )
+    }
+
+    @Test
+    fun `find request JSON no longer carries the removed all flag`() {
+        val concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration"
+        val encoded = ProtocolJson.encodeRequest(
+            FindInstancesRequest(token = "secret", concept = concept, exact = false, limit = 100),
+        )
+        assertFalse(encoded.contains(""""all""""), "find requests must not carry the removed all flag: $encoded")
+
+        // A stray legacy `all` field is ignored rather than rejected, so an old caller degrades to the default scope.
+        assertEquals(
+            FindInstancesRequest(token = "secret", concept = concept, exact = false, limit = 100, scope = null),
+            ProtocolJson.decodeRequest(
+                """{"type":"find-instances","token":"secret","concept":"$concept","exact":false,"limit":100,"all":true}""",
             ),
         )
     }

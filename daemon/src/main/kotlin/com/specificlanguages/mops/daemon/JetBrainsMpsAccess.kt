@@ -3,6 +3,8 @@ package com.specificlanguages.mops.daemon
 import com.intellij.psi.codeStyle.NameUtil
 import com.specificlanguages.mops.daemon.core.*
 import com.specificlanguages.mops.protocol.*
+import jetbrains.mps.ide.findusages.model.scopes.ModelsScope
+import jetbrains.mps.ide.findusages.model.scopes.ModulesScope
 import jetbrains.mps.progress.EmptyProgressMonitor
 import jetbrains.mps.project.EditableFilteringScope
 import jetbrains.mps.project.GlobalScope
@@ -70,13 +72,14 @@ class JetBrainsMpsAccess(
         override fun getNode(target: NodeTarget, ancestry: Boolean): MpsNodeJson =
             jsonNodeExporter.export(resolveNode(target), ancestry)
 
-        override fun findUsages(target: NodeTarget, limit: Int, all: Boolean): FindUsagesResponse {
+        override fun findUsages(target: NodeTarget, limit: Int, scope: List<String>?): FindUsagesResponse {
             val node = resolveNode(target)
-            val scope = searchScope(all)
+            val resolvedScope = resolveSearchScope(scope)
             val collected = CollectConsumer<SReference>()
-            FindUsagesFacade.getInstance().findUsages(scope, setOf(node), collected, EmptyProgressMonitor())
+            FindUsagesFacade.getInstance()
+                .findUsages(resolvedScope.searchScope, setOf(node), collected, EmptyProgressMonitor())
 
-            val references = collected.result
+            val references = resolvedScope.retainWithinSubtree(collected.result) { it.sourceNode }
             val selected = if (limit > 0) references.take(limit) else references
 
             return FindUsagesResponse(
@@ -88,7 +91,7 @@ class JetBrainsMpsAccess(
             )
         }
 
-        override fun findInstances(concept: String, exact: Boolean, limit: Int, all: Boolean): FindInstancesResponse {
+        override fun findInstances(concept: String, exact: Boolean, limit: Int, scope: List<String>?): FindInstancesResponse {
             val mpsConcept = ConceptRegistry.getInstance().getConceptByName(concept)
             if (!mpsConcept.isValid) {
                 throw MpsRequestException(
@@ -97,12 +100,12 @@ class JetBrainsMpsAccess(
                 )
             }
 
-            val scope = searchScope(all)
+            val resolvedScope = resolveSearchScope(scope)
             val collected = CollectConsumer<SNode>()
             FindUsagesFacade.getInstance()
-                .findInstances(scope, setOf(mpsConcept), exact, collected, EmptyProgressMonitor())
+                .findInstances(resolvedScope.searchScope, setOf(mpsConcept), exact, collected, EmptyProgressMonitor())
 
-            val instances = collected.result
+            val instances = resolvedScope.retainWithinSubtree(collected.result) { it }
             val selected = if (limit > 0) instances.take(limit) else instances
 
             return FindInstancesResponse(
@@ -200,6 +203,38 @@ class JetBrainsMpsAccess(
             }
         }
     }
+
+    // Maps an optional `in` clause to the MPS Search Scope a find runs over. The default (no clause) is Editable
+    // Project Sources; `["/"]` is the whole repository; any other segment list resolves through the same navigation
+    // grammar `list` uses and is searched exhaustively. A repository, module, or model scope maps directly to an MPS
+    // search scope; a Root Node or nested-node scope has no MPS scope of its own, so it runs over the containing model
+    // and post-filters results to that node's subtree.
+    private fun resolveSearchScope(scope: List<String>?): ScopeResolution =
+        when (scope) {
+            null -> ScopeResolution(EditableFilteringScope(project.scope), containmentRoot = null)
+            listOf("/") -> ScopeResolution(GlobalScope(project.repository), containmentRoot = null)
+            else -> when (val resolution = resolveListTarget(scope)) {
+                is ListTargetResolution.Found -> scopeForTarget(resolution.target)
+                is ListTargetResolution.Ambiguous -> throw MpsRequestException(
+                    code = MpsErrorCode.AMBIGUOUS_TARGET,
+                    message = "${resolution.message}\nsee: mops explain scope",
+                )
+                ListTargetResolution.Missing -> throw MpsRequestException(
+                    code = MpsErrorCode.TARGET_NOT_FOUND,
+                    message = "scope not found: ${scope.joinToString(" ")} — see: mops explain scope",
+                )
+            }
+        }
+
+    private fun scopeForTarget(target: ListTarget): ScopeResolution =
+        when (target) {
+            is ListTarget.Module -> ScopeResolution(ModulesScope(listOf(target.module)), containmentRoot = null)
+            is ListTarget.Model -> ScopeResolution(ModelsScope(listOf(target.model)), containmentRoot = null)
+            is ListTarget.RootNode -> ScopeResolution(modelScopeOf(target.node), containmentRoot = target.node)
+            is ListTarget.Node -> ScopeResolution(modelScopeOf(target.node), containmentRoot = target.node)
+        }
+
+    private fun modelScopeOf(node: SNode): SearchScope = ModelsScope(listOfNotNull(node.model))
 
     private fun resolveListTarget(target: List<String>): ListTargetResolution {
         if (target.isEmpty()) {
@@ -370,6 +405,25 @@ class JetBrainsMpsAccess(
         fun getOrThrow(): T = when (this) {
             is Success -> value
             is Failure -> throw exception
+        }
+    }
+
+    private class ScopeResolution(val searchScope: SearchScope, private val containmentRoot: SNode?) {
+        // For an explicit subtree scope (a Root Node or nested node) the search runs over the containing model, so the
+        // results are narrowed here to those the scope node contains; a repository, module, or model scope has no
+        // subtree and keeps every result.
+        fun <T> retainWithinSubtree(results: Collection<T>, sourceNode: (T) -> SNode): List<T> {
+            val root = containmentRoot ?: return results.toList()
+            return results.filter { isAncestorOrSelf(root, sourceNode(it)) }
+        }
+
+        private fun isAncestorOrSelf(ancestor: SNode, node: SNode): Boolean {
+            var current: SNode? = node
+            while (current != null) {
+                if (current == ancestor) return true
+                current = current.parent
+            }
+            return false
         }
     }
 

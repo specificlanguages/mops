@@ -10,7 +10,7 @@ import com.specificlanguages.mops.protocol.EditNotation
  * format.
  */
 object ExplainTopics {
-    private val topLevelTopics = listOf("edit", "target", "position", "node-ref", "name-pattern")
+    private val topLevelTopics = listOf("edit", "target", "position", "node-ref", "name-pattern", "scope")
 
     private val operationTopics: List<String> = EditNotation.operationNames.map { "edit.$it" }
 

@@ -79,9 +79,72 @@ class FindInstancesCommandTest {
     }
 
     @Test
-    fun `find instances passes all flag to the daemon`() {
+    fun `find instances passes the in-clause scope segments to the daemon`() {
         val client = mock<DaemonClient>()
-        whenever(client.findInstances(CONCEPT, false, 100, true)).thenReturn(sampleInstancesResponse())
+        val scope = listOf("com.specificlanguages.json", ".structure")
+        whenever(client.findInstances(CONCEPT, false, 100, scope)).thenReturn(sampleInstancesResponse())
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(FindInstancesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(CONCEPT, "in", "com.specificlanguages.json", ".structure")
+        }
+
+        assertEquals(0, exitCode)
+        verify(client).findInstances(CONCEPT, false, 100, scope)
+    }
+
+    @Test
+    fun `find instances maps in slash to the repository scope`() {
+        val client = mock<DaemonClient>()
+        whenever(client.findInstances(CONCEPT, false, 100, listOf("/"))).thenReturn(sampleInstancesResponse())
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(FindInstancesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(CONCEPT, "in", "/")
+        }
+
+        assertEquals(0, exitCode)
+        verify(client).findInstances(CONCEPT, false, 100, listOf("/"))
+    }
+
+    @Test
+    fun `find instances keeps a query literally named in as the concept`() {
+        val client = mock<DaemonClient>()
+        whenever(client.findInstances("in", false, 100, listOf("/"))).thenReturn(sampleInstancesResponse())
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(FindInstancesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("in", "in", "/")
+        }
+
+        assertEquals(0, exitCode)
+        verify(client).findInstances("in", false, 100, listOf("/"))
+    }
+
+    @Test
+    fun `find instances rejects an in clause with no scope segments`() {
+        val client = mock<DaemonClient>()
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(FindInstancesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(CONCEPT, "in")
+        }
+
+        assertEquals(1, exitCode)
+        verifyNoInteractions(client)
+    }
+
+    @Test
+    fun `find instances rejects the removed all option`() {
+        val client = mock<DaemonClient>()
         var exitCode = Int.MIN_VALUE
 
         tapSystemOut {
@@ -90,8 +153,8 @@ class FindInstancesCommandTest {
                 .execute("--all", CONCEPT)
         }
 
-        assertEquals(0, exitCode)
-        verify(client).findInstances(CONCEPT, false, 100, true)
+        assertEquals(2, exitCode)
+        verifyNoInteractions(client)
     }
 
     @Test

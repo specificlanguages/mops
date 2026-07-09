@@ -14,10 +14,10 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
                 is ModelGetNodeRequest ->
                     ModelGetNodeResponse(node = mpsAccess.read { getNode(request.target, request.ancestry) })
 
-                is FindUsagesRequest -> mpsAccess.read { findUsages(request.target, request.limit, request.all) }
+                is FindUsagesRequest -> mpsAccess.read { findUsages(request.target, request.limit, request.scope) }
 
                 is FindInstancesRequest -> mpsAccess.read {
-                    findInstances(request.concept, request.exact, request.limit, request.all)
+                    findInstances(request.concept, request.exact, request.limit, request.scope)
                 }
 
                 is FindByNameRequest -> mpsAccess.read {

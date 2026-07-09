@@ -9,7 +9,14 @@ import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 import picocli.CommandLine.ParentCommand
 
-@Command(name = "instances", description = ["Find instances of one MPS concept in editable project sources."])
+@Command(
+    name = "instances",
+    description = [
+        "Find instances of one MPS concept. Searches editable project sources by default; append " +
+            "`in <scope-segments>` to search a module, model, or subtree exhaustively, or `in /` for the whole " +
+            "repository. See `mops explain scope`.",
+    ],
+)
 class FindInstancesCommand(private val daemonClient: DaemonClient? = null) : CliCommand() {
     @ParentCommand
     lateinit var find: FindOperations
@@ -19,12 +26,6 @@ class FindInstancesCommand(private val daemonClient: DaemonClient? = null) : Cli
         description = ["Print instance results as JSON."],
     )
     var json: Boolean = false
-
-    @Option(
-        names = ["--all"],
-        description = ["Search all models, including read-only libraries and stubs, not just editable project sources."],
-    )
-    var all: Boolean = false
 
     @Option(
         names = ["--exact"],
@@ -47,10 +48,18 @@ class FindInstancesCommand(private val daemonClient: DaemonClient? = null) : Cli
     )
     lateinit var concept: String
 
+    @Parameters(
+        index = "1..*",
+        paramLabel = "[in SCOPE_SEGMENT...]",
+        description = ["Optional Search Scope clause: the literal `in` followed by navigation-target segments."],
+    )
+    var scopeClause: List<String> = emptyList()
+
     override fun run() {
         require(limit >= 0) { "limit must not be negative" }
+        val scope = scopeClauseSegments(scopeClause)
         val client = daemonClient ?: find.root.ensureDaemon()
-        val response = client.findInstances(concept = concept, exact = exact, limit = limit, all = all)
+        val response = client.findInstances(concept = concept, exact = exact, limit = limit, scope = scope)
         if (json) {
             println(ProtocolJson.encodeResponse(response))
         } else {
