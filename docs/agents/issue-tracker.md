@@ -7,7 +7,9 @@ Issues and PRDs for this repo live as local Markdown files under `.scratch/`.
 - **One feature per directory**: `.scratch/<feature-slug>/`
 - **The PRD**: `.scratch/<feature-slug>/PRD.md`
 - **Implementation issues**: `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01`
-- **Issue state**: record it as a `Status:` line near the top of each issue file; see `docs/agents/issue-states.md` for the strings
+- **Issue state**: record it as a `Status:` line near the top of each issue file; see `docs/agents/issue-states.md` for
+  the strings
+- **Triage labels:** not used in this repository, as issues are local. Just use `Status: ready`.
 - **Comments and conversation history**: append to the bottom of the file under a `## Comments` heading
 
 ## When a skill says "publish to the issue tracker"
