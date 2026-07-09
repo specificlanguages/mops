@@ -157,7 +157,9 @@ class FindInstancesSemanticsTest {
     }
 
     @Test
-    fun `reports an unresolved concept as not found`() {
+    fun `reports an unresolved concept in an unloaded language with its load diagnosis`() {
+        // The fixture language is present but not compiled, so name lookup cannot see its concepts. The failure names
+        // the language, its load cause, and how to inspect it further, rather than a bare "not found".
         val exception = assertFailsWith<MpsRequestException> {
             SharedMpsEnvironment.sharedMpsAccess.read {
                 findInstances("com.specificlanguages.json.structure.DoesNotExist", exact = false, limit = DEFAULT_LIMIT)
@@ -165,12 +167,62 @@ class FindInstancesSemanticsTest {
         }
 
         assertEquals(MpsErrorCode.CONCEPT_NOT_FOUND, exception.code)
-        assertEquals(
-            "no valid MPS Concept resolved for \"com.specificlanguages.json.structure.DoesNotExist\" " +
-                "(probable owning language: com.specificlanguages.json) — either the name is wrong, or its owning " +
-                "language is not compiled or not loaded into the project; build the language and retry",
-            exception.message,
-        )
+        val message = assertNotNull(exception.message)
+        assertContains(message, "its language \"com.specificlanguages.json\" is not loaded")
+        assertContains(message, "NOT_BUILT")
+        assertContains(message, "run 'mops diagnose module com.specificlanguages.json'")
+    }
+
+    @Test
+    fun `forgives a dropped structure infix and returns the same instances`() {
+        val canonical = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances(CONCEPT_DECLARATION, exact = false, limit = DEFAULT_LIMIT)
+        }
+        val dropped = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances("jetbrains.mps.lang.structure.ConceptDeclaration", exact = false, limit = DEFAULT_LIMIT)
+        }
+
+        assertTrue(canonical.nodes.isNotEmpty(), "fixture should hold concept declarations")
+        assertEquals(canonical, dropped, "the dropped-infix form should resolve to the same concept")
+    }
+
+    @Test
+    fun `suggests similar concepts in a loaded language`() {
+        val exception = assertFailsWith<MpsRequestException> {
+            SharedMpsEnvironment.sharedMpsAccess.read {
+                findInstances("jetbrains.mps.lang.structure.structure.ConceptDeclaratn", exact = false, limit = DEFAULT_LIMIT)
+            }
+        }
+
+        assertEquals(MpsErrorCode.CONCEPT_NOT_FOUND, exception.code)
+        val message = assertNotNull(exception.message)
+        assertContains(message, "which is loaded")
+        assertContains(message, "did you mean")
+        assertContains(message, "ConceptDeclaration")
+    }
+
+    @Test
+    fun `reports an unknown language`() {
+        val exception = assertFailsWith<MpsRequestException> {
+            SharedMpsEnvironment.sharedMpsAccess.read {
+                findInstances("no.such.language.structure.Whatever", exact = false, limit = DEFAULT_LIMIT)
+            }
+        }
+
+        assertEquals(MpsErrorCode.CONCEPT_NOT_FOUND, exception.code)
+        assertContains(assertNotNull(exception.message), "\"no.such.language\" is not a module known to this project")
+    }
+
+    @Test
+    fun `reports a malformed concept name`() {
+        val exception = assertFailsWith<MpsRequestException> {
+            SharedMpsEnvironment.sharedMpsAccess.read {
+                findInstances("NotAQualifiedName", exact = false, limit = DEFAULT_LIMIT)
+            }
+        }
+
+        assertEquals(MpsErrorCode.CONCEPT_NOT_FOUND, exception.code)
+        assertContains(assertNotNull(exception.message), "not a well-formed concept name")
     }
 
     @Test

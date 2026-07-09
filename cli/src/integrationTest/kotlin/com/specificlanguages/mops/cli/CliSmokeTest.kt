@@ -121,8 +121,10 @@ class CliSmokeTest {
             )
 
             assertTrue(result.exitCode != 0, result.output)
-            assertContains(result.output, "no valid MPS Concept resolved for")
-            assertContains(result.output, "com.specificlanguages.json.structure.DoesNotExist")
+            // The fixture language is present but not compiled, so the failure explains the unloaded language rather
+            // than reporting a bare "not found".
+            assertContains(result.output, "its language \"com.specificlanguages.json\" is not loaded")
+            assertContains(result.output, "diagnose module com.specificlanguages.json")
         } finally {
             stopDaemons(project, daemonHome)
         }

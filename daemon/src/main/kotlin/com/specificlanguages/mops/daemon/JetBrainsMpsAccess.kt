@@ -10,7 +10,6 @@ import jetbrains.mps.project.EditableFilteringScope
 import jetbrains.mps.project.GlobalScope
 import jetbrains.mps.project.Project
 import jetbrains.mps.smodel.SNodeUtil
-import jetbrains.mps.smodel.language.ConceptRegistry
 import jetbrains.mps.smodel.persistence.def.v9.IdEncoder
 import jetbrains.mps.util.CollectConsumer
 import org.jetbrains.mps.openapi.model.*
@@ -92,13 +91,7 @@ class JetBrainsMpsAccess(
         }
 
         override fun findInstances(concept: String, exact: Boolean, limit: Int, scope: ResolvedScope): FindInstancesResponse {
-            val mpsConcept = ConceptRegistry.getInstance().getConceptByName(concept)
-            if (!mpsConcept.isValid) {
-                throw MpsRequestException(
-                    code = MpsErrorCode.CONCEPT_NOT_FOUND,
-                    message = ConceptValidityGuard.messageForUnresolvedConcept(concept),
-                )
-            }
+            val mpsConcept = ConceptResolver(project).resolve(concept)
 
             val searchScope = searchScopeFor(scope)
             val collected = CollectConsumer<SNode>()

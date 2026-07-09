@@ -55,10 +55,18 @@ only the immediate parent.
 mops --mps-home <path> find instances [--exact] [--limit N] [--json] <concept>
 ```
 
-Searches **Editable Project Sources** for nodes that are instances of a fully qualified MPS concept, including
-subconcepts and MPS interface matches by default. `--exact` restricts results to nodes whose direct concept is the
-queried one. An unresolved concept fails with `CONCEPT_NOT_FOUND`; an existing concept with no matches succeeds with no
-rows. Text output is tab-separated rows of `root` or `node`, the node name (or `<unnamed>`), the node's actual concept,
+Searches **Editable Project Sources** for nodes that are instances of a fully qualified MPS concept
+(`<language>.structure.<ConceptName>`), including subconcepts and MPS interface matches by default. `--exact` restricts
+results to nodes whose direct concept is the queried one. An existing concept with no matches succeeds with no rows.
+
+A concept that does not resolve fails with `CONCEPT_NOT_FOUND`, and the error explains which of the causes applies: the
+name is not well formed; the owning language is unknown to the project; the owning language is present but not loaded
+(in which case it reports that language's load diagnosis and points at `diagnose module`, since only loaded languages
+contribute concepts to name lookup); or the language is loaded but has no such concept (in which case it suggests
+similarly named concepts from that language). A dropped `.structure.` infix is forgiven: `<language>.<ConceptName>`
+resolves as if written in full when the language is loaded.
+
+Text output is tab-separated rows of `root` or `node`, the node name (or `<unnamed>`), the node's actual concept,
 and its serialized node reference; a non-root node appends its immediate parent as trailing `parent`, parent name (or
 `<unnamed>`), parent concept, and parent reference columns. `--json` prints an object with `limit`, `truncated`, and a
 `nodes` array whose non-root entries carry a nested `parent` summary.
