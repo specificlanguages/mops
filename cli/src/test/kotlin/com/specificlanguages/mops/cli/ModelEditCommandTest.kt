@@ -173,7 +173,7 @@ class ModelEditCommandTest {
         assertContains(
             stderr,
             "supported: addChild, addRoot, copyAsChild, copyAsRoot, delete, deleteChild, moveAsChild, moveAsRoot, " +
-                "setProperty, setReference",
+                "replace, setProperty, setReference",
         )
         assertContains(stderr, """Did you mean "addRoot"?""")
         assertContains(stderr, "See: mops explain edit")

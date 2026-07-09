@@ -145,6 +145,21 @@ sealed interface EditOperation {
         val target: EditTarget,
         val model: ModelDestination,
     ) : EditOperation
+
+    /**
+     * Replaces the [target] node in place with [with], an Inline Subtree position: a fresh-node spec, a Move Leaf that
+     * adopts an existing node identity-preservingly, or a Copy Leaf that deep-copies with fresh ids. The replacement
+     * takes the target's exact slot — same parent, Containment Role, and sibling index, or Root Node position in the
+     * same model when the target is a root — and the remainder of the target's old subtree is deleted. A bare Move Leaf
+     * of a descendant of [target] is an unwrap. Any [role] carried by [with] is ignored: the slot comes from the target.
+     */
+    @Serializable
+    @SerialName("replace")
+    data class Replace(
+        val target: EditTarget,
+        val with: InlineChild,
+        @SerialName("as") override val alias: String? = null,
+    ) : EditOperation, CreatingOperation
 }
 
 /**

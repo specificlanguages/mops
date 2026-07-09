@@ -32,6 +32,7 @@ import org.jetbrains.mps.openapi.model.EditableSModel
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SNode
 import org.jetbrains.mps.openapi.model.SNodeAccessUtil
+import org.jetbrains.mps.openapi.model.SNodeUtil
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 
 class EditBatchExecutor(
@@ -450,6 +451,46 @@ class EditBatchExecutor(
                     detach(node)
                     model.addRootNode(node)
                     rootPlacements.add(RootPlacement(index, model, node))
+                }
+
+                is EditOperation.Replace -> {
+                    val target = requireEditableNode(index, operation.target)
+                    val model = target.model!!
+                    // Build the replacement while the target subtree is still attached, so a Move/Copy Leaf sourcing a
+                    // node from inside the target can still be resolved and adopted before the remainder is dropped.
+                    val replacement = when (val with = operation.with) {
+                        is InlineChild.Fresh -> {
+                            val concept = resolveConceptOrFail(index, with.concept)
+                            mutated = true
+                            val node = model.createNode(concept)
+                            populate(index, model, node, with.properties, with.references, with.children)
+                            node
+                        }
+                        is InlineChild.Move -> {
+                            val source = requireEditableNode(index, with.source)
+                            // A child target's slot lives under its parent; adopting an ancestor of that parent would
+                            // place a node inside its own descendant. A descendant of the target (an unwrap) is fine.
+                            target.parent?.let { failIfWouldMoveIntoOwnDescendant(index, it, source) }
+                            mutated = true
+                            source
+                        }
+                        is InlineChild.Copy -> {
+                            val source = resolveNode(index, with.source)
+                            mutated = true
+                            CopyUtil.copy(source)
+                        }
+                    }
+                    // MPS's own in-place swap: preserves the exact sibling index for a child target, handles a root
+                    // target, and detaches the replacement from wherever it sits — including from inside the target's
+                    // now-dropped subtree. The old subtree is detached (i.e. deleted) by the swap.
+                    SNodeUtil.replaceWithAnother(target, replacement)
+                    val parent = replacement.parent
+                    if (parent != null) {
+                        placements.add(Placement(index, parent, replacement.containmentLink!!, replacement))
+                    } else {
+                        rootPlacements.add(RootPlacement(index, replacement.model!!, replacement))
+                    }
+                    bindAlias(index, operation.alias, replacement)
                 }
             }
         }

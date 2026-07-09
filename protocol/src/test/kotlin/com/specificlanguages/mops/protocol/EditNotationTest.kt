@@ -8,11 +8,11 @@ import kotlin.test.assertFalse
 
 class EditNotationTest {
     @Test
-    fun `operation names cover the seven edit operations`() {
+    fun `operation names cover the edit operations`() {
         assertEquals(
             setOf(
                 "setProperty", "setReference", "addChild", "copyAsChild", "moveAsChild", "delete", "deleteChild",
-                "addRoot", "copyAsRoot", "moveAsRoot",
+                "addRoot", "copyAsRoot", "moveAsRoot", "replace",
             ),
             EditNotation.operationNames.toSet(),
         )

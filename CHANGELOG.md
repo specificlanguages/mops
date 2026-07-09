@@ -2,6 +2,14 @@
 
 ## 0.3.0 (Unreleased)
 
+- Added the `mops model edit` **`replace`** operation: `{"op": "replace", "target": <target>, "with": <inline
+  position>, "as": ...}`. The replacement — a fresh-node spec, a **Move Leaf**, or a **Copy Leaf** — takes the target's
+  exact slot (same parent, Containment Role, and sibling index, or Root Node position when the target is a root), and
+  the remainder of the target's old subtree is deleted. Move Leaves inside `with` may adopt nodes from inside the
+  replaced target, keeping their identities (and inbound References) alive; a bare Move Leaf of a descendant is an
+  unwrap. The swap uses MPS's own `SNodeUtil.replaceWithAnother`; the end state is Constraint-checked like any other
+  edit. Inbound References to deleted nodes are left dangling (visible to `mops model check`, not rewritten). See
+  `mops explain edit.replace`.
 - Extended the `mops model edit` inline-subtree notation so a position in a `children` array holds a fresh-node spec, a
   **Move Leaf** (`{"role": ..., "move": <target>}`) that adopts an existing node with its subtree identity-preservingly,
   or a **Copy Leaf** (`{"role": ..., "copy": <target>}`) that deep-copies it with fresh ids. Leaves work at any depth in
