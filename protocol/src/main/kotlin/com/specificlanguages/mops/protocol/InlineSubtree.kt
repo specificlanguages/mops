@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.protocol
 
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
@@ -14,31 +15,32 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 /**
- * One position in an Inline Subtree's `children` array. A position holds exactly one of: a fresh-node spec
- * ([Fresh]), a Move Leaf that adopts an existing node identity-preservingly ([Move]), or a Copy Leaf that
- * deep-copies an existing node with fresh ids ([Copy]). A leaf carries the Containment [role] it is placed under,
- * mirroring the `role` a fresh spec carries.
+ * One position in an Inline Subtree's `children` array. Every position carries the Containment [role] it fills under
+ * its parent, and is exactly one of: a fresh-node spec ([Fresh]), a Move Leaf that adopts an existing node
+ * identity-preservingly ([Move]), or a Copy Leaf that deep-copies an existing node with fresh ids ([Copy]).
  */
 @Serializable(with = InlineChildSerializer::class)
 sealed interface InlineChild {
-    data class Fresh(val node: InlineNode) : InlineChild
-    data class Move(val role: String?, val source: EditTarget) : InlineChild
-    data class Copy(val role: String?, val source: EditTarget) : InlineChild
-}
+    val role: String?
 
-/**
- * A fresh-node spec in an Inline Subtree: a new node of [concept] under Containment [role], carrying inline
- * [properties], [references] to existing nodes, and a nested [children] subtree. Shaped like the tree `get-node`
- * emits, so its output (which also carries `model`/`id`/`parent`) decodes here with those enrichment fields ignored.
- */
-@Serializable
-data class InlineNode(
-    val role: String? = null,
-    val concept: String,
-    val properties: List<MpsNodePropertyJson>? = null,
-    val references: List<InlineReference>? = null,
-    val children: List<InlineChild>? = null,
-)
+    /**
+     * A fresh node of [concept] carrying inline [properties], [references] to existing nodes, and a nested [children]
+     * subtree. Shaped like the tree `get-node` emits, so output (which also carries `model`/`id`/`parent`) decodes here
+     * with those enrichment fields ignored.
+     */
+    @Serializable
+    @SerialName("InlineNodeSpec")
+    data class Fresh(
+        override val role: String? = null,
+        val concept: String,
+        val properties: List<MpsNodePropertyJson>? = null,
+        val references: List<InlineReference>? = null,
+        val children: List<InlineChild>? = null,
+    ) : InlineChild
+
+    data class Move(override val role: String?, val source: EditTarget) : InlineChild
+    data class Copy(override val role: String?, val source: EditTarget) : InlineChild
+}
 
 /**
  * An inline Reference set on a freshly built node, pointing at an existing node under [role]. The target is given
@@ -60,7 +62,7 @@ internal object InlineChildSerializer : KSerializer<InlineChild> {
     override fun serialize(encoder: Encoder, value: InlineChild) {
         val jsonEncoder = encoder as? JsonEncoder ?: throw UnsupportedJsonOnlySerializerException("InlineChild")
         val element = when (value) {
-            is InlineChild.Fresh -> jsonEncoder.json.encodeToJsonElement(InlineNode.serializer(), value.node)
+            is InlineChild.Fresh -> jsonEncoder.json.encodeToJsonElement(InlineChild.Fresh.serializer(), value)
             is InlineChild.Move -> leafObject(jsonEncoder, "move", value.role, value.source)
             is InlineChild.Copy -> leafObject(jsonEncoder, "copy", value.role, value.source)
         }
@@ -90,7 +92,7 @@ internal object InlineChildSerializer : KSerializer<InlineChild> {
             val role = obj.stringField("role")
             return if (hasMove) InlineChild.Move(role, source) else InlineChild.Copy(role, source)
         }
-        return InlineChild.Fresh(jsonDecoder.json.decodeFromJsonElement(InlineNode.serializer(), obj))
+        return jsonDecoder.json.decodeFromJsonElement(InlineChild.Fresh.serializer(), obj)
     }
 
     private fun leafObject(encoder: JsonEncoder, key: String, role: String?, source: EditTarget): JsonObject =

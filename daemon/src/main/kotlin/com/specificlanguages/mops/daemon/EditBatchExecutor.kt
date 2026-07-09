@@ -318,27 +318,21 @@ class EditBatchExecutor(
                 referencePlacements.add(ReferencePlacement(index, node, link, target))
             }
             children?.forEach { child ->
-                fun linkForRole(role: String?): SContainmentLink {
-                    val resolvedRole = role
-                        ?: fail(MpsErrorCode.INVALID_REQUEST, "operation $index inline child is missing a role")
-                    return resolveContainmentOrFail(index, node, resolvedRole)
-                }
+                val role = child.role
+                    ?: fail(MpsErrorCode.INVALID_REQUEST, "operation $index inline child is missing a role")
+                val link = resolveContainmentOrFail(index, node, role)
                 when (child) {
                     is InlineChild.Fresh -> {
-                        val spec = child.node
-                        val link = linkForRole(spec.role)
-                        val childNode = model.createNode(resolveConceptOrFail(index, spec.concept))
+                        val childNode = model.createNode(resolveConceptOrFail(index, child.concept))
                         node.addChild(link, childNode)
                         placements.add(Placement(index, node, link, childNode))
-                        populate(index, model, childNode, spec.properties, spec.references, spec.children)
+                        populate(index, model, childNode, child.properties, child.references, child.children)
                     }
                     is InlineChild.Move -> {
-                        val link = linkForRole(child.role)
                         val source = requireEditableNode(index, child.source)
                         adoptMoveLeaf(index, node, link, source)
                     }
                     is InlineChild.Copy -> {
-                        val link = linkForRole(child.role)
                         val source = resolveNode(index, child.source)
                         val copy = CopyUtil.copy(source)
                         node.addChild(link, copy)

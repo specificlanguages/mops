@@ -185,10 +185,10 @@ object EditSchema {
     }
 
     // A child position in an Inline Subtree: a fresh-node spec, a {role?, move} leaf, or a {role?, copy} leaf. The
-    // custom serializer hides this union, so it is hand-authored; the fresh branch forces the InlineNode object into
-    // $defs and references it.
+    // custom serializer hides this union, so it is hand-authored; the fresh branch forces the fresh-node-spec object
+    // into $defs and references it (which also breaks the children recursion).
     private fun inlineChildFragment(defs: MutableMap<String, JsonObject>): JsonObject {
-        val freshRef = objectRef(InlineNode.serializer().descriptor, defs)
+        val freshRef = objectRef(InlineChild.Fresh.serializer().descriptor, defs)
         return buildJsonObject {
             putJsonArray("anyOf") {
                 add(freshRef)

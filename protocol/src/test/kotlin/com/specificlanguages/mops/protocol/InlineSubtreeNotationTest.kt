@@ -56,7 +56,7 @@ class InlineSubtreeNotationTest {
         assertEquals(EditTarget.InModel("m", "11"), copy.source)
 
         val fresh = assertIs<InlineChild.Fresh>(children[2])
-        val nested = assertIs<InlineChild.Move>(fresh.node.children!!.single())
+        val nested = assertIs<InlineChild.Move>(fresh.children!!.single())
         assertEquals(EditTarget.Alias("\$a"), nested.source)
     }
 
@@ -143,7 +143,7 @@ class InlineSubtreeNotationTest {
                     children = listOf(
                         InlineChild.Move(role = "members", source = EditTarget.Alias("\$a")),
                         InlineChild.Copy(role = "members", source = EditTarget.InModel("m", "3")),
-                        InlineChild.Fresh(InlineNode(role = "members", concept = "D")),
+                        InlineChild.Fresh(role = "members", concept = "D"),
                     ),
                 ),
             ),

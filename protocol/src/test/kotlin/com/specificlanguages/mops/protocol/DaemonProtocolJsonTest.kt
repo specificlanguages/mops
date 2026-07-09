@@ -296,11 +296,9 @@ class DaemonProtocolJsonTest {
                         ),
                         children = listOf(
                             InlineChild.Fresh(
-                                InlineNode(
-                                    role = "statements",
-                                    concept = "com.acme.Return",
-                                    properties = listOf(MpsNodePropertyJson(name = "label", value = "r")),
-                                ),
+                                role = "statements",
+                                concept = "com.acme.Return",
+                                properties = listOf(MpsNodePropertyJson(name = "label", value = "r")),
                             ),
                         ),
                     ),
