@@ -43,6 +43,12 @@ class MpsListSemanticsTest {
                         moduleKind = "solution",
                         reference = BUILD_MODULE_REFERENCE,
                     ),
+                    MpsListEntryJson(
+                        type = "module",
+                        name = "json.sandbox",
+                        moduleKind = "solution",
+                        reference = SANDBOX_MODULE_REFERENCE,
+                    ),
                 ),
             ),
             root,
@@ -373,6 +379,7 @@ class MpsListSemanticsTest {
     private companion object {
         const val LANGUAGE_MODULE_REFERENCE = "f3f42ddf-d692-4c29-90fb-7360196f01ab(com.specificlanguages.json)"
         const val BUILD_MODULE_REFERENCE = "84f0ad52-c7ca-45dd-99c5-9605c96bf808(com.specificlanguages.json.build)"
+        const val SANDBOX_MODULE_REFERENCE = "84cf8fb2-5a00-4f48-8747-6b797fc155f2(json.sandbox)"
         const val STRUCTURE_MODEL_REFERENCE = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
         const val BUILD_MODEL_REFERENCE = "r:1044fb59-f691-4b27-8b09-aa9b966feb0e(com.specificlanguages.json.build)"
         const val JSON_FILE_NODE_ID = "2110045694544566904"
