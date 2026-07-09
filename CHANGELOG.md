@@ -2,6 +2,14 @@
 
 ## 0.3.0 (Unreleased)
 
+- Extended the `mops model edit` inline-subtree notation so a position in a `children` array holds a fresh-node spec, a
+  **Move Leaf** (`{"role": ..., "move": <target>}`) that adopts an existing node with its subtree identity-preservingly,
+  or a **Copy Leaf** (`{"role": ..., "copy": <target>}`) that deep-copies it with fresh ids. Leaves work at any depth in
+  `addChild` and `addRoot`, mix with fresh specs, and are checked against Constraints like any other placement. Inline
+  references now accept the canonical `{"role": ..., "to": <target>}` form (the same grammar `setReference` uses,
+  aliases included) alongside the get-node-shaped `{"role": ..., "target": {...}}` form that lets `get-node` output
+  round-trip. Mixing a fresh spec with a leaf, setting both `move` and `copy`, or setting both `to` and `target` is
+  rejected with a field-naming decode error. See `mops explain inline-subtree`.
 - Added a trailing `in <scope-segments>` Search Scope clause to `mops find instances` and `mops find usages`, using the same navigation-target grammar as `mops list`. A scope resolves to the repository (`in /`), a module, a model, or a node subtree, and is searched exhaustively (including read-only library and stub models within it); without a clause the search stays scoped to editable project sources. See `mops explain scope`.
 - **Breaking:** Removed `--all` from `mops find instances` and `mops find usages`; `in /` now searches the whole MPS repository instead.
 - Made `find instances` and `model edit` explain a `CONCEPT_NOT_FOUND` instead of reporting a bare "not found": they

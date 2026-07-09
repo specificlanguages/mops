@@ -33,5 +33,5 @@ DRILL DOWN
   edit.setProperty, edit.setReference, edit.addChild, edit.copyAsChild,
   edit.moveAsChild, edit.delete, edit.deleteChild, edit.addRoot, edit.copyAsRoot,
   edit.moveAsRoot
-  target, position, node-ref
+  inline-subtree, target, position, node-ref
   Run `mops explain edit --schema` for the generated JSON Schema of the batch.

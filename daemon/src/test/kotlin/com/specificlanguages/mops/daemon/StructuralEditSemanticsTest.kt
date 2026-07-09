@@ -6,9 +6,9 @@ import com.specificlanguages.mops.protocol.ChildPosition
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
+import com.specificlanguages.mops.protocol.InlineReference
 import com.specificlanguages.mops.protocol.MpsNodeJson
 import com.specificlanguages.mops.protocol.MpsNodePropertyJson
-import com.specificlanguages.mops.protocol.MpsNodeReferenceJson
 import com.specificlanguages.mops.protocol.MpsNodeReferenceTargetJson
 import com.specificlanguages.mops.protocol.NodeTarget
 import java.nio.file.Path
@@ -59,7 +59,7 @@ class StructuralEditSemanticsTest {
                             concept = LINK_DECLARATION,
                             properties = listOf(MpsNodePropertyJson(name = "role", value = "extraLink")),
                             references = listOf(
-                                MpsNodeReferenceJson(
+                                InlineReference(
                                     role = "target",
                                     target = MpsNodeReferenceTargetJson(node = IJSON_VALUE_ID),
                                 ),

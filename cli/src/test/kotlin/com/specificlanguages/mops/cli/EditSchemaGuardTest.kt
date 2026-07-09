@@ -15,7 +15,7 @@ import kotlin.test.assertTrue
  * the real [ProtocolJson] batch serializer and validate against the generated `model-edit.schema.json`.
  */
 class EditSchemaGuardTest {
-    private val topLevelTopics = listOf("edit", "target", "position", "node-ref")
+    private val topLevelTopics = listOf("edit", "inline-subtree", "target", "position", "node-ref")
     private val operationTopics = EditNotation.operationNames.map { "edit.$it" }
     private val exampleTopics = (topLevelTopics + operationTopics).filter { it != "edit" }
     private val sectionHeaders =

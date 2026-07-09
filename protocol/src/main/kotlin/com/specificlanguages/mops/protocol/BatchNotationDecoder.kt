@@ -80,10 +80,15 @@ internal object BatchNotationDecoder {
         }
 
         // Catch-all for remaining shape problems the structural checks above do not model (for example a primitive
-        // field given the wrong JSON type), attributed to this op's page.
+        // field given the wrong JSON type), attributed to this op's page. Inline-subtree serializers (children,
+        // references) raise a [ProtocolJsonException] whose message already names the offending field, so surface it
+        // verbatim rather than the generic fallback.
         return try {
             json.decodeFromJsonElement(EditOperation.serializer(), element)
             null
+        } catch (exception: ProtocolJsonException) {
+            failure(index, op, BatchDecodeErrorCategory.WrongType,
+                "operations[$index]: $op ${exception.message} — see: mops explain edit.$op")
         } catch (_: SerializationException) {
             failure(index, op, BatchDecodeErrorCategory.WrongType,
                 "operations[$index]: $op has an invalid field — see: mops explain edit.$op")

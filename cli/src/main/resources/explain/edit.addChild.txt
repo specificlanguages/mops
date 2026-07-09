@@ -6,15 +6,18 @@ FIELDS
   role        (required) the Containment Role to add the Child under
   concept     (required) qualified concept name of the new node
   properties  (optional) inline properties for the new node
-  references  (optional) inline References to existing nodes
-  children    (optional) nested child nodes (a Node Subtree)
+  references  (optional) inline References to existing nodes, each {role, to} or
+              {role, target} — see inline-subtree
+  children    (optional) nested nodes: fresh specs, Move Leaves, or Copy Leaves —
+              see inline-subtree
   position    (optional, default last) placement among children — see position
   as          (optional) batch-local alias bound to the created node; reference it
               in later operations as $name (the leading $ is required in references)
 
 SEMANTICS
   Creates one node of concept and inserts it under the parent's Containment Role
-  at position. Nested children build a whole Node Subtree in one operation.
+  at position. Nested children build a whole Node Subtree in one operation; a
+  Move Leaf or Copy Leaf reuses an existing node instead of building a fresh one.
 
 EXAMPLE
   Add a member, then set a property on it through its alias:
@@ -38,4 +41,4 @@ EXAMPLE
 }
 
 SEE ALSO
-  edit, target, position, node-ref
+  edit, inline-subtree, target, position, node-ref

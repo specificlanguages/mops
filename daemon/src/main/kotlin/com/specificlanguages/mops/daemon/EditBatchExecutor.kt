@@ -8,10 +8,10 @@ import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditConstraintViolation
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
+import com.specificlanguages.mops.protocol.InlineChild
+import com.specificlanguages.mops.protocol.InlineReference
 import com.specificlanguages.mops.protocol.ModelEditResponse
-import com.specificlanguages.mops.protocol.MpsNodeJson
 import com.specificlanguages.mops.protocol.ModelDestination
-import com.specificlanguages.mops.protocol.MpsNodeReferenceJson
 import com.specificlanguages.mops.protocol.MpsNodePropertyJson
 import com.specificlanguages.mops.protocol.NodeTarget
 import jetbrains.mps.core.aspects.constraints.rules.kinds.CanBeAncestorContext
@@ -219,9 +219,16 @@ class EditBatchExecutor(
                 )
             }
 
-        fun resolveReferenceTargetOrFail(index: Int, ownerModel: SModel, reference: MpsNodeReferenceJson): SNode {
-            val targetModel = reference.target.model
-            val nodeId = reference.target.node
+        fun resolveReferenceTargetOrFail(index: Int, ownerModel: SModel, reference: InlineReference): SNode {
+            // The canonical `to` form (the full EditTarget grammar, aliases included) resolves like every other target.
+            reference.to?.let { return resolveNode(index, it) }
+
+            // The get-node-shaped `target` form: a bare node id resolves within the owner model, a `model/nodeId` pair
+            // globally.
+            val target = reference.target
+                ?: fail(MpsErrorCode.TARGET_RESOLUTION_FAILED, "operation $index reference ${reference.role} has no target")
+            val targetModel = target.model
+            val nodeId = target.node
                 ?: fail(
                     MpsErrorCode.TARGET_RESOLUTION_FAILED,
                     "operation $index reference ${reference.role} is missing a target node id",
@@ -255,14 +262,51 @@ class EditBatchExecutor(
             }
         }
 
-        // Sets properties and references on [node] and builds its nested children, recursively.
+        // Detaches [node] from its current home — a containing node or a model's root position — so it can be adopted
+        // elsewhere with its identity intact.
+        fun detach(node: SNode) {
+            val oldParent = node.parent
+            if (oldParent != null) {
+                oldParent.removeChild(node)
+            } else {
+                node.model?.removeRootNode(node)
+            }
+        }
+
+        // Rejects moving [moved] under [insertionParent] when [moved] is that parent or an ancestor of it, which would
+        // place a node inside its own descendant. Shared by moveAsChild and the Move Leaf so both report the same error.
+        fun failIfWouldMoveIntoOwnDescendant(index: Int, insertionParent: SNode, moved: SNode) {
+            var ancestor: SNode? = insertionParent
+            while (ancestor != null) {
+                if (ancestor == moved) {
+                    fail(
+                        MpsErrorCode.INVALID_REQUEST,
+                        "operation $index cannot move a node into itself or its own descendant",
+                    )
+                }
+                ancestor = ancestor.parent
+            }
+        }
+
+        // Adopts an existing node as a Move Leaf: fails if it is the insertion point [parent] or an ancestor of it, then
+        // detaches and re-attaches it identity-preservingly.
+        fun adoptMoveLeaf(index: Int, parent: SNode, link: SContainmentLink, source: SNode) {
+            failIfWouldMoveIntoOwnDescendant(index, parent, source)
+            detach(source)
+            parent.addChild(link, source)
+            placements.add(Placement(index, parent, link, source))
+        }
+
+        // Sets properties and references on [node] and builds its nested children, recursively. Each child is a fresh
+        // node spec, a Move Leaf (adopting an existing node identity-preservingly), or a Copy Leaf (deep-copying with
+        // fresh ids).
         fun populate(
             index: Int,
             model: SModel,
             node: SNode,
             properties: List<MpsNodePropertyJson>?,
-            references: List<MpsNodeReferenceJson>?,
-            children: List<MpsNodeJson>?,
+            references: List<InlineReference>?,
+            children: List<InlineChild>?,
         ) {
             properties?.forEach { property ->
                 SNodeAccessUtil.setPropertyValue(node, resolvePropertyOrFail(index, node, property.name), property.value)
@@ -273,14 +317,34 @@ class EditBatchExecutor(
                 node.setReferenceTarget(link, target)
                 referencePlacements.add(ReferencePlacement(index, node, link, target))
             }
-            children?.forEach { childSpec ->
-                val role = childSpec.role
-                    ?: fail(MpsErrorCode.INVALID_REQUEST, "operation $index inline child is missing a role")
-                val link = resolveContainmentOrFail(index, node, role)
-                val childNode = model.createNode(resolveConceptOrFail(index, childSpec.concept))
-                node.addChild(link, childNode)
-                placements.add(Placement(index, node, link, childNode))
-                populate(index, model, childNode, childSpec.properties, childSpec.references, childSpec.children)
+            children?.forEach { child ->
+                fun linkForRole(role: String?): SContainmentLink {
+                    val resolvedRole = role
+                        ?: fail(MpsErrorCode.INVALID_REQUEST, "operation $index inline child is missing a role")
+                    return resolveContainmentOrFail(index, node, resolvedRole)
+                }
+                when (child) {
+                    is InlineChild.Fresh -> {
+                        val spec = child.node
+                        val link = linkForRole(spec.role)
+                        val childNode = model.createNode(resolveConceptOrFail(index, spec.concept))
+                        node.addChild(link, childNode)
+                        placements.add(Placement(index, node, link, childNode))
+                        populate(index, model, childNode, spec.properties, spec.references, spec.children)
+                    }
+                    is InlineChild.Move -> {
+                        val link = linkForRole(child.role)
+                        val source = requireEditableNode(index, child.source)
+                        adoptMoveLeaf(index, node, link, source)
+                    }
+                    is InlineChild.Copy -> {
+                        val link = linkForRole(child.role)
+                        val source = resolveNode(index, child.source)
+                        val copy = CopyUtil.copy(source)
+                        node.addChild(link, copy)
+                        placements.add(Placement(index, node, link, copy))
+                    }
+                }
             }
         }
 
@@ -333,24 +397,10 @@ class EditBatchExecutor(
                 is EditOperation.MoveAsChild -> {
                     val node = requireEditableNode(index, operation.target)
                     val newParent = requireEditableNode(index, operation.into)
-                    var ancestor: SNode? = newParent
-                    while (ancestor != null) {
-                        if (ancestor == node) {
-                            fail(
-                                MpsErrorCode.INVALID_REQUEST,
-                                "operation $index cannot move a node into itself or its own descendant",
-                            )
-                        }
-                        ancestor = ancestor.parent
-                    }
+                    failIfWouldMoveIntoOwnDescendant(index, newParent, node)
                     val link = resolveContainmentOrFail(index, newParent, operation.role)
                     mutated = true
-                    val oldParent = node.parent
-                    if (oldParent != null) {
-                        oldParent.removeChild(node)
-                    } else {
-                        node.model?.removeRootNode(node)
-                    }
+                    detach(node)
                     attach(index, newParent, link, node, operation.position)
                     placements.add(Placement(index, newParent, link, node))
                 }
@@ -403,12 +453,7 @@ class EditBatchExecutor(
                     val node = requireEditableNode(index, operation.target)
                     val model = requireEditableModel(index, operation.model)
                     mutated = true
-                    val oldParent = node.parent
-                    if (oldParent != null) {
-                        oldParent.removeChild(node)
-                    } else {
-                        node.model?.removeRootNode(node)
-                    }
+                    detach(node)
                     model.addRootNode(node)
                     rootPlacements.add(RootPlacement(index, model, node))
                 }

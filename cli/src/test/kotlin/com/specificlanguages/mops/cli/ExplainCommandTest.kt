@@ -17,7 +17,8 @@ import kotlin.test.assertTrue
 
 @ResourceLock("system-streams")
 class ExplainCommandTest {
-    private val topLevelTopics = listOf("edit", "target", "position", "node-ref", "name-pattern", "scope")
+    private val topLevelTopics =
+        listOf("edit", "inline-subtree", "target", "position", "node-ref", "name-pattern", "scope")
     private val operationTopics = EditNotation.operationNames.map { "edit.$it" }
     private val allTopics = topLevelTopics + operationTopics
 

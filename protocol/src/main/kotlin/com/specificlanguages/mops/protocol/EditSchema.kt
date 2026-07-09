@@ -28,6 +28,8 @@ object EditSchema {
     private const val EDIT_TARGET_SERIAL_NAME = "EditTarget"
     private const val CHILD_POSITION_SERIAL_NAME = "ChildPosition"
     private const val MODEL_DESTINATION_SERIAL_NAME = "ModelDestination"
+    private const val INLINE_CHILD_SERIAL_NAME = "InlineChild"
+    private const val INLINE_REFERENCE_SERIAL_NAME = "InlineReference"
 
     // The two hand-authored union fragments: EditTarget's custom serializer accepts a bare reference string (a node
     // reference or a $alias) or a {model, nodeId} object; ChildPosition's accepts the "first"/"last"/"only" keywords or
@@ -140,6 +142,8 @@ object EditSchema {
             EDIT_TARGET_SERIAL_NAME -> return EDIT_TARGET_FRAGMENT
             CHILD_POSITION_SERIAL_NAME -> return CHILD_POSITION_FRAGMENT
             MODEL_DESTINATION_SERIAL_NAME -> return MODEL_DESTINATION_FRAGMENT
+            INLINE_CHILD_SERIAL_NAME -> return inlineChildFragment(defs)
+            INLINE_REFERENCE_SERIAL_NAME -> return inlineReferenceFragment(defs)
         }
 
         return when (descriptor.kind) {
@@ -178,6 +182,46 @@ object EditSchema {
             }
         }
         return buildJsonObject { put("\$ref", "#/\$defs/$name") }
+    }
+
+    // A child position in an Inline Subtree: a fresh-node spec, a {role?, move} leaf, or a {role?, copy} leaf. The
+    // custom serializer hides this union, so it is hand-authored; the fresh branch forces the InlineNode object into
+    // $defs and references it.
+    private fun inlineChildFragment(defs: MutableMap<String, JsonObject>): JsonObject {
+        val freshRef = objectRef(InlineNode.serializer().descriptor, defs)
+        return buildJsonObject {
+            putJsonArray("anyOf") {
+                add(freshRef)
+                add(leafBranch("move"))
+                add(leafBranch("copy"))
+            }
+        }
+    }
+
+    private fun leafBranch(leaf: String): JsonObject = buildJsonObject {
+        put("type", "object")
+        putJsonObject("properties") {
+            putJsonObject("role") { put("type", "string") }
+            put(leaf, EDIT_TARGET_FRAGMENT)
+        }
+        putJsonArray("required") { add(leaf) }
+        put("additionalProperties", false)
+    }
+
+    // An inline Reference: {role, to} (the EditTarget grammar) or {role, target} (the get-node-shaped object). The
+    // custom serializer hides this shape, so it is hand-authored; the target branch references the get-node target def.
+    private fun inlineReferenceFragment(defs: MutableMap<String, JsonObject>): JsonObject {
+        val targetRef = objectRef(MpsNodeReferenceTargetJson.serializer().descriptor, defs)
+        return buildJsonObject {
+            put("type", "object")
+            putJsonObject("properties") {
+                putJsonObject("role") { put("type", "string") }
+                put("to", EDIT_TARGET_FRAGMENT)
+                put("target", targetRef)
+            }
+            putJsonArray("required") { add("role") }
+            put("additionalProperties", false)
+        }
     }
 
     private fun typeObject(type: String): JsonObject = buildJsonObject { put("type", type) }

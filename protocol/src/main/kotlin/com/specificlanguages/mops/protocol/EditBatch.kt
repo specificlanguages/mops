@@ -62,8 +62,8 @@ sealed interface EditOperation {
         val role: String,
         val concept: String,
         val properties: List<MpsNodePropertyJson>? = null,
-        val references: List<MpsNodeReferenceJson>? = null,
-        val children: List<MpsNodeJson>? = null,
+        val references: List<InlineReference>? = null,
+        val children: List<InlineChild>? = null,
         val position: ChildPosition = ChildPosition.Last,
         @SerialName("as") override val alias: String? = null,
     ) : EditOperation, CreatingOperation
@@ -118,8 +118,8 @@ sealed interface EditOperation {
         val model: ModelDestination,
         val concept: String,
         val properties: List<MpsNodePropertyJson>? = null,
-        val references: List<MpsNodeReferenceJson>? = null,
-        val children: List<MpsNodeJson>? = null,
+        val references: List<InlineReference>? = null,
+        val children: List<InlineChild>? = null,
         @SerialName("as") override val alias: String? = null,
     ) : EditOperation, CreatingOperation
 

@@ -289,16 +289,18 @@ class DaemonProtocolJsonTest {
                         concept = "com.acme.Block",
                         properties = listOf(MpsNodePropertyJson(name = "name", value = "b")),
                         references = listOf(
-                            MpsNodeReferenceJson(
+                            InlineReference(
                                 role = "type",
                                 target = MpsNodeReferenceTargetJson(model = model, node = "77"),
                             ),
                         ),
                         children = listOf(
-                            MpsNodeJson(
-                                role = "statements",
-                                concept = "com.acme.Return",
-                                properties = listOf(MpsNodePropertyJson(name = "label", value = "r")),
+                            InlineChild.Fresh(
+                                InlineNode(
+                                    role = "statements",
+                                    concept = "com.acme.Return",
+                                    properties = listOf(MpsNodePropertyJson(name = "label", value = "r")),
+                                ),
                             ),
                         ),
                     ),
