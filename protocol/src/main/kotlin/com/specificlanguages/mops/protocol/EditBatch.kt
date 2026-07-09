@@ -160,6 +160,37 @@ sealed interface EditOperation {
         val with: InlineChild,
         @SerialName("as") override val alias: String? = null,
     ) : EditOperation, CreatingOperation
+
+    /**
+     * Wraps the [target] node in a fresh node of [concept] that takes the target's exact place (same parent,
+     * Containment Role, and sibling index, or Root Node position when the target is a root); the target then moves
+     * under the wrapper's [role] at [position] among any inline-built siblings. The wrapper is built like an [AddChild]
+     * inline spec, carrying [properties], [references], and a [children] subtree. [alias] binds the wrapper.
+     */
+    @Serializable
+    @SerialName("wrap")
+    data class Wrap(
+        val target: EditTarget,
+        val concept: String,
+        val role: String,
+        val properties: List<MpsNodePropertyJson>? = null,
+        val references: List<InlineReference>? = null,
+        val children: List<InlineChild>? = null,
+        val position: ChildPosition = ChildPosition.Last,
+        @SerialName("as") override val alias: String? = null,
+    ) : EditOperation, CreatingOperation
+
+    /**
+     * Unwraps the [target] node, promoting [keep] — an [EditTarget] that must resolve to a proper descendant of
+     * [target] — into the target's exact place (or Root Node position when the target is a root). The rest of the
+     * target's subtree is deleted. Nothing is created, so there is no alias.
+     */
+    @Serializable
+    @SerialName("unwrap")
+    data class Unwrap(
+        val target: EditTarget,
+        val keep: EditTarget,
+    ) : EditOperation
 }
 
 /**

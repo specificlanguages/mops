@@ -4,7 +4,8 @@ SHAPE
   Operations that create structure (addChild, addRoot) take inline "properties",
   "references", and "children". The shape mirrors what `get-node` emits, so you can
   paste a subtree from `get-node` and edit it. replace's "with" is one such position
-  (a fresh spec or a bare Move/Copy Leaf) that takes the replaced node's slot.
+  (a fresh spec or a bare Move/Copy Leaf) that takes the replaced node's slot, and
+  wrap builds its wrapper from the same inline "properties"/"references"/"children".
 
 CHILDREN
   Each entry in a "children" array is exactly one of:
@@ -61,4 +62,4 @@ EXAMPLE
 }
 
 SEE ALSO
-  edit, edit.addChild, edit.addRoot, edit.replace, target, node-ref
+  edit, edit.addChild, edit.addRoot, edit.replace, edit.wrap, target, node-ref

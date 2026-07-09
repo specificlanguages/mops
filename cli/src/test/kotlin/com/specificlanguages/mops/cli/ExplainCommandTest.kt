@@ -159,6 +159,8 @@ class ExplainCommandTest {
         is EditOperation.MoveAsRoot -> listOf(op.target)
         is EditOperation.AddRoot -> emptyList()
         is EditOperation.Replace -> listOf(op.target)
+        is EditOperation.Wrap -> listOf(op.target)
+        is EditOperation.Unwrap -> listOf(op.target, op.keep)
     }
 
     private fun positionOf(op: EditOperation): ChildPosition? = when (op) {
@@ -166,6 +168,7 @@ class ExplainCommandTest {
         is EditOperation.CopyAsChild -> op.position
         is EditOperation.MoveAsChild -> op.position
         is EditOperation.DeleteChild -> op.position
+        is EditOperation.Wrap -> op.position
         else -> null
     }
 

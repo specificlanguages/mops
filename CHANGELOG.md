@@ -2,6 +2,15 @@
 
 ## 0.3.0 (Unreleased)
 
+- Added the `mops model edit` **`wrap`** and **`unwrap`** operations. `wrap` (`{"op": "wrap", "target", "concept",
+  "role", ...}`) puts a fresh node of `concept` in the target's exact slot and moves the target under the wrapper's
+  `role` (at an optional `position` among inline-built siblings); the wrapper is built like an `addChild` inline spec
+  (`properties`/`references`/`children`, Move/Copy Leaves included) and `as` binds it. `unwrap` (`{"op": "unwrap",
+  "target", "keep"}`) promotes `keep` — which must resolve to a proper descendant of the target — into the target's
+  slot and deletes the rest; `keep` may be any depth, so a multi-level strip is one operation. Both work on Root Nodes
+  (the wrapper or kept node becomes a root of the same model), preserve identity (inbound References keep resolving),
+  and are Constraint-checked on the end state. Node attributes travel inside the target's subtree and are never copied
+  onto a wrapper. See `mops explain edit.wrap` and `mops explain edit.unwrap`.
 - Added the `mops model edit` **`replace`** operation: `{"op": "replace", "target": <target>, "with": <inline
   position>, "as": ...}`. The replacement — a fresh-node spec, a **Move Leaf**, or a **Copy Leaf** — takes the target's
   exact slot (same parent, Containment Role, and sibling index, or Root Node position when the target is a root), and

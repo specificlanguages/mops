@@ -12,7 +12,7 @@ class EditNotationTest {
         assertEquals(
             setOf(
                 "setProperty", "setReference", "addChild", "copyAsChild", "moveAsChild", "delete", "deleteChild",
-                "addRoot", "copyAsRoot", "moveAsRoot", "replace",
+                "addRoot", "copyAsRoot", "moveAsRoot", "replace", "wrap", "unwrap",
             ),
             EditNotation.operationNames.toSet(),
         )

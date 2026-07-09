@@ -19,6 +19,8 @@ OPERATIONS
   copyAsRoot    copy a Node Subtree into a model as a Root Node
   moveAsRoot    move an existing node to Root Node position of a model
   replace       swap a node in place for a new subtree, keeping its exact slot
+  wrap          put a new node around an existing one, keeping its exact slot
+  unwrap        strip a wrapper, keeping one descendant in its place
 
 NOTES
   Atomicity is best-effort, not guaranteed. If an operation fails before the batch
@@ -26,7 +28,7 @@ NOTES
   from disk, so nothing is committed. Saving itself is not transactional: a batch
   that spans several models writes them one at a time, so a failure partway through
   saving can leave earlier models already persisted.
-  Aliases: a creating operation (addChild, copyAsChild, addRoot, copyAsRoot, replace) may bind
+  Aliases: a creating operation (addChild, copyAsChild, addRoot, copyAsRoot, replace, wrap) may bind
   its new node to a batch-local "as" alias (e.g. "as": "root") that later operations
   target as "$root". The leading $ is the reference sigil — required when targeting an
   alias, and not part of the name.
@@ -37,6 +39,6 @@ NOTES
 DRILL DOWN
   edit.setProperty, edit.setReference, edit.addChild, edit.copyAsChild,
   edit.moveAsChild, edit.delete, edit.deleteChild, edit.addRoot, edit.copyAsRoot,
-  edit.moveAsRoot, edit.replace
+  edit.moveAsRoot, edit.replace, edit.wrap, edit.unwrap
   inline-subtree, target, position, node-ref
   Run `mops explain edit --schema` for the generated JSON Schema of the batch.

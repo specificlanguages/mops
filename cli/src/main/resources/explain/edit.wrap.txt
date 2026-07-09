@@ -1,0 +1,45 @@
+edit.wrap — put a new node around an existing one, keeping its exact slot.
+
+FIELDS
+  op          "wrap"
+  target      (required) the node to wrap — see target
+  concept     (required) the wrapper's concept (fully-qualified name)
+  role        (required) the wrapper's Containment Role the target moves under
+  properties  (optional) inline properties of the wrapper — see inline-subtree
+  references  (optional) inline references of the wrapper — see inline-subtree
+  children    (optional) inline children built alongside the target under the
+              wrapper, including Move/Copy Leaves — see inline-subtree
+  position    (optional, default last) where the target lands among any inline-built
+              siblings in role — see position
+  as          (optional) batch-local alias bound to the wrapper; reference it in
+              later operations as $name (the leading $ is required in references)
+
+SEMANTICS
+  A fresh wrapper node of concept takes the target's exact place — same parent,
+  Containment Role, and sibling index, or Root Node position in the same model when
+  the target is a root. The target then moves under the wrapper's role at position,
+  keeping its identity (so inbound References to it keep resolving) and its whole
+  subtree. The wrapper is built like an addChild inline spec; its properties,
+  references, and children fill out the rest of it.
+
+  Annotations stay put: MPS node attributes are children of the node they annotate,
+  so they travel inside the target's subtree under the wrapper — they are never
+  copied onto the wrapper.
+
+EXAMPLE
+  Wrap an expression in a ParenthesizedExpression, which takes its slot and holds it
+  under "expression":
+{
+  "operations": [
+    {
+      "op": "wrap",
+      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+      "concept": "jetbrains.mps.baseLanguage.structure.ParenthesizedExpression",
+      "role": "expression",
+      "as": "wrapper"
+    }
+  ]
+}
+
+SEE ALSO
+  edit, inline-subtree, target, position, node-ref

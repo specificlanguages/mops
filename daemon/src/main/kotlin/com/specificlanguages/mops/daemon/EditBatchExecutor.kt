@@ -343,6 +343,33 @@ class EditBatchExecutor(
             }
         }
 
+        // Swaps [replacement] into [target]'s exact place via MPS's own API (preserving the sibling index for a child
+        // target, or Root Node position for a root), records the resulting placement for end-state Constraint checking,
+        // and deletes the old subtree (MPS deletion is detachment, performed by the swap).
+        fun replaceInPlace(index: Int, target: SNode, replacement: SNode) {
+            SNodeUtil.replaceWithAnother(target, replacement)
+            val parent = replacement.parent
+            if (parent != null) {
+                placements.add(Placement(index, parent, replacement.containmentLink!!, replacement))
+            } else {
+                rootPlacements.add(RootPlacement(index, replacement.model!!, replacement))
+            }
+        }
+
+        // Rejects a [keep] target that is not a proper descendant of [target]: it must be a different node reachable by
+        // walking up parents from [keep]. Shared intent-level validation for unwrap.
+        fun failIfNotProperDescendant(index: Int, target: SNode, keep: SNode) {
+            if (keep == target) {
+                fail(MpsErrorCode.INVALID_REQUEST, "operation $index keep must be a proper descendant of target, not target itself")
+            }
+            var ancestor: SNode? = keep.parent
+            while (ancestor != null) {
+                if (ancestor == target) return
+                ancestor = ancestor.parent
+            }
+            fail(MpsErrorCode.INVALID_REQUEST, "operation $index keep must be a descendant of target")
+        }
+
         for ((index, operation) in batch.operations.withIndex()) {
             when (operation) {
                 is EditOperation.SetProperty -> {
@@ -480,17 +507,34 @@ class EditBatchExecutor(
                             CopyUtil.copy(source)
                         }
                     }
-                    // MPS's own in-place swap: preserves the exact sibling index for a child target, handles a root
-                    // target, and detaches the replacement from wherever it sits — including from inside the target's
-                    // now-dropped subtree. The old subtree is detached (i.e. deleted) by the swap.
-                    SNodeUtil.replaceWithAnother(target, replacement)
-                    val parent = replacement.parent
-                    if (parent != null) {
-                        placements.add(Placement(index, parent, replacement.containmentLink!!, replacement))
-                    } else {
-                        rootPlacements.add(RootPlacement(index, replacement.model!!, replacement))
-                    }
+                    replaceInPlace(index, target, replacement)
                     bindAlias(index, operation.alias, replacement)
+                }
+
+                is EditOperation.Wrap -> {
+                    val target = requireEditableNode(index, operation.target)
+                    val model = target.model!!
+                    val concept = resolveConceptOrFail(index, operation.concept)
+                    mutated = true
+                    val wrapper = model.createNode(concept)
+                    val link = resolveContainmentOrFail(index, wrapper, operation.role)
+                    // Build the wrapper's other inline structure first, then swap it into the target's slot, then adopt
+                    // the target under the wrapper's role among any inline-built siblings.
+                    populate(index, model, wrapper, operation.properties, operation.references, operation.children)
+                    replaceInPlace(index, target, wrapper)
+                    attach(index, wrapper, link, target, operation.position)
+                    placements.add(Placement(index, wrapper, link, target))
+                    bindAlias(index, operation.alias, wrapper)
+                }
+
+                is EditOperation.Unwrap -> {
+                    val target = requireEditableNode(index, operation.target)
+                    val keep = requireEditableNode(index, operation.keep)
+                    failIfNotProperDescendant(index, target, keep)
+                    mutated = true
+                    // The kept descendant rises into the target's slot; the swap detaches it from inside the target and
+                    // drops the remainder.
+                    replaceInPlace(index, target, keep)
                 }
             }
         }
