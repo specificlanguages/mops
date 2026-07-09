@@ -15,21 +15,21 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @ResourceLock("system-streams")
-class FindByNameCommandTest {
+class FindRootByNameCommandTest {
     @Test
-    fun `find by-name prints tab-separated rows for a pattern`() {
+    fun `find root-by-name prints tab-separated rows for a pattern`() {
         val client = mock<DaemonClient>()
-        whenever(client.findByName(PATTERN, 100, false)).thenReturn(sampleResponse())
+        whenever(client.findByName(PATTERN, 100, null)).thenReturn(sampleResponse())
         var exitCode = Int.MIN_VALUE
 
         val stdout = tapSystemOut {
-            exitCode = CommandLine(FindByNameCommand(client))
+            exitCode = CommandLine(FindRootByNameCommand(client))
                 .setExecutionExceptionHandler(PrintErrorAndExit)
                 .execute(PATTERN)
         }
 
         assertEquals(0, exitCode)
-        verify(client).findByName(PATTERN, 100, false)
+        verify(client).findByName(PATTERN, 100, null)
         assertEquals(
             "root\tJsonObject\tjetbrains.mps.lang.structure.structure.ConceptDeclaration\t" +
                 "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
@@ -39,13 +39,13 @@ class FindByNameCommandTest {
     }
 
     @Test
-    fun `find by-name renders unnamed nodes`() {
+    fun `find root-by-name renders unnamed nodes`() {
         val client = mock<DaemonClient>()
-        whenever(client.findByName(PATTERN, 100, false)).thenReturn(sampleResponse(name = null))
+        whenever(client.findByName(PATTERN, 100, null)).thenReturn(sampleResponse(name = null))
         var exitCode = Int.MIN_VALUE
 
         val stdout = tapSystemOut {
-            exitCode = CommandLine(FindByNameCommand(client))
+            exitCode = CommandLine(FindRootByNameCommand(client))
                 .setExecutionExceptionHandler(PrintErrorAndExit)
                 .execute(PATTERN)
         }
@@ -60,30 +60,76 @@ class FindByNameCommandTest {
     }
 
     @Test
-    fun `find by-name passes all flag to the daemon`() {
+    fun `find root-by-name passes the scope clause to the daemon`() {
         val client = mock<DaemonClient>()
-        whenever(client.findByName(PATTERN, 100, true)).thenReturn(sampleResponse())
+        whenever(client.findByName(PATTERN, 100, listOf("com.specificlanguages.json"))).thenReturn(sampleResponse())
         var exitCode = Int.MIN_VALUE
 
         tapSystemOut {
-            exitCode = CommandLine(FindByNameCommand(client))
+            exitCode = CommandLine(FindRootByNameCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(PATTERN, "in", "com.specificlanguages.json")
+        }
+
+        assertEquals(0, exitCode)
+        verify(client).findByName(PATTERN, 100, listOf("com.specificlanguages.json"))
+    }
+
+    @Test
+    fun `find root-by-name passes the repository scope to the daemon`() {
+        val client = mock<DaemonClient>()
+        whenever(client.findByName(PATTERN, 100, listOf("/"))).thenReturn(sampleResponse())
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(FindRootByNameCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(PATTERN, "in", "/")
+        }
+
+        assertEquals(0, exitCode)
+        verify(client).findByName(PATTERN, 100, listOf("/"))
+    }
+
+    @Test
+    fun `find root-by-name rejects a bare in with no scope segments`() {
+        val client = mock<DaemonClient>()
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(FindRootByNameCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(PATTERN, "in")
+        }
+
+        assertEquals(1, exitCode)
+        verifyNoInteractions(client)
+    }
+
+    @Test
+    fun `find root-by-name rejects the removed --all option`() {
+        val client = mock<DaemonClient>()
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(FindRootByNameCommand(client))
                 .setExecutionExceptionHandler(PrintErrorAndExit)
                 .execute("--all", PATTERN)
         }
 
-        assertEquals(0, exitCode)
-        verify(client).findByName(PATTERN, 100, true)
+        assertEquals(2, exitCode)
+        verifyNoInteractions(client)
     }
 
     @Test
-    fun `find by-name prints response object as json when requested`() {
+    fun `find root-by-name prints response object as json when requested`() {
         val client = mock<DaemonClient>()
         val response = sampleResponse()
-        whenever(client.findByName(PATTERN, 100, false)).thenReturn(response)
+        whenever(client.findByName(PATTERN, 100, null)).thenReturn(response)
         var exitCode = Int.MIN_VALUE
 
         val stdout = tapSystemOut {
-            exitCode = CommandLine(FindByNameCommand(client))
+            exitCode = CommandLine(FindRootByNameCommand(client))
                 .setExecutionExceptionHandler(PrintErrorAndExit)
                 .execute("--json", PATTERN)
         }
@@ -93,15 +139,15 @@ class FindByNameCommandTest {
     }
 
     @Test
-    fun `find by-name appends a truncation row when more results exist`() {
+    fun `find root-by-name appends a truncation row when more results exist`() {
         val client = mock<DaemonClient>()
-        whenever(client.findByName(PATTERN, 1, false)).thenReturn(
+        whenever(client.findByName(PATTERN, 1, null)).thenReturn(
             sampleResponse(limit = 1).copy(truncated = true),
         )
         var exitCode = Int.MIN_VALUE
 
         val stdout = tapSystemOut {
-            exitCode = CommandLine(FindByNameCommand(client))
+            exitCode = CommandLine(FindRootByNameCommand(client))
                 .setExecutionExceptionHandler(PrintErrorAndExit)
                 .execute("--limit", "1", PATTERN)
         }
@@ -117,12 +163,12 @@ class FindByNameCommandTest {
     }
 
     @Test
-    fun `find by-name rejects a blank pattern before dispatching to the daemon`() {
+    fun `find root-by-name rejects a blank pattern before dispatching to the daemon`() {
         val client = mock<DaemonClient>()
         var exitCode = Int.MIN_VALUE
 
         tapSystemOut {
-            exitCode = CommandLine(FindByNameCommand(client))
+            exitCode = CommandLine(FindRootByNameCommand(client))
                 .setExecutionExceptionHandler(PrintErrorAndExit)
                 .execute("   ")
         }
@@ -132,12 +178,12 @@ class FindByNameCommandTest {
     }
 
     @Test
-    fun `find by-name rejects a negative limit before dispatching to the daemon`() {
+    fun `find root-by-name rejects a negative limit before dispatching to the daemon`() {
         val client = mock<DaemonClient>()
         var exitCode = Int.MIN_VALUE
 
         tapSystemOut {
-            exitCode = CommandLine(FindByNameCommand(client))
+            exitCode = CommandLine(FindRootByNameCommand(client))
                 .setExecutionExceptionHandler(PrintErrorAndExit)
                 .execute("--limit", "-1", PATTERN)
         }

@@ -115,7 +115,7 @@ class JetBrainsMpsAccess(
             )
         }
 
-        override fun findByName(pattern: String, limit: Int, all: Boolean): FindByNameResponse {
+        override fun findByName(pattern: String, limit: Int, scope: ResolvedScope): FindByNameResponse {
             // The leading '*' reproduces MPS Go-to-Node's "search in any place": the pattern matches anywhere within a
             // name, not only as a prefix. The MinusculeMatcher then supports camel-hump and '*' wildcards, and
             // matchingDegree ranks prefix and contiguous matches above scattered middle matches.
@@ -123,9 +123,9 @@ class JetBrainsMpsAccess(
                 .withCaseSensitivity(NameUtil.MatchingCaseSensitivity.NONE)
                 .build()
 
-            val scope = searchScope(all)
+            val searchScope = rootBearingScope(scope)
             val matches = mutableListOf<Pair<SNode, Int>>()
-            for (model in scope.models) {
+            for (model in searchScope.models) {
                 for (root in model.rootNodes) {
                     val name = nodeName(root) ?: continue
                     if (matcher.matches(name)) {
@@ -156,10 +156,22 @@ class JetBrainsMpsAccess(
         override fun diagnoseModule(module: String): ModuleDiagnosticResponse =
             ModuleLoadDiagnostics(project).diagnoseModule(module)
 
-        // Editable Project Sources are the default find scope; `all` widens to the whole repository, including the
-        // read-only library and stub models the editable filter otherwise excludes.
-        private fun searchScope(all: Boolean): SearchScope =
-            if (all) GlobalScope(project.repository) else EditableFilteringScope(project.scope)
+        // `find root-by-name` searches Root Nodes only, so its scope must bear roots: the default editable project
+        // sources, the whole repository, a module, or a model. A subtree scope (a Root Node or nested node) has no
+        // roots of its own, so it is rejected with a pointer to the named-descendant search instead.
+        private fun rootBearingScope(scope: ResolvedScope): SearchScope =
+            when (scope) {
+                ResolvedScope.EditableProjectSources -> EditableFilteringScope(project.scope)
+                ResolvedScope.Repository -> GlobalScope(project.repository)
+                is ResolvedScope.Module -> ModulesScope(listOf(resolveModule(scope.moduleReference)))
+                is ResolvedScope.Model -> ModelsScope(listOf(resolveModel(scope.modelReference)))
+                is ResolvedScope.Subtree -> throw MpsRequestException(
+                    code = MpsErrorCode.UNSUPPORTED_TARGET,
+                    message = "find root-by-name searches Root Nodes only, and a node or root-node scope holds none — " +
+                        "use `mops find instances <concept> --named <pattern>` to search named descendants of a node.\n" +
+                        "see: mops explain scope",
+                )
+            }
 
         override fun resolveScope(segments: List<String>?): ResolvedScope =
             when (segments) {

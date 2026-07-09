@@ -10,7 +10,7 @@ import picocli.CommandLine.ParentCommand
     subcommands = [
         FindInstancesCommand::class,
         FindUsagesCommand::class,
-        FindByNameCommand::class,
+        FindRootByNameCommand::class,
         RecursiveHelpCommand::class,
     ],
 )

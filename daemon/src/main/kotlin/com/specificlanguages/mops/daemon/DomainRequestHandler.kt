@@ -23,7 +23,7 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
                 }
 
                 is FindByNameRequest -> mpsAccess.read {
-                    findByName(request.pattern, request.limit, request.all)
+                    findByName(request.pattern, request.limit, resolveScope(request.scope))
                 }
 
                 is ModelEditRequest -> mpsAccess.write { modelEdit(request.batch, request.constraints) }

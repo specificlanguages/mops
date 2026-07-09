@@ -1,4 +1,4 @@
-name-pattern — the Name Pattern Notation for `mops find by-name`.
+name-pattern — the Name Pattern Notation for `mops find root-by-name`.
 
 A name pattern matches a Root Node by its Node Name, using the same matcher as
 MPS's Go-to-Node navigation. The whole pattern is treated as one name; it is
@@ -25,14 +25,15 @@ RANKING
   above scattered middle matches. Use --limit to bound the result count.
 
 SCOPE
-  by-name searches Root Nodes in Editable Project Sources. Pass --all to widen
-  the search to the whole MPS Repository, including read-only library and stub
-  models.
+  root-by-name searches Root Nodes in Editable Project Sources by default.
+  Append an `in <segment>...` clause to search a module, a model, or the whole
+  repository (`in /`) exhaustively. See `mops explain scope`.
 
 EXAMPLE
-  mops find by-name Json
-  mops find by-name 'Json*Type'
-  mops find by-name --all --limit 10 Concept
+  mops find root-by-name Json
+  mops find root-by-name 'Json*Type'
+  mops find root-by-name Concept in /
+  mops find root-by-name --limit 10 Concept in com.specificlanguages.json
 
 SEE ALSO
-  node-ref, target
+  node-ref, scope, target

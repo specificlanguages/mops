@@ -102,16 +102,18 @@ class DomainRequestHandlerTest {
     }
 
     @Test
-    fun `find-by-name reads and returns the response directly`() {
+    fun `find-by-name resolves the scope then reads and returns the response directly`() {
         val expected = FindByNameResponse(limit = 10, truncated = false, nodes = emptyList())
-        whenever(operations.findByName("Json", 10, true)).thenReturn(expected)
+        whenever(operations.resolveScope(listOf("/"))).thenReturn(ResolvedScope.Repository)
+        whenever(operations.findByName("Json", 10, ResolvedScope.Repository)).thenReturn(expected)
 
         val response = handler.handleDomainRequest(
-            FindByNameRequest(TOKEN, pattern = "Json", limit = 10, all = true),
+            FindByNameRequest(TOKEN, pattern = "Json", limit = 10, scope = listOf("/")),
         )
 
         assertEquals(expected, response)
-        verify(operations).findByName("Json", 10, true)
+        verify(operations).resolveScope(listOf("/"))
+        verify(operations).findByName("Json", 10, ResolvedScope.Repository)
         verifyNoMoreInteractions(operations)
     }
 

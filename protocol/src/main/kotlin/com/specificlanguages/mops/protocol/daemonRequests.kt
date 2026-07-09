@@ -74,8 +74,9 @@ data class FindInstancesRequest(
 
 /**
  * Request to find root nodes whose name matches [pattern], using MPS's Go-to-Node name-pattern matching. Searches
- * editable project sources by default, or the whole repository (including read-only library and stub models) when
- * [all] is set.
+ * editable project sources by default; an explicit [scope] (the raw navigation-target segments of an `in` clause) is
+ * searched exhaustively, including read-only library and stub models within it. `["/"]` names the whole repository.
+ * Only root-bearing scopes are valid: a node or root-node scope is rejected because it holds no Root Nodes.
  */
 @Serializable
 @SerialName("find-by-name")
@@ -83,7 +84,7 @@ data class FindByNameRequest(
     override val token: String,
     val pattern: String,
     val limit: Int,
-    val all: Boolean = false,
+    val scope: List<String>? = null,
 ) : DaemonRequest
 
 /**

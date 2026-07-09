@@ -85,9 +85,9 @@ class DefaultDaemonClient(
             FindInstancesResponse::class.java
         )
 
-    override fun findByName(pattern: String, limit: Int, all: Boolean): FindByNameResponse =
+    override fun findByName(pattern: String, limit: Int, scope: List<String>?): FindByNameResponse =
         exchange(
-            FindByNameRequest(token = token, pattern = pattern, limit = limit, all = all),
+            FindByNameRequest(token = token, pattern = pattern, limit = limit, scope = scope),
             FindByNameResponse::class.java
         )
 

@@ -668,12 +668,13 @@ class DaemonProtocolJsonTest {
 
     @Test
     fun `find-by-name request and named-nodes response JSON carry node results`() {
-        val request = FindByNameRequest(token = "secret", pattern = "Json*", limit = 100)
+        val request = FindByNameRequest(token = "secret", pattern = "Json*", limit = 100, scope = listOf("/"))
         val serializedRequest = ProtocolJson.encodeRequest(request)
 
         assertContains(serializedRequest, """"type":"find-by-name"""")
         assertContains(serializedRequest, """"pattern":"Json*"""")
         assertContains(serializedRequest, """"limit":100""")
+        assertContains(serializedRequest, """"scope":["/"]""")
         assertEquals(request, ProtocolJson.decodeRequest(serializedRequest))
 
         val response = FindByNameResponse(

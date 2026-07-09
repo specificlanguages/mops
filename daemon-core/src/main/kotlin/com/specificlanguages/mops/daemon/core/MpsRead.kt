@@ -32,7 +32,16 @@ interface MpsRead {
         scope: ResolvedScope = ResolvedScope.EditableProjectSources,
     ): FindInstancesResponse
 
-    fun findByName(pattern: String, limit: Int, all: Boolean = false): FindByNameResponse
+    /**
+     * Finds root nodes whose name matches [pattern]. Only root-bearing scopes are valid — the default editable project
+     * sources, the repository, a module, or a model. A [ResolvedScope.Subtree] scope holds no Root Nodes and is
+     * rejected with an error pointing at `find instances --named` for named descendants.
+     */
+    fun findByName(
+        pattern: String,
+        limit: Int,
+        scope: ResolvedScope = ResolvedScope.EditableProjectSources,
+    ): FindByNameResponse
 
     fun findUsages(
         target: NodeTarget,
