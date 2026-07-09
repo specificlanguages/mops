@@ -4,6 +4,7 @@
     <projectModules>
       <modulePath path="$PROJECT_DIR$/languages/com.specificlanguages.json/com.specificlanguages.json.mpl" folder="" />
       <modulePath path="$PROJECT_DIR$/solutions/com.specificlanguages.json.build/com.specificlanguages.json.build.msd" folder="" />
+      <modulePath path="$PROJECT_DIR$/solutions/json.sandbox/json.sandbox.msd" folder="" />
     </projectModules>
   </component>
 </project>
