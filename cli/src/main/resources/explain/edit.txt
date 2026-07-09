@@ -1,4 +1,5 @@
-edit — the edit-batch Notation: an ordered batch of Edit Operations applied atomically.
+edit — the edit-batch Notation: an ordered batch of Edit Operations applied as a unit,
+with best-effort atomicity.
 
 SHAPE
   {"operations": [ <operation>, ... ]}
@@ -19,8 +20,11 @@ OPERATIONS
   moveAsRoot    move an existing node to Root Node position of a model
 
 NOTES
-  Atomic: the batch applies all-or-nothing; if any operation fails, nothing is
-  committed.
+  Atomicity is best-effort, not guaranteed. If an operation fails before the batch
+  is saved, the in-memory changes are reverted by reloading the affected models
+  from disk, so nothing is committed. Saving itself is not transactional: a batch
+  that spans several models writes them one at a time, so a failure partway through
+  saving can leave earlier models already persisted.
   Aliases: a creating operation (addChild, copyAsChild, addRoot, copyAsRoot) may bind
   its new node to a batch-local "as" alias (e.g. "as": "root") that later operations
   target as "$root". The leading $ is the reference sigil — required when targeting an

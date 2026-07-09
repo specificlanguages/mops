@@ -15,7 +15,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * Ordered batch of Edit Operations applied atomically by `mops model edit`.
+ * Ordered batch of Edit Operations applied as a unit by `mops model edit`, with best-effort atomicity.
  */
 @Serializable
 data class EditBatch(

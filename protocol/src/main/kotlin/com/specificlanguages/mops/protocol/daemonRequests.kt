@@ -88,7 +88,7 @@ data class FindByNameRequest(
 ) : DaemonRequest
 
 /**
- * Request to apply one atomic batch of Edit Operations inside the project daemon.
+ * Request to apply one batch of Edit Operations as a unit inside the project daemon, with best-effort atomicity.
  */
 @Serializable
 @SerialName("model-edit")
