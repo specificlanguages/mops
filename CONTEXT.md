@@ -162,6 +162,16 @@ An **MPS Node** together with all nodes reachable from it through **Containment 
 _Avoid_: node tree, branch
 _Related_: Containment Link, Child
 
+**Edit Script**:
+A **Notation**: a JavaScript program that reads model state and performs **Edit Operations** through **Node Handles** within one transaction. An **Edit Script** is a second edit front-end alongside the edit batch JSON; both express the same **Edit Operations**.
+_Avoid_: macro, plugin
+_Related_: Edit Operation, Node Handle, Notation
+
+**Node Handle**:
+The representation of an **MPS Node** inside an **Edit Script**: named access to the node's properties, **References**, and **Children**, plus its **Edit Operations** as methods. A **Node Handle** is live — it reflects edits made earlier in the same script.
+_Avoid_: node object, wrapper
+_Related_: Edit Script, MPS Node
+
 **Constraint**:
 A language-defined rule that restricts whether an edit is well-formed, such as which **MPS Concepts** may fill an **MPS Link**, a link's cardinality, or whether a node may be a **Child** of another node.
 _Avoid_: rule, validation
