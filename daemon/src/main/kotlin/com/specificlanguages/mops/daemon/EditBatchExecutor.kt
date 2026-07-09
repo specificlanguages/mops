@@ -57,6 +57,7 @@ class EditBatchExecutor(
         val rootPlacements = mutableListOf<RootPlacement>()
         val referencePlacements = mutableListOf<ReferencePlacement>()
         val uncheckable = UncheckableLanguages()
+        val conceptResolver = ConceptResolver(project)
         var mutated = false
 
         fun fail(code: MpsErrorCode, message: String): Nothing {
@@ -162,12 +163,13 @@ class EditBatchExecutor(
         }
 
         fun resolveConceptOrFail(index: Int, fqn: String): SConcept {
-            val concept = ConceptRegistry.getInstance().getConceptByName(fqn)
-            if (!concept.isValid) {
-                fail(
-                    MpsErrorCode.CONCEPT_NOT_FOUND,
-                    "operation $index: ${ConceptValidityGuard.messageForUnresolvedConcept(fqn)}",
-                )
+            // ConceptResolver forgives a dropped `.structure.` and, when a name does not resolve, throws with a
+            // diagnosis (unknown language, unloaded language, or a "did you mean" among a loaded language's concepts).
+            // Re-route that through fail() so the operation index is prefixed and any partial batch is rolled back.
+            val concept = try {
+                conceptResolver.resolve(fqn)
+            } catch (exception: MpsRequestException) {
+                fail(exception.code, "operation $index: ${exception.message}")
             }
             return concept as? SConcept
                 ?: fail(MpsErrorCode.MODEL_EDIT_FAILED, "operation $index concept is not instantiable: $fqn")

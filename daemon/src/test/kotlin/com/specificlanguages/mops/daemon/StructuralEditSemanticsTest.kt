@@ -18,6 +18,7 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -154,6 +155,35 @@ class StructuralEditSemanticsTest {
                 }
             }
             assertEquals(MpsErrorCode.CONCEPT_NOT_FOUND, exception.code)
+            // The edit path shares find's diagnosis: the operation index is kept and the unknown language is named.
+            val message = assertNotNull(exception.message)
+            assertContains(message, "operation 0")
+            assertContains(message, "\"com.does.not\" is not a module known to this project")
+            assertEquals(before, structureModel(projectPath).readText())
+        }
+    }
+
+    @Test
+    fun `a mistyped concept in a loaded language suggests alternatives and changes nothing`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
+            val before = structureModel(projectPath).readText()
+            val exception = assertFailsWith<MpsRequestException> {
+                mpsAccess.write {
+                    modelEdit(
+                        batchOf(
+                            EditOperation.AddChild(
+                                target = EditTarget.NodeReference(JSON_FILE_REF),
+                                role = "propertyDeclaration",
+                                concept = "jetbrains.mps.lang.structure.structure.PropertyDeclaratn",
+                            ),
+                        ),
+                    )
+                }
+            }
+            assertEquals(MpsErrorCode.CONCEPT_NOT_FOUND, exception.code)
+            val message = assertNotNull(exception.message)
+            assertContains(message, "did you mean")
+            assertContains(message, "PropertyDeclaration")
             assertEquals(before, structureModel(projectPath).readText())
         }
     }

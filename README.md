@@ -37,7 +37,10 @@ per-project daemon, and asks that daemon to persist the target model.
 mops --mps-home <path> model edit [--file PATH]
 ```
 
-Applies a JSON batch of edit operations through the daemon. Run `mops explain edit` for the operation reference.
+Applies a JSON batch of edit operations through the daemon. Run `mops explain edit` for the operation reference. An
+operation that names a concept resolves it the same way `find instances` does: a dropped `.structure.` infix is
+forgiven, and a name that does not resolve fails the batch (changing nothing) with the same diagnosis — unknown
+language, unloaded language, or a "did you mean" among a loaded language's concepts.
 
 ```sh
 mops --mps-home <path> model get-node [--ancestry] <node-reference>
