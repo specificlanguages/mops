@@ -10,9 +10,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlin.io.path.createDirectories
-import kotlin.io.path.readText
-import kotlin.io.path.writeText
 
 class FindInstancesSemanticsTest {
 
@@ -50,7 +47,7 @@ class FindInstancesSemanticsTest {
             findInstances(CONCEPT_DECLARATION, exact = false, limit = 0)
         }
         val repository = SharedMpsEnvironment.sharedMpsAccess.read {
-            findInstances(CONCEPT_DECLARATION, exact = false, limit = 0, scope = listOf("/"))
+            findInstances(CONCEPT_DECLARATION, exact = false, limit = 0, scope = resolveScope(listOf("/")))
         }
 
         val editableReferences = editable.nodes.map { it.reference }.toSet()
@@ -70,10 +67,10 @@ class FindInstancesSemanticsTest {
     @Test
     fun `scopes an instances search to a module`() {
         val inModule = SharedMpsEnvironment.sharedMpsAccess.read {
-            findInstances(CONCEPT_DECLARATION, exact = false, limit = 0, scope = listOf(LANGUAGE_MODULE))
+            findInstances(CONCEPT_DECLARATION, exact = false, limit = 0, scope = resolveScope(listOf(LANGUAGE_MODULE)))
         }
         val inRepository = SharedMpsEnvironment.sharedMpsAccess.read {
-            findInstances(CONCEPT_DECLARATION, exact = false, limit = 0, scope = listOf("/"))
+            findInstances(CONCEPT_DECLARATION, exact = false, limit = 0, scope = resolveScope(listOf("/")))
         }
 
         val moduleReferences = inModule.nodes.map { it.reference }.toSet()
@@ -93,7 +90,12 @@ class FindInstancesSemanticsTest {
     @Test
     fun `scopes an instances search to a model`() {
         val inModel = SharedMpsEnvironment.sharedMpsAccess.read {
-            findInstances(CONCEPT_DECLARATION, exact = false, limit = 0, scope = listOf(LANGUAGE_MODULE, STRUCTURE_MODEL))
+            findInstances(
+                CONCEPT_DECLARATION,
+                exact = false,
+                limit = 0,
+                scope = resolveScope(listOf(LANGUAGE_MODULE, STRUCTURE_MODEL)),
+            )
         }
 
         assertTrue(inModel.nodes.isNotEmpty(), "the structure model should hold concept declarations")
@@ -106,10 +108,20 @@ class FindInstancesSemanticsTest {
     @Test
     fun `scopes an instances search to a node subtree returning only descendants`() {
         val inSubtree = SharedMpsEnvironment.sharedMpsAccess.read {
-            findInstances(LINK_DECLARATION, exact = false, limit = 0, scope = listOf(LANGUAGE_MODULE, STRUCTURE_MODEL, "JsonObject"))
+            findInstances(
+                LINK_DECLARATION,
+                exact = false,
+                limit = 0,
+                scope = resolveScope(listOf(LANGUAGE_MODULE, STRUCTURE_MODEL, "JsonObject")),
+            )
         }
         val inModel = SharedMpsEnvironment.sharedMpsAccess.read {
-            findInstances(LINK_DECLARATION, exact = false, limit = 0, scope = listOf(LANGUAGE_MODULE, STRUCTURE_MODEL))
+            findInstances(
+                LINK_DECLARATION,
+                exact = false,
+                limit = 0,
+                scope = resolveScope(listOf(LANGUAGE_MODULE, STRUCTURE_MODEL)),
+            )
         }
 
         assertTrue(inSubtree.nodes.isNotEmpty(), "JsonObject should own at least one link declaration")
@@ -125,58 +137,6 @@ class FindInstancesSemanticsTest {
             inModel.nodes.any { it.parent?.name != "JsonObject" },
             "the model-wide search must reach link declarations owned by other roots",
         )
-    }
-
-    @Test
-    fun `reports an ambiguous scope segment with candidates referencing the scope topic`() {
-        val duplicateReference = "11111111-2222-4333-8444-555555555555(com.specificlanguages.json.build)"
-
-        SharedMpsEnvironment.withProjectCopy(
-            prepare = { project ->
-                val originalDescriptor = project.resolve(
-                    "solutions/com.specificlanguages.json.build/com.specificlanguages.json.build.msd",
-                )
-                val duplicateDirectory = project.resolve("solutions/duplicate-json-build").createDirectories()
-                duplicateDirectory.resolve("duplicate-json-build.msd").writeText(
-                    originalDescriptor.readText().replace(
-                        "84f0ad52-c7ca-45dd-99c5-9605c96bf808",
-                        "11111111-2222-4333-8444-555555555555",
-                    ),
-                )
-                val modulesXml = project.resolve(".mps/modules.xml")
-                modulesXml.writeText(
-                    modulesXml.readText().replace(
-                        "    </projectModules>",
-                        "      <modulePath path=\"\$PROJECT_DIR\$/solutions/duplicate-json-build/duplicate-json-build.msd\" folder=\"\" />\n" +
-                            "    </projectModules>",
-                    ),
-                )
-            },
-        ) { mpsAccess, _ ->
-            val exception = assertFailsWith<MpsRequestException> {
-                mpsAccess.read {
-                    findInstances(CONCEPT_DECLARATION, exact = false, limit = 0, scope = listOf("com.specificlanguages.json.build"))
-                }
-            }
-
-            assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, exception.code)
-            assertContains(exception.message, "ambiguous module target com.specificlanguages.json.build")
-            assertContains(exception.message, duplicateReference)
-            assertContains(exception.message, "mops explain scope")
-        }
-    }
-
-    @Test
-    fun `reports an unresolved scope segment as not found referencing the scope topic`() {
-        val exception = assertFailsWith<MpsRequestException> {
-            SharedMpsEnvironment.sharedMpsAccess.read {
-                findInstances(CONCEPT_DECLARATION, exact = false, limit = 0, scope = listOf("no.such.module"))
-            }
-        }
-
-        assertEquals(MpsErrorCode.TARGET_NOT_FOUND, exception.code)
-        assertContains(exception.message, "scope not found: no.such.module")
-        assertContains(exception.message, "mops explain scope")
     }
 
     @Test

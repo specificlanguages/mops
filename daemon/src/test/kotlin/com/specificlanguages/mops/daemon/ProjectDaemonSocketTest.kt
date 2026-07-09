@@ -12,6 +12,7 @@ import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.PingRequest
 import com.specificlanguages.mops.protocol.PongResponse
 import com.specificlanguages.mops.daemon.core.MpsWrite
+import com.specificlanguages.mops.daemon.core.ResolvedScope
 import com.specificlanguages.mops.protocol.StopRequest
 import com.specificlanguages.mops.protocol.StoppedResponse
 import org.junit.jupiter.api.io.TempDir
@@ -84,7 +85,9 @@ class ProjectDaemonSocketTest {
     @Test
     fun `a domain request is delegated to the request handler`() {
         val expected = FindInstancesResponse(limit = 100, truncated = false, nodes = emptyList())
-        whenever(operations.findInstances("some.Concept", false, 100)).thenReturn(expected)
+        whenever(operations.resolveScope(null)).thenReturn(ResolvedScope.EditableProjectSources)
+        whenever(operations.findInstances("some.Concept", false, 100, ResolvedScope.EditableProjectSources))
+            .thenReturn(expected)
         val daemon = start()
 
         val response = daemon.exchange(
@@ -92,7 +95,7 @@ class ProjectDaemonSocketTest {
         )
 
         assertEquals(expected, response)
-        verify(operations).findInstances("some.Concept", false, 100)
+        verify(operations).findInstances("some.Concept", false, 100, ResolvedScope.EditableProjectSources)
     }
 
     @Test

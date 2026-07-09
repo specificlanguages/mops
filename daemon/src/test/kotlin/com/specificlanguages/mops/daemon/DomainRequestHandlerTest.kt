@@ -3,6 +3,7 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.daemon.core.MpsWrite
+import com.specificlanguages.mops.daemon.core.ResolvedScope
 import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.FindByNameRequest
@@ -58,38 +59,46 @@ class DomainRequestHandlerTest {
     }
 
     @Test
-    fun `find-instances reads and returns the response directly`() {
+    fun `find-instances resolves the scope then reads and returns the response directly`() {
         val expected = FindInstancesResponse(limit = 10, truncated = true, nodes = emptyList())
-        whenever(operations.findInstances("some.Concept", true, 10)).thenReturn(expected)
+        whenever(operations.resolveScope(null)).thenReturn(ResolvedScope.EditableProjectSources)
+        whenever(operations.findInstances("some.Concept", true, 10, ResolvedScope.EditableProjectSources))
+            .thenReturn(expected)
 
         val response = handler.handleDomainRequest(
             FindInstancesRequest(TOKEN, concept = "some.Concept", exact = true, limit = 10),
         )
 
         assertEquals(expected, response)
-        verify(operations).findInstances("some.Concept", true, 10)
+        verify(operations).resolveScope(null)
+        verify(operations).findInstances("some.Concept", true, 10, ResolvedScope.EditableProjectSources)
         verifyNoMoreInteractions(operations)
     }
 
     @Test
-    fun `find requests forward the scope segments`() {
-        val scope = listOf("com.example", ".model")
-        val instances = FindInstancesResponse(limit = 10, truncated = false, nodes = emptyList())
-        whenever(operations.findInstances("some.Concept", false, 10, scope)).thenReturn(instances)
+    fun `find requests resolve the scope segments and forward the resolved scope`() {
+        val segments = listOf("com.example", ".model")
+        val moduleScope = ResolvedScope.Module("ref(com.example)")
+        whenever(operations.resolveScope(segments)).thenReturn(moduleScope)
+        whenever(operations.findInstances("some.Concept", false, 10, moduleScope))
+            .thenReturn(FindInstancesResponse(limit = 10, truncated = false, nodes = emptyList()))
 
         handler.handleDomainRequest(
-            FindInstancesRequest(TOKEN, concept = "some.Concept", exact = false, limit = 10, scope = scope),
+            FindInstancesRequest(TOKEN, concept = "some.Concept", exact = false, limit = 10, scope = segments),
         )
 
-        verify(operations).findInstances("some.Concept", false, 10, scope)
+        verify(operations).resolveScope(segments)
+        verify(operations).findInstances("some.Concept", false, 10, moduleScope)
 
-        val usages = FindUsagesResponse(limit = 5, truncated = false, usages = emptyList())
         val target = NodeTarget.InModel("some.model", "7")
-        whenever(operations.findUsages(target, 5, listOf("/"))).thenReturn(usages)
+        whenever(operations.resolveScope(listOf("/"))).thenReturn(ResolvedScope.Repository)
+        whenever(operations.findUsages(target, 5, ResolvedScope.Repository))
+            .thenReturn(FindUsagesResponse(limit = 5, truncated = false, usages = emptyList()))
 
         handler.handleDomainRequest(FindUsagesRequest(TOKEN, target, limit = 5, scope = listOf("/")))
 
-        verify(operations).findUsages(target, 5, listOf("/"))
+        verify(operations).resolveScope(listOf("/"))
+        verify(operations).findUsages(target, 5, ResolvedScope.Repository)
     }
 
     @Test
@@ -107,15 +116,17 @@ class DomainRequestHandlerTest {
     }
 
     @Test
-    fun `find-usages reads and returns the response directly`() {
+    fun `find-usages resolves the scope then reads and returns the response directly`() {
         val expected = FindUsagesResponse(limit = 5, truncated = false, usages = emptyList())
         val target = NodeTarget.InModel("some.model", "7")
-        whenever(operations.findUsages(target, 5)).thenReturn(expected)
+        whenever(operations.resolveScope(null)).thenReturn(ResolvedScope.EditableProjectSources)
+        whenever(operations.findUsages(target, 5, ResolvedScope.EditableProjectSources)).thenReturn(expected)
 
         val response = handler.handleDomainRequest(FindUsagesRequest(TOKEN, target, limit = 5))
 
         assertEquals(expected, response)
-        verify(operations).findUsages(target, 5)
+        verify(operations).resolveScope(null)
+        verify(operations).findUsages(target, 5, ResolvedScope.EditableProjectSources)
         verifyNoMoreInteractions(operations)
     }
 
@@ -165,7 +176,8 @@ class DomainRequestHandlerTest {
 
     @Test
     fun `a request exception on a read path maps to its error code`() {
-        whenever(operations.findInstances("some.Concept", false, 100))
+        whenever(operations.resolveScope(null)).thenReturn(ResolvedScope.EditableProjectSources)
+        whenever(operations.findInstances("some.Concept", false, 100, ResolvedScope.EditableProjectSources))
             .thenThrow(MpsRequestException(MpsErrorCode.CONCEPT_NOT_FOUND, "concept not found: some.Concept"))
 
         val response = handler.handleDomainRequest(

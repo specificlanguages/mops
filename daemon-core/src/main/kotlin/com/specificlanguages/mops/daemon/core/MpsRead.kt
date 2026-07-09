@@ -18,11 +18,27 @@ interface MpsRead {
 
     fun getNode(target: NodeTarget, ancestry: Boolean = false): MpsNodeJson
 
-    fun findInstances(concept: String, exact: Boolean, limit: Int, scope: List<String>? = null): FindInstancesResponse
+    /**
+     * Resolves the optional `in`-clause [segments] of a find into a validated [ResolvedScope], reusing the navigation
+     * grammar of [list]. A null or empty segment list yields the default editable-project-sources scope; `["/"]` yields
+     * the whole repository. An ambiguous or missing segment fails with the same error shapes navigation uses.
+     */
+    fun resolveScope(segments: List<String>?): ResolvedScope
+
+    fun findInstances(
+        concept: String,
+        exact: Boolean,
+        limit: Int,
+        scope: ResolvedScope = ResolvedScope.EditableProjectSources,
+    ): FindInstancesResponse
 
     fun findByName(pattern: String, limit: Int, all: Boolean = false): FindByNameResponse
 
-    fun findUsages(target: NodeTarget, limit: Int, scope: List<String>? = null): FindUsagesResponse
+    fun findUsages(
+        target: NodeTarget,
+        limit: Int,
+        scope: ResolvedScope = ResolvedScope.EditableProjectSources,
+    ): FindUsagesResponse
 
     /**
      * Diagnoses the load state of the project's languages and Java-bearing modules, reporting for each unloaded one why

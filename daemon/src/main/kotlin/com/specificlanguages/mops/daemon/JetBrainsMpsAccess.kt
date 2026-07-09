@@ -72,14 +72,14 @@ class JetBrainsMpsAccess(
         override fun getNode(target: NodeTarget, ancestry: Boolean): MpsNodeJson =
             jsonNodeExporter.export(resolveNode(target), ancestry)
 
-        override fun findUsages(target: NodeTarget, limit: Int, scope: List<String>?): FindUsagesResponse {
+        override fun findUsages(target: NodeTarget, limit: Int, scope: ResolvedScope): FindUsagesResponse {
             val node = resolveNode(target)
-            val resolvedScope = resolveSearchScope(scope)
+            val searchScope = searchScopeFor(scope)
             val collected = CollectConsumer<SReference>()
             FindUsagesFacade.getInstance()
-                .findUsages(resolvedScope.searchScope, setOf(node), collected, EmptyProgressMonitor())
+                .findUsages(searchScope.searchScope, setOf(node), collected, EmptyProgressMonitor())
 
-            val references = resolvedScope.retainWithinSubtree(collected.result) { it.sourceNode }
+            val references = searchScope.retainWithinSubtree(collected.result) { it.sourceNode }
             val selected = if (limit > 0) references.take(limit) else references
 
             return FindUsagesResponse(
@@ -91,7 +91,7 @@ class JetBrainsMpsAccess(
             )
         }
 
-        override fun findInstances(concept: String, exact: Boolean, limit: Int, scope: List<String>?): FindInstancesResponse {
+        override fun findInstances(concept: String, exact: Boolean, limit: Int, scope: ResolvedScope): FindInstancesResponse {
             val mpsConcept = ConceptRegistry.getInstance().getConceptByName(concept)
             if (!mpsConcept.isValid) {
                 throw MpsRequestException(
@@ -100,12 +100,12 @@ class JetBrainsMpsAccess(
                 )
             }
 
-            val resolvedScope = resolveSearchScope(scope)
+            val searchScope = searchScopeFor(scope)
             val collected = CollectConsumer<SNode>()
             FindUsagesFacade.getInstance()
-                .findInstances(resolvedScope.searchScope, setOf(mpsConcept), exact, collected, EmptyProgressMonitor())
+                .findInstances(searchScope.searchScope, setOf(mpsConcept), exact, collected, EmptyProgressMonitor())
 
-            val instances = resolvedScope.retainWithinSubtree(collected.result) { it }
+            val instances = searchScope.retainWithinSubtree(collected.result) { it }
             val selected = if (limit > 0) instances.take(limit) else instances
 
             return FindInstancesResponse(
@@ -161,6 +161,63 @@ class JetBrainsMpsAccess(
         private fun searchScope(all: Boolean): SearchScope =
             if (all) GlobalScope(project.repository) else EditableFilteringScope(project.scope)
 
+        override fun resolveScope(segments: List<String>?): ResolvedScope =
+            when (segments) {
+                null, emptyList<String>() -> ResolvedScope.EditableProjectSources
+                listOf("/") -> ResolvedScope.Repository
+                else -> when (val resolution = resolveListTarget(segments)) {
+                    is ListTargetResolution.Found -> resolvedScopeForTarget(resolution.target)
+                    is ListTargetResolution.Ambiguous -> throw MpsRequestException(
+                        code = MpsErrorCode.AMBIGUOUS_TARGET,
+                        message = "${resolution.message}\nsee: mops explain scope",
+                    )
+                    ListTargetResolution.Missing -> throw MpsRequestException(
+                        code = MpsErrorCode.TARGET_NOT_FOUND,
+                        message = "scope not found: ${segments.joinToString(" ")} — see: mops explain scope",
+                    )
+                }
+            }
+
+        private fun resolvedScopeForTarget(target: ListTarget): ResolvedScope =
+            when (target) {
+                is ListTarget.Module -> ResolvedScope.Module(persistence.asString(target.module.moduleReference))
+                is ListTarget.Model -> ResolvedScope.Model(persistence.asString(target.model.reference))
+                is ListTarget.RootNode -> ResolvedScope.Subtree(persistence.asString(target.node.reference))
+                is ListTarget.Node -> ResolvedScope.Subtree(persistence.asString(target.node.reference))
+            }
+
+        // Maps a resolved scope to the MPS Search Scope a find runs over. A repository, module, or model scope maps
+        // directly; a subtree scope has no MPS scope of its own, so it runs over the containing model and post-filters
+        // results to the scope node's subtree. Each reference re-resolves deterministically because resolution already
+        // ruled out ambiguity.
+        private fun searchScopeFor(scope: ResolvedScope): MpsSearchScope =
+            when (scope) {
+                ResolvedScope.EditableProjectSources ->
+                    MpsSearchScope(EditableFilteringScope(project.scope), containmentRoot = null)
+                ResolvedScope.Repository ->
+                    MpsSearchScope(GlobalScope(project.repository), containmentRoot = null)
+                is ResolvedScope.Module ->
+                    MpsSearchScope(ModulesScope(listOf(resolveModule(scope.moduleReference))), containmentRoot = null)
+                is ResolvedScope.Model ->
+                    MpsSearchScope(ModelsScope(listOf(resolveModel(scope.modelReference))), containmentRoot = null)
+                is ResolvedScope.Subtree -> {
+                    val node = resolveSubtreeNode(scope.nodeReference)
+                    MpsSearchScope(ModelsScope(listOfNotNull(node.model)), containmentRoot = node)
+                }
+            }
+
+        private fun resolveModule(reference: String): SModule =
+            resolveModuleReference(reference)
+                ?: throw MpsRequestException(MpsErrorCode.TARGET_NOT_FOUND, "module not found: $reference")
+
+        private fun resolveModel(reference: String): SModel =
+            resolveModelReference(reference)
+                ?: throw MpsRequestException(MpsErrorCode.MODEL_NOT_FOUND, "model not found: $reference")
+
+        private fun resolveSubtreeNode(reference: String): SNode =
+            resolveNodeReference(reference)
+                ?: throw MpsRequestException(MpsErrorCode.NODE_NOT_FOUND, "node not found: $reference")
+
         protected fun nodeSummary(node: SNode): MpsNodeSummaryJson =
             MpsNodeSummaryJson(
                 type = if (node.parent == null) "root" else "node",
@@ -203,38 +260,6 @@ class JetBrainsMpsAccess(
             }
         }
     }
-
-    // Maps an optional `in` clause to the MPS Search Scope a find runs over. The default (no clause) is Editable
-    // Project Sources; `["/"]` is the whole repository; any other segment list resolves through the same navigation
-    // grammar `list` uses and is searched exhaustively. A repository, module, or model scope maps directly to an MPS
-    // search scope; a Root Node or nested-node scope has no MPS scope of its own, so it runs over the containing model
-    // and post-filters results to that node's subtree.
-    private fun resolveSearchScope(scope: List<String>?): ScopeResolution =
-        when (scope) {
-            null -> ScopeResolution(EditableFilteringScope(project.scope), containmentRoot = null)
-            listOf("/") -> ScopeResolution(GlobalScope(project.repository), containmentRoot = null)
-            else -> when (val resolution = resolveListTarget(scope)) {
-                is ListTargetResolution.Found -> scopeForTarget(resolution.target)
-                is ListTargetResolution.Ambiguous -> throw MpsRequestException(
-                    code = MpsErrorCode.AMBIGUOUS_TARGET,
-                    message = "${resolution.message}\nsee: mops explain scope",
-                )
-                ListTargetResolution.Missing -> throw MpsRequestException(
-                    code = MpsErrorCode.TARGET_NOT_FOUND,
-                    message = "scope not found: ${scope.joinToString(" ")} — see: mops explain scope",
-                )
-            }
-        }
-
-    private fun scopeForTarget(target: ListTarget): ScopeResolution =
-        when (target) {
-            is ListTarget.Module -> ScopeResolution(ModulesScope(listOf(target.module)), containmentRoot = null)
-            is ListTarget.Model -> ScopeResolution(ModelsScope(listOf(target.model)), containmentRoot = null)
-            is ListTarget.RootNode -> ScopeResolution(modelScopeOf(target.node), containmentRoot = target.node)
-            is ListTarget.Node -> ScopeResolution(modelScopeOf(target.node), containmentRoot = target.node)
-        }
-
-    private fun modelScopeOf(node: SNode): SearchScope = ModelsScope(listOfNotNull(node.model))
 
     private fun resolveListTarget(target: List<String>): ListTargetResolution {
         if (target.isEmpty()) {
@@ -348,6 +373,11 @@ class JetBrainsMpsAccess(
             persistence.createModelReference(target).resolve(project.repository)
         }.getOrNull()
 
+    private fun resolveModuleReference(target: String): SModule? =
+        runCatching {
+            persistence.createModuleReference(target).resolve(project.repository)
+        }.getOrNull()
+
     private fun resolveProjectModuleTarget(target: String): ListTargetResolution {
         val modules = matchingProjectModules(target)
         return when (modules.size) {
@@ -408,7 +438,7 @@ class JetBrainsMpsAccess(
         }
     }
 
-    private class ScopeResolution(val searchScope: SearchScope, private val containmentRoot: SNode?) {
+    private class MpsSearchScope(val searchScope: SearchScope, private val containmentRoot: SNode?) {
         // For an explicit subtree scope (a Root Node or nested node) the search runs over the containing model, so the
         // results are narrowed here to those the scope node contains; a repository, module, or model scope has no
         // subtree and keeps every result.

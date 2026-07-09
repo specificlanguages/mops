@@ -57,7 +57,7 @@ class FindUsagesSemanticsTest {
             findUsages(NodeTarget.NodeReference(BASE_CONCEPT_REFERENCE), limit = 0)
         }
         val repository = SharedMpsEnvironment.sharedMpsAccess.read {
-            findUsages(NodeTarget.NodeReference(BASE_CONCEPT_REFERENCE), limit = 0, scope = listOf("/"))
+            findUsages(NodeTarget.NodeReference(BASE_CONCEPT_REFERENCE), limit = 0, scope = resolveScope(listOf("/")))
         }
 
         val editableUsages = editable.usages.map { it.role to it.owner.reference }.toSet()
@@ -76,10 +76,14 @@ class FindUsagesSemanticsTest {
     @Test
     fun `scopes a usages search to a module`() {
         val inModule = SharedMpsEnvironment.sharedMpsAccess.read {
-            findUsages(NodeTarget.NodeReference(BASE_CONCEPT_REFERENCE), limit = 0, scope = listOf(LANGUAGE_MODULE))
+            findUsages(
+                NodeTarget.NodeReference(BASE_CONCEPT_REFERENCE),
+                limit = 0,
+                scope = resolveScope(listOf(LANGUAGE_MODULE)),
+            )
         }
         val inRepository = SharedMpsEnvironment.sharedMpsAccess.read {
-            findUsages(NodeTarget.NodeReference(BASE_CONCEPT_REFERENCE), limit = 0, scope = listOf("/"))
+            findUsages(NodeTarget.NodeReference(BASE_CONCEPT_REFERENCE), limit = 0, scope = resolveScope(listOf("/")))
         }
 
         val moduleUsages = inModule.usages.map { it.role to it.owner.reference }.toSet()
