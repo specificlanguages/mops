@@ -130,6 +130,20 @@ data class ModuleDiagnosticResponse(
 ) : DaemonResponse
 
 /**
+ * Successful response carrying the result of a make run: its [outcome], how many generatable modules were in the make
+ * set (the requested modules plus their generatable dependency closure), and the error and warning [messages] MPS
+ * reported. On [MakeOutcome.FAILED] the [messages] carry the errors; on [MakeOutcome.NOTHING_TO_GENERATE] the make set
+ * held no generatable model.
+ */
+@Serializable
+@SerialName("make-result")
+data class MakeResponse(
+    val outcome: MakeOutcome,
+    val moduleCount: Int,
+    val messages: List<MakeMessageJson>,
+) : DaemonResponse
+
+/**
  * Startup message emitted on daemon stdout when the loopback server is ready to accept authenticated requests.
  */
 @Serializable

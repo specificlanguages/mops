@@ -4,6 +4,7 @@ import com.specificlanguages.mops.protocol.ConstraintEnforcement
 import com.specificlanguages.mops.protocol.FindByNameResponse
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindUsagesResponse
+import com.specificlanguages.mops.protocol.MakeResponse
 import com.specificlanguages.mops.protocol.ModuleDiagnosticResponse
 import com.specificlanguages.mops.protocol.ModulesDiagnosticsResponse
 import com.specificlanguages.mops.protocol.ModelEditResponse
@@ -29,4 +30,15 @@ interface DaemonClient {
     fun list(target: List<String>?, depth: Int): MpsListResponse
     fun diagnoseModules(): ModulesDiagnosticsResponse
     fun diagnoseModule(module: String): ModuleDiagnosticResponse
+
+    /**
+     * Runs the MPS make on the named [modules] and their dependency closure. May block for a long time — generation and
+     * compilation are unbounded — so implementations must not impose a short read timeout.
+     */
+    fun makeModules(modules: List<String>): MakeResponse
+
+    /**
+     * Runs the MPS make on every generatable module in the project. May block for a long time.
+     */
+    fun makeProject(): MakeResponse
 }

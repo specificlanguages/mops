@@ -1,11 +1,18 @@
 package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
+import com.specificlanguages.mops.daemon.core.MpsMake
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.daemon.core.MpsWrite
 import com.specificlanguages.mops.daemon.core.ResolvedScope
 import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.EditBatch
+import com.specificlanguages.mops.protocol.MakeMessageJson
+import com.specificlanguages.mops.protocol.MakeMessageKind
+import com.specificlanguages.mops.protocol.MakeModulesRequest
+import com.specificlanguages.mops.protocol.MakeOutcome
+import com.specificlanguages.mops.protocol.MakeProjectRequest
+import com.specificlanguages.mops.protocol.MakeResponse
 import com.specificlanguages.mops.protocol.FindByNameRequest
 import com.specificlanguages.mops.protocol.FindByNameResponse
 import com.specificlanguages.mops.protocol.FindInstancesRequest
@@ -42,8 +49,9 @@ import kotlin.test.assertEquals
  */
 class DomainRequestHandlerTest {
     private val operations = mock<MpsWrite>()
+    private val make = mock<MpsMake>()
     private val workspacePath = Path.of("/workspace/example")
-    private val handler = DomainRequestHandler(workspacePath, mpsAccessOver(operations))
+    private val handler = DomainRequestHandler(workspacePath, mpsAccessOver(operations, make))
 
     @Test
     fun `get-node reads and wraps the exported node`() {
@@ -166,6 +174,44 @@ class DomainRequestHandlerTest {
         assertEquals(ModelResaveResponse(modelTarget = "some.model"), response)
         verify(operations).resave("some.model")
         verifyNoMoreInteractions(operations)
+    }
+
+    @Test
+    fun `make-modules makes the requested modules and returns the result directly`() {
+        val expected = MakeResponse(MakeOutcome.SUCCESS, moduleCount = 2, messages = emptyList())
+        whenever(make.makeModules(listOf("moduleA", "moduleB"))).thenReturn(expected)
+
+        val response = handler.handleDomainRequest(MakeModulesRequest(TOKEN, listOf("moduleA", "moduleB")))
+
+        assertEquals(expected, response)
+        verify(make).makeModules(listOf("moduleA", "moduleB"))
+        verifyNoInteractions(operations)
+    }
+
+    @Test
+    fun `make-project makes the whole project and returns the result directly`() {
+        val expected = MakeResponse(
+            MakeOutcome.FAILED,
+            moduleCount = 5,
+            messages = listOf(MakeMessageJson(MakeMessageKind.ERROR, "boom")),
+        )
+        whenever(make.makeProject()).thenReturn(expected)
+
+        val response = handler.handleDomainRequest(MakeProjectRequest(TOKEN))
+
+        assertEquals(expected, response)
+        verify(make).makeProject()
+        verifyNoInteractions(operations)
+    }
+
+    @Test
+    fun `a request exception on the make path maps to its error code`() {
+        whenever(make.makeModules(listOf("missing")))
+            .thenThrow(MpsRequestException(MpsErrorCode.TARGET_NOT_FOUND, "module not found: missing"))
+
+        val response = handler.handleDomainRequest(MakeModulesRequest(TOKEN, listOf("missing")))
+
+        assertEquals(errorResponse("TARGET_NOT_FOUND", "module not found: missing"), response)
     }
 
     @Test

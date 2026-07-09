@@ -42,6 +42,12 @@ class JetBrainsMpsAccess(
             captureRequestErrors { JetBrainsMpsWrite(this).block() }
         }.getOrThrow()
 
+    // Make runs outside any model action — the make framework takes its own model locks — so this deliberately does
+    // not wrap the block in computeReadAction the way read/write do. Model collection inside the make takes its own
+    // short read actions.
+    override fun <T> make(block: MpsMake.() -> T): T =
+        captureRequestErrors { JetBrainsMpsMake().block() }.getOrThrow()
+
     private open inner class JetBrainsMpsRead : MpsRead {
         override fun list(target: List<String>?, depth: Int): MpsListEntryJson =
             when (target) {
@@ -264,6 +270,14 @@ class JetBrainsMpsAccess(
                 )
             }
         }
+    }
+
+    private inner class JetBrainsMpsMake : MpsMake {
+        private val projectMake = ProjectMake(project)
+
+        override fun makeModules(modules: List<String>): MakeResponse = projectMake.makeModules(modules)
+
+        override fun makeProject(): MakeResponse = projectMake.makeProject()
     }
 
     private fun resolveListTarget(target: List<String>): ListTargetResolution {

@@ -127,3 +127,21 @@ data class DiagnoseModuleRequest(
     override val token: String,
     val module: String,
 ) : DaemonRequest
+
+/**
+ * Request to run the MPS make (generation and compilation) on the named [modules] (each a module name or serialized
+ * module reference) together with their transitive dependency closure, so that any un-made dependency is made too.
+ */
+@Serializable
+@SerialName("make-modules")
+data class MakeModulesRequest(
+    override val token: String,
+    val modules: List<String>,
+) : DaemonRequest
+
+/**
+ * Request to run the MPS make (generation and compilation) on every generatable module in the project.
+ */
+@Serializable
+@SerialName("make-project")
+data class MakeProjectRequest(override val token: String) : DaemonRequest

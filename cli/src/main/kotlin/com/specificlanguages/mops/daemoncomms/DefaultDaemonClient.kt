@@ -14,6 +14,9 @@ import com.specificlanguages.mops.protocol.FindInstancesRequest
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindUsagesRequest
 import com.specificlanguages.mops.protocol.FindUsagesResponse
+import com.specificlanguages.mops.protocol.MakeModulesRequest
+import com.specificlanguages.mops.protocol.MakeProjectRequest
+import com.specificlanguages.mops.protocol.MakeResponse
 import com.specificlanguages.mops.protocol.DiagnoseModuleRequest
 import com.specificlanguages.mops.protocol.DiagnoseModulesRequest
 import com.specificlanguages.mops.protocol.ModuleDiagnosticResponse
@@ -115,8 +118,26 @@ class DefaultDaemonClient(
             ModuleDiagnosticResponse::class.java
         )
 
-    private fun <T : DaemonResponse> exchange(request: DaemonRequest, responseType: Class<T>): T {
-        val response = ProtocolJson.decodeResponse(exchangeLine(request))
+    override fun makeModules(modules: List<String>): MakeResponse =
+        exchange(
+            MakeModulesRequest(token = token, modules = modules),
+            MakeResponse::class.java,
+            timeout = MAKE_TIMEOUT,
+        )
+
+    override fun makeProject(): MakeResponse =
+        exchange(
+            MakeProjectRequest(token = token),
+            MakeResponse::class.java,
+            timeout = MAKE_TIMEOUT,
+        )
+
+    private fun <T : DaemonResponse> exchange(
+        request: DaemonRequest,
+        responseType: Class<T>,
+        timeout: Duration = this.timeout,
+    ): T {
+        val response = ProtocolJson.decodeResponse(exchangeLine(request, timeout))
 
         if (response is DaemonErrorResponse) {
             throw IllegalStateException(response.message)
@@ -129,7 +150,7 @@ class DefaultDaemonClient(
         return responseType.cast(response)
     }
 
-    private fun exchangeLine(request: DaemonRequest): String {
+    private fun exchangeLine(request: DaemonRequest, timeout: Duration): String {
         return Socket(InetAddress.getLoopbackAddress(), port).use { socket ->
             socket.soTimeout = timeout.toMillis().toInt()
             PrintWriter(socket.getOutputStream(), true).use { writer ->
@@ -142,6 +163,10 @@ class DefaultDaemonClient(
     }
 
     companion object {
+        // A make runs generation and compilation with no natural time bound, so its socket read must not time out. A
+        // zero soTimeout blocks indefinitely; the daemon closing the socket still unblocks the read with EOF.
+        private val MAKE_TIMEOUT: Duration = Duration.ZERO
+
         fun fromRecord(record: DaemonRecord) = DefaultDaemonClient(record.port, record.token)
     }
 }
