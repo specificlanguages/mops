@@ -50,8 +50,12 @@ object SharedMpsEnvironment {
      * the shared project is open, a copy's identical modules would resolve to the already-loaded instances and the
      * copy's file mutations would be invisible.
      */
-    fun <T> withProjectCopy(prepare: (Path) -> Unit = {}, block: (MpsAccess, Path) -> T): T =
-        withOpenProjectCopy(prepare) { project, projectPath ->
+    fun <T> withProjectCopy(
+        projectName: String = FIXTURE_PROJECT_NAME,
+        prepare: (Path) -> Unit = {},
+        block: (MpsAccess, Path) -> T,
+    ): T =
+        withOpenProjectCopy(projectName, prepare) { project, projectPath ->
             block(JetBrainsMpsAccess(project, DaemonLogger()), projectPath)
         }
 
@@ -59,9 +63,13 @@ object SharedMpsEnvironment {
      * Like [withProjectCopy] but hands [block] the opened [Project] directly, for tests that need project-level state
      * (such as its **Project Modules**) rather than the [MpsAccess] read/write surface.
      */
-    fun <T> withOpenProjectCopy(prepare: (Path) -> Unit = {}, block: (Project, Path) -> T): T {
+    fun <T> withOpenProjectCopy(
+        projectName: String = FIXTURE_PROJECT_NAME,
+        prepare: (Path) -> Unit = {},
+        block: (Project, Path) -> T,
+    ): T {
         closeSharedProject()
-        val projectPath = copyFixtureProject(Files.createTempDirectory("mops-project-copy"))
+        val projectPath = copyFixtureProject(Files.createTempDirectory("mops-project-copy"), projectName)
         prepare(projectPath)
         val project = openProject(projectPath)
         try {
@@ -148,10 +156,10 @@ object SharedMpsEnvironment {
             }
     }
 
-    private fun copyFixtureProject(targetParent: Path): Path {
-        val source = requiredPathProperty("test.projectsDir").resolve(FIXTURE_PROJECT_NAME)
+    private fun copyFixtureProject(targetParent: Path, projectName: String = FIXTURE_PROJECT_NAME): Path {
+        val source = requiredPathProperty("test.projectsDir").resolve(projectName)
         require(Files.isDirectory(source)) { "missing fixture project: $source" }
-        val target = targetParent.resolve(FIXTURE_PROJECT_NAME)
+        val target = targetParent.resolve(projectName)
         Files.walk(source).use { paths ->
             paths.forEach { path ->
                 val destination = target.resolve(source.relativize(path).pathString)
