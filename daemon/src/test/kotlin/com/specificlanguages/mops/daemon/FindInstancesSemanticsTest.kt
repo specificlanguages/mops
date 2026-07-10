@@ -342,47 +342,51 @@ class FindInstancesSemanticsTest {
     }
 
     @Test
-    fun `resolves a unique bare short name to the same instances as its qualified name`() {
-        val qualified = SharedMpsEnvironment.sharedMpsAccess.read {
-            findInstances(CONCEPT_DECLARATION, exact = false, limit = DEFAULT_LIMIT)
-        }
-        val short = SharedMpsEnvironment.sharedMpsAccess.read {
-            findInstances("ConceptDeclaration", exact = false, limit = DEFAULT_LIMIT)
-        }
-
-        assertTrue(qualified.nodes.isNotEmpty(), "fixture should hold concept declarations")
-        assertEquals(qualified, short, "the bare short name should resolve to the same concept")
-    }
-
-    @Test
-    fun `an ambiguous bare short name fails with the qualified candidates`() {
-        // `Expression` names a concept in both the freshly built `exprs` language and the always-loaded baseLanguage,
-        // so a bare short name cannot pick one; the failure lists the qualified candidates to retry with.
-        val exception = SharedMpsEnvironment.withProjectCopy(projectName = EXPRESSION_LANGUAGE_PROJECT) { access, _ ->
-            val made = access.extra { makeModules(listOf(EXPRESSION_LANGUAGE_MODULE)) }
-            assertEquals(MakeOutcome.SUCCESS, made.outcome, "building $EXPRESSION_LANGUAGE_MODULE must succeed: ${made.messages}")
-            assertFailsWith<MpsRequestException> {
-                access.read { findInstances("Expression", exact = false, limit = 0) }
-            }
-        }
-
-        assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, exception.code)
-        val message = assertNotNull(exception.message)
-        assertContains(message, "\"Expression\" is ambiguous")
-        assertContains(message, "exprs.structure.Expression")
-        assertContains(message, "jetbrains.mps.baseLanguage.structure.Expression")
-    }
-
-    @Test
-    fun `reports an unknown bare short name as not found in any loaded language`() {
+    fun `refuses short-name resolution while a project language is unbuilt`() {
+        // The shared fixture's own language com.specificlanguages.json is present but not built, so a concept of that
+        // short name could hide there unseen. Counting matches would wrongly report uniqueness, so resolution refuses
+        // and names the language to build (or asks for a qualified name). The qualified spelling is unaffected.
         val exception = assertFailsWith<MpsRequestException> {
             SharedMpsEnvironment.sharedMpsAccess.read {
-                findInstances("NoSuchConceptAnywhere", exact = false, limit = DEFAULT_LIMIT)
+                findInstances("ConceptDeclaration", exact = false, limit = DEFAULT_LIMIT)
             }
         }
 
-        assertEquals(MpsErrorCode.CONCEPT_NOT_FOUND, exception.code)
-        assertContains(assertNotNull(exception.message), "was not found in any loaded language")
+        assertEquals(MpsErrorCode.LANGUAGE_NOT_LOADED, exception.code)
+        val message = assertNotNull(exception.message)
+        assertContains(message, "\"ConceptDeclaration\" cannot be resolved")
+        assertContains(message, "com.specificlanguages.json")
+        assertContains(message, "not built")
+    }
+
+    @Test
+    fun `resolves short names once every project language is built`() {
+        // With `exprs` built, no project language is unbuilt, so short-name counting is trustworthy and exercises all
+        // three outcomes: a unique name resolves like its qualified form, an ambiguous name lists candidates, and an
+        // unknown name is not found. One make covers all three.
+        SharedMpsEnvironment.withProjectCopy(projectName = EXPRESSION_LANGUAGE_PROJECT) { access, _ ->
+            val made = access.extra { makeModules(listOf(EXPRESSION_LANGUAGE_MODULE)) }
+            assertEquals(MakeOutcome.SUCCESS, made.outcome, "building $EXPRESSION_LANGUAGE_MODULE must succeed: ${made.messages}")
+
+            val qualified = access.read { findInstances(CONCEPT_DECLARATION, exact = false, limit = 0) }
+            val short = access.read { findInstances("ConceptDeclaration", exact = false, limit = 0) }
+            assertTrue(qualified.nodes.isNotEmpty(), "fixture should hold concept declarations")
+            assertEquals(qualified, short, "a unique bare short name resolves to the same concept as its qualified form")
+
+            val ambiguous = assertFailsWith<MpsRequestException> {
+                access.read { findInstances("Expression", exact = false, limit = 0) }
+            }
+            assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, ambiguous.code)
+            val ambiguousMessage = assertNotNull(ambiguous.message)
+            assertContains(ambiguousMessage, "exprs.structure.Expression")
+            assertContains(ambiguousMessage, "jetbrains.mps.baseLanguage.structure.Expression")
+
+            val unknown = assertFailsWith<MpsRequestException> {
+                access.read { findInstances("NoSuchConceptAnywhere", exact = false, limit = 0) }
+            }
+            assertEquals(MpsErrorCode.CONCEPT_NOT_FOUND, unknown.code)
+            assertContains(assertNotNull(unknown.message), "was not found in any loaded language")
+        }
     }
 
     @Test

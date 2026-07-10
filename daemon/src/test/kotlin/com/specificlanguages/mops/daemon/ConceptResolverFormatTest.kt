@@ -61,6 +61,17 @@ class ConceptResolverFormatTest {
     }
 
     @Test
+    fun `unbuilt short name message names the languages and offers both remedies`() {
+        val message = ConceptResolver.unbuiltShortNameMessage("Expression", listOf("exprs", "other.lang"))
+
+        assertContains(message, "\"Expression\" cannot be resolved")
+        assertContains(message, "  - exprs")
+        assertContains(message, "  - other.lang")
+        assertContains(message, "mops make exprs")
+        assertContains(message, "qualified concept name")
+    }
+
+    @Test
     fun `ambiguous short name message lists the qualified candidates to retry with`() {
         val message = ConceptResolver.ambiguousShortNameMessage(
             "Statement",

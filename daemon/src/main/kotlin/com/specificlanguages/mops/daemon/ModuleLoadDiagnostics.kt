@@ -82,6 +82,20 @@ class ModuleLoadDiagnostics(private val project: Project) {
         )
     }
 
+    /**
+     * Qualified names of the project's languages that are present but whose runtime is not loaded — languages that
+     * could define concepts yet are not built. Sorted and de-duplicated; absent languages are excluded, as they define
+     * nothing buildable. A caller resolving a bare short concept name uses this to refuse guessing uniqueness while a
+     * language it cannot see might also carry the name. Must run inside a read action.
+     */
+    fun unbuiltProjectLanguages(): List<String> =
+        projectLanguages()
+            .mapNotNull { it.sourceModule }
+            .filterNot { runtimeLoaded(it) }
+            .map { nameOf(it) }
+            .distinct()
+            .sorted()
+
     fun diagnoseModule(reference: String): ModuleDiagnosticResponse {
         val module = resolveModule(reference)
             ?: return ModuleDiagnosticResponse(absentDiagnostic(reference, "unknown"))

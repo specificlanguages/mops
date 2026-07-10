@@ -19,11 +19,11 @@ import org.jetbrains.mps.openapi.language.SAbstractConcept
  * MPS's by-name index; the bare short name is resolved by counting matches across all loaded languages, since the same
  * short name may belong to more than one language.
  *
- * A lookup can therefore fail four ways, each with its own remedy: a bare short name is ambiguous across languages; a
- * bare short name matches nothing; a qualified name's language is unknown or not loaded; or the language is loaded but
- * has no such concept. This resolver tells them apart. It also forgives a dropped `.structure.` infix: given
- * `foo.bar.Baz` it retries `foo.bar.structure.Baz`, so a caller who omits the infix still gets results when the
- * language is loaded.
+ * A lookup can therefore fail five ways, each with its own remedy: a bare short name is offered while a project language
+ * is unbuilt (so counting cannot be trusted); a bare short name is ambiguous across languages; a bare short name matches
+ * nothing; a qualified name's language is unknown or not loaded; or the language is loaded but has no such concept. This
+ * resolver tells them apart. It also forgives a dropped `.structure.` infix: given `foo.bar.Baz` it retries
+ * `foo.bar.structure.Baz`, so a caller who omits the infix still gets results when the language is loaded.
  *
  * Must run inside an MPS read action.
  */
@@ -62,8 +62,16 @@ class ConceptResolver(private val project: Project) {
     /**
      * Resolves a bare short name by counting concepts of that name across all loaded languages: a unique match wins, a
      * tie fails with the qualified candidates as retry tokens, and no match fails with near-miss suggestions.
+     *
+     * Counting is only trustworthy when every project language is built: an unbuilt language contributes no concepts to
+     * name lookup, so it could define the same short name unseen and turn a "unique" or "not found" verdict wrong. So
+     * the resolution refuses outright while any project language is unbuilt, naming them so the caller can build them or
+     * qualify the concept.
      */
     private fun resolveShortName(shortName: String): SAbstractConcept {
+        val unbuilt = ModuleLoadDiagnostics(project).unbuiltProjectLanguages()
+        if (unbuilt.isNotEmpty()) throw languageNotLoaded(unbuiltShortNameMessage(shortName, unbuilt))
+
         val matches = conceptsNamed(shortName)
         return when (matches.size) {
             1 -> matches.single()
@@ -137,8 +145,17 @@ class ConceptResolver(private val project: Project) {
     private fun ambiguous(message: String): MpsRequestException =
         MpsRequestException(code = MpsErrorCode.AMBIGUOUS_TARGET, message = message)
 
+    private fun languageNotLoaded(message: String): MpsRequestException =
+        MpsRequestException(code = MpsErrorCode.LANGUAGE_NOT_LOADED, message = message)
+
     companion object {
         private const val MAX_SUGGESTIONS = 5
+
+        fun unbuiltShortNameMessage(shortName: String, unbuiltLanguages: List<String>): String =
+            "the short concept name \"$shortName\" cannot be resolved while these project languages are not built, " +
+                "since any of them may also define it:\n" +
+                unbuiltLanguages.joinToString("\n") { "  - $it" } +
+                "\nbuild them (for example 'mops make ${unbuiltLanguages.first()}') or use a qualified concept name."
 
         fun ambiguousShortNameMessage(shortName: String, qualifiedCandidates: List<String>): String =
             "concept name \"$shortName\" is ambiguous; it names ${qualifiedCandidates.size} concepts across loaded " +
