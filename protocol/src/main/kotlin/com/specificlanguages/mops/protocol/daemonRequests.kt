@@ -34,6 +34,21 @@ data class ModelGetNodeRequest(
 ) : DaemonRequest
 
 /**
+ * Request to render one node as the plain text of its default editor, the way it would appear in the MPS editor.
+ *
+ * When the node's concept has no real editor — its language has not been made, so MPS would fall back to the generic
+ * reflective editor — rendering fails unless [allowReflective] is set, in which case the reflective editor's text is
+ * returned.
+ */
+@Serializable
+@SerialName("model-render-node")
+data class ModelRenderNodeRequest(
+    override val token: String,
+    val target: NodeTarget,
+    val allowReflective: Boolean = false,
+) : DaemonRequest
+
+/**
  * Request to find references to one resolved MPS node. Searches editable project sources by default; an explicit
  * [scope] (the raw navigation-target segments of an `in` clause) is searched exhaustively, including read-only library
  * and stub models within it. `["/"]` names the whole repository.

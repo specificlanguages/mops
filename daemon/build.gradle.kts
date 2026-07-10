@@ -42,6 +42,9 @@ dependencies {
     mpsRuntime(mpsZip.map {
         zipTree(it.singleFile).matching {
             include("lib/mps-core.jar")
+            // Editor cell rendering (headless node-to-text). See docs/mps/editor-cell-rendering.md.
+            include("lib/mps-editor.jar")
+            include("lib/mps-editor-api.jar")
             include("lib/mps-collections.jar")
             include("lib/mps-closures.jar")
             include("lib/mps-environment.jar")

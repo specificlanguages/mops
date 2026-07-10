@@ -65,6 +65,23 @@ them for the project root, or pass `/` for the repository root. `--depth` bounds
 `model`, `root`, or `node`); `--json` prints the semantic tree.
 
 ```sh
+mops --mps-home <path> model render-node [--allow-reflective] <node-reference>
+mops --mps-home <path> model render-node [--allow-reflective] <model-target> <node-id>
+```
+
+Renders one resolved node as the plain text of its default editor — the way it would appear in the MPS editor — and
+prints it verbatim, preserving the editor's line breaks and indentation. Addressed the same way as `model get-node`: a
+serialized node reference, or a model target plus node id. An unresolved target fails with `NODE_NOT_FOUND`. Any node
+is renderable, not only Root Nodes; the output is a quick overview for reading, not a round-trippable serialization.
+
+If any concept in the node's subtree does not resolve — its language is not loaded — the command fails with
+`LANGUAGE_NOT_LOADED`. It diagnoses each unloaded language through the same machinery as `find instances` (naming the
+root cause: not built, absent, or a broken dependency) and points at `mops module make <language>` and `mops diagnose
+module <language>`. Pass `--allow-reflective` to render anyway. A concept whose language *is* loaded but that simply defines
+no editor is not an error: MPS renders it with its generic reflective editor (concept aliases and roles rather than the
+language's own notation), which the command prints as-is.
+
+```sh
 mops --mps-home <path> find instances [--exact] [--limit N] [--json] <concept>
 ```
 

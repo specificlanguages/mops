@@ -24,4 +24,25 @@ object ConceptValidityGuard {
     /** Best-effort qualified name of [concept]'s owning language, used to group warnings once per language. */
     fun languageName(concept: SConcept): String =
         runCatching { concept.language.qualifiedName }.getOrNull() ?: concept.qualifiedName
+
+    /**
+     * The qualified names, sorted and de-duplicated, of the languages of every unresolved **MPS Concept** anywhere in
+     * [node]'s containment subtree (the node and all its descendants). Empty when every concept resolved. Callers use
+     * this to refuse an operation that needs valid concepts throughout the subtree, such as editor rendering, and to
+     * name the languages to make.
+     */
+    fun unresolvedLanguages(node: SNode): List<String> {
+        val languages = sortedSetOf<String>()
+        collectUnresolvedLanguages(node, languages)
+        return languages.toList()
+    }
+
+    private fun collectUnresolvedLanguages(node: SNode, into: MutableSet<String>) {
+        if (!node.concept.isValid) {
+            into.add(languageName(node.concept))
+        }
+        for (child in node.children) {
+            collectUnresolvedLanguages(child, into)
+        }
+    }
 }

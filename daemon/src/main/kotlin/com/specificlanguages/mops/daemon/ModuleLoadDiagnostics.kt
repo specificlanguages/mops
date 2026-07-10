@@ -33,6 +33,18 @@ import java.util.stream.Stream
  *
  * All methods must run inside an MPS read action.
  */
+/**
+ * Flattens a module load [problem] tree to the root modules that must be fixed — its leaves — one per line,
+ * de-duplicated: `  - <module>: <reason> — <detail>`. Shared by every caller that turns a diagnosis into a message.
+ */
+internal fun moduleLoadRootCauseLines(problem: ModuleLoadProblemJson): String =
+    moduleLoadRootCauses(problem).distinctBy { it.module to it.reason }.joinToString("\n") { leaf ->
+        "  - ${leaf.module}: ${leaf.reason}${leaf.detail?.let { " — $it" } ?: ""}"
+    }
+
+private fun moduleLoadRootCauses(problem: ModuleLoadProblemJson): List<ModuleLoadProblemJson> =
+    if (problem.causes.isEmpty()) listOf(problem) else problem.causes.flatMap(::moduleLoadRootCauses)
+
 class ModuleLoadDiagnostics(private val project: Project) {
 
     private val repository = project.repository

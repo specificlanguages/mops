@@ -1,7 +1,7 @@
 package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
-import com.specificlanguages.mops.daemon.core.MpsMake
+import com.specificlanguages.mops.daemon.core.MpsExtra
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.daemon.core.MpsWrite
 import com.specificlanguages.mops.daemon.core.ResolvedScope
@@ -23,6 +23,8 @@ import com.specificlanguages.mops.protocol.ModelEditRequest
 import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.ModelGetNodeRequest
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
+import com.specificlanguages.mops.protocol.ModelRenderNodeRequest
+import com.specificlanguages.mops.protocol.ModelRenderNodeResponse
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import com.specificlanguages.mops.protocol.MpsListRequest
 import com.specificlanguages.mops.protocol.MpsListResponse
@@ -47,9 +49,9 @@ import kotlin.test.assertEquals
  */
 class DomainRequestHandlerTest {
     private val operations = mock<MpsWrite>()
-    private val make = mock<MpsMake>()
+    private val extra = mock<MpsExtra>()
     private val workspacePath = Path.of("/workspace/example")
-    private val handler = DomainRequestHandler(workspacePath, mpsAccessOver(operations, make))
+    private val handler = DomainRequestHandler(workspacePath, mpsAccessOver(operations, extra))
 
     @Test
     fun `get-node reads and wraps the exported node`() {
@@ -62,6 +64,30 @@ class DomainRequestHandlerTest {
         assertEquals(ModelGetNodeResponse(node), response)
         verify(operations).getNode(target)
         verifyNoMoreInteractions(operations)
+    }
+
+    @Test
+    fun `render-node renders and wraps the rendered text`() {
+        val target = NodeTarget.NodeReference("r:model/1")
+        whenever(extra.renderNode(target, false)).thenReturn("{\n  \"foo\"\n}")
+
+        val response = handler.handleDomainRequest(ModelRenderNodeRequest(TOKEN, target))
+
+        assertEquals(ModelRenderNodeResponse("{\n  \"foo\"\n}"), response)
+        verify(extra).renderNode(target, false)
+        verifyNoInteractions(operations)
+    }
+
+    @Test
+    fun `render-node forwards the allow-reflective flag`() {
+        val target = NodeTarget.NodeReference("r:model/1")
+        whenever(extra.renderNode(target, true)).thenReturn("reflective text")
+
+        val response = handler.handleDomainRequest(ModelRenderNodeRequest(TOKEN, target, allowReflective = true))
+
+        assertEquals(ModelRenderNodeResponse("reflective text"), response)
+        verify(extra).renderNode(target, true)
+        verifyNoInteractions(operations)
     }
 
     @Test
@@ -168,12 +194,12 @@ class DomainRequestHandlerTest {
     @Test
     fun `make-modules makes the requested modules and returns the result directly`() {
         val expected = MakeResponse(MakeOutcome.SUCCESS, moduleCount = 2, messages = emptyList())
-        whenever(make.makeModules(listOf("moduleA", "moduleB"))).thenReturn(expected)
+        whenever(extra.makeModules(listOf("moduleA", "moduleB"))).thenReturn(expected)
 
         val response = handler.handleDomainRequest(MakeModulesRequest(TOKEN, listOf("moduleA", "moduleB")))
 
         assertEquals(expected, response)
-        verify(make).makeModules(listOf("moduleA", "moduleB"))
+        verify(extra).makeModules(listOf("moduleA", "moduleB"))
         verifyNoInteractions(operations)
     }
 
@@ -184,18 +210,18 @@ class DomainRequestHandlerTest {
             moduleCount = 5,
             messages = listOf(MakeMessageJson(MakeMessageKind.ERROR, "boom")),
         )
-        whenever(make.makeProject()).thenReturn(expected)
+        whenever(extra.makeProject()).thenReturn(expected)
 
         val response = handler.handleDomainRequest(MakeProjectRequest(TOKEN))
 
         assertEquals(expected, response)
-        verify(make).makeProject()
+        verify(extra).makeProject()
         verifyNoInteractions(operations)
     }
 
     @Test
     fun `a request exception on the make path maps to its error code`() {
-        whenever(make.makeModules(listOf("missing")))
+        whenever(extra.makeModules(listOf("missing")))
             .thenThrow(MpsRequestException(MpsErrorCode.TARGET_NOT_FOUND, "module not found: missing"))
 
         val response = handler.handleDomainRequest(MakeModulesRequest(TOKEN, listOf("missing")))

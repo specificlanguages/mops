@@ -17,12 +17,15 @@ import org.jetbrains.mps.openapi.module.FindUsagesFacade
 import org.jetbrains.mps.openapi.module.SModule
 import org.jetbrains.mps.openapi.module.SearchScope
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutionException
 
 class JetBrainsMpsAccess(
     private val project: Project,
     logger: DaemonLogger,
     private val mpsListExporter: MpsListExporter = MpsListExporter(),
     private val jsonNodeExporter: JsonNodeExporter = JsonNodeExporter(),
+    private val editorNodeRenderer: EditorNodeRenderer = EditorNodeRenderer(),
     private val modelNodeResolver: ModelNodeResolver = ModelNodeResolver(logger),
     private val editBatchExecutor: EditBatchExecutor = EditBatchExecutor(modelNodeResolver),
     private val persistence: PersistenceFacade = PersistenceFacade.getInstance(),
@@ -42,11 +45,16 @@ class JetBrainsMpsAccess(
             captureRequestErrors { JetBrainsMpsWrite(this).block() }
         }.getOrThrow()
 
-    // Make runs outside any model action — the make framework takes its own model locks — so this deliberately does
-    // not wrap the block in computeReadAction the way read/write do. Model collection inside the make takes its own
-    // short read actions.
-    override fun <T> make(block: MpsMake.() -> T): T =
-        captureRequestErrors { JetBrainsMpsMake().block() }.getOrThrow()
+    // Extra operations run with no model action active: make takes the make framework's own model locks, and render
+    // bridges to and blocks on the EDT — either would deadlock inside a read or write action. Enforce that here, once,
+    // so the individual operations need not each re-check it. Unlike read/write this deliberately does not wrap the
+    // block in computeReadAction; each operation takes its own short model actions as it needs them.
+    override fun <T> extra(block: MpsExtra.() -> T): T {
+        require(!project.modelAccess.canRead()) {
+            "extra operations must run with no read/write action active, or they may deadlock"
+        }
+        return captureRequestErrors { JetBrainsMpsExtra().block() }.getOrThrow()
+    }
 
     private open inner class JetBrainsMpsRead : MpsRead {
         override fun list(target: List<String>?, depth: Int): MpsListEntryJson =
@@ -76,6 +84,43 @@ class JetBrainsMpsAccess(
 
         override fun getNode(target: NodeTarget, ancestry: Boolean): MpsNodeJson =
             jsonNodeExporter.export(resolveNode(target), ancestry)
+
+        // Resolves the node to render and, unless [allowReflective], refuses a subtree whose concepts did not resolve.
+        // The editor render itself is deliberately not done here: it must run on the EDT and would deadlock if driven
+        // from inside this read action (see [MpsAccess.renderNode]). So this returns the node for the caller to render
+        // once the read action has released.
+        fun resolveForRender(target: NodeTarget, allowReflective: Boolean): SNode {
+            val node = resolveNode(target)
+            if (!allowReflective) {
+                val unresolvedLanguages = ConceptValidityGuard.unresolvedLanguages(node)
+                if (unresolvedLanguages.isNotEmpty()) {
+                    throw MpsRequestException(
+                        code = MpsErrorCode.LANGUAGE_NOT_LOADED,
+                        message = unrenderableSubtreeMessage(unresolvedLanguages),
+                    )
+                }
+            }
+            return node
+        }
+
+        // One or more concepts in the subtree did not resolve because their language is not loaded. Diagnose each
+        // through the shared ModuleLoadDiagnostics so the cause (not built, absent, broken dependency, ...) is reported
+        // the same way `find instances` reports an unloaded language, and point at making it or rendering reflectively.
+        private fun unrenderableSubtreeMessage(languages: List<String>): String {
+            val diagnostics = ModuleLoadDiagnostics(project)
+            val causes = languages.joinToString("\n") { language ->
+                val diagnostic = diagnostics.diagnoseModule(language).module
+                when {
+                    diagnostic.problem != null -> moduleLoadRootCauseLines(diagnostic.problem!!)
+                    !diagnostic.present -> "  - $language: not a module known to this project"
+                    else -> "  - $language: a concept used here is not defined in it"
+                }
+            }
+            return "cannot render: this subtree uses languages that are not loaded, so their concepts did not resolve:\n" +
+                "$causes\n" +
+                "Make the affected languages (e.g. `mops module make ${languages.first()}`; run " +
+                "`mops diagnose module <language>` for the full cause), or pass --allow-reflective to render anyway."
+        }
 
         override fun findUsages(target: NodeTarget, limit: Int, scope: ResolvedScope): FindUsagesResponse {
             val node = resolveNode(target)
@@ -251,12 +296,31 @@ class JetBrainsMpsAccess(
             editBatchExecutor.apply(project, batch, writeScope, constraints)
     }
 
-    private inner class JetBrainsMpsMake : MpsMake {
+    private inner class JetBrainsMpsExtra : MpsExtra {
         private val projectMake = ProjectMake(project)
 
         override fun makeModules(modules: List<String>): MakeResponse = projectMake.makeModules(modules)
 
         override fun makeProject(): MakeResponse = projectMake.makeProject()
+
+        // Resolution and rendering run together in one read action on the EDT, required because the editor's disposal
+        // asserts the EDT.
+        override fun renderNode(target: NodeTarget, allowReflective: Boolean): String {
+            val rendered = CompletableFuture<String>()
+            project.modelAccess.runReadInEDT {
+                try {
+                    val node = JetBrainsMpsRead().resolveForRender(target, allowReflective)
+                    rendered.complete(editorNodeRenderer.render(node, project))
+                } catch (throwable: Throwable) {
+                    rendered.completeExceptionally(throwable)
+                }
+            }
+            return try {
+                rendered.get()
+            } catch (exception: ExecutionException) {
+                throw exception.cause ?: exception
+            }
+        }
     }
 
     private fun resolveListTarget(target: List<String>): ListTargetResolution {

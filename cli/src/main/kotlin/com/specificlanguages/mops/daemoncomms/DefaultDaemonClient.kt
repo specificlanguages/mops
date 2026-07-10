@@ -25,6 +25,8 @@ import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.ModelGetNodeRequest
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
+import com.specificlanguages.mops.protocol.ModelRenderNodeRequest
+import com.specificlanguages.mops.protocol.ModelRenderNodeResponse
 import com.specificlanguages.mops.protocol.MpsListRequest
 import com.specificlanguages.mops.protocol.MpsListResponse
 import com.specificlanguages.mops.protocol.PingRequest
@@ -64,6 +66,12 @@ class DefaultDaemonClient(
         exchange(
             ModelGetNodeRequest(token = token, target = target, ancestry = ancestry),
             ModelGetNodeResponse::class.java
+        )
+
+    override fun renderNode(target: NodeTarget, allowReflective: Boolean): ModelRenderNodeResponse =
+        exchange(
+            ModelRenderNodeRequest(token = token, target = target, allowReflective = allowReflective),
+            ModelRenderNodeResponse::class.java
         )
 
     override fun findUsages(target: NodeTarget, limit: Int, scope: List<String>?): FindUsagesResponse =

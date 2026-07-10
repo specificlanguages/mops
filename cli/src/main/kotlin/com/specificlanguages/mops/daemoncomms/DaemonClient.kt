@@ -10,6 +10,7 @@ import com.specificlanguages.mops.protocol.ModulesDiagnosticsResponse
 import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
+import com.specificlanguages.mops.protocol.ModelRenderNodeResponse
 import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.MpsListResponse
 import com.specificlanguages.mops.protocol.PongResponse
@@ -20,6 +21,7 @@ import com.specificlanguages.mops.protocol.PongResponse
 interface DaemonClient {
     fun ping(): PongResponse
     fun getNode(target: NodeTarget, ancestry: Boolean = false): ModelGetNodeResponse
+    fun renderNode(target: NodeTarget, allowReflective: Boolean = false): ModelRenderNodeResponse
     fun findUsages(target: NodeTarget, limit: Int, scope: List<String>? = null): FindUsagesResponse
     fun findInstances(concept: String, exact: Boolean, limit: Int, scope: List<String>? = null): FindInstancesResponse
     fun findByName(pattern: String, limit: Int, scope: List<String>? = null): FindByNameResponse

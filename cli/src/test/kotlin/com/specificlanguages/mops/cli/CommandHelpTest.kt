@@ -40,6 +40,7 @@ class CommandHelpTest {
 
         assertContains(output, "get-node")
         assertContains(output, "edit")
+        assertContains(output, "render-node")
     }
 
     @Test
@@ -101,6 +102,7 @@ class CommandHelpTest {
             arrayOf("find", "usages"),
             arrayOf("find", "root-by-name"),
             arrayOf("model", "get-node"),
+            arrayOf("model", "render-node"),
             arrayOf("model", "edit"),
             arrayOf("daemon", "ping"),
             arrayOf("daemon", "status"),

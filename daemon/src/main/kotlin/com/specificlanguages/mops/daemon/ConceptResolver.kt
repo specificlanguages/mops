@@ -93,7 +93,7 @@ class ConceptResolver(private val project: Project) {
             )
             if (problem != null) {
                 append(":\n")
-                append(rootCauseLines(problem))
+                append(moduleLoadRootCauseLines(problem))
             }
             append("\nrun 'mops diagnose module ${parsed.language}' for the full dependency tree")
         }
@@ -106,15 +106,6 @@ class ConceptResolver(private val project: Project) {
                 "concept \"${parsed.shortName}\" was not found in language \"${parsed.language}\", which is loaded; " +
                     "did you mean: ${suggestions.joinToString(", ")}?"
             }
-
-        /** The root modules to fix: the leaves of the problem tree, one per line, de-duplicated. */
-        private fun rootCauseLines(problem: ModuleLoadProblemJson): String =
-            leaves(problem).distinctBy { it.module to it.reason }.joinToString("\n") { leaf ->
-                "  - ${leaf.module}: ${leaf.reason}${leaf.detail?.let { " — $it" } ?: ""}"
-            }
-
-        private fun leaves(problem: ModuleLoadProblemJson): List<ModuleLoadProblemJson> =
-            if (problem.causes.isEmpty()) listOf(problem) else problem.causes.flatMap(::leaves)
 
         /** A closeness rank (lower is closer) for a candidate concept name, or null when it is not similar enough. */
         private fun similarity(query: String, candidate: String): Int? {

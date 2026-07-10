@@ -49,6 +49,14 @@ class StoppedResponse : DaemonResponse {
 data class ModelGetNodeResponse(val node: MpsNodeJson) : DaemonResponse
 
 /**
+ * Successful response carrying the plain-text rendering of one node's default editor. The [text] preserves the editor's
+ * line breaks and indentation; it rides the single-line protocol as an escaped JSON string.
+ */
+@Serializable
+@SerialName("model-render-node")
+data class ModelRenderNodeResponse(val text: String) : DaemonResponse
+
+/**
  * Successful response carrying bounded Node Usage search results.
  */
 @Serializable

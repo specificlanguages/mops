@@ -14,6 +14,10 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
                 is ModelGetNodeRequest ->
                     ModelGetNodeResponse(node = mpsAccess.read { getNode(request.target, request.ancestry) })
 
+                is ModelRenderNodeRequest -> ModelRenderNodeResponse(
+                    text = mpsAccess.extra { renderNode(request.target, request.allowReflective) },
+                )
+
                 is FindUsagesRequest -> mpsAccess.read {
                     findUsages(request.target, request.limit, resolveScope(request.scope))
                 }
@@ -36,9 +40,9 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
 
                 is DiagnoseModuleRequest -> mpsAccess.read { diagnoseModule(request.module) }
 
-                is MakeModulesRequest -> mpsAccess.make { makeModules(request.modules) }
+                is MakeModulesRequest -> mpsAccess.extra { makeModules(request.modules) }
 
-                is MakeProjectRequest -> mpsAccess.make { makeProject() }
+                is MakeProjectRequest -> mpsAccess.extra { makeProject() }
 
                 else -> errorResponse("UNSUPPORTED_REQUEST", "unsupported request type: ${request::class.simpleName}")
             }

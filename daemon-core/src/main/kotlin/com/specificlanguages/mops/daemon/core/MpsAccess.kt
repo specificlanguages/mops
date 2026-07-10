@@ -6,9 +6,8 @@ interface MpsAccess {
     fun <T> write(block: MpsWrite.() -> T): T
 
     /**
-     * Runs [block] against the [MpsMake] operations. Unlike [read] and [write] this does *not* wrap the block in an MPS
-     * model action: the make framework manages its own model access, and running it inside a read/write action would
-     * deadlock. Resource collection inside a make operation takes its own short read actions.
+     * Runs [block] against the [MpsExtra] operations, which must run with no read/write action active. This method
+     * *requires* that no read/write action is active. Each extra operation manages its own model access.
      */
-    fun <T> make(block: MpsMake.() -> T): T
+    fun <T> extra(block: MpsExtra.() -> T): T
 }

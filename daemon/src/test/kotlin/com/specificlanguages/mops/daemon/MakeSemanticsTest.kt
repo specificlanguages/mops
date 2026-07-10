@@ -21,7 +21,7 @@ class MakeSemanticsTest {
     @Test
     fun `making a solution also makes the language it depends on`() {
         val response = SharedMpsEnvironment.withProjectCopy { access, _ ->
-            access.make { makeModules(listOf("json.sandbox")) }
+            access.extra {makeModules(listOf("json.sandbox")) }
         }
 
         val errors = response.messages.filter { it.kind == MakeMessageKind.ERROR }
@@ -33,7 +33,7 @@ class MakeSemanticsTest {
     @Test
     fun `making the whole project succeeds`() {
         val response = SharedMpsEnvironment.withProjectCopy { access, _ ->
-            access.make { makeProject() }
+            access.extra {makeProject() }
         }
 
         val errors = response.messages.filter { it.kind == MakeMessageKind.ERROR }
@@ -47,7 +47,7 @@ class MakeSemanticsTest {
             projectName = SANDBOX,
             prepare = ::breakCalculator,
         ) { access, _ ->
-            access.make { makeProject() }
+            access.extra {makeProject() }
         }
 
         assertEquals(
@@ -81,7 +81,7 @@ class MakeSemanticsTest {
     fun `an unknown module name fails with a target-not-found error`() {
         val failure = assertFailsWith<MpsRequestException> {
             SharedMpsEnvironment.withProjectCopy { access, _ ->
-                access.make { makeModules(listOf("no.such.module.at.all")) }
+                access.extra {makeModules(listOf("no.such.module.at.all")) }
             }
         }
 
