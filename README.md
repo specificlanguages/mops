@@ -55,14 +55,20 @@ reference. A Root Node has no `parent`. `--ancestry` nests `parent` recursively 
 only the immediate parent.
 
 ```sh
-mops --mps-home <path> list [--depth N] [--json] [TARGET_SEGMENT...]
-mops --mps-home <path> ls   [--depth N] [--json] [TARGET_SEGMENT...]
+mops --mps-home <path> list [--depth N] [--limit N] [--summary] [--role ROLE] [--json] [TARGET_SEGMENT...]
+mops --mps-home <path> ls   [--depth N] [--limit N] [--summary] [--role ROLE] [--json] [TARGET_SEGMENT...]
 ```
 
 Lists an MPS navigation target as a bounded tree. Space-separated target segments address a module, model, or node; omit
 them for the project root, or pass `/` for the repository root. `--depth` bounds the descendant depth from 0 to 8
 (default 1). Text output is one indented tab-separated row per entry, tagged by kind (`project`, `repository`, `module`,
 `model`, `root`, or `node`); `--json` prints the semantic tree.
+
+`--limit N` caps how many children each level shows (default 50; `0` is unlimited). A level wider than the cap is
+truncated and gains a final `truncated <shown> <total>` row so the omission is explicit. `--summary` replaces the
+target's children with grouped counts — per **Role** (with the dominant concepts) for a node, per concept for a model's
+roots, per model for a module, per kind for the project or repository — and cannot be combined with `--depth`. `--role
+ROLE` lists only the target node's children in one containment role and is valid only for a node target.
 
 ```sh
 mops --mps-home <path> model render-node [--allow-reflective] <node-reference>

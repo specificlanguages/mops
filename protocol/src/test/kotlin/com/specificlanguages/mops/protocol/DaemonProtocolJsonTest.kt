@@ -640,6 +640,44 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `list request JSON carries the limit summary and role shaping fields`() {
+        val serialized = ProtocolJson.encodeRequest(
+            MpsListRequest(token = "secret", target = listOf("JsonFile"), depth = 1, limit = 10, summary = true, role = "member"),
+        )
+        assertContains(serialized, "\"limit\":10")
+        assertContains(serialized, "\"summary\":true")
+        assertContains(serialized, "\"role\":\"member\"")
+        assertEquals(
+            MpsListRequest(token = "secret", target = listOf("JsonFile"), depth = 1, limit = 10, summary = true, role = "member"),
+            ProtocolJson.decodeRequest(serialized),
+        )
+    }
+
+    @Test
+    fun `list response JSON round-trips summary and truncation structure`() {
+        val root = MpsListEntryJson(
+            type = "model",
+            name = "com.example.structure",
+            reference = "r:model",
+            childTotal = 5,
+            children = listOf(
+                MpsListEntryJson(type = "root", name = "A", concept = "a.b.C", reference = "r:model/1"),
+            ),
+            summary = MpsListSummaryJson(
+                by = "role",
+                groups = listOf(
+                    MpsListSummaryGroupJson(key = "member", count = 3, concepts = listOf("a.b.Field", "a.b.Method")),
+                    MpsListSummaryGroupJson(key = "name", count = 1),
+                ),
+            ),
+        )
+
+        val decoded = ProtocolJson.decodeResponse(ProtocolJson.encodeResponse(MpsListResponse(root)))
+
+        assertEquals(MpsListResponse(root), decoded)
+    }
+
+    @Test
     fun `find-usages request and response JSON carry usage results`() {
         val target = NodeTarget.NodeReference(
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",

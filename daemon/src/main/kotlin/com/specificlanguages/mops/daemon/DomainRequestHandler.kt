@@ -41,7 +41,15 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
                 is ModelEditRequest -> mpsAccess.write { modelEdit(request.batch, request.constraints) }
 
                 is MpsListRequest -> MpsListResponse(
-                    root = mpsAccess.read { list(target = request.target, depth = request.depth) },
+                    root = mpsAccess.read {
+                        list(
+                            target = request.target,
+                            depth = request.depth,
+                            limit = request.limit,
+                            summary = request.summary,
+                            role = request.role,
+                        )
+                    },
                 )
 
                 is DiagnoseModulesRequest -> mpsAccess.read { diagnoseModules() }

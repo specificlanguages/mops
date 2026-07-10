@@ -16,7 +16,19 @@ import com.specificlanguages.mops.protocol.NodeTarget
  * carry a specific error code.
  */
 interface MpsRead {
-    fun list(target: List<String>?, depth: Int): MpsListEntryJson
+    /**
+     * Lists one navigation target as a bounded semantic tree. [depth] bounds descent; [limit] caps each level's
+     * children (0 = unbounded), recording the total on a truncated level. When [summary] is set the target's children
+     * are returned as grouped counts instead of enumerated. [role], valid only for a node target, restricts the listed
+     * children to one Containment Role.
+     */
+    fun list(
+        target: List<String>?,
+        depth: Int,
+        limit: Int = 0,
+        summary: Boolean = false,
+        role: String? = null,
+    ): MpsListEntryJson
 
     fun getNode(target: NodeTarget, ancestry: Boolean = false): MpsNodeJson
 

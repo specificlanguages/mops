@@ -40,7 +40,13 @@ interface DaemonClient {
     ): FindInstancesResponse
     fun findByName(pattern: String, scope: List<String>? = null, limit: Int): FindByNameResponse
     fun modelEdit(batch: EditBatch, constraints: ConstraintEnforcement = ConstraintEnforcement.BEST_EFFORT): ModelEditResponse
-    fun list(target: List<String>?, depth: Int): MpsListResponse
+    fun list(
+        target: List<String>?,
+        depth: Int,
+        limit: Int = 0,
+        summary: Boolean = false,
+        role: String? = null,
+    ): MpsListResponse
     fun diagnoseModules(): ModulesDiagnosticsResponse
     fun diagnoseModule(module: String): ModuleDiagnosticResponse
 

@@ -2,6 +2,13 @@
 
 ## 0.3.0 (Unreleased)
 
+- Gave `mops list` three output-shaping options for wide targets. `--limit N` caps each level's children (default 50,
+  `0` unlimited) and appends a `truncated <shown> <total>` row to any level it clips, so the omission is explicit rather
+  than silent. `--summary` prints grouped counts instead of enumerating children — per **Role** with the dominant
+  concepts for a node, per concept for a model's roots, per model for a module, and per kind for the project or
+  repository — and is rejected together with `--depth`. `--role <role>` lists only a node target's children in one
+  containment role, and errors on a module, model, project, or repository target. JSON output carries the same summary
+  and truncation information structurally (`summary`, `childTotal`).
 - Added the `mops model edit` **`wrap`** and **`unwrap`** operations. `wrap` (`{"op": "wrap", "target", "concept",
   "role", ...}`) puts a fresh node of `concept` in the target's exact slot and moves the target under the wrapper's
   `role` (at an optional `position` among inline-built siblings); the wrapper is built like an `addChild` inline spec

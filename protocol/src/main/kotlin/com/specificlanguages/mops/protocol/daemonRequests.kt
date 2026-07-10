@@ -131,6 +131,12 @@ data class MpsListRequest(
     override val token: String,
     val target: List<String>? = null,
     val depth: Int,
+    // Per-level child cap; 0 means unbounded. A level wider than the cap is truncated and its total recorded.
+    val limit: Int = 0,
+    // Summarize the target's children as grouped counts instead of enumerating them.
+    val summary: Boolean = false,
+    // When the target is a node, restrict its listed children to this Containment Role; invalid for non-node targets.
+    val role: String? = null,
 ) : DaemonRequest
 
 /**

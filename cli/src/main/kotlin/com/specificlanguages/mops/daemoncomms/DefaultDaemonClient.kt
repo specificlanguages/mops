@@ -120,9 +120,9 @@ class DefaultDaemonClient(
             ModelEditResponse::class.java
         )
 
-    override fun list(target: List<String>?, depth: Int): MpsListResponse =
+    override fun list(target: List<String>?, depth: Int, limit: Int, summary: Boolean, role: String?): MpsListResponse =
         exchange(
-            MpsListRequest(token = token, target = target, depth = depth),
+            MpsListRequest(token = token, target = target, depth = depth, limit = limit, summary = summary, role = role),
             MpsListResponse::class.java
         )
 

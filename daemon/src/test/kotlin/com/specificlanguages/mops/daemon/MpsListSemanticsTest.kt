@@ -376,6 +376,128 @@ class MpsListSemanticsTest {
         }
     }
 
+    @Test
+    fun `summarizes model roots per concept ordered by count`() {
+        val model = SharedMpsEnvironment.sharedMpsAccess.read {
+            list(listOf("com.specificlanguages.json", "com.specificlanguages.json.structure"), depth = 1, summary = true)
+        }
+
+        assertEquals("model", model.type)
+        assertNull(model.children)
+
+        val summary = assertNotNull(model.summary)
+        assertEquals("concept", summary.by)
+        assertEquals(10, summary.groups.sumOf { it.count })
+        assertEquals("jetbrains.mps.lang.structure.structure.ConceptDeclaration", summary.groups.first().key)
+        assertEquals(
+            8,
+            summary.groups.single { it.key == "jetbrains.mps.lang.structure.structure.ConceptDeclaration" }.count,
+        )
+    }
+
+    @Test
+    fun `summarizes module roots per model`() {
+        val module = SharedMpsEnvironment.sharedMpsAccess.read {
+            list(listOf("com.specificlanguages.json"), depth = 1, summary = true)
+        }
+
+        assertEquals("module", module.type)
+        assertNull(module.children)
+
+        val summary = assertNotNull(module.summary)
+        assertEquals("model", summary.by)
+        assertEquals(10, summary.groups.single { it.key == "com.specificlanguages.json.structure" }.count)
+    }
+
+    @Test
+    fun `summarizes project modules per kind`() {
+        val project = SharedMpsEnvironment.sharedMpsAccess.read { list(null, depth = 1, summary = true) }
+
+        assertEquals("project", project.type)
+        assertNull(project.children)
+
+        val summary = assertNotNull(project.summary)
+        assertEquals("module-kind", summary.by)
+        assertEquals(2, summary.groups.single { it.key == "solution" }.count)
+        assertEquals(1, summary.groups.single { it.key == "language" }.count)
+    }
+
+    @Test
+    fun `summarizes node children per role with dominant concepts`() {
+        val node = SharedMpsEnvironment.sharedMpsAccess.read {
+            list(
+                listOf("com.specificlanguages.json", "com.specificlanguages.json.structure", "JsonFile"),
+                depth = 1,
+                summary = true,
+            )
+        }
+
+        assertEquals("root", node.type)
+        assertNull(node.children)
+
+        val summary = assertNotNull(node.summary)
+        assertEquals("role", summary.by)
+        val implements = summary.groups.single { it.key == "implements" }
+        assertEquals(1, implements.count)
+        assertEquals(
+            listOf("jetbrains.mps.lang.structure.structure.InterfaceConceptReference"),
+            implements.concepts,
+        )
+    }
+
+    @Test
+    fun `restricts a node's listed children to one role`() {
+        val node = SharedMpsEnvironment.sharedMpsAccess.read {
+            list(
+                listOf("com.specificlanguages.json", "com.specificlanguages.json.structure", "JsonFile"),
+                depth = 1,
+                role = "implements",
+            )
+        }
+
+        val children = assertNotNull(node.children)
+        val child = children.single()
+        assertEquals("implements", child.role)
+        assertEquals("jetbrains.mps.lang.structure.structure.InterfaceConceptReference", child.concept)
+    }
+
+    @Test
+    fun `rejects a role filter on a non-node target`() {
+        val exception = assertFailsWith<MpsRequestException> {
+            SharedMpsEnvironment.sharedMpsAccess.read {
+                list(
+                    listOf("com.specificlanguages.json", "com.specificlanguages.json.structure"),
+                    depth = 1,
+                    role = "implements",
+                )
+            }
+        }
+
+        assertEquals(MpsErrorCode.UNSUPPORTED_TARGET, exception.code)
+        assertContains(exception.message, "--role is valid only for a node target")
+    }
+
+    @Test
+    fun `truncates a level wider than the limit and records the total`() {
+        val model = SharedMpsEnvironment.sharedMpsAccess.read {
+            list(listOf("com.specificlanguages.json", "com.specificlanguages.json.structure"), depth = 1, limit = 3)
+        }
+
+        val children = assertNotNull(model.children)
+        assertEquals(3, children.size)
+        assertEquals(10, model.childTotal)
+    }
+
+    @Test
+    fun `records no total when a level fits within the limit`() {
+        val model = SharedMpsEnvironment.sharedMpsAccess.read {
+            list(listOf("com.specificlanguages.json", "com.specificlanguages.json.structure"), depth = 1, limit = 0)
+        }
+
+        assertEquals(10, assertNotNull(model.children).size)
+        assertNull(model.childTotal)
+    }
+
     private companion object {
         const val LANGUAGE_MODULE_REFERENCE = "f3f42ddf-d692-4c29-90fb-7360196f01ab(com.specificlanguages.json)"
         const val BUILD_MODULE_REFERENCE = "84f0ad52-c7ca-45dd-99c5-9605c96bf808(com.specificlanguages.json.build)"

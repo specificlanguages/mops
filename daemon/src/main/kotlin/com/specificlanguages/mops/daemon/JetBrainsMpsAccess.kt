@@ -59,10 +59,16 @@ class JetBrainsMpsAccess(
     }
 
     private open inner class JetBrainsMpsRead : MpsRead {
-        override fun list(target: List<String>?, depth: Int): MpsListEntryJson =
+        override fun list(target: List<String>?, depth: Int, limit: Int, summary: Boolean, role: String?): MpsListEntryJson =
             when (target) {
-                null -> mpsListExporter.exportProject(project, depth)
-                listOf("/") -> mpsListExporter.exportRepository(project.repository, depth)
+                null -> {
+                    rejectRoleOnNonNode(role, "project")
+                    mpsListExporter.exportProject(project, depth, limit, summary)
+                }
+                listOf("/") -> {
+                    rejectRoleOnNonNode(role, "repository")
+                    mpsListExporter.exportRepository(project.repository, depth, limit, summary)
+                }
                 else -> {
                     val root = when (val resolution = resolveListTarget(target)) {
                         is ListTargetResolution.Found -> resolution.target
@@ -76,13 +82,32 @@ class JetBrainsMpsAccess(
                         )
                     }
                     when (root) {
-                        is ListTarget.Module -> mpsListExporter.exportModule(root.module, depth)
-                        is ListTarget.Model -> mpsListExporter.exportModel(root.model, depth)
-                        is ListTarget.RootNode -> mpsListExporter.exportRoot(root.node, depth)
-                        is ListTarget.Node -> mpsListExporter.exportNode(root.node, depth)
+                        is ListTarget.Module -> {
+                            rejectRoleOnNonNode(role, "module")
+                            mpsListExporter.exportModule(root.module, depth, limit, summary)
+                        }
+                        is ListTarget.Model -> {
+                            rejectRoleOnNonNode(role, "model")
+                            mpsListExporter.exportModel(root.model, depth, limit, summary)
+                        }
+                        is ListTarget.RootNode -> mpsListExporter.exportRoot(root.node, depth, limit, summary, role)
+                        is ListTarget.Node -> mpsListExporter.exportNode(root.node, depth, limit, summary, role)
                     }
                 }
             }
+
+        // --role restricts a node's children to one Containment Role, so it is meaningful only for a node target. A
+        // module, model, project, or repository target has no containment roles; reject --role there instead of
+        // silently ignoring it.
+        private fun rejectRoleOnNonNode(role: String?, targetKind: String) {
+            if (role != null) {
+                throw MpsRequestException(
+                    code = MpsErrorCode.UNSUPPORTED_TARGET,
+                    message = "--role is valid only for a node target, but this target is a $targetKind, which has no " +
+                        "containment roles. List a node (root or nested) to filter its children by role.",
+                )
+            }
+        }
 
         override fun getNode(target: NodeTarget, ancestry: Boolean): MpsNodeJson =
             jsonNodeExporter.export(resolveNode(target), ancestry)
