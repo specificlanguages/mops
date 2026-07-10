@@ -73,14 +73,17 @@ data class ModelCheckRequest(
 data class FindUsagesRequest(
     override val token: String,
     val target: NodeTarget,
-    val limit: Int,
     val scope: List<String>? = null,
+    val limit: Int,
 ) : DaemonRequest
 
 /**
  * Request to find instances of one MPS concept. Searches editable project sources by default; an explicit [scope] (the
  * raw navigation-target segments of an `in` clause) is searched exhaustively, including read-only library and stub
  * models within it. `["/"]` names the whole repository.
+ *
+ * [filters] are optional post-filters over the concept-instance results (see [NodeFilter]); they combine with each
+ * other and with the scope by AND, each only narrowing.
  */
 @Serializable
 @SerialName("find-instances")
@@ -88,8 +91,9 @@ data class FindInstancesRequest(
     override val token: String,
     val concept: String,
     val exact: Boolean,
-    val limit: Int,
     val scope: List<String>? = null,
+    val filters: List<NodeFilter> = emptyList(),
+    val limit: Int,
 ) : DaemonRequest
 
 /**
@@ -103,8 +107,8 @@ data class FindInstancesRequest(
 data class FindByNameRequest(
     override val token: String,
     val pattern: String,
-    val limit: Int,
     val scope: List<String>? = null,
+    val limit: Int,
 ) : DaemonRequest
 
 /**

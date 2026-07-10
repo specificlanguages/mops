@@ -29,6 +29,7 @@ import com.specificlanguages.mops.protocol.MpsListEntryJson
 import com.specificlanguages.mops.protocol.MpsListRequest
 import com.specificlanguages.mops.protocol.MpsListResponse
 import com.specificlanguages.mops.protocol.MpsNodeJson
+import com.specificlanguages.mops.protocol.NodeFilter
 import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.PingRequest
 import org.mockito.kotlin.doThrow
@@ -94,7 +95,7 @@ class DomainRequestHandlerTest {
     fun `find-instances resolves the scope then reads and returns the response directly`() {
         val expected = FindInstancesResponse(limit = 10, truncated = true, nodes = emptyList())
         whenever(operations.resolveScope(null)).thenReturn(ResolvedScope.EditableProjectSources)
-        whenever(operations.findInstances("some.Concept", true, 10, ResolvedScope.EditableProjectSources))
+        whenever(operations.findInstances("some.Concept", true, ResolvedScope.EditableProjectSources, limit = 10))
             .thenReturn(expected)
 
         val response = handler.handleDomainRequest(
@@ -103,8 +104,41 @@ class DomainRequestHandlerTest {
 
         assertEquals(expected, response)
         verify(operations).resolveScope(null)
-        verify(operations).findInstances("some.Concept", true, 10, ResolvedScope.EditableProjectSources)
+        verify(operations).findInstances("some.Concept", true, ResolvedScope.EditableProjectSources, limit = 10)
         verifyNoMoreInteractions(operations)
+    }
+
+    @Test
+    fun `find-instances forwards the node filters to the read operation`() {
+        val filters = listOf(NodeFilter.Named("Json*"), NodeFilter.Role("linkDeclaration"))
+        whenever(operations.resolveScope(null)).thenReturn(ResolvedScope.EditableProjectSources)
+        whenever(
+            operations.findInstances(
+                "some.Concept",
+                false,
+                ResolvedScope.EditableProjectSources,
+                filters,
+                limit = 10,
+            ),
+        ).thenReturn(FindInstancesResponse(limit = 10, truncated = false, nodes = emptyList()))
+
+        handler.handleDomainRequest(
+            FindInstancesRequest(
+                TOKEN,
+                concept = "some.Concept",
+                exact = false,
+                limit = 10,
+                filters = filters,
+            ),
+        )
+
+        verify(operations).findInstances(
+            "some.Concept",
+            false,
+            ResolvedScope.EditableProjectSources,
+            filters,
+            limit = 10,
+        )
     }
 
     @Test
@@ -112,7 +146,7 @@ class DomainRequestHandlerTest {
         val segments = listOf("com.example", ".model")
         val moduleScope = ResolvedScope.Module("ref(com.example)")
         whenever(operations.resolveScope(segments)).thenReturn(moduleScope)
-        whenever(operations.findInstances("some.Concept", false, 10, moduleScope))
+        whenever(operations.findInstances("some.Concept", false, moduleScope, limit = 10))
             .thenReturn(FindInstancesResponse(limit = 10, truncated = false, nodes = emptyList()))
 
         handler.handleDomainRequest(
@@ -120,24 +154,24 @@ class DomainRequestHandlerTest {
         )
 
         verify(operations).resolveScope(segments)
-        verify(operations).findInstances("some.Concept", false, 10, moduleScope)
+        verify(operations).findInstances("some.Concept", false, moduleScope, limit = 10)
 
         val target = NodeTarget.InModel("some.model", "7")
         whenever(operations.resolveScope(listOf("/"))).thenReturn(ResolvedScope.Repository)
-        whenever(operations.findUsages(target, 5, ResolvedScope.Repository))
+        whenever(operations.findUsages(target, ResolvedScope.Repository, limit = 5))
             .thenReturn(FindUsagesResponse(limit = 5, truncated = false, usages = emptyList()))
 
         handler.handleDomainRequest(FindUsagesRequest(TOKEN, target, limit = 5, scope = listOf("/")))
 
         verify(operations).resolveScope(listOf("/"))
-        verify(operations).findUsages(target, 5, ResolvedScope.Repository)
+        verify(operations).findUsages(target, ResolvedScope.Repository, limit = 5)
     }
 
     @Test
     fun `find-by-name resolves the scope then reads and returns the response directly`() {
         val expected = FindByNameResponse(limit = 10, truncated = false, nodes = emptyList())
         whenever(operations.resolveScope(listOf("/"))).thenReturn(ResolvedScope.Repository)
-        whenever(operations.findByName("Json", 10, ResolvedScope.Repository)).thenReturn(expected)
+        whenever(operations.findByName("Json", ResolvedScope.Repository, limit = 10)).thenReturn(expected)
 
         val response = handler.handleDomainRequest(
             FindByNameRequest(TOKEN, pattern = "Json", limit = 10, scope = listOf("/")),
@@ -145,7 +179,7 @@ class DomainRequestHandlerTest {
 
         assertEquals(expected, response)
         verify(operations).resolveScope(listOf("/"))
-        verify(operations).findByName("Json", 10, ResolvedScope.Repository)
+        verify(operations).findByName("Json", ResolvedScope.Repository, limit = 10)
         verifyNoMoreInteractions(operations)
     }
 
@@ -154,13 +188,13 @@ class DomainRequestHandlerTest {
         val expected = FindUsagesResponse(limit = 5, truncated = false, usages = emptyList())
         val target = NodeTarget.InModel("some.model", "7")
         whenever(operations.resolveScope(null)).thenReturn(ResolvedScope.EditableProjectSources)
-        whenever(operations.findUsages(target, 5, ResolvedScope.EditableProjectSources)).thenReturn(expected)
+        whenever(operations.findUsages(target, ResolvedScope.EditableProjectSources, limit = 5)).thenReturn(expected)
 
         val response = handler.handleDomainRequest(FindUsagesRequest(TOKEN, target, limit = 5))
 
         assertEquals(expected, response)
         verify(operations).resolveScope(null)
-        verify(operations).findUsages(target, 5, ResolvedScope.EditableProjectSources)
+        verify(operations).findUsages(target, ResolvedScope.EditableProjectSources, limit = 5)
         verifyNoMoreInteractions(operations)
     }
 
@@ -240,7 +274,7 @@ class DomainRequestHandlerTest {
     @Test
     fun `a request exception on a read path maps to its error code`() {
         whenever(operations.resolveScope(null)).thenReturn(ResolvedScope.EditableProjectSources)
-        whenever(operations.findInstances("some.Concept", false, 100, ResolvedScope.EditableProjectSources))
+        whenever(operations.findInstances("some.Concept", false, ResolvedScope.EditableProjectSources, limit = 100))
             .thenThrow(MpsRequestException(MpsErrorCode.CONCEPT_NOT_FOUND, "concept not found: some.Concept"))
 
         val response = handler.handleDomainRequest(

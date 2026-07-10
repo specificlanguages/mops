@@ -3,6 +3,7 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.FindInstancesResponse
+import com.specificlanguages.mops.protocol.NodeFilter
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -136,6 +137,132 @@ class FindInstancesSemanticsTest {
         assertTrue(
             inModel.nodes.any { it.parent?.name != "JsonObject" },
             "the model-wide search must reach link declarations owned by other roots",
+        )
+    }
+
+    @Test
+    fun `named filter keeps only instances whose name matches the pattern`() {
+        val all = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances(CONCEPT_DECLARATION, exact = false, limit = 0)
+        }
+        val named = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances(CONCEPT_DECLARATION, exact = false, limit = 0, filters = listOf(NodeFilter.Named("JsonObject")))
+        }
+
+        assertTrue(all.nodes.size > named.nodes.size, "the named filter should narrow the concept results")
+        assertEquals(setOf("JsonObject"), named.nodes.mapNotNull { it.name }.toSet())
+    }
+
+    @Test
+    fun `named filter matches camel-hump abbreviations like root-by-name`() {
+        val payload = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances(CONCEPT_DECLARATION, exact = false, limit = 0, filters = listOf(NodeFilter.Named("JN")))
+        }
+
+        val names = payload.nodes.mapNotNull { it.name }.toSet()
+        assertContains(names, "JsonNumber")
+        assertContains(names, "JsonNull")
+        assertTrue(names.none { it == "JsonArray" }, "JsonArray has no N hump and must not match JN: $names")
+    }
+
+    @Test
+    fun `role filter keeps only instances filling that containment role`() {
+        val all = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances(LINK_DECLARATION, exact = false, limit = 0)
+        }
+        val inRole = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances(LINK_DECLARATION, exact = false, limit = 0, filters = listOf(NodeFilter.Role("linkDeclaration")))
+        }
+
+        assertTrue(inRole.nodes.isNotEmpty(), "link declarations fill the linkDeclaration role")
+        assertTrue(inRole.nodes.all { it.parent?.role == "linkDeclaration" }, "every result fills the role: ${inRole.nodes}")
+        assertEquals(
+            all.nodes.map { it.reference }.toSet(),
+            inRole.nodes.map { it.reference }.toSet(),
+            "every link declaration fills the linkDeclaration role",
+        )
+    }
+
+    @Test
+    fun `role filter excludes instances in other roles`() {
+        val payload = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances(LINK_DECLARATION, exact = false, limit = 0, filters = listOf(NodeFilter.Role("noSuchRole")))
+        }
+
+        assertTrue(payload.nodes.isEmpty(), "no link declaration fills a nonexistent role: ${payload.nodes}")
+    }
+
+    @Test
+    fun `role filter never matches root nodes`() {
+        val roots = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances(CONCEPT_DECLARATION, exact = false, limit = 0)
+        }
+        assertTrue(roots.nodes.isNotEmpty() && roots.nodes.all { it.type == "root" }, "concept declarations are roots")
+
+        val filtered = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances(CONCEPT_DECLARATION, exact = false, limit = 0, filters = listOf(NodeFilter.Role("linkDeclaration")))
+        }
+        assertTrue(filtered.nodes.isEmpty(), "root nodes have no containment role and never match --role: ${filtered.nodes}")
+    }
+
+    @Test
+    fun `named and role filters compose by AND`() {
+        val all = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances(LINK_DECLARATION, exact = false, limit = 0)
+        }
+        val name = all.nodes.mapNotNull { it.name }.first()
+
+        // Both filters satisfiable: keeps matching link declarations, each in the role.
+        val both = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances(
+                LINK_DECLARATION,
+                exact = false,
+                limit = 0,
+                filters = listOf(NodeFilter.Named(name), NodeFilter.Role("linkDeclaration")),
+            )
+        }
+        assertTrue(both.nodes.isNotEmpty(), "a satisfiable name+role pair keeps matching link declarations")
+        assertTrue(both.nodes.all { it.parent?.role == "linkDeclaration" }, "every result still fills the role")
+
+        // Adding an unsatisfiable role empties the name matches — the role predicate ANDs in.
+        val roleExcludes = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances(
+                LINK_DECLARATION,
+                exact = false,
+                limit = 0,
+                filters = listOf(NodeFilter.Named(name), NodeFilter.Role("noSuchRole")),
+            )
+        }
+        assertTrue(roleExcludes.nodes.isEmpty(), "an unsatisfiable role removes the name matches")
+
+        // Adding an unsatisfiable name empties the role matches — the name predicate ANDs in.
+        val nameExcludes = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances(
+                LINK_DECLARATION,
+                exact = false,
+                limit = 0,
+                filters = listOf(NodeFilter.Named("zzzNoSuchName"), NodeFilter.Role("linkDeclaration")),
+            )
+        }
+        assertTrue(nameExcludes.nodes.isEmpty(), "an unsatisfiable name removes the role matches")
+    }
+
+    @Test
+    fun `named filter combines with a scope clause`() {
+        val inModel = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances(
+                CONCEPT_DECLARATION,
+                exact = false,
+                scope = resolveScope(listOf(LANGUAGE_MODULE, STRUCTURE_MODEL)),
+                filters = listOf(NodeFilter.Named("JsonObject")),
+                limit = 0,
+            )
+        }
+
+        assertEquals(setOf("JsonObject"), inModel.nodes.mapNotNull { it.name }.toSet())
+        assertTrue(
+            inModel.nodes.all { it.reference.contains("($STRUCTURE_MODEL)") },
+            "every scoped result must belong to the structure model: ${inModel.nodes}",
         )
     }
 

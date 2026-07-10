@@ -24,7 +24,7 @@ class FindUsagesCommandTest {
         val client = mock<DaemonClient>()
         val nodeReference =
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
-        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), 100)).thenReturn(sampleUsagesResponse())
+        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), limit = 100)).thenReturn(sampleUsagesResponse())
         var exitCode = Int.MIN_VALUE
 
         val stdout = tapSystemOut {
@@ -34,7 +34,7 @@ class FindUsagesCommandTest {
         }
 
         assertEquals(0, exitCode)
-        verify(client).findUsages(NodeTarget.NodeReference(nodeReference), 100)
+        verify(client).findUsages(NodeTarget.NodeReference(nodeReference), limit = 100)
         assertEquals(
             "usage\tconcept\tJsonObject\tjetbrains.mps.lang.structure.structure.ConceptDeclaration\t" +
                 "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
@@ -61,7 +61,7 @@ class FindUsagesCommandTest {
                 reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566800",
             ),
         )
-        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), 100)).thenReturn(
+        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), limit = 100)).thenReturn(
             FindUsagesResponse(limit = 100, truncated = false, usages = listOf(MpsNodeUsageJson(role = "concept", owner = owner))),
         )
         var exitCode = Int.MIN_VALUE
@@ -90,7 +90,7 @@ class FindUsagesCommandTest {
             modelTarget = "com.specificlanguages.json.structure",
             nodeId = "2110045694544566904",
         )
-        whenever(client.findUsages(target, 100)).thenReturn(sampleUsagesResponse())
+        whenever(client.findUsages(target, limit = 100)).thenReturn(sampleUsagesResponse())
         var exitCode = Int.MIN_VALUE
 
         tapSystemOut {
@@ -100,7 +100,7 @@ class FindUsagesCommandTest {
         }
 
         assertEquals(0, exitCode)
-        verify(client).findUsages(target, 100)
+        verify(client).findUsages(target, limit = 100)
     }
 
     @Test
@@ -108,7 +108,7 @@ class FindUsagesCommandTest {
         val client = mock<DaemonClient>()
         val nodeReference =
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
-        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), 100, listOf("/")))
+        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), listOf("/"), limit = 100))
             .thenReturn(sampleUsagesResponse())
         var exitCode = Int.MIN_VALUE
 
@@ -119,7 +119,7 @@ class FindUsagesCommandTest {
         }
 
         assertEquals(0, exitCode)
-        verify(client).findUsages(NodeTarget.NodeReference(nodeReference), 100, listOf("/"))
+        verify(client).findUsages(NodeTarget.NodeReference(nodeReference), listOf("/"), limit = 100)
     }
 
     @Test
@@ -130,7 +130,7 @@ class FindUsagesCommandTest {
             nodeId = "2110045694544566904",
         )
         val scope = listOf("com.specificlanguages.json")
-        whenever(client.findUsages(target, 100, scope)).thenReturn(sampleUsagesResponse())
+        whenever(client.findUsages(target, scope, limit = 100)).thenReturn(sampleUsagesResponse())
         var exitCode = Int.MIN_VALUE
 
         tapSystemOut {
@@ -140,7 +140,7 @@ class FindUsagesCommandTest {
         }
 
         assertEquals(0, exitCode)
-        verify(client).findUsages(target, 100, scope)
+        verify(client).findUsages(target, scope, limit = 100)
     }
 
     @Test
@@ -183,7 +183,7 @@ class FindUsagesCommandTest {
         val nodeReference =
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
         val response = sampleUsagesResponse()
-        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), 100)).thenReturn(response)
+        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), limit = 100)).thenReturn(response)
         var exitCode = Int.MIN_VALUE
 
         val stdout = tapSystemOut {
@@ -201,7 +201,7 @@ class FindUsagesCommandTest {
         val client = mock<DaemonClient>()
         val nodeReference =
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
-        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), 0)).thenReturn(
+        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), limit = 0)).thenReturn(
             sampleUsagesResponse(limit = 0),
         )
         var exitCode = Int.MIN_VALUE
@@ -213,7 +213,7 @@ class FindUsagesCommandTest {
         }
 
         assertEquals(0, exitCode)
-        verify(client).findUsages(NodeTarget.NodeReference(nodeReference), 0)
+        verify(client).findUsages(NodeTarget.NodeReference(nodeReference), limit = 0)
     }
 
     @Test
@@ -221,7 +221,7 @@ class FindUsagesCommandTest {
         val client = mock<DaemonClient>()
         val nodeReference =
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
-        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), 1)).thenReturn(
+        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), limit = 1)).thenReturn(
             sampleUsagesResponse(limit = 1).copy(truncated = true),
         )
         var exitCode = Int.MIN_VALUE

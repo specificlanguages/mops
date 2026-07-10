@@ -21,15 +21,21 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
                 is ModelCheckRequest -> mpsAccess.read { checkModel(request.target, request.limit) }
 
                 is FindUsagesRequest -> mpsAccess.read {
-                    findUsages(request.target, request.limit, resolveScope(request.scope))
+                    findUsages(request.target, resolveScope(request.scope), request.limit)
                 }
 
                 is FindInstancesRequest -> mpsAccess.read {
-                    findInstances(request.concept, request.exact, request.limit, resolveScope(request.scope))
+                    findInstances(
+                        request.concept,
+                        request.exact,
+                        resolveScope(request.scope),
+                        request.filters,
+                        request.limit,
+                    )
                 }
 
                 is FindByNameRequest -> mpsAccess.read {
-                    findByName(request.pattern, request.limit, resolveScope(request.scope))
+                    findByName(request.pattern, resolveScope(request.scope), request.limit)
                 }
 
                 is ModelEditRequest -> mpsAccess.write { modelEdit(request.batch, request.constraints) }

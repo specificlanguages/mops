@@ -3,6 +3,7 @@ package com.specificlanguages.mops.cli
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.FindInstancesResponse
+import com.specificlanguages.mops.protocol.NodeFilter
 import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.MpsNodeParentJson
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
@@ -20,7 +21,7 @@ class FindInstancesCommandTest {
     @Test
     fun `find instances prints tab-separated rows for a concept`() {
         val client = mock<DaemonClient>()
-        whenever(client.findInstances(CONCEPT, false, 100)).thenReturn(sampleInstancesResponse())
+        whenever(client.findInstances(CONCEPT, false, limit = 100)).thenReturn(sampleInstancesResponse())
         var exitCode = Int.MIN_VALUE
 
         val stdout = tapSystemOut {
@@ -30,7 +31,7 @@ class FindInstancesCommandTest {
         }
 
         assertEquals(0, exitCode)
-        verify(client).findInstances(CONCEPT, false, 100)
+        verify(client).findInstances(CONCEPT, false, limit = 100)
         assertEquals(
             "root\tJsonObject\tjetbrains.mps.lang.structure.structure.ConceptDeclaration\t" +
                 "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
@@ -42,7 +43,7 @@ class FindInstancesCommandTest {
     @Test
     fun `find instances renders unnamed nodes`() {
         val client = mock<DaemonClient>()
-        whenever(client.findInstances(CONCEPT, false, 100)).thenReturn(
+        whenever(client.findInstances(CONCEPT, false, limit = 100)).thenReturn(
             sampleInstancesResponse(name = null),
         )
         var exitCode = Int.MIN_VALUE
@@ -65,7 +66,7 @@ class FindInstancesCommandTest {
     @Test
     fun `find instances passes exact flag to the daemon`() {
         val client = mock<DaemonClient>()
-        whenever(client.findInstances(CONCEPT, true, 100)).thenReturn(sampleInstancesResponse())
+        whenever(client.findInstances(CONCEPT, true, limit = 100)).thenReturn(sampleInstancesResponse())
         var exitCode = Int.MIN_VALUE
 
         tapSystemOut {
@@ -75,14 +76,14 @@ class FindInstancesCommandTest {
         }
 
         assertEquals(0, exitCode)
-        verify(client).findInstances(CONCEPT, true, 100)
+        verify(client).findInstances(CONCEPT, true, limit = 100)
     }
 
     @Test
     fun `find instances passes the in-clause scope segments to the daemon`() {
         val client = mock<DaemonClient>()
         val scope = listOf("com.specificlanguages.json", ".structure")
-        whenever(client.findInstances(CONCEPT, false, 100, scope)).thenReturn(sampleInstancesResponse())
+        whenever(client.findInstances(CONCEPT, false, scope, limit = 100)).thenReturn(sampleInstancesResponse())
         var exitCode = Int.MIN_VALUE
 
         tapSystemOut {
@@ -92,13 +93,74 @@ class FindInstancesCommandTest {
         }
 
         assertEquals(0, exitCode)
-        verify(client).findInstances(CONCEPT, false, 100, scope)
+        verify(client).findInstances(CONCEPT, false, scope, limit = 100)
+    }
+
+    @Test
+    fun `find instances passes the named filter to the daemon`() {
+        val client = mock<DaemonClient>()
+        val filters = listOf(NodeFilter.Named("Json*"))
+        whenever(client.findInstances(CONCEPT, false, filters = filters, limit = 100)).thenReturn(sampleInstancesResponse())
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(FindInstancesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(CONCEPT, "--named", "Json*")
+        }
+
+        assertEquals(0, exitCode)
+        verify(client).findInstances(CONCEPT, false, filters = filters, limit = 100)
+    }
+
+    @Test
+    fun `find instances passes the role filter to the daemon`() {
+        val client = mock<DaemonClient>()
+        val filters = listOf(NodeFilter.Role("linkDeclaration"))
+        whenever(client.findInstances(CONCEPT, false, filters = filters, limit = 100)).thenReturn(sampleInstancesResponse())
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(FindInstancesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(CONCEPT, "--role", "linkDeclaration")
+        }
+
+        assertEquals(0, exitCode)
+        verify(client).findInstances(CONCEPT, false, filters = filters, limit = 100)
+    }
+
+    @Test
+    fun `find instances combines named, role, and scope in one query`() {
+        val client = mock<DaemonClient>()
+        val scope = listOf("com.specificlanguages.json", ".structure")
+        val filters = listOf(NodeFilter.Named("Json*"), NodeFilter.Role("linkDeclaration"))
+        whenever(client.findInstances(CONCEPT, false, scope, filters, 100)).thenReturn(sampleInstancesResponse())
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(FindInstancesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(
+                    CONCEPT,
+                    "--named",
+                    "Json*",
+                    "--role",
+                    "linkDeclaration",
+                    "in",
+                    "com.specificlanguages.json",
+                    ".structure",
+                )
+        }
+
+        assertEquals(0, exitCode)
+        verify(client).findInstances(CONCEPT, false, scope, filters, 100)
     }
 
     @Test
     fun `find instances maps in slash to the repository scope`() {
         val client = mock<DaemonClient>()
-        whenever(client.findInstances(CONCEPT, false, 100, listOf("/"))).thenReturn(sampleInstancesResponse())
+        whenever(client.findInstances(CONCEPT, false, listOf("/"), limit = 100)).thenReturn(sampleInstancesResponse())
         var exitCode = Int.MIN_VALUE
 
         tapSystemOut {
@@ -108,13 +170,13 @@ class FindInstancesCommandTest {
         }
 
         assertEquals(0, exitCode)
-        verify(client).findInstances(CONCEPT, false, 100, listOf("/"))
+        verify(client).findInstances(CONCEPT, false, listOf("/"), limit = 100)
     }
 
     @Test
     fun `find instances keeps a query literally named in as the concept`() {
         val client = mock<DaemonClient>()
-        whenever(client.findInstances("in", false, 100, listOf("/"))).thenReturn(sampleInstancesResponse())
+        whenever(client.findInstances("in", false, listOf("/"), limit = 100)).thenReturn(sampleInstancesResponse())
         var exitCode = Int.MIN_VALUE
 
         tapSystemOut {
@@ -124,7 +186,7 @@ class FindInstancesCommandTest {
         }
 
         assertEquals(0, exitCode)
-        verify(client).findInstances("in", false, 100, listOf("/"))
+        verify(client).findInstances("in", false, listOf("/"), limit = 100)
     }
 
     @Test
@@ -161,7 +223,7 @@ class FindInstancesCommandTest {
     fun `find instances prints response object as json when requested`() {
         val client = mock<DaemonClient>()
         val response = sampleInstancesResponse()
-        whenever(client.findInstances(CONCEPT, false, 100)).thenReturn(response)
+        whenever(client.findInstances(CONCEPT, false, limit = 100)).thenReturn(response)
         var exitCode = Int.MIN_VALUE
 
         val stdout = tapSystemOut {
@@ -177,7 +239,7 @@ class FindInstancesCommandTest {
     @Test
     fun `find instances accepts zero as unlimited limit`() {
         val client = mock<DaemonClient>()
-        whenever(client.findInstances(CONCEPT, false, 0)).thenReturn(sampleInstancesResponse(limit = 0))
+        whenever(client.findInstances(CONCEPT, false, limit = 0)).thenReturn(sampleInstancesResponse(limit = 0))
         var exitCode = Int.MIN_VALUE
 
         tapSystemOut {
@@ -187,13 +249,13 @@ class FindInstancesCommandTest {
         }
 
         assertEquals(0, exitCode)
-        verify(client).findInstances(CONCEPT, false, 0)
+        verify(client).findInstances(CONCEPT, false, limit = 0)
     }
 
     @Test
     fun `find instances appends a truncation row when more results exist`() {
         val client = mock<DaemonClient>()
-        whenever(client.findInstances(CONCEPT, false, 1)).thenReturn(
+        whenever(client.findInstances(CONCEPT, false, limit = 1)).thenReturn(
             sampleInstancesResponse(limit = 1).copy(truncated = true),
         )
         var exitCode = Int.MIN_VALUE
@@ -230,7 +292,7 @@ class FindInstancesCommandTest {
                 reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566800",
             ),
         )
-        whenever(client.findInstances(CONCEPT, false, 100)).thenReturn(
+        whenever(client.findInstances(CONCEPT, false, limit = 100)).thenReturn(
             FindInstancesResponse(limit = 100, truncated = false, nodes = listOf(node)),
         )
         var exitCode = Int.MIN_VALUE

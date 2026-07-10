@@ -10,6 +10,7 @@ import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.FindByNameRequest
 import com.specificlanguages.mops.protocol.FindByNameResponse
+import com.specificlanguages.mops.protocol.NodeFilter
 import com.specificlanguages.mops.protocol.FindInstancesRequest
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindUsagesRequest
@@ -82,21 +83,34 @@ class DefaultDaemonClient(
             ModelCheckResponse::class.java
         )
 
-    override fun findUsages(target: NodeTarget, limit: Int, scope: List<String>?): FindUsagesResponse =
+    override fun findUsages(target: NodeTarget, scope: List<String>?, limit: Int): FindUsagesResponse =
         exchange(
-            FindUsagesRequest(token = token, target = target, limit = limit, scope = scope),
+            FindUsagesRequest(token = token, target = target, scope = scope, limit = limit),
             FindUsagesResponse::class.java
         )
 
-    override fun findInstances(concept: String, exact: Boolean, limit: Int, scope: List<String>?): FindInstancesResponse =
+    override fun findInstances(
+        concept: String,
+        exact: Boolean,
+        scope: List<String>?,
+        filters: List<NodeFilter>,
+        limit: Int,
+    ): FindInstancesResponse =
         exchange(
-            FindInstancesRequest(token = token, concept = concept, exact = exact, limit = limit, scope = scope),
+            FindInstancesRequest(
+                token = token,
+                concept = concept,
+                exact = exact,
+                scope = scope,
+                filters = filters,
+                limit = limit,
+            ),
             FindInstancesResponse::class.java
         )
 
-    override fun findByName(pattern: String, limit: Int, scope: List<String>?): FindByNameResponse =
+    override fun findByName(pattern: String, scope: List<String>?, limit: Int): FindByNameResponse =
         exchange(
-            FindByNameRequest(token = token, pattern = pattern, limit = limit, scope = scope),
+            FindByNameRequest(token = token, pattern = pattern, scope = scope, limit = limit),
             FindByNameResponse::class.java
         )
 

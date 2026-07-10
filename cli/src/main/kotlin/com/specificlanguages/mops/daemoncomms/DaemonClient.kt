@@ -12,6 +12,7 @@ import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
 import com.specificlanguages.mops.protocol.ModelRenderNodeResponse
+import com.specificlanguages.mops.protocol.NodeFilter
 import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.MpsListResponse
 import com.specificlanguages.mops.protocol.PongResponse
@@ -29,9 +30,15 @@ interface DaemonClient {
      * (`0` or less returns every finding).
      */
     fun checkModel(target: String, limit: Int): ModelCheckResponse
-    fun findUsages(target: NodeTarget, limit: Int, scope: List<String>? = null): FindUsagesResponse
-    fun findInstances(concept: String, exact: Boolean, limit: Int, scope: List<String>? = null): FindInstancesResponse
-    fun findByName(pattern: String, limit: Int, scope: List<String>? = null): FindByNameResponse
+    fun findUsages(target: NodeTarget, scope: List<String>? = null, limit: Int): FindUsagesResponse
+    fun findInstances(
+        concept: String,
+        exact: Boolean,
+        scope: List<String>? = null,
+        filters: List<NodeFilter> = emptyList(),
+        limit: Int,
+    ): FindInstancesResponse
+    fun findByName(pattern: String, scope: List<String>? = null, limit: Int): FindByNameResponse
     fun modelEdit(batch: EditBatch, constraints: ConstraintEnforcement = ConstraintEnforcement.BEST_EFFORT): ModelEditResponse
     fun list(target: List<String>?, depth: Int): MpsListResponse
     fun diagnoseModules(): ModulesDiagnosticsResponse

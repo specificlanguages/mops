@@ -12,6 +12,7 @@ import jetbrains.mps.project.Project
 import jetbrains.mps.smodel.SNodeUtil
 import jetbrains.mps.smodel.persistence.def.v9.IdEncoder
 import jetbrains.mps.util.CollectConsumer
+import org.jetbrains.mps.openapi.language.SAbstractConcept
 import org.jetbrains.mps.openapi.model.*
 import org.jetbrains.mps.openapi.module.FindUsagesFacade
 import org.jetbrains.mps.openapi.module.SModule
@@ -132,14 +133,24 @@ class JetBrainsMpsAccess(
                 "`mops diagnose module <language>` for the full cause), or pass --allow-reflective to render anyway."
         }
 
-        override fun findUsages(target: NodeTarget, limit: Int, scope: ResolvedScope): FindUsagesResponse {
+        override fun findUsages(target: NodeTarget, scope: ResolvedScope, limit: Int): FindUsagesResponse {
             val node = resolveNode(target)
-            val searchScope = searchScopeFor(scope)
-            val collected = CollectConsumer<SReference>()
-            FindUsagesFacade.getInstance()
-                .findUsages(searchScope.searchScope, setOf(node), collected, EmptyProgressMonitor())
-
-            val references = searchScope.retainWithinSubtree(collected.result) { it.sourceNode }
+            val references = when (val domain = searchDomainFor(scope)) {
+                is SearchDomain.MpsScope -> {
+                    val collected = CollectConsumer<SReference>()
+                    FindUsagesFacade.getInstance()
+                        .findUsages(domain.searchScope, setOf(node), collected, EmptyProgressMonitor())
+                    collected.result.toList()
+                }
+                // Walking one subtree touches far fewer nodes than searching its whole model and discarding the rest.
+                is SearchDomain.Subtree -> {
+                    val targetReference = persistence.asString(node.reference)
+                    subtreeNodes(domain.root)
+                        .flatMap { it.references.asSequence() }
+                        .filter { it.targetNodeReference?.let(persistence::asString) == targetReference }
+                        .toList()
+                }
+            }
             val selected = if (limit > 0) references.take(limit) else references
 
             return FindUsagesResponse(
@@ -151,15 +162,28 @@ class JetBrainsMpsAccess(
             )
         }
 
-        override fun findInstances(concept: String, exact: Boolean, limit: Int, scope: ResolvedScope): FindInstancesResponse {
+        override fun findInstances(
+            concept: String,
+            exact: Boolean,
+            scope: ResolvedScope,
+            filters: List<NodeFilter>,
+            limit: Int,
+        ): FindInstancesResponse {
             val mpsConcept = ConceptResolver(project).resolve(concept)
+            val matches = when (val domain = searchDomainFor(scope)) {
+                is SearchDomain.MpsScope -> {
+                    val collected = CollectConsumer<SNode>()
+                    FindUsagesFacade.getInstance()
+                        .findInstances(domain.searchScope, setOf(mpsConcept), exact, collected, EmptyProgressMonitor())
+                    collected.result.toList()
+                }
+                // Walking one subtree touches far fewer nodes than searching its whole model and discarding the rest.
+                is SearchDomain.Subtree ->
+                    subtreeNodes(domain.root).filter { isInstanceOf(it, mpsConcept, exact) }.toList()
+            }
 
-            val searchScope = searchScopeFor(scope)
-            val collected = CollectConsumer<SNode>()
-            FindUsagesFacade.getInstance()
-                .findInstances(searchScope.searchScope, setOf(mpsConcept), exact, collected, EmptyProgressMonitor())
-
-            val instances = searchScope.retainWithinSubtree(collected.result) { it }
+            val predicates = filters.map(::compileFilter)
+            val instances = matches.filter { node -> predicates.all { it(node) } }
             val selected = if (limit > 0) instances.take(limit) else instances
 
             return FindInstancesResponse(
@@ -169,13 +193,8 @@ class JetBrainsMpsAccess(
             )
         }
 
-        override fun findByName(pattern: String, limit: Int, scope: ResolvedScope): FindByNameResponse {
-            // The leading '*' reproduces MPS Go-to-Node's "search in any place": the pattern matches anywhere within a
-            // name, not only as a prefix. The MinusculeMatcher then supports camel-hump and '*' wildcards, and
-            // matchingDegree ranks prefix and contiguous matches above scattered middle matches.
-            val matcher = NameUtil.buildMatcher("*$pattern")
-                .withCaseSensitivity(NameUtil.MatchingCaseSensitivity.NONE)
-                .build()
+        override fun findByName(pattern: String, scope: ResolvedScope, limit: Int): FindByNameResponse {
+            val matcher = nameMatcher(pattern)
 
             val searchScope = rootBearingScope(scope)
             val matches = mutableListOf<Pair<SNode, Int>>()
@@ -252,24 +271,17 @@ class JetBrainsMpsAccess(
                 is ListTarget.Node -> ResolvedScope.Subtree(persistence.asString(target.node.reference))
             }
 
-        // Maps a resolved scope to the MPS Search Scope a find runs over. A repository, module, or model scope maps
-        // directly; a subtree scope has no MPS scope of its own, so it runs over the containing model and post-filters
-        // results to the scope node's subtree. Each reference re-resolves deterministically because resolution already
-        // ruled out ambiguity.
-        private fun searchScopeFor(scope: ResolvedScope): MpsSearchScope =
+        // Maps a resolved scope to the domain a find runs over. A repository, module, or model scope becomes an MPS
+        // Search Scope searched with the platform's index-backed FindUsagesFacade; a subtree scope becomes the scope
+        // node itself, whose subtree the find walks node-by-node instead. Each reference re-resolves deterministically
+        // because resolution already ruled out ambiguity.
+        private fun searchDomainFor(scope: ResolvedScope): SearchDomain =
             when (scope) {
-                ResolvedScope.EditableProjectSources ->
-                    MpsSearchScope(EditableFilteringScope(project.scope), containmentRoot = null)
-                ResolvedScope.Repository ->
-                    MpsSearchScope(GlobalScope(project.repository), containmentRoot = null)
-                is ResolvedScope.Module ->
-                    MpsSearchScope(ModulesScope(listOf(resolveModule(scope.moduleReference))), containmentRoot = null)
-                is ResolvedScope.Model ->
-                    MpsSearchScope(ModelsScope(listOf(resolveModel(scope.modelReference))), containmentRoot = null)
-                is ResolvedScope.Subtree -> {
-                    val node = resolveSubtreeNode(scope.nodeReference)
-                    MpsSearchScope(ModelsScope(listOfNotNull(node.model)), containmentRoot = node)
-                }
+                ResolvedScope.EditableProjectSources -> SearchDomain.MpsScope(EditableFilteringScope(project.scope))
+                ResolvedScope.Repository -> SearchDomain.MpsScope(GlobalScope(project.repository))
+                is ResolvedScope.Module -> SearchDomain.MpsScope(ModulesScope(listOf(resolveModule(scope.moduleReference))))
+                is ResolvedScope.Model -> SearchDomain.MpsScope(ModelsScope(listOf(resolveModel(scope.modelReference))))
+                is ResolvedScope.Subtree -> SearchDomain.Subtree(resolveSubtreeNode(scope.nodeReference))
             }
 
         private fun resolveModule(reference: String): SModule =
@@ -464,6 +476,28 @@ class JetBrainsMpsAccess(
     private fun nodeName(node: SNode): String? =
         SNodeAccessUtil.getPropertyValue(node, SNodeUtil.property_INamedConcept_name) as String?
 
+    // Builds the Go-to-Node name matcher shared by `find root-by-name` and the `find instances --named` filter, so the
+    // two searches match names by one rule. The leading '*' reproduces MPS Go-to-Node's "search in any place": the
+    // pattern matches anywhere within a name, not only as a prefix. The MinusculeMatcher then supports camel-hump and
+    // '*' wildcards, and matchingDegree ranks prefix and contiguous matches above scattered middle matches.
+    private fun nameMatcher(pattern: String) =
+        NameUtil.buildMatcher("*$pattern")
+            .withCaseSensitivity(NameUtil.MatchingCaseSensitivity.NONE)
+            .build()
+
+    // Compiles one requested filter into a predicate over a found node. A Named filter reuses the Go-to-Node name
+    // matcher `find root-by-name` uses, so an unnamed node never matches; a Role filter tests the node's containment
+    // role, which a Root Node lacks and so never matches.
+    private fun compileFilter(filter: NodeFilter): (SNode) -> Boolean =
+        when (filter) {
+            is NodeFilter.Named -> {
+                val matcher = nameMatcher(filter.pattern)
+                val predicate: (SNode) -> Boolean = { node -> nodeName(node)?.let(matcher::matches) == true }
+                predicate
+            }
+            is NodeFilter.Role -> { node: SNode -> node.containmentLink?.role == filter.role }
+        }
+
     private fun nodeMatches(node: SNode, name: String, nodeId: SNodeId?): Boolean =
         nodeName(node) == name || node.nodeId == nodeId
 
@@ -500,24 +534,25 @@ class JetBrainsMpsAccess(
         }
     }
 
-    private class MpsSearchScope(val searchScope: SearchScope, private val containmentRoot: SNode?) {
-        // For an explicit subtree scope (a Root Node or nested node) the search runs over the containing model, so the
-        // results are narrowed here to those the scope node contains; a repository, module, or model scope has no
-        // subtree and keeps every result.
-        fun <T> retainWithinSubtree(results: Collection<T>, sourceNode: (T) -> SNode): List<T> {
-            val root = containmentRoot ?: return results.toList()
-            return results.filter { isAncestorOrSelf(root, sourceNode(it)) }
+    // The domain a find runs over. An [MpsScope] is searched with the platform's index-backed FindUsagesFacade; a
+    // [Subtree] is walked node-by-node, which is cheaper than searching the node's whole model and discarding the rest.
+    private sealed interface SearchDomain {
+        data class MpsScope(val searchScope: SearchScope) : SearchDomain
+        data class Subtree(val root: SNode) : SearchDomain
+    }
+
+    // The scope node and every node beneath it, depth-first. `find instances`/`find usages` scoped to a subtree walk
+    // this instead of touching the containing model.
+    private fun subtreeNodes(root: SNode): Sequence<SNode> =
+        sequence {
+            yield(root)
+            for (child in root.children) yieldAll(subtreeNodes(child))
         }
 
-        private fun isAncestorOrSelf(ancestor: SNode, node: SNode): Boolean {
-            var current: SNode? = node
-            while (current != null) {
-                if (current == ancestor) return true
-                current = current.parent
-            }
-            return false
-        }
-    }
+    // Whether [node] is an instance of [concept], matching FindUsagesFacade's `exact` flag: exact requires the node's
+    // direct concept; otherwise a subconcept also matches (isSubConceptOf is reflexive, so it covers the concept itself).
+    private fun isInstanceOf(node: SNode, concept: SAbstractConcept, exact: Boolean): Boolean =
+        if (exact) node.concept == concept else node.concept.isSubConceptOf(concept)
 
     private sealed interface ListTarget {
         data class Module(val module: SModule) : ListTarget

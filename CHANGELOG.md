@@ -29,6 +29,7 @@
   rejected with a field-naming decode error. See `mops explain inline-subtree`.
 - Added a trailing `in <scope-segments>` Search Scope clause to `mops find instances` and `mops find usages`, using the same navigation-target grammar as `mops list`. A scope resolves to the repository (`in /`), a module, a model, or a node subtree, and is searched exhaustively (including read-only library and stub models within it); without a clause the search stays scoped to editable project sources. See `mops explain scope`.
 - **Breaking:** Removed `--all` from `mops find instances` and `mops find usages`; `in /` now searches the whole MPS repository instead.
+- Added `--named <pattern>` and `--role <role>` filters to `mops find instances`. `--named` keeps only instances whose Node Name matches the given Go-to-Node pattern (the same matcher as `mops find root-by-name`; see `mops explain name-pattern`); `--role` keeps only instances filling that containment role, so Root Nodes never match. Both filters, and the scope clause, AND together to narrow results.
 - Made `find instances` and `model edit` explain a `CONCEPT_NOT_FOUND` instead of reporting a bare "not found": they
   distinguish a malformed name, an unknown owning language, a present-but-unloaded language (reporting that language's
   load diagnosis and pointing at `diagnose module`), and a loaded language that lacks the concept (suggesting similarly

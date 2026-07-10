@@ -3,6 +3,7 @@ package com.specificlanguages.mops.daemon.core
 import com.specificlanguages.mops.protocol.FindByNameResponse
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindUsagesResponse
+import com.specificlanguages.mops.protocol.NodeFilter
 import com.specificlanguages.mops.protocol.ModuleDiagnosticResponse
 import com.specificlanguages.mops.protocol.ModulesDiagnosticsResponse
 import com.specificlanguages.mops.protocol.ModelCheckResponse
@@ -35,11 +36,17 @@ interface MpsRead {
      */
     fun resolveScope(segments: List<String>?): ResolvedScope
 
+    /**
+     * Finds instances of [concept] within [scope], keeping only those that satisfy every [filter][filters]. The filters
+     * are AND-composed post-filters over the concept matches (see [NodeFilter]); a subtree [scope] adds its own
+     * containment predicate to the same chain. An empty [filters] list applies no post-filtering.
+     */
     fun findInstances(
         concept: String,
         exact: Boolean,
-        limit: Int,
         scope: ResolvedScope = ResolvedScope.EditableProjectSources,
+        filters: List<NodeFilter> = emptyList(),
+        limit: Int,
     ): FindInstancesResponse
 
     /**
@@ -49,14 +56,14 @@ interface MpsRead {
      */
     fun findByName(
         pattern: String,
-        limit: Int,
         scope: ResolvedScope = ResolvedScope.EditableProjectSources,
+        limit: Int,
     ): FindByNameResponse
 
     fun findUsages(
         target: NodeTarget,
-        limit: Int,
         scope: ResolvedScope = ResolvedScope.EditableProjectSources,
+        limit: Int,
     ): FindUsagesResponse
 
     /**

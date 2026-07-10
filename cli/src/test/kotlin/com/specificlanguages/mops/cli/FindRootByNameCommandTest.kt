@@ -19,7 +19,7 @@ class FindRootByNameCommandTest {
     @Test
     fun `find root-by-name prints tab-separated rows for a pattern`() {
         val client = mock<DaemonClient>()
-        whenever(client.findByName(PATTERN, 100, null)).thenReturn(sampleResponse())
+        whenever(client.findByName(PATTERN, limit = 100)).thenReturn(sampleResponse())
         var exitCode = Int.MIN_VALUE
 
         val stdout = tapSystemOut {
@@ -29,7 +29,7 @@ class FindRootByNameCommandTest {
         }
 
         assertEquals(0, exitCode)
-        verify(client).findByName(PATTERN, 100, null)
+        verify(client).findByName(PATTERN, limit = 100)
         assertEquals(
             "root\tJsonObject\tjetbrains.mps.lang.structure.structure.ConceptDeclaration\t" +
                 "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
@@ -41,7 +41,7 @@ class FindRootByNameCommandTest {
     @Test
     fun `find root-by-name renders unnamed nodes`() {
         val client = mock<DaemonClient>()
-        whenever(client.findByName(PATTERN, 100, null)).thenReturn(sampleResponse(name = null))
+        whenever(client.findByName(PATTERN, limit = 100)).thenReturn(sampleResponse(name = null))
         var exitCode = Int.MIN_VALUE
 
         val stdout = tapSystemOut {
@@ -62,7 +62,7 @@ class FindRootByNameCommandTest {
     @Test
     fun `find root-by-name passes the scope clause to the daemon`() {
         val client = mock<DaemonClient>()
-        whenever(client.findByName(PATTERN, 100, listOf("com.specificlanguages.json"))).thenReturn(sampleResponse())
+        whenever(client.findByName(PATTERN, listOf("com.specificlanguages.json"), limit = 100)).thenReturn(sampleResponse())
         var exitCode = Int.MIN_VALUE
 
         tapSystemOut {
@@ -72,13 +72,13 @@ class FindRootByNameCommandTest {
         }
 
         assertEquals(0, exitCode)
-        verify(client).findByName(PATTERN, 100, listOf("com.specificlanguages.json"))
+        verify(client).findByName(PATTERN, listOf("com.specificlanguages.json"), limit = 100)
     }
 
     @Test
     fun `find root-by-name passes the repository scope to the daemon`() {
         val client = mock<DaemonClient>()
-        whenever(client.findByName(PATTERN, 100, listOf("/"))).thenReturn(sampleResponse())
+        whenever(client.findByName(PATTERN, listOf("/"), limit = 100)).thenReturn(sampleResponse())
         var exitCode = Int.MIN_VALUE
 
         tapSystemOut {
@@ -88,7 +88,7 @@ class FindRootByNameCommandTest {
         }
 
         assertEquals(0, exitCode)
-        verify(client).findByName(PATTERN, 100, listOf("/"))
+        verify(client).findByName(PATTERN, listOf("/"), limit = 100)
     }
 
     @Test
@@ -125,7 +125,7 @@ class FindRootByNameCommandTest {
     fun `find root-by-name prints response object as json when requested`() {
         val client = mock<DaemonClient>()
         val response = sampleResponse()
-        whenever(client.findByName(PATTERN, 100, null)).thenReturn(response)
+        whenever(client.findByName(PATTERN, limit = 100)).thenReturn(response)
         var exitCode = Int.MIN_VALUE
 
         val stdout = tapSystemOut {
@@ -141,7 +141,7 @@ class FindRootByNameCommandTest {
     @Test
     fun `find root-by-name appends a truncation row when more results exist`() {
         val client = mock<DaemonClient>()
-        whenever(client.findByName(PATTERN, 1, null)).thenReturn(
+        whenever(client.findByName(PATTERN, limit = 1)).thenReturn(
             sampleResponse(limit = 1).copy(truncated = true),
         )
         var exitCode = Int.MIN_VALUE

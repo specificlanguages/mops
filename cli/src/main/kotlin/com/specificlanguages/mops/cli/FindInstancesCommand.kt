@@ -2,6 +2,7 @@ package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.DaemonResponse
+import com.specificlanguages.mops.protocol.NodeFilter
 import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import picocli.CommandLine.Command
@@ -12,9 +13,10 @@ import picocli.CommandLine.ParentCommand
 @Command(
     name = "instances",
     description = [
-        "Find instances of one MPS concept. Searches editable project sources by default; append " +
-            "`in <scope-segments>` to search a module, model, or subtree exhaustively, or `in /` for the whole " +
-            "repository. See `mops explain scope`.",
+        "Find instances of one MPS concept, optionally narrowed by `--named` and `--role` (which AND together with " +
+            "each other and the scope). Searches editable project sources by default; append `in <scope-segments>` to " +
+            "search a module, model, or subtree exhaustively, or `in /` for the whole repository. See " +
+            "`mops explain scope`.",
     ],
 )
 class FindInstancesCommand(private val daemonClient: DaemonClient? = null) : CliCommand() {
@@ -32,6 +34,26 @@ class FindInstancesCommand(private val daemonClient: DaemonClient? = null) : Cli
         description = ["Match only nodes whose direct concept is the queried concept."],
     )
     var exact: Boolean = false
+
+    @Option(
+        names = ["--named"],
+        paramLabel = "PATTERN",
+        description = [
+            "Keep only instances whose Node Name matches this Go-to-Node pattern; supports camel-hump and '*' " +
+                "wildcards. See `mops explain name-pattern`.",
+        ],
+    )
+    var named: String? = null
+
+    @Option(
+        names = ["--role"],
+        paramLabel = "ROLE",
+        description = [
+            "Keep only instances filling this containment role in their parent. Root Nodes have no role and never " +
+                "match.",
+        ],
+    )
+    var role: String? = null
 
     @Option(
         names = ["--limit"],
@@ -58,8 +80,18 @@ class FindInstancesCommand(private val daemonClient: DaemonClient? = null) : Cli
     override fun run() {
         require(limit >= 0) { "limit must not be negative" }
         val scope = scopeClauseSegments(scopeClause)
+        val filters = buildList {
+            named?.let { add(NodeFilter.Named(it)) }
+            role?.let { add(NodeFilter.Role(it)) }
+        }
         val client = daemonClient ?: find.root.ensureDaemon()
-        val response = client.findInstances(concept = concept, exact = exact, limit = limit, scope = scope)
+        val response = client.findInstances(
+            concept = concept,
+            exact = exact,
+            scope = scope,
+            filters = filters,
+            limit = limit,
+        )
         if (json) {
             println(ProtocolJson.encodeResponse(response))
         } else {

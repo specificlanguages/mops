@@ -797,6 +797,34 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `find-instances request JSON carries the node filters and defaults them to empty`() {
+        val concept = "jetbrains.mps.lang.structure.structure.LinkDeclaration"
+        val filtered = FindInstancesRequest(
+            token = "secret",
+            concept = concept,
+            exact = false,
+            limit = 100,
+            filters = listOf(NodeFilter.Named("Json*"), NodeFilter.Role("linkDeclaration")),
+        )
+        val serialized = ProtocolJson.encodeRequest(filtered)
+
+        assertContains(serialized, """"type":"named","pattern":"Json*"""")
+        assertContains(serialized, """"type":"role","role":"linkDeclaration"""")
+        assertEquals(filtered, ProtocolJson.decodeRequest(serialized))
+
+        // With no filters the list is empty and round-trips as such; an omitted `filters` key decodes to empty too.
+        val unfiltered = FindInstancesRequest(token = "secret", concept = concept, exact = false, limit = 100)
+        assertEquals(emptyList<NodeFilter>(), unfiltered.filters)
+        assertEquals(unfiltered, ProtocolJson.decodeRequest(ProtocolJson.encodeRequest(unfiltered)))
+        assertEquals(
+            unfiltered,
+            ProtocolJson.decodeRequest(
+                """{"type":"find-instances","token":"secret","concept":"$concept","exact":false,"limit":100}""",
+            ),
+        )
+    }
+
+    @Test
     fun `find request JSON no longer carries the removed all flag`() {
         val concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration"
         val encoded = ProtocolJson.encodeRequest(

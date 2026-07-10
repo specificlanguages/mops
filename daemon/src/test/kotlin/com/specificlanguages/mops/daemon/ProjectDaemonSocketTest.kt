@@ -86,7 +86,7 @@ class ProjectDaemonSocketTest {
     fun `a domain request is delegated to the request handler`() {
         val expected = FindInstancesResponse(limit = 100, truncated = false, nodes = emptyList())
         whenever(operations.resolveScope(null)).thenReturn(ResolvedScope.EditableProjectSources)
-        whenever(operations.findInstances("some.Concept", false, 100, ResolvedScope.EditableProjectSources))
+        whenever(operations.findInstances("some.Concept", false, ResolvedScope.EditableProjectSources, limit = 100))
             .thenReturn(expected)
         val daemon = start()
 
@@ -95,7 +95,7 @@ class ProjectDaemonSocketTest {
         )
 
         assertEquals(expected, response)
-        verify(operations).findInstances("some.Concept", false, 100, ResolvedScope.EditableProjectSources)
+        verify(operations).findInstances("some.Concept", false, ResolvedScope.EditableProjectSources, limit = 100)
     }
 
     @Test
