@@ -2,6 +2,13 @@
 
 ## 0.3.0 (Unreleased)
 
+- Made `mops list` and every `mops find` subcommand print short concept names by default in text output, with
+  `--full-concept` to restore the fully qualified names. Short names are safe as the default because they round-trip
+  through the shared concept-name resolver. JSON output keeps qualified concept names regardless of the flag.
+- Added `--refs-only` to `mops find instances`, `find usages`, and `find root-by-name`: it prints one serialized Node
+  Reference per line and nothing else, so results pipe straight into `mops model get-node` and other commands. It
+  combines with `in <scope>` and the other filters, is mutually exclusive with `--json`, and reports any truncation on
+  stderr so stdout stays a clean stream of references.
 - Gave `mops list` three output-shaping options for wide targets. `--limit N` caps each level's children (default 50,
   `0` unlimited) and appends a `truncated <shown> <total>` row to any level it clips, so the omission is explicit rather
   than silent. `--summary` prints grouped counts instead of enumerating children — per **Role** with the dominant

@@ -36,7 +36,7 @@ class FindUsagesCommandTest {
         assertEquals(0, exitCode)
         verify(client).findUsages(NodeTarget.NodeReference(nodeReference), limit = 100)
         assertEquals(
-            "usage\tconcept\tJsonObject\tjetbrains.mps.lang.structure.structure.ConceptDeclaration\t" +
+            "usage\tconcept\tJsonObject\tConceptDeclaration\t" +
                 "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
                 System.lineSeparator(),
             stdout,
@@ -74,9 +74,9 @@ class FindUsagesCommandTest {
 
         assertEquals(0, exitCode)
         assertEquals(
-            "usage\tconcept\tJsonObject\tjetbrains.mps.lang.structure.structure.ConceptDeclaration\t" +
+            "usage\tconcept\tJsonObject\tConceptDeclaration\t" +
                 "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905\t" +
-                "parent\tJsonFile\tjetbrains.mps.lang.structure.structure.ConceptDeclaration\t" +
+                "parent\tJsonFile\tConceptDeclaration\t" +
                 "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566800" +
                 System.lineSeparator(),
             stdout,
@@ -234,7 +234,7 @@ class FindUsagesCommandTest {
 
         assertEquals(0, exitCode)
         assertEquals(
-            "usage\tconcept\tJsonObject\tjetbrains.mps.lang.structure.structure.ConceptDeclaration\t" +
+            "usage\tconcept\tJsonObject\tConceptDeclaration\t" +
                 "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
                 System.lineSeparator() +
                 "truncated\t1\tmore results not shown" + System.lineSeparator(),
@@ -253,6 +253,68 @@ class FindUsagesCommandTest {
             exitCode = CommandLine(FindUsagesCommand(client))
                 .setExecutionExceptionHandler(PrintErrorAndExit)
                 .execute("--limit", "-1", nodeReference)
+        }
+
+        assertEquals(1, exitCode)
+        verifyNoInteractions(client)
+    }
+
+    @Test
+    fun `find usages shows fully qualified concept names with --full-concept`() {
+        val client = mock<DaemonClient>()
+        val nodeReference =
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
+        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), limit = 100)).thenReturn(sampleUsagesResponse())
+        var exitCode = Int.MIN_VALUE
+
+        val stdout = tapSystemOut {
+            exitCode = CommandLine(FindUsagesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("--full-concept", nodeReference)
+        }
+
+        assertEquals(0, exitCode)
+        assertEquals(
+            "usage\tconcept\tJsonObject\tjetbrains.mps.lang.structure.structure.ConceptDeclaration\t" +
+                "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
+                System.lineSeparator(),
+            stdout,
+        )
+    }
+
+    @Test
+    fun `find usages prints the referencing node reference per line with --refs-only`() {
+        val client = mock<DaemonClient>()
+        val nodeReference =
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
+        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), limit = 100)).thenReturn(sampleUsagesResponse())
+        var exitCode = Int.MIN_VALUE
+
+        val stdout = tapSystemOut {
+            exitCode = CommandLine(FindUsagesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("--refs-only", nodeReference)
+        }
+
+        assertEquals(0, exitCode)
+        assertEquals(
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
+                System.lineSeparator(),
+            stdout,
+        )
+    }
+
+    @Test
+    fun `find usages rejects --refs-only combined with --json`() {
+        val client = mock<DaemonClient>()
+        val nodeReference =
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(FindUsagesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("--refs-only", "--json", nodeReference)
         }
 
         assertEquals(1, exitCode)

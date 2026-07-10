@@ -139,8 +139,8 @@ class MpsListCommandTest {
         assertEquals(0, exitCode)
         assertEquals(
             "model\tcom.example.structure\tr:model" + System.lineSeparator() +
-                "  concept\ta.b.ConceptDeclaration\t8" + System.lineSeparator() +
-                "  concept\ta.b.InterfaceConceptDeclaration\t1" + System.lineSeparator(),
+                "  concept\tConceptDeclaration\t8" + System.lineSeparator() +
+                "  concept\tInterfaceConceptDeclaration\t1" + System.lineSeparator(),
             stdout,
         )
     }
@@ -174,6 +174,45 @@ class MpsListCommandTest {
             exitCode = CommandLine(MpsListCommand(client))
                 .setExecutionExceptionHandler(PrintErrorAndExit)
                 .execute("--summary", "JsonFile")
+        }
+
+        assertEquals(0, exitCode)
+        assertEquals(
+            "root\tJsonFile\tConceptDeclaration\tr:model/1" + System.lineSeparator() +
+                "  role\tlinkDeclaration\t2\tLinkDeclaration" + System.lineSeparator(),
+            stdout,
+        )
+    }
+
+    @Test
+    fun `list shows fully qualified concept names with --full-concept`() {
+        val client = mock<DaemonClient>()
+        whenever(client.list(eq(listOf("JsonFile")), eq(1), eq(50), eq(true), isNull())).thenReturn(
+            MpsListResponse(
+                root = MpsListEntryJson(
+                    type = "root",
+                    name = "JsonFile",
+                    concept = "a.b.ConceptDeclaration",
+                    reference = "r:model/1",
+                    summary = MpsListSummaryJson(
+                        by = "role",
+                        groups = listOf(
+                            MpsListSummaryGroupJson(
+                                key = "linkDeclaration",
+                                count = 2,
+                                concepts = listOf("a.b.LinkDeclaration"),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        var exitCode = Int.MIN_VALUE
+        val stdout = tapSystemOut {
+            exitCode = CommandLine(MpsListCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("--full-concept", "--summary", "JsonFile")
         }
 
         assertEquals(0, exitCode)

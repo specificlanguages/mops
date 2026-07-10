@@ -52,6 +52,12 @@ class MpsListCommand(private val daemonClient: DaemonClient? = null) : CliComman
     )
     var json: Boolean = false
 
+    @Option(
+        names = ["--full-concept"],
+        description = ["Show fully qualified concept names in text output instead of short names."],
+    )
+    var fullConcept: Boolean = false
+
     @Parameters(
         arity = "0..*",
         paramLabel = "TARGET_SEGMENT",
@@ -106,9 +112,14 @@ class MpsListCommand(private val daemonClient: DaemonClient? = null) : CliComman
     private fun summaryColumns(
         summary: MpsListSummaryJson,
         group: MpsListSummaryGroupJson,
-    ): List<String> =
-        listOf(summary.by, group.key, group.count.toString()) +
-            (group.concepts?.takeIf { it.isNotEmpty() }?.let { listOf(it.joinToString(", ")) } ?: emptyList())
+    ): List<String> {
+        // A "concept" grouping keys each group by a concept qualified name; the other axes key by role, model, or kind.
+        val key = if (summary.by == "concept") displayConcept(group.key, fullConcept) else group.key
+        val concepts = group.concepts?.takeIf { it.isNotEmpty() }
+            ?.let { listOf(it.joinToString(", ") { concept -> displayConcept(concept, fullConcept) }) }
+            ?: emptyList()
+        return listOf(summary.by, key, group.count.toString()) + concepts
+    }
 
     private fun MpsListEntryJson.columns(): List<String> =
         when (type) {
@@ -125,7 +136,8 @@ class MpsListCommand(private val daemonClient: DaemonClient? = null) : CliComman
         listOf(typeColumn) + nodeColumnsWithoutType()
 
     private fun MpsListEntryJson.nodeColumnsWithoutType(): List<String> =
-        listOf(name ?: "<unnamed>", concept.orEmpty(), reference.orEmpty()) + listOfNotNull(error)
+        listOf(name ?: "<unnamed>", concept?.let { displayConcept(it, fullConcept) }.orEmpty(), reference.orEmpty()) +
+            listOfNotNull(error)
 
     private fun usesSpaceSeparatedTargetSegments(): Boolean =
         target.none { it.contains("/") } ||

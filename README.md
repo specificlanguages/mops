@@ -55,8 +55,8 @@ reference. A Root Node has no `parent`. `--ancestry` nests `parent` recursively 
 only the immediate parent.
 
 ```sh
-mops --mps-home <path> list [--depth N] [--limit N] [--summary] [--role ROLE] [--json] [TARGET_SEGMENT...]
-mops --mps-home <path> ls   [--depth N] [--limit N] [--summary] [--role ROLE] [--json] [TARGET_SEGMENT...]
+mops --mps-home <path> list [--depth N] [--limit N] [--summary] [--role ROLE] [--full-concept] [--json] [TARGET_SEGMENT...]
+mops --mps-home <path> ls   [--depth N] [--limit N] [--summary] [--role ROLE] [--full-concept] [--json] [TARGET_SEGMENT...]
 ```
 
 Lists an MPS navigation target as a bounded tree. Space-separated target segments address a module, model, or node; omit
@@ -69,6 +69,9 @@ truncated and gains a final `truncated <shown> <total>` row so the omission is e
 target's children with grouped counts — per **Role** (with the dominant concepts) for a node, per concept for a model's
 roots, per model for a module, per kind for the project or repository — and cannot be combined with `--depth`. `--role
 ROLE` lists only the target node's children in one containment role and is valid only for a node target.
+
+Text output shows short concept names; `--full-concept` restores the fully qualified names. JSON output keeps qualified
+concept names regardless.
 
 ```sh
 mops --mps-home <path> model render-node [--allow-reflective] <node-reference>
@@ -88,7 +91,7 @@ no editor is not an error: MPS renders it with its generic reflective editor (co
 language's own notation), which the command prints as-is.
 
 ```sh
-mops --mps-home <path> find instances [--exact] [--limit N] [--json] <concept>
+mops --mps-home <path> find instances [--exact] [--limit N] [--full-concept] [--refs-only] [--json] <concept>
 ```
 
 Searches **Editable Project Sources** for nodes that are instances of a fully qualified MPS concept
@@ -104,12 +107,15 @@ resolves as if written in full when the language is loaded.
 
 Text output is tab-separated rows of `root` or `node`, the node name (or `<unnamed>`), the node's actual concept,
 and its serialized node reference; a non-root node appends its immediate parent as trailing `parent`, parent name (or
-`<unnamed>`), parent concept, and parent reference columns. `--json` prints an object with `limit`, `truncated`, and a
+`<unnamed>`), parent concept, and parent reference columns. Concept columns show short names by default; `--full-concept`
+restores the fully qualified names, while JSON output keeps them regardless. `--refs-only` prints just one serialized
+node reference per line — nothing else — so results pipe straight into `mops model get-node`; it is mutually exclusive
+with `--json` and reports any truncation on stderr. `--json` prints an object with `limit`, `truncated`, and a
 `nodes` array whose non-root entries carry a nested `parent` summary.
 
 ```sh
-mops --mps-home <path> find usages [--limit N] [--json] <node-reference>
-mops --mps-home <path> find usages [--limit N] [--json] <model-target> <node-id>
+mops --mps-home <path> find usages [--limit N] [--full-concept] [--refs-only] [--json] <node-reference>
+mops --mps-home <path> find usages [--limit N] [--full-concept] [--refs-only] [--json] <model-target> <node-id>
 ```
 
 Searches **Editable Project Sources** for references to one resolved target node, addressed the same way as
@@ -118,19 +124,22 @@ reference role, and the owning node's name (or `<unnamed>`), concept, and refere
 by its position in its model. A non-root owner appends its immediate parent as trailing `parent`, parent name (or
 `<unnamed>`), parent concept, and parent reference columns. `--json` prints an object with `limit`, `truncated`, and a
 `usages` array whose entries carry the reference `role` and a nested `owner` node summary, itself carrying a nested
-`parent` summary for a non-root owner. Both `find` modes default to `--limit 100`, treat
+`parent` summary for a non-root owner. Concept columns follow the same short-name default, `--full-concept`, and
+JSON-keeps-qualified rules as `find instances`; `--refs-only` prints one serialized reference per referencing node.
+Both `find` modes default to `--limit 100`, treat
 `--limit 0` as unlimited, reject negative limits, and append a `truncated` row (in text) or set `truncated` (in JSON)
 only when more matches exist than were returned.
 
 ```sh
-mops --mps-home <path> find root-by-name [--limit N] [--json] <pattern> [in <scope-segment>...]
+mops --mps-home <path> find root-by-name [--limit N] [--full-concept] [--refs-only] [--json] <pattern> [in <scope-segment>...]
 ```
 
 Finds Root Nodes by name using MPS Go-to-Node pattern matching. The pattern supports camel-hump and `*` wildcards (see
 `mops explain name-pattern`). By default it searches **Editable Project Sources**; append `in <scope-segments>` to
 search a module, model, or the whole repository (`in /`), where only root-bearing scopes are valid (see
 `mops explain scope`). It defaults to `--limit 100`, treats `--limit 0` as unlimited, and rejects negative limits. Text
-output is tab-separated rows in the same shape as `find instances`; `--json` prints the structured response.
+output is tab-separated rows in the same shape as `find instances`, including the short-concept default with
+`--full-concept` and the `--refs-only` piping mode; `--json` prints the structured response.
 
 ```sh
 mops --mps-home <path> diagnose modules [--all] [--json]

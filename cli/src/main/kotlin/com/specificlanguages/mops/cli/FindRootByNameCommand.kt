@@ -27,6 +27,21 @@ class FindRootByNameCommand(private val daemonClient: DaemonClient? = null) : Cl
     var json: Boolean = false
 
     @Option(
+        names = ["--full-concept"],
+        description = ["Show fully qualified concept names in text output instead of short names."],
+    )
+    var fullConcept: Boolean = false
+
+    @Option(
+        names = ["--refs-only"],
+        description = [
+            "Print one serialized node reference per line and nothing else, for piping. Cannot combine with --json; " +
+                "truncation is reported on stderr.",
+        ],
+    )
+    var refsOnly: Boolean = false
+
+    @Option(
         names = ["--limit"],
         paramLabel = "N",
         description = ["Maximum nodes to return. Defaults to 100; 0 means unlimited."],
@@ -51,15 +66,21 @@ class FindRootByNameCommand(private val daemonClient: DaemonClient? = null) : Cl
     override fun run() {
         require(limit >= 0) { "limit must not be negative" }
         require(pattern.isNotBlank()) { "pattern must not be blank" }
+        require(!(refsOnly && json)) { "--refs-only cannot be combined with --json" }
         val scope = scopeClauseSegments(scopeClause)
         val client = daemonClient ?: find.root.ensureDaemon()
         val response = client.findByName(pattern = pattern, limit = limit, scope = scope)
-        if (json) {
-            println(ProtocolJson.encodeResponse(response))
-        } else {
-            response.nodes.forEach(::renderText)
-            if (response.truncated) {
-                println(listOf("truncated", response.nodes.size, "more results not shown").joinToString("\t"))
+        when {
+            json -> println(ProtocolJson.encodeResponse(response))
+            refsOnly -> {
+                response.nodes.forEach { println(it.reference) }
+                if (response.truncated) reportTruncationOnStderr(response.nodes.size)
+            }
+            else -> {
+                response.nodes.forEach(::renderText)
+                if (response.truncated) {
+                    println(listOf("truncated", response.nodes.size, "more results not shown").joinToString("\t"))
+                }
             }
         }
     }
@@ -70,9 +91,9 @@ class FindRootByNameCommand(private val daemonClient: DaemonClient? = null) : Cl
                 listOf(
                     node.type,
                     node.name ?: "<unnamed>",
-                    node.concept,
+                    displayConcept(node.concept, fullConcept),
                     node.reference,
-                ) + parentColumns(node.parent)
+                ) + parentColumns(node.parent, fullConcept)
             ).joinToString("\t"),
         )
     }

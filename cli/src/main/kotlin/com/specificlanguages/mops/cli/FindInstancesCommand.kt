@@ -30,6 +30,21 @@ class FindInstancesCommand(private val daemonClient: DaemonClient? = null) : Cli
     var json: Boolean = false
 
     @Option(
+        names = ["--full-concept"],
+        description = ["Show fully qualified concept names in text output instead of short names."],
+    )
+    var fullConcept: Boolean = false
+
+    @Option(
+        names = ["--refs-only"],
+        description = [
+            "Print one serialized node reference per line and nothing else, for piping. Cannot combine with --json; " +
+                "truncation is reported on stderr.",
+        ],
+    )
+    var refsOnly: Boolean = false
+
+    @Option(
         names = ["--exact"],
         description = ["Match only nodes whose direct concept is the queried concept."],
     )
@@ -79,6 +94,7 @@ class FindInstancesCommand(private val daemonClient: DaemonClient? = null) : Cli
 
     override fun run() {
         require(limit >= 0) { "limit must not be negative" }
+        require(!(refsOnly && json)) { "--refs-only cannot be combined with --json" }
         val scope = scopeClauseSegments(scopeClause)
         val filters = buildList {
             named?.let { add(NodeFilter.Named(it)) }
@@ -92,12 +108,17 @@ class FindInstancesCommand(private val daemonClient: DaemonClient? = null) : Cli
             filters = filters,
             limit = limit,
         )
-        if (json) {
-            println(ProtocolJson.encodeResponse(response))
-        } else {
-            response.nodes.forEach(::renderText)
-            if (response.truncated) {
-                println(listOf("truncated", response.nodes.size, "more results not shown").joinToString("\t"))
+        when {
+            json -> println(ProtocolJson.encodeResponse(response))
+            refsOnly -> {
+                response.nodes.forEach { println(it.reference) }
+                if (response.truncated) reportTruncationOnStderr(response.nodes.size)
+            }
+            else -> {
+                response.nodes.forEach(::renderText)
+                if (response.truncated) {
+                    println(listOf("truncated", response.nodes.size, "more results not shown").joinToString("\t"))
+                }
             }
         }
     }
@@ -108,9 +129,9 @@ class FindInstancesCommand(private val daemonClient: DaemonClient? = null) : Cli
                 listOf(
                     node.type,
                     node.name ?: "<unnamed>",
-                    node.concept,
+                    displayConcept(node.concept, fullConcept),
                     node.reference,
-                ) + parentColumns(node.parent)
+                ) + parentColumns(node.parent, fullConcept)
             ).joinToString("\t"),
         )
     }

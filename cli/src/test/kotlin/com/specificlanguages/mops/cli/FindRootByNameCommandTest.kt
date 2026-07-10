@@ -31,7 +31,7 @@ class FindRootByNameCommandTest {
         assertEquals(0, exitCode)
         verify(client).findByName(PATTERN, limit = 100)
         assertEquals(
-            "root\tJsonObject\tjetbrains.mps.lang.structure.structure.ConceptDeclaration\t" +
+            "root\tJsonObject\tConceptDeclaration\t" +
                 "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
                 System.lineSeparator(),
             stdout,
@@ -52,7 +52,7 @@ class FindRootByNameCommandTest {
 
         assertEquals(0, exitCode)
         assertEquals(
-            "root\t<unnamed>\tjetbrains.mps.lang.structure.structure.ConceptDeclaration\t" +
+            "root\t<unnamed>\tConceptDeclaration\t" +
                 "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
                 System.lineSeparator(),
             stdout,
@@ -154,7 +154,7 @@ class FindRootByNameCommandTest {
 
         assertEquals(0, exitCode)
         assertEquals(
-            "root\tJsonObject\tjetbrains.mps.lang.structure.structure.ConceptDeclaration\t" +
+            "root\tJsonObject\tConceptDeclaration\t" +
                 "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
                 System.lineSeparator() +
                 "truncated\t1\tmore results not shown" + System.lineSeparator(),
@@ -186,6 +186,62 @@ class FindRootByNameCommandTest {
             exitCode = CommandLine(FindRootByNameCommand(client))
                 .setExecutionExceptionHandler(PrintErrorAndExit)
                 .execute("--limit", "-1", PATTERN)
+        }
+
+        assertEquals(1, exitCode)
+        verifyNoInteractions(client)
+    }
+
+    @Test
+    fun `find root-by-name shows fully qualified concept names with --full-concept`() {
+        val client = mock<DaemonClient>()
+        whenever(client.findByName(PATTERN, limit = 100)).thenReturn(sampleResponse())
+        var exitCode = Int.MIN_VALUE
+
+        val stdout = tapSystemOut {
+            exitCode = CommandLine(FindRootByNameCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("--full-concept", PATTERN)
+        }
+
+        assertEquals(0, exitCode)
+        assertEquals(
+            "root\tJsonObject\tjetbrains.mps.lang.structure.structure.ConceptDeclaration\t" +
+                "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
+                System.lineSeparator(),
+            stdout,
+        )
+    }
+
+    @Test
+    fun `find root-by-name prints one node reference per line with --refs-only`() {
+        val client = mock<DaemonClient>()
+        whenever(client.findByName(PATTERN, limit = 100)).thenReturn(sampleResponse())
+        var exitCode = Int.MIN_VALUE
+
+        val stdout = tapSystemOut {
+            exitCode = CommandLine(FindRootByNameCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("--refs-only", PATTERN)
+        }
+
+        assertEquals(0, exitCode)
+        assertEquals(
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
+                System.lineSeparator(),
+            stdout,
+        )
+    }
+
+    @Test
+    fun `find root-by-name rejects --refs-only combined with --json`() {
+        val client = mock<DaemonClient>()
+        var exitCode = Int.MIN_VALUE
+
+        tapSystemOut {
+            exitCode = CommandLine(FindRootByNameCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("--refs-only", "--json", PATTERN)
         }
 
         assertEquals(1, exitCode)
