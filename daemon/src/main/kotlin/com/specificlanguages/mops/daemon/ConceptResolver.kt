@@ -63,23 +63,23 @@ class ConceptResolver(private val project: Project) {
      * Resolves a bare short name by counting concepts of that name across all loaded languages: a unique match wins, a
      * tie fails with the qualified candidates as retry tokens, and no match fails with near-miss suggestions.
      *
-     * Counting is only trustworthy when every project language is built: an unbuilt language contributes no concepts to
-     * name lookup, so it could define the same short name unseen and turn a "unique" or "not found" verdict wrong. So
-     * the resolution refuses outright while any project language is unbuilt, naming them so the caller can build them or
-     * qualify the concept.
+     * The count is trustworthy only for two or more matches: that is ambiguous no matter what, since an unbuilt language
+     * could only add further candidates, never collapse these to one. For zero or one match the verdict is provisional —
+     * an unbuilt project language contributes no concepts to name lookup, so it could hold the deciding concept unseen
+     * and turn "unique" or "not found" wrong. So when the count is under two and any project language is unbuilt, the
+     * resolution refuses, naming the languages to build (or asking for a qualified name) instead of guessing.
      */
     private fun resolveShortName(shortName: String): SAbstractConcept {
+        val matches = conceptsNamed(shortName)
+        if (matches.size >= 2) {
+            throw ambiguous(ambiguousShortNameMessage(shortName, matches.map { it.qualifiedName }.sorted()))
+        }
+
         val unbuilt = ModuleLoadDiagnostics(project).unbuiltProjectLanguages()
         if (unbuilt.isNotEmpty()) throw languageNotLoaded(unbuiltShortNameMessage(shortName, unbuilt))
 
-        val matches = conceptsNamed(shortName)
-        return when (matches.size) {
-            1 -> matches.single()
-            0 -> throw notFound(shortNameNotFoundMessage(shortName, similarConceptNamesAcrossLanguages(shortName)))
-            else -> throw ambiguous(
-                ambiguousShortNameMessage(shortName, matches.map { it.qualifiedName }.sorted()),
-            )
-        }
+        return matches.singleOrNull()
+            ?: throw notFound(shortNameNotFoundMessage(shortName, similarConceptNamesAcrossLanguages(shortName)))
     }
 
     /** Concepts of every loaded language whose short name is exactly [shortName], one per qualified name. */

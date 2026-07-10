@@ -360,6 +360,23 @@ class FindInstancesSemanticsTest {
     }
 
     @Test
+    fun `reports an ambiguous short name even while a project language is unbuilt`() {
+        // `BinaryOperation` is defined by both baseLanguage and baseLanguage.collections, which are loaded here. Two
+        // matches is already ambiguous — an unbuilt language could only add candidates — so this reports the ambiguity
+        // rather than deferring to a build, even though com.specificlanguages.json is unbuilt in this fixture.
+        val exception = assertFailsWith<MpsRequestException> {
+            SharedMpsEnvironment.sharedMpsAccess.read {
+                findInstances("BinaryOperation", exact = false, limit = DEFAULT_LIMIT)
+            }
+        }
+
+        assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, exception.code)
+        val message = assertNotNull(exception.message)
+        assertContains(message, "jetbrains.mps.baseLanguage.structure.BinaryOperation")
+        assertContains(message, "jetbrains.mps.baseLanguage.collections.structure.BinaryOperation")
+    }
+
+    @Test
     fun `resolves short names once every project language is built`() {
         // With `exprs` built, no project language is unbuilt, so short-name counting is trustworthy and exercises all
         // three outcomes: a unique name resolves like its qualified form, an ambiguous name lists candidates, and an
