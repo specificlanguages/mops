@@ -2,7 +2,7 @@
 
 Verified against the MPS 2025.1.2 distribution jars (the daemon's compile/runtime target) and the MPS 2025.1 source,
 and cross-checked against `MPS/MPS` master (build 261, 2026.1). Source paths below are relative to an MPS source
-checkout root. This backs `LanguageLoadDiagnostics` and the `diagnose languages` command.
+checkout root.
 
 ## The invariant: name lookup only sees loaded language runtimes
 
@@ -40,8 +40,8 @@ lookup.
   present in master)** — maps each reference through the deployed-runtime map (`myModuleRuntime`) and invokes `op` only
   for modules that actually have a registered runtime. Passing a single module reference and recording whether `op`
   fired is the **per-module "loaded" test that works for any module kind** (languages, solutions, generators), not just
-  languages. This is what `ModuleLoadDiagnostics` uses. (It's an awkward API — a `forEach`-style probe rather than a
-  boolean — but it is public and stable.)
+  languages. This is the per-module load check a diagnostic can build on. (It's an awkward API — a `forEach`-style
+  probe rather than a boolean — but it is public and stable.)
 - `@Nullable LanguageRuntime getLanguage(SLanguage)` (~:442) — the language-specific equivalent; `getLanguage(L) != null`
   means loaded. Internally a language whose runtime class fails to load is put in `myLanguagesNoRuntime` and gets no
   entry.
@@ -75,7 +75,7 @@ actual runtime registration and is preferred.
 
 ## Classifying why a module is not loaded
 
-`ModuleLoadDiagnostics` classifies an unloaded module (one for which `withModuleRuntime` did not fire) into a stable
+An unloaded module (one for which `withModuleRuntime` did not fire) can be classified into a stable
 reason, built from the signals below rather than MPS's version-volatile classloading graph. The kinds:
 
 - `ABSENT` — the module reference does not resolve in the repository.
@@ -110,7 +110,7 @@ its runtime solution modules. The signals:
   closure but are **not** in `getDeclaredDependencies()`, so a diagnostic that ignores them misses a common cause: an
   absent runtime solution. Resolve each with `SModuleReference.resolve(repository)`; null means absent.
 
-`ModuleLoadDiagnostics.dependencies` walks this closure. A declared dependency's target is absent when
+The dependency analysis walks this closure. A declared dependency's target is absent when
 `SDependency.getTarget() == null`; a present target is recursed into. The walk memoizes each module's result and guards
 cycles, so it is bounded by the number of distinct modules reachable.
 
@@ -136,13 +136,13 @@ cycles, so it is bounded by the number of distinct modules reachable.
   and its runtime solution commonly depend on each other). `ModulesWatcher.refillStatusMap`
   (`core/kernel/.../ModulesWatcher.java` ~:142, :174) explicitly tolerates them: a module whose only unresolved
   dependencies are cycle members, with no genuinely broken dependency, is marked `LIKELY_VALID`/`VALID` (loadable). So
-  `ModuleLoadDiagnostics` treats a back-edge to a module already on the current path as a non-blocking edge that
+  a diagnostic should treat a back-edge to a module already on the current path as a non-blocking edge that
   contributes no cause; a module blocked only by a cycle is deferred rather than reported, and its real root cause
   surfaces when a cycle member is diagnosed as a top-level module (whose path starts empty).
 - **A read action is required.** Every call here touches the repository; run inside `project.modelAccess`
   read access.
 - **Cost.** The `withModuleRuntime` check is cheap; the per-module dependency walk that explains an unloaded module is
-  memoized and bounded by the number of distinct modules reachable, so a full `diagnose modules` stays fast enough for
+  memoized and bounded by the number of distinct modules reachable, so a full project scan stays fast enough for
   an on-demand command even on a large project.
 
 ## Why we avoid MPS's internal classloading graph
@@ -152,6 +152,6 @@ The richest data lives in `jetbrains.mps.classloading.ModulesWatcher` (per-modul
 for classloading (no respective module facet or absent in a repository)"`). But obtaining the watcher goes through
 `ClassLoaderManager.getModulesWatcher()`, which is `@TestOnly` package-private, and `CLDependencies` (the real
 classpath-closure computation) is a package-private class. This is precisely the area that churns between MPS versions,
-so `LanguageLoadDiagnostics` deliberately reconstructs the needed facts from the stable openapi/registry surface above
+so a robust diagnostic deliberately reconstructs the needed facts from the stable openapi/registry surface above
 rather than depending on those internals. When re-verifying for a new MPS version, the registry and openapi contracts
 here are the ones to re-check.
