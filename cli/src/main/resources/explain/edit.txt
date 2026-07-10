@@ -22,6 +22,30 @@ OPERATIONS
   wrap          put a new node around an existing one, keeping its exact slot
   unwrap        strip a wrapper, keeping one descendant in its place
 
+CHOOSING AN OPERATION
+  Rearranging existing structure? Prefer replace, wrap, and unwrap over
+  delete-and-rebuild. Each keeps the target's exact slot (parent, Role, index) and
+  preserves node identity, so inbound References keep resolving — rebuilding from
+  scratch mints fresh ids and silently orphans them.
+    replace  swap a node for a new subtree in its place — edit.replace
+    wrap     put a new node around one, keeping its slot — edit.wrap
+    unwrap   strip a wrapper, promoting one descendant — edit.unwrap
+
+  Reusing a node inside a new subtree (addChild, addRoot, replace, wrap)? A Move
+  Leaf adopts it by identity, so inbound References stay alive; a Copy Leaf mints an
+  independent duplicate with fresh ids. Move preserves, copy mints — see
+  inline-subtree.
+
+  Annotations travel with their node: MPS attributes are children of the node they
+  annotate, so wrapping or moving a node carries them along — they never migrate to
+  a wrapper.
+
+  Dangling References: edit does not detect, warn about, or rewrite inbound
+  References left dangling when a node is deleted — that is Model Check territory.
+  Run `find usages` before to see what points at a node, and `model check` after to
+  catch anything left dangling. To keep inbound References alive across a
+  rearrangement, adopt the node with a Move Leaf rather than rebuilding it.
+
 NOTES
   Atomicity is best-effort, not guaranteed. If an operation fails before the batch
   is saved, the in-memory changes are reverted by reloading the affected models

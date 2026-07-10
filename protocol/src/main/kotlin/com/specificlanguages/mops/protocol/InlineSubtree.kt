@@ -72,18 +72,18 @@ internal object InlineChildSerializer : KSerializer<InlineChild> {
     override fun deserialize(decoder: Decoder): InlineChild {
         val jsonDecoder = decoder as? JsonDecoder ?: throw UnsupportedJsonOnlySerializerException("InlineChild")
         val obj = jsonDecoder.decodeJsonElement() as? JsonObject
-            ?: throw ProtocolJsonException("has an inline child that is not a JSON object")
+            ?: throw InlineSubtreeException("has an inline child that is not a JSON object")
 
         val hasMove = "move" in obj
         val hasCopy = "copy" in obj
         if (hasMove && hasCopy) {
-            throw ProtocolJsonException("has a child that sets both \"move\" and \"copy\"; a leaf is one or the other")
+            throw InlineSubtreeException("has a child that sets both \"move\" and \"copy\"; a leaf is one or the other")
         }
         if (hasMove || hasCopy) {
             val leaf = if (hasMove) "move" else "copy"
             val extras = obj.keys.filter { it != "role" && it != leaf }
             if (extras.isNotEmpty()) {
-                throw ProtocolJsonException(
+                throw InlineSubtreeException(
                     "has a child that mixes a \"$leaf\" leaf with fresh-node field(s) ${extras.joinToString()}; " +
                         "a leaf carries only \"role\" and \"$leaf\"",
                 )
@@ -120,16 +120,16 @@ internal object InlineReferenceSerializer : KSerializer<InlineReference> {
     override fun deserialize(decoder: Decoder): InlineReference {
         val jsonDecoder = decoder as? JsonDecoder ?: throw UnsupportedJsonOnlySerializerException("InlineReference")
         val obj = jsonDecoder.decodeJsonElement() as? JsonObject
-            ?: throw ProtocolJsonException("has an inline reference that is not a JSON object")
+            ?: throw InlineSubtreeException("has an inline reference that is not a JSON object")
 
-        val role = obj.stringField("role") ?: throw ProtocolJsonException("has an inline reference missing its \"role\"")
+        val role = obj.stringField("role") ?: throw InlineSubtreeException("has an inline reference missing its \"role\"")
         val hasTo = obj["to"].let { it != null && it !is JsonNull }
         val hasTarget = obj["target"].let { it != null && it !is JsonNull }
         if (hasTo && hasTarget) {
-            throw ProtocolJsonException("has a reference \"$role\" that sets both \"to\" and \"target\"; use one")
+            throw InlineSubtreeException("has a reference \"$role\" that sets both \"to\" and \"target\"; use one")
         }
         if (!hasTo && !hasTarget) {
-            throw ProtocolJsonException("has a reference \"$role\" with neither \"to\" nor \"target\"")
+            throw InlineSubtreeException("has a reference \"$role\" with neither \"to\" nor \"target\"")
         }
         val to = if (hasTo) jsonDecoder.json.decodeFromJsonElement(EditTarget.serializer(), obj.getValue("to")) else null
         val target = if (hasTarget) {

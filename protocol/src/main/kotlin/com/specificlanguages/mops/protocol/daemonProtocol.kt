@@ -120,7 +120,14 @@ internal object PathAsStringSerializer : KSerializer<Path> {
 /**
  * Raised when protocol JSON is structurally invalid in a way the custom serializers detect.
  */
-class ProtocolJsonException(message: String) : SerializationException(message)
+open class ProtocolJsonException(message: String) : SerializationException(message)
+
+/**
+ * Raised when an Inline Subtree position — a child spec, Move/Copy Leaf, or inline reference — is malformed. Carried
+ * separately from [ProtocolJsonException] so the batch decoder points such failures at the `inline-subtree` page rather
+ * than the host operation's.
+ */
+class InlineSubtreeException(message: String) : ProtocolJsonException(message)
 
 /**
  * Raised when a JSON-only custom serializer is used with a non-JSON format.

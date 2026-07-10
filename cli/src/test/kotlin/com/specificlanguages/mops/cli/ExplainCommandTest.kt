@@ -25,7 +25,8 @@ class ExplainCommandTest {
     // Topics whose EXAMPLE is a shell command rather than an edit-batch JSON object; excluded from batch parsing.
     private val nonBatchTopics = setOf("edit", "name-pattern", "scope")
     private val sectionHeaders =
-        setOf("FIELDS", "SEMANTICS", "EXAMPLE", "SEE ALSO", "SHAPE", "OPERATIONS", "NOTES", "DRILL DOWN", "FORMS")
+        setOf("FIELDS", "SEMANTICS", "EXAMPLE", "SEE ALSO", "SHAPE", "OPERATIONS", "CHOOSING AN OPERATION", "NOTES",
+            "DRILL DOWN", "FORMS")
 
     @Test
     fun `explain with no argument lists all top-level topics and exits zero`() {

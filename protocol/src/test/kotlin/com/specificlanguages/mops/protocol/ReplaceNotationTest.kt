@@ -67,6 +67,7 @@ class ReplaceNotationTest {
         assertContains(detail, "both")
         assertContains(detail, "move")
         assertContains(detail, "copy")
+        assertContains(detail, "see: mops explain inline-subtree")
     }
 
     @Test

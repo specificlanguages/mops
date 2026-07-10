@@ -19,7 +19,8 @@ class EditSchemaGuardTest {
     private val operationTopics = EditNotation.operationNames.map { "edit.$it" }
     private val exampleTopics = (topLevelTopics + operationTopics).filter { it != "edit" }
     private val sectionHeaders =
-        setOf("FIELDS", "SEMANTICS", "EXAMPLE", "SEE ALSO", "SHAPE", "OPERATIONS", "NOTES", "DRILL DOWN", "FORMS")
+        setOf("FIELDS", "SEMANTICS", "EXAMPLE", "SEE ALSO", "SHAPE", "OPERATIONS", "CHOOSING AN OPERATION", "NOTES",
+            "DRILL DOWN", "FORMS")
 
     private val schema: JsonSchema =
         JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012).getSchema(ExplainTopics.editSchema())

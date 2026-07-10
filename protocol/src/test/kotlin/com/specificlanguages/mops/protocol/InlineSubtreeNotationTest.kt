@@ -89,6 +89,7 @@ class InlineSubtreeNotationTest {
         assertContains(detail, "addChild")
         assertContains(detail, "move")
         assertContains(detail, "concept")
+        assertContains(detail, "see: mops explain inline-subtree")
     }
 
     @Test
@@ -98,6 +99,7 @@ class InlineSubtreeNotationTest {
         assertContains(detail, "both")
         assertContains(detail, "move")
         assertContains(detail, "copy")
+        assertContains(detail, "see: mops explain inline-subtree")
     }
 
     @Test
@@ -129,6 +131,7 @@ class InlineSubtreeNotationTest {
         assertContains(detail, "operations[0]")
         assertContains(detail, "\"type\"")
         assertContains(detail, "both")
+        assertContains(detail, "see: mops explain inline-subtree")
     }
 
     @Test

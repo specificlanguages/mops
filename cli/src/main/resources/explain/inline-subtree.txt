@@ -32,6 +32,12 @@ CHILDREN
   References the node (rebuilding it from scratch would orphan those References);
   reach for a Copy Leaf when you want an independent duplicate.
 
+  Ordering within one operation: every Move Leaf is detached from its current home
+  before any node is deleted; then the new structure is built and attached; then
+  (for replace and unwrap) the remainder of the old subtree is dropped. So a Move
+  Leaf may adopt a node from inside the very subtree being replaced or unwrapped —
+  it survives with its identity while the rest is discarded.
+
 REFERENCES
   Each entry in a "references" array points a new node's Reference at an existing
   node:
