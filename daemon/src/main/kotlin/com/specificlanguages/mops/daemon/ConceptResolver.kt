@@ -14,10 +14,16 @@ import org.jetbrains.mps.openapi.language.SAbstractConcept
  * targeted explanation.
  *
  * A concept's qualified name is `<language>.structure.<ConceptName>`, and name lookup only sees concepts of loaded
- * languages (see [ModuleLoadDiagnostics]). So a lookup can fail for three distinct reasons, each with its own remedy:
- * the name is not well formed, the owning language is unknown or not loaded, or the language is loaded but has no such
- * concept. This resolver tells them apart. It also forgives a dropped `.structure.` infix: given `foo.bar.Baz` it
- * retries `foo.bar.structure.Baz`, so a caller who omits the infix still gets results when the language is loaded.
+ * languages (see [ModuleLoadDiagnostics]). A caller may name a concept three ways: by its qualified name, by the
+ * qualified name with the `.structure.` infix dropped, or by its bare short name. The first two are resolved through
+ * MPS's by-name index; the bare short name is resolved by counting matches across all loaded languages, since the same
+ * short name may belong to more than one language.
+ *
+ * A lookup can therefore fail four ways, each with its own remedy: a bare short name is ambiguous across languages; a
+ * bare short name matches nothing; a qualified name's language is unknown or not loaded; or the language is loaded but
+ * has no such concept. This resolver tells them apart. It also forgives a dropped `.structure.` infix: given
+ * `foo.bar.Baz` it retries `foo.bar.structure.Baz`, so a caller who omits the infix still gets results when the
+ * language is loaded.
  *
  * Must run inside an MPS read action.
  */
@@ -28,6 +34,20 @@ class ConceptResolver(private val project: Project) {
 
     /** The resolved concept, or an [MpsRequestException] carrying a diagnosis of why the name did not resolve. */
     fun resolve(name: String): SAbstractConcept {
+        resolveQualified(name)?.let { return it }
+
+        // A bare short name (no dots) never keys MPS's qualified-name index, so resolve it by counting matches across
+        // loaded languages instead. A dotted name that reaches here is a qualified attempt whose language is the more
+        // useful thing to diagnose.
+        if (isBareShortName(name)) return resolveShortName(name)
+
+        val parsed = ConceptName.parse(name)
+            ?: throw notFound(malformedMessage(name))
+        throw notFound(diagnose(parsed))
+    }
+
+    /** Resolves a qualified name in either spelling through MPS's by-name index, or null when neither spelling hits. */
+    private fun resolveQualified(name: String): SAbstractConcept? {
         conceptRegistry.getConceptByName(name).takeIf { it.isValid }?.let { return it }
 
         // Forgive a dropped `.structure.`: treat the whole prefix as the language and insert the infix before the
@@ -36,11 +56,45 @@ class ConceptResolver(private val project: Project) {
         droppedInfixCandidate(name)?.takeIf { it != name }?.let { candidate ->
             conceptRegistry.getConceptByName(candidate).takeIf { it.isValid }?.let { return it }
         }
-
-        val parsed = ConceptName.parse(name)
-            ?: throw notFound(malformedMessage(name))
-        throw notFound(diagnose(parsed))
+        return null
     }
+
+    /**
+     * Resolves a bare short name by counting concepts of that name across all loaded languages: a unique match wins, a
+     * tie fails with the qualified candidates as retry tokens, and no match fails with near-miss suggestions.
+     */
+    private fun resolveShortName(shortName: String): SAbstractConcept {
+        val matches = conceptsNamed(shortName)
+        return when (matches.size) {
+            1 -> matches.single()
+            0 -> throw notFound(shortNameNotFoundMessage(shortName, similarConceptNamesAcrossLanguages(shortName)))
+            else -> throw ambiguous(
+                ambiguousShortNameMessage(shortName, matches.map { it.qualifiedName }.sorted()),
+            )
+        }
+    }
+
+    /** Concepts of every loaded language whose short name is exactly [shortName], one per qualified name. */
+    private fun conceptsNamed(shortName: String): List<SAbstractConcept> =
+        languageRegistry.allLanguages
+            .flatMap { it.concepts }
+            .filter { it.name == shortName }
+            .distinctBy { it.qualifiedName }
+
+    /** Qualified names of loaded concepts whose short name resembles [shortName], closest first. */
+    private fun similarConceptNamesAcrossLanguages(shortName: String): List<String> =
+        languageRegistry.allLanguages
+            .flatMap { it.concepts }
+            .mapNotNull { concept ->
+                concept.name.takeIf(String::isNotBlank)
+                    ?.let { name -> similarity(shortName, name)?.let { concept.qualifiedName to it } }
+            }
+            .distinctBy { it.first }
+            .sortedWith(compareBy({ it.second }, { it.first }))
+            .take(MAX_SUGGESTIONS)
+            .map { it.first }
+
+    private fun isBareShortName(name: String): Boolean = name.isNotBlank() && !name.contains('.')
 
     private fun droppedInfixCandidate(name: String): String? {
         val shortName = name.substringAfterLast('.', "")
@@ -75,8 +129,24 @@ class ConceptResolver(private val project: Project) {
     private fun notFound(message: String): MpsRequestException =
         MpsRequestException(code = MpsErrorCode.CONCEPT_NOT_FOUND, message = message)
 
+    private fun ambiguous(message: String): MpsRequestException =
+        MpsRequestException(code = MpsErrorCode.AMBIGUOUS_TARGET, message = message)
+
     companion object {
         private const val MAX_SUGGESTIONS = 5
+
+        fun ambiguousShortNameMessage(shortName: String, qualifiedCandidates: List<String>): String =
+            "concept name \"$shortName\" is ambiguous; it names ${qualifiedCandidates.size} concepts across loaded " +
+                "languages. Retry with one qualified name:\n" +
+                qualifiedCandidates.joinToString("\n") { "  $it" }
+
+        fun shortNameNotFoundMessage(shortName: String, suggestions: List<String>): String =
+            if (suggestions.isEmpty()) {
+                "concept \"$shortName\" was not found in any loaded language, and no concept has a similar name"
+            } else {
+                "concept \"$shortName\" was not found in any loaded language; " +
+                    "did you mean: ${suggestions.joinToString(", ")}?"
+            }
 
         fun malformedMessage(name: String): String =
             "\"$name\" is not a well-formed concept name; expected <language>.structure.<ConceptName> " +

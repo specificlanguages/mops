@@ -341,10 +341,35 @@ class FindInstancesSemanticsTest {
     }
 
     @Test
+    fun `resolves a unique bare short name to the same instances as its qualified name`() {
+        val qualified = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances(CONCEPT_DECLARATION, exact = false, limit = DEFAULT_LIMIT)
+        }
+        val short = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances("ConceptDeclaration", exact = false, limit = DEFAULT_LIMIT)
+        }
+
+        assertTrue(qualified.nodes.isNotEmpty(), "fixture should hold concept declarations")
+        assertEquals(qualified, short, "the bare short name should resolve to the same concept")
+    }
+
+    @Test
+    fun `reports an unknown bare short name as not found in any loaded language`() {
+        val exception = assertFailsWith<MpsRequestException> {
+            SharedMpsEnvironment.sharedMpsAccess.read {
+                findInstances("NoSuchConceptAnywhere", exact = false, limit = DEFAULT_LIMIT)
+            }
+        }
+
+        assertEquals(MpsErrorCode.CONCEPT_NOT_FOUND, exception.code)
+        assertContains(assertNotNull(exception.message), "was not found in any loaded language")
+    }
+
+    @Test
     fun `reports a malformed concept name`() {
         val exception = assertFailsWith<MpsRequestException> {
             SharedMpsEnvironment.sharedMpsAccess.read {
-                findInstances("NotAQualifiedName", exact = false, limit = DEFAULT_LIMIT)
+                findInstances("com.example.structure.", exact = false, limit = DEFAULT_LIMIT)
             }
         }
 

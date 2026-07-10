@@ -61,6 +61,31 @@ class ConceptResolverFormatTest {
     }
 
     @Test
+    fun `ambiguous short name message lists the qualified candidates to retry with`() {
+        val message = ConceptResolver.ambiguousShortNameMessage(
+            "Statement",
+            listOf("com.a.structure.Statement", "com.b.structure.Statement"),
+        )
+
+        assertContains(message, "\"Statement\" is ambiguous")
+        assertContains(message, "names 2 concepts")
+        assertContains(message, "Retry with one qualified name")
+        assertContains(message, "  com.a.structure.Statement")
+        assertContains(message, "  com.b.structure.Statement")
+    }
+
+    @Test
+    fun `short name not found message suggests similar concepts when present`() {
+        val none = ConceptResolver.shortNameNotFoundMessage("Xyzzy", emptyList())
+        assertContains(none, "was not found in any loaded language")
+        assertContains(none, "no concept has a similar name")
+
+        val some = ConceptResolver.shortNameNotFoundMessage("Statment", listOf("com.a.structure.Statement"))
+        assertContains(some, "was not found in any loaded language")
+        assertContains(some, "did you mean: com.a.structure.Statement?")
+    }
+
+    @Test
     fun `unloaded language message flattens the problem to its root causes`() {
         val problem = ModuleLoadProblemJson(
             module = "a.b",
