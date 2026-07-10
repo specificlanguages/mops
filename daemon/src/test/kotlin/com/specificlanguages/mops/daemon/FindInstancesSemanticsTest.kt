@@ -3,6 +3,7 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.FindInstancesResponse
+import com.specificlanguages.mops.protocol.MakeOutcome
 import com.specificlanguages.mops.protocol.NodeFilter
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -354,6 +355,25 @@ class FindInstancesSemanticsTest {
     }
 
     @Test
+    fun `an ambiguous bare short name fails with the qualified candidates`() {
+        // `Expression` names a concept in both the freshly built `exprs` language and the always-loaded baseLanguage,
+        // so a bare short name cannot pick one; the failure lists the qualified candidates to retry with.
+        val exception = SharedMpsEnvironment.withProjectCopy(projectName = EXPRESSION_LANGUAGE_PROJECT) { access, _ ->
+            val made = access.extra { makeModules(listOf(EXPRESSION_LANGUAGE_MODULE)) }
+            assertEquals(MakeOutcome.SUCCESS, made.outcome, "building $EXPRESSION_LANGUAGE_MODULE must succeed: ${made.messages}")
+            assertFailsWith<MpsRequestException> {
+                access.read { findInstances("Expression", exact = false, limit = 0) }
+            }
+        }
+
+        assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, exception.code)
+        val message = assertNotNull(exception.message)
+        assertContains(message, "\"Expression\" is ambiguous")
+        assertContains(message, "exprs.structure.Expression")
+        assertContains(message, "jetbrains.mps.baseLanguage.structure.Expression")
+    }
+
+    @Test
     fun `reports an unknown bare short name as not found in any loaded language`() {
         val exception = assertFailsWith<MpsRequestException> {
             SharedMpsEnvironment.sharedMpsAccess.read {
@@ -394,6 +414,8 @@ class FindInstancesSemanticsTest {
         const val LINK_DECLARATION = "jetbrains.mps.lang.structure.structure.LinkDeclaration"
         const val LANGUAGE_MODULE = "com.specificlanguages.json"
         const val STRUCTURE_MODEL = "com.specificlanguages.json.structure"
+        const val EXPRESSION_LANGUAGE_PROJECT = "expression-language"
+        const val EXPRESSION_LANGUAGE_MODULE = "exprs"
         const val DEFAULT_LIMIT = 100
     }
 }
