@@ -5,10 +5,8 @@ import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.NodeTarget
 import jetbrains.mps.extapi.persistence.FileDataSource
 import jetbrains.mps.project.Project
-import jetbrains.mps.smodel.persistence.def.v9.IdEncoder
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SNode
-import org.jetbrains.mps.openapi.model.SNodeId
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import java.nio.file.Path
 
@@ -19,7 +17,7 @@ class ModelNodeResolver(
     fun findNode(project: Project, target: NodeTarget): SNode? =
         when (target) {
             is NodeTarget.NodeReference -> persistence
-                .createNodeReference(target.nodeReference)
+                .createNodeReference(normalizeNodeReferenceSpelling(persistence, target.nodeReference))
                 .resolve(project.repository)
 
             is NodeTarget.InModel -> {
@@ -28,7 +26,12 @@ class ModelNodeResolver(
                         code = MpsErrorCode.MODEL_NOT_FOUND,
                         message = "model not found: ${target.modelTarget}",
                     )
-                model.getNode(parseNodeId(target.nodeId))
+                val nodeId = parseNodeIdOrNull(persistence, target.nodeId)
+                    ?: throw MpsRequestException(
+                        code = MpsErrorCode.INVALID_REQUEST,
+                        message = "could not parse node id: ${target.nodeId}",
+                    )
+                model.getNode(nodeId)
             }
         }
 
@@ -38,15 +41,6 @@ class ModelNodeResolver(
      * one.
      */
     fun findModelUnique(project: Project, modelTarget: String): SModel? = findSingleModel(project, modelTarget)
-
-    private fun parseNodeId(nodeId: String): SNodeId {
-        if (nodeId.all(Char::isDigit)) {
-            return requireNotNull(persistence.createNodeId(nodeId)) {
-                "could not parse nodeId: $nodeId"
-            }
-        }
-        return IdEncoder().parseNodeId(nodeId)
-    }
 
     private fun findSingleModel(project: Project, modelTarget: String): SModel? {
         val candidates = matchingModels(project, modelTarget)

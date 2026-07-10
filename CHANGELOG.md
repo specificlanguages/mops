@@ -2,6 +2,10 @@
 
 ## 0.3.0 (Unreleased)
 
+- Made both **Node ID** spellings — the decimal form mops prints and the encoded form persisted in `.mps` files —
+  resolve wherever a node id appears, including the id part of a serialized **Node Reference**. A reference copied
+  straight from a `.mps` file now resolves the same as one from mops output, in `model get-node`, `find usages`, `list`,
+  scope clauses, and `model edit` targets. A malformed id fails with a parse error rather than a misleading "not found".
 - Made `mops list` and every `mops find` subcommand print short concept names by default in text output, with
   `--full-concept` to restore the fully qualified names. Short names are safe as the default because they round-trip
   through the shared concept-name resolver. JSON output keeps qualified concept names regardless of the flag.

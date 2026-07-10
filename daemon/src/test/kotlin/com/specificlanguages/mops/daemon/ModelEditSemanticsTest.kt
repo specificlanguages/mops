@@ -42,6 +42,29 @@ class ModelEditSemanticsTest {
     }
 
     @Test
+    fun `set property by a node reference whose id uses the persisted spelling`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
+            val response = mpsAccess.write {
+                modelEdit(
+                    EditBatch(
+                        operations = listOf(
+                            EditOperation.SetProperty(
+                                target = EditTarget.NodeReference("$STRUCTURE_MODEL_REFERENCE/$JSON_FILE_ENCODED_NODE_ID"),
+                                name = "name",
+                                value = "RenamedJsonFile",
+                            ),
+                        ),
+                    ),
+                )
+            }
+
+            assertEquals(ModelEditResponse(created = emptyMap(), violations = emptyList()), response)
+            val node = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_NODE_REFERENCE)) }
+            assertEquals("RenamedJsonFile", propertyValue(node, "name"))
+        }
+    }
+
+    @Test
     fun `clear property by model target persists`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
             val model = projectPath.resolve(STRUCTURE_MODEL_PATH)
@@ -133,6 +156,8 @@ class ModelEditSemanticsTest {
         const val STRUCTURE_MODEL_REFERENCE = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
         const val STRUCTURE_MODEL_NAME = "com.specificlanguages.json.structure"
         const val JSON_FILE_NODE_ID = "2110045694544566904"
+        // The same node id in the encoded spelling MPS persists in .mps files.
+        const val JSON_FILE_ENCODED_NODE_ID = "1P8oQ4NaXDS"
         const val JSON_FILE_NODE_REFERENCE = "$STRUCTURE_MODEL_REFERENCE/$JSON_FILE_NODE_ID"
         const val STRUCTURE_MODEL_PATH = "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps"
     }

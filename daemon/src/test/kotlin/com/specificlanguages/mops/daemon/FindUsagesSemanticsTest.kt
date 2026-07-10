@@ -24,6 +24,16 @@ class FindUsagesSemanticsTest {
     }
 
     @Test
+    fun `finds usages of a node reference whose id uses the persisted spelling`() {
+        val payload = SharedMpsEnvironment.sharedMpsAccess.read {
+            findUsages(NodeTarget.NodeReference(IJSON_VALUE_ENCODED_REFERENCE), limit = DEFAULT_LIMIT)
+        }
+
+        assertTrue(payload.usages.isNotEmpty())
+        assertTrue(payload.usages.any { it.role == "intfc" }, "expected an implements usage, got: ${payload.usages}")
+    }
+
+    @Test
     fun `finds reference usages of a model target and node id`() {
         val payload = SharedMpsEnvironment.sharedMpsAccess.read {
             findUsages(
@@ -109,6 +119,9 @@ class FindUsagesSemanticsTest {
         const val IJSON_VALUE_NODE_ID = "2110045694544566909"
         const val IJSON_VALUE_REFERENCE =
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/$IJSON_VALUE_NODE_ID"
+        // The same reference with its id in the encoded spelling MPS persists in .mps files.
+        const val IJSON_VALUE_ENCODED_REFERENCE =
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/1P8oQ4NaXDX"
         const val DEFAULT_LIMIT = 100
     }
 }

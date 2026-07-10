@@ -9,6 +9,11 @@ FORMS
     <model-name>  the model's qualified name, in parentheses
     <node-id>     the node's id within that model, after the slash
 
+  The <node-id> has two interchangeable spellings: the decimal form mops prints,
+  and the shorter encoded form persisted in .mps files (e.g. 1P8oQ4NaXDS). A
+  reference resolves the same whichever spelling its id uses, so one copied from
+  a .mps file works verbatim.
+
   It is half-opaque: read the parts to understand what you are looking at, but
   copy a Node Reference WHOLE from mops output. Never construct one from pieces.
 

@@ -10,7 +10,6 @@ import jetbrains.mps.project.EditableFilteringScope
 import jetbrains.mps.project.GlobalScope
 import jetbrains.mps.project.Project
 import jetbrains.mps.smodel.SNodeUtil
-import jetbrains.mps.smodel.persistence.def.v9.IdEncoder
 import jetbrains.mps.util.CollectConsumer
 import org.jetbrains.mps.openapi.language.SAbstractConcept
 import org.jetbrains.mps.openapi.model.*
@@ -401,7 +400,7 @@ class JetBrainsMpsAccess(
         if (target.isEmpty()) {
             return ListTargetResolution.Found(ListTarget.Model(model))
         }
-        val rootSegmentId = parseNodeIdOrNull(target[0])
+        val rootSegmentId = parseNodeIdOrNull(persistence, target[0])
         val rootNodes = model.rootNodes
             .filter { nodeMatches(it, target[0], rootSegmentId) }
             .toList()
@@ -417,7 +416,7 @@ class JetBrainsMpsAccess(
 
         var node = rootNode
         for (segment in target.drop(1)) {
-            val segmentId = parseNodeIdOrNull(segment)
+            val segmentId = parseNodeIdOrNull(persistence, segment)
             val childNodes = node.children
                 .filter { nodeMatches(it, segment, segmentId) }
                 .toList()
@@ -464,7 +463,7 @@ class JetBrainsMpsAccess(
 
     private fun resolveNodeReference(target: String): SNode? =
         runCatching {
-            persistence.createNodeReference(target).resolve(project.repository)
+            persistence.createNodeReference(normalizeNodeReferenceSpelling(persistence, target)).resolve(project.repository)
         }.getOrNull()
 
     private fun resolveModelReference(target: String): SModel? =
@@ -525,15 +524,6 @@ class JetBrainsMpsAccess(
 
     private fun nodeMatches(node: SNode, name: String, nodeId: SNodeId?): Boolean =
         nodeName(node) == name || node.nodeId == nodeId
-
-    private fun parseNodeIdOrNull(nodeId: String): SNodeId? =
-        runCatching {
-            if (nodeId.all(Char::isDigit)) {
-                persistence.createNodeId(nodeId)
-            } else {
-                IdEncoder().parseNodeId(nodeId)
-            }
-        }.getOrNull()
 
     private fun listTargetForNode(node: SNode): ListTarget =
         if (node.parent == null) {

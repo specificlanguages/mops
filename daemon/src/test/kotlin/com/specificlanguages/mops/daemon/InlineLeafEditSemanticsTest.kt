@@ -10,6 +10,7 @@ import com.specificlanguages.mops.protocol.InlineReference
 import com.specificlanguages.mops.protocol.ModelDestination
 import com.specificlanguages.mops.protocol.MpsNodeJson
 import com.specificlanguages.mops.protocol.MpsNodePropertyJson
+import com.specificlanguages.mops.protocol.MpsNodeReferenceTargetJson
 import com.specificlanguages.mops.protocol.NodeTarget
 import java.nio.file.Path
 import kotlin.io.path.readText
@@ -169,6 +170,37 @@ class InlineLeafEditSemanticsTest {
         }
     }
 
+    @Test
+    fun `an inline reference target accepts a bare node id in the persisted spelling`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
+            val response = mpsAccess.write {
+                modelEdit(
+                    batchOf(
+                        EditOperation.AddChild(
+                            target = EditTarget.NodeReference(JSON_FILE_REF),
+                            role = "linkDeclaration",
+                            concept = LINK_DECLARATION,
+                            properties = listOf(MpsNodePropertyJson(name = "role", value = "viaEncodedId")),
+                            references = listOf(
+                                // A bare node id (no model) resolves within the owner model; here in the encoded
+                                // spelling MPS persists, which must resolve the same as the decimal form.
+                                InlineReference(
+                                    role = "target",
+                                    target = MpsNodeReferenceTargetJson(node = IJSON_VALUE_ENCODED_ID),
+                                ),
+                            ),
+                        ),
+                    ),
+                )
+            }
+            assertTrue(response.violations.isEmpty(), "expected no violations, got ${response.violations}")
+
+            val jsonFile = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_REF)) }
+            val link = childrenInRole(jsonFile, "linkDeclaration").single { propertyValueOrNull(it, "role") == "viaEncodedId" }
+            assertEquals(IJSON_VALUE_ID, link.references?.single { it.role == "target" }?.target?.node)
+        }
+    }
+
     private fun moveLeaf(role: String, source: String): InlineChild =
         InlineChild.Move(role = role, source = EditTarget.NodeReference(source))
 
@@ -196,5 +228,7 @@ class InlineLeafEditSemanticsTest {
         const val JSON_STRING_VALUE_REF = "$STRUCTURE_MODEL/$JSON_STRING_VALUE_ID"
         const val JSON_ARRAY_REF = "$STRUCTURE_MODEL/2110045694544569357"
         const val IJSON_VALUE_ID = "2110045694544566909"
+        // The same node id in the encoded spelling MPS persists in .mps files.
+        const val IJSON_VALUE_ENCODED_ID = "1P8oQ4NaXDX"
     }
 }

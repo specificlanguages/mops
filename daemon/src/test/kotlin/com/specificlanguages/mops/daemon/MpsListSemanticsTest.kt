@@ -206,6 +206,18 @@ class MpsListSemanticsTest {
     }
 
     @Test
+    fun `lists a node reference whose id uses the persisted spelling`() {
+        val root = SharedMpsEnvironment.sharedMpsAccess.read {
+            list(listOf("$STRUCTURE_MODEL_REFERENCE/1P8oQ4NaXDS"), depth = 1)
+        }
+
+        assertEquals("root", root.type)
+        assertEquals("JsonFile", root.name)
+        assertEquals(JSON_FILE_NODE_ID, root.id)
+        assertEquals(JSON_FILE_NODE_REFERENCE, root.reference)
+    }
+
+    @Test
     fun `lists containment children owned by child node path`() {
         val node = SharedMpsEnvironment.sharedMpsAccess.read {
             list(

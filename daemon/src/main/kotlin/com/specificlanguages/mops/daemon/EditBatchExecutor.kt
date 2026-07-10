@@ -235,7 +235,7 @@ class EditBatchExecutor(
                     "operation $index reference ${reference.role} is missing a target node id",
                 )
             val resolved = if (targetModel == null) {
-                runCatching { ownerModel.getNode(persistence.createNodeId(nodeId)) }.getOrNull()
+                parseNodeIdOrNull(persistence, nodeId)?.let(ownerModel::getNode)
             } else {
                 modelNodeResolver.findNode(project, NodeTarget.NodeReference("$targetModel/$nodeId"))
             }
