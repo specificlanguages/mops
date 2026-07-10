@@ -15,6 +15,7 @@ import jetbrains.mps.messages.IMessage
 import jetbrains.mps.messages.IMessageHandler
 import jetbrains.mps.messages.MessageKind
 import jetbrains.mps.progress.EmptyProgressMonitor
+import jetbrains.mps.project.AbstractModule
 import jetbrains.mps.project.Project
 import jetbrains.mps.project.dependency.GlobalModuleDependenciesManager
 import jetbrains.mps.smodel.Language
@@ -58,8 +59,13 @@ class ProjectMake(private val project: Project) {
 
     private fun runMake(models: List<SModel>): MakeResponse {
         // resources() reads the model graph and keeps only generatable models, grouped one MResource per module.
+        // But "generatable" is not the same as "writable": MPS ships its library languages and runtime solutions as
+        // *source* models inside `-src.jar` files, and those models report themselves generatable, so they survive
+        // ModelsToResources — yet writing their generation output into the jar fails ("Write for jar files is not
+        // supported"). We only ever intend to make project sources, so drop models of read-only (packaged) modules
+        // first. See docs/mps/make-generation.md.
         val resources: List<IResource> = project.modelAccess.computeReadAction<List<IResource>> {
-            ModelsToResources(models).resources().toList()
+            ModelsToResources(models.filter { it.isInWritableModule() }).resources().toList()
         }
 
         if (resources.isEmpty()) {
@@ -120,6 +126,12 @@ class ProjectMake(private val project: Project) {
         }
         return result
     }
+
+    // A model belongs to a writable module when its owning module is not read-only. Read-only modules are the deployed,
+    // jar-packaged libraries MPS ships pre-built; they must never be regenerated. Models with no resolvable module are
+    // kept — they are not the packaged-library case this guards against.
+    private fun SModel.isInWritableModule(): Boolean =
+        (module as? AbstractModule)?.isReadOnly != true
 
     private fun resolveProjectModule(name: String): SModule {
         val matches = project.projectModulesWithGenerators.filter {

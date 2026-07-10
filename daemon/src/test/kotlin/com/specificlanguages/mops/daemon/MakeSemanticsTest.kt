@@ -13,9 +13,10 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * Drives the real make against a copy of the `mps-json` fixture (make writes generated files, so the shared read-only
- * project cannot be used). Asserts that making a solution automatically makes the language it depends on, and that a
- * whole-project make succeeds.
+ * Drives the real make against fixture-project copies (make writes generated files, so the shared read-only project
+ * cannot be used). Asserts that making a solution automatically makes the language it depends on, that a whole-project
+ * make succeeds, that a module whose closure reaches jar-packaged library sources still makes, and that a broken model
+ * fails with reported errors.
  */
 class MakeSemanticsTest {
     @Test
@@ -28,6 +29,24 @@ class MakeSemanticsTest {
         assertEquals(MakeOutcome.SUCCESS, response.outcome, "unexpected errors: $errors")
         // The sandbox plus its dependency closure's generatable modules: at least the sandbox and the json language.
         assertTrue(response.moduleCount >= 2, "expected the language to be made too, got ${response.moduleCount}")
+    }
+
+    @Test
+    fun `making a module whose closure reaches jar-packaged library sources succeeds`() {
+        // `exprs` uses baseLanguage.closures/collections/tuples, whose runtime solutions MPS ships as source models
+        // inside `-src.jar` files. Those models report themselves generatable, so a naive make set includes them and
+        // fails trying to write generation output into the jar ("Write for jar files is not supported"). The make must
+        // drop read-only library modules and generate only the writable project sources.
+        val response = SharedMpsEnvironment.withProjectCopy(projectName = EXPRESSION_LANGUAGE) { access, _ ->
+            access.extra { makeModules(listOf("exprs")) }
+        }
+
+        val errors = response.messages.filter { it.kind == MakeMessageKind.ERROR }
+        assertEquals(MakeOutcome.SUCCESS, response.outcome, "unexpected errors: $errors")
+        assertTrue(
+            errors.none { it.text.contains("Write for jar files") },
+            "the make must not try to regenerate jar-packaged library modules; got ${errors.map { it.text }}",
+        )
     }
 
     @Test
@@ -90,5 +109,6 @@ class MakeSemanticsTest {
 
     private companion object {
         const val SANDBOX = "base-language-sandbox"
+        const val EXPRESSION_LANGUAGE = "expression-language"
     }
 }

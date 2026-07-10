@@ -148,8 +148,16 @@ actually collected.
 Source: `core/resources/source_gen/.../ModelsToResources.java`.
 
 - `ModelsToResources(models).resources()` keeps only models where `GenerationFacade.canGenerate(model)` is true —
-  i.e. `model instanceof GeneratableSModel && model.isGeneratable()`. Non-generatable models (read-only, stubs,
-  already-transient, etc.) are **silently dropped**.
+  i.e. `model instanceof GeneratableSModel && model.isGeneratable()`. Non-generatable models (stubs, already-transient,
+  etc.) are **silently dropped**.
+- **Generatable is not the same as writable.** MPS ships its library languages and runtime solutions
+  (`closures.runtime`, `collections.runtime`, `tuples.runtime`, `jetbrains.mps.lang.core`, …) as *source* models inside
+  `<module>-src.jar` archives. Those models are `GeneratableSModel` and report `isGeneratable() == true`, so
+  `ModelsToResources` keeps them — but their module is read-only and its output path is inside the jar, so generating
+  them throws `IOException("Write for jar files is not supported.")` from `JarEntryFile` (`mps-core.jar`;
+  `core/vfs/.../jar/JarEntryFile.java`). A caller that feeds a dependency closure (not just project sources) to the make
+  must therefore drop models whose owning module is read-only first — check `(module as AbstractModule).isReadOnly()`.
+  Making only `project.projectModulesWithGenerators` never hits this because project modules are writable.
 - Surviving models are grouped by their owning `SModule` into one `MResource` per module.
 - Consequence: an empty result means "nothing here is generatable", which is distinct from "generation failed". The
   reference tool maps this to a dedicated exit code (254, *nothing to generate*). Check for an empty resource list
@@ -269,9 +277,11 @@ val closure: Collection<SModule> =
 - Takes an optional `ErrorHandler` (default posts warnings) for dependencies that cannot be resolved.
 
 Feed the closure through the normal path — `module.models` → `ModelsToResources(...).resources()`. `ModelsToResources`
-drops every non-generatable module (deployed library languages, stubs, compiled solutions) via
-`GenerationFacade.canGenerate`, so the make set naturally narrows to the **source** modules in the closure; already-built
-library dependencies fall away on their own. The clusterizer then orders the survivors.
+drops non-generatable models via `GenerationFacade.canGenerate`, which sheds stubs and compiled-only solutions — but
+**not** deployed library languages/runtimes that ship their source in `-src.jar` archives: those models are generatable
+and survive, and generating them fails on the jar write (see the `ModelsToResources` section above). So a closure-based
+make must additionally drop models of read-only modules before handing them over; only then does the set narrow to the
+writable **source** modules you meant to build. The clusterizer then orders the survivors.
 
 **`COMPILE` does not include a used language's source module (verified).** A plain solution that *uses* a language `L`
 (its models import `L`) but has no module-level `<dependency>` on `L`'s module gets a `COMPILE` closure of **just
