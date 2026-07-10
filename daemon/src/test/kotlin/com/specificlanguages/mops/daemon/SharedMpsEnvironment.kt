@@ -6,8 +6,11 @@ import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.launcher.MpsLaunchArgs
 import de.itemis.mps.gradle.project.loader.EnvironmentKind
 import de.itemis.mps.gradle.project.loader.ProjectLoader
+import jetbrains.mps.classloading.ClassLoaderManager
+import jetbrains.mps.progress.EmptyProgressMonitor
 import jetbrains.mps.project.MPSProject
 import jetbrains.mps.project.Project
+import jetbrains.mps.smodel.MPSModuleRepository
 import jetbrains.mps.tool.environment.Environment
 import java.nio.file.Files
 import java.nio.file.Path
@@ -76,6 +79,21 @@ object SharedMpsEnvironment {
             return block(project, projectPath)
         } finally {
             environment.closeProject(project)
+            unloadOrphanedLanguageRuntimes()
+        }
+    }
+
+    // Closing the copy unregisters its modules from the environment-global repository, but any module the copy *made*
+    // keeps its compiled class runtime resident — keyed by module id, past the module's removal. A later test that opens
+    // a project sharing that module id would then see the language as loaded though it built nothing, so, e.g., a copy
+    // that makes a language pollutes every subsequent test in the JVM. `closeProject` does not drive the module through
+    // the class-loading unload path and neither time nor GC reconciles it; only an explicit reload does. reloadAll
+    // reconciles the class-loading registry against the (now smaller) repository and evicts those orphaned runtimes, so
+    // each copy starts from a clean slate. See docs/mps/module-runtime-unloading.md.
+    private fun unloadOrphanedLanguageRuntimes() {
+        val repository = MPSModuleRepository.getInstance()
+        repository.modelAccess.runWriteAction {
+            ClassLoaderManager.getInstance().reloadAll(EmptyProgressMonitor())
         }
     }
 
@@ -164,7 +182,9 @@ object SharedMpsEnvironment {
         val target = targetParent.resolve(projectName)
         Files.walk(source).use { paths ->
             paths.forEach { path ->
-                val destination = target.resolve(source.relativize(path).pathString)
+                val relative = source.relativize(path)
+                if (isGeneratedArtifact(relative)) return@forEach
+                val destination = target.resolve(relative.pathString)
                 if (Files.isDirectory(path)) {
                     destination.createDirectories()
                 } else {
@@ -174,6 +194,15 @@ object SharedMpsEnvironment {
         }
         return target
     }
+
+    // MPS build outputs (source_gen, classes_gen, and their .caches siblings) must never enter a test's working copy:
+    // opening a copy that already carries a compiled language would load that language's runtime and make its concepts
+    // resolve, so the copy would no longer reproduce an as-yet-unmade language.
+    private fun isGeneratedArtifact(relative: Path): Boolean =
+        (0 until relative.nameCount).any { index ->
+            val segment = relative.getName(index).pathString
+            segment.endsWith("_gen") || segment.endsWith("_gen.caches")
+        }
 
     private fun requiredPathProperty(name: String): Path =
         Path.of(requireNotNull(System.getProperty(name)) { "missing system property $name" })
