@@ -143,11 +143,13 @@ object SharedMpsEnvironment {
         GeneralSettings.getInstance().confirmOpenNewProject = GeneralSettings.OPEN_PROJECT_NEW_WINDOW
     }
 
+    // idea.home.path / idea.config.path / idea.system.path are supplied as launch-time -D arguments by the Gradle test
+    // task, not set here. The IntelliJ platform locks on idea.config.path / idea.system.path and caches them on first
+    // PathManager access, so a runtime System.setProperty can lose that race and fall back to a shared per-product
+    // directory, colliding across worktrees. See the daemon build script's test task. The remaining MpsLaunchArgs -D
+    // properties are read later than PathManager initialization, so setting them at runtime here is safe.
     private fun applyMpsSystemProperties() {
         val mpsHome = requiredPathProperty("test.mpsHome")
-        System.setProperty("idea.home.path", mpsHome.pathString)
-        System.setProperty("idea.config.path", Files.createTempDirectory("mops-idea-config").pathString)
-        System.setProperty("idea.system.path", Files.createTempDirectory("mops-idea-system").pathString)
         MpsLaunchArgs.getJvmArgsFor(mpsHome)
             .filter { it.startsWith("-D") && it.contains('=') }
             .forEach { argument ->

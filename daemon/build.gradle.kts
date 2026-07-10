@@ -129,11 +129,24 @@ tasks.test {
         },
     )
     jvmArgs(mpsAddOpens)
+    val mpsTestWorkDir = layout.buildDirectory.dir("mps-test")
     jvmArgumentProviders.add {
+        // The IntelliJ platform's single-instance DirectoryLock is keyed on idea.config.path / idea.system.path, and
+        // PathManager caches those on first access. So they must be launch-time -D arguments, not runtime
+        // System.setProperty calls: a runtime set can lose the race against PathManager's caching and fall back to the
+        // shared per-product default directory, at which point two test JVMs in different worktrees collide on one lock
+        // ("Only one instance of MPS can be run at a time"). Rooting them under this module's build/ makes them
+        // per-worktree, and stable across runs the way the production daemon's per-project dirs are.
+        val work = mpsTestWorkDir.get().asFile
+        val configDir = work.resolve("idea-config").apply { mkdirs() }
+        val systemDir = work.resolve("idea-system").apply { mkdirs() }
         listOf(
             "-Dtest.mpsHome=${testMpsRoot.get()}",
             "-Dtest.projectsDir=${rootDir.resolve("test-projects")}",
             "-Djava.awt.headless=true",
+            "-Didea.home.path=${testMpsRoot.get()}",
+            "-Didea.config.path=$configDir",
+            "-Didea.system.path=$systemDir",
         )
     }
 }
