@@ -135,6 +135,18 @@ class MpsListSemanticsTest {
     }
 
     @Test
+    fun `lists root nodes owned by a bare model name as a single segment`() {
+        // "com.specificlanguages.json.structure" is a unique model name and no module bears it, so the single segment
+        // resolves to the model without spelling out its owning module.
+        val model = SharedMpsEnvironment.sharedMpsAccess.read { list(listOf("com.specificlanguages.json.structure"), depth = 1) }
+
+        assertEquals("model", model.type)
+        assertEquals("com.specificlanguages.json.structure", model.name)
+        assertEquals(STRUCTURE_MODEL_REFERENCE, model.reference)
+        assertNotNull(model.children?.singleOrNull { it.name == "JsonFile" })
+    }
+
+    @Test
     fun `lists root nodes owned by serialized model reference`() {
         val model = SharedMpsEnvironment.sharedMpsAccess.read { list(listOf(STRUCTURE_MODEL_REFERENCE), depth = 1) }
 
@@ -250,8 +262,10 @@ class MpsListSemanticsTest {
 
     @Test
     fun `limits depth across module model root and child traversal`() {
+        // Addressed by serialized module reference: the bare name "com.specificlanguages.json.build" also names a model
+        // in this solution, so as a single segment it is ambiguous by counting (see the ambiguity test below).
         val module = SharedMpsEnvironment.sharedMpsAccess.read {
-            list(listOf("com.specificlanguages.json.build"), depth = 4)
+            list(listOf(BUILD_MODULE_REFERENCE), depth = 4)
         }
 
         assertEquals("module", module.type)
@@ -321,10 +335,13 @@ class MpsListSemanticsTest {
                 mpsAccess.read { list(listOf("com.specificlanguages.json.build"), depth = 1) }
             }
 
+            // Counting every interpretation, the name matches both modules and the solution's same-named model, so the
+            // candidate list is typed (module/model) with a serialized reference apiece.
             assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, exception.code)
-            assertContains(exception.message, "ambiguous module target com.specificlanguages.json.build")
+            assertContains(exception.message, "ambiguous target com.specificlanguages.json.build")
             assertContains(exception.message, BUILD_MODULE_REFERENCE)
             assertContains(exception.message, duplicateReference)
+            assertContains(exception.message, BUILD_MODEL_REFERENCE)
         }
     }
 

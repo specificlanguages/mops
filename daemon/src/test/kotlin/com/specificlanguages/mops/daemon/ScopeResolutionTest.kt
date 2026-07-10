@@ -60,6 +60,76 @@ class ScopeResolutionTest {
     }
 
     @Test
+    fun `resolves a bare model name as a single segment to a model scope`() {
+        assertEquals(
+            ResolvedScope.Model(STRUCTURE_MODEL_REFERENCE),
+            SharedMpsEnvironment.sharedMpsAccess.read { resolveScope(listOf(STRUCTURE_MODEL)) },
+        )
+    }
+
+    @Test
+    fun `resolves a bare model name carrying a stereotype by its full name`() {
+        val stereotypedReference = "r:11111111-2222-4333-8444-555555555555(com.specificlanguages.json.structure@tests)"
+
+        SharedMpsEnvironment.withProjectCopy(
+            prepare = { project ->
+                val model = project.resolve(STRUCTURE_MODEL_PATH)
+                model.resolveSibling("com.specificlanguages.json.structure@tests.mps").writeText(
+                    model.readText().replace(STRUCTURE_MODEL_REFERENCE, stereotypedReference),
+                )
+            },
+        ) { mpsAccess, _ ->
+            // The stereotype is part of the full Model Name, so it must be given to match this model, and dropping it
+            // still resolves the original.
+            assertEquals(
+                ResolvedScope.Model(stereotypedReference),
+                mpsAccess.read { resolveScope(listOf("com.specificlanguages.json.structure@tests")) },
+            )
+            assertEquals(
+                ResolvedScope.Model(STRUCTURE_MODEL_REFERENCE),
+                mpsAccess.read { resolveScope(listOf(STRUCTURE_MODEL)) },
+            )
+        }
+    }
+
+    @Test
+    fun `reports a module and its same-named model as an ambiguous single segment`() {
+        val exception = assertFailsWith<MpsRequestException> {
+            SharedMpsEnvironment.sharedMpsAccess.read { resolveScope(listOf(BUILD_MODULE)) }
+        }
+
+        assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, exception.code)
+        assertContains(exception.message, "ambiguous target $BUILD_MODULE")
+        assertContains(exception.message, BUILD_MODULE_REFERENCE)
+        assertContains(exception.message, BUILD_MODEL_REFERENCE)
+        assertContains(exception.message, "mops explain scope")
+    }
+
+    @Test
+    fun `reports two same-named models as an ambiguous single segment`() {
+        val duplicateReference = "r:11111111-2222-4333-8444-555555555555(com.specificlanguages.json.structure)"
+
+        SharedMpsEnvironment.withProjectCopy(
+            prepare = { project ->
+                val model = project.resolve(STRUCTURE_MODEL_PATH)
+                model.resolveSibling("duplicate.structure.mps").writeText(
+                    model.readText().replace(STRUCTURE_MODEL_REFERENCE, duplicateReference),
+                )
+            },
+        ) { mpsAccess, _ ->
+            val exception = assertFailsWith<MpsRequestException> {
+                mpsAccess.read { resolveScope(listOf(STRUCTURE_MODEL)) }
+            }
+
+            assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, exception.code)
+            assertContains(exception.message, "ambiguous target $STRUCTURE_MODEL")
+            assertContains(exception.message, STRUCTURE_MODEL_REFERENCE)
+            assertContains(exception.message, duplicateReference)
+            assertContains(exception.message, "mops explain scope")
+        }
+    }
+
+    @Test
     fun `resolves a root node by path or reference to a subtree scope`() {
         val byPath = SharedMpsEnvironment.sharedMpsAccess.read {
             resolveScope(listOf(LANGUAGE_MODULE, STRUCTURE_MODEL, "JsonFile"))
@@ -114,7 +184,7 @@ class ScopeResolutionTest {
             }
 
             assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, exception.code)
-            assertContains(exception.message, "ambiguous module target com.specificlanguages.json.build")
+            assertContains(exception.message, "ambiguous target com.specificlanguages.json.build")
             assertContains(exception.message, duplicateReference)
             assertContains(exception.message, "mops explain scope")
         }
@@ -125,6 +195,11 @@ class ScopeResolutionTest {
         const val LANGUAGE_MODULE_REFERENCE = "f3f42ddf-d692-4c29-90fb-7360196f01ab(com.specificlanguages.json)"
         const val STRUCTURE_MODEL = "com.specificlanguages.json.structure"
         const val STRUCTURE_MODEL_REFERENCE = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
+        const val STRUCTURE_MODEL_PATH = "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps"
         const val JSON_FILE_NODE_REFERENCE = "$STRUCTURE_MODEL_REFERENCE/2110045694544566904"
+        // The build solution's module and its main model share this name — a natural module/model collision.
+        const val BUILD_MODULE = "com.specificlanguages.json.build"
+        const val BUILD_MODULE_REFERENCE = "84f0ad52-c7ca-45dd-99c5-9605c96bf808(com.specificlanguages.json.build)"
+        const val BUILD_MODEL_REFERENCE = "r:1044fb59-f691-4b27-8b09-aa9b966feb0e(com.specificlanguages.json.build)"
     }
 }

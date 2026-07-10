@@ -389,17 +389,11 @@ class JetBrainsMpsAccess(
         }
 
         if (target.size == 1) {
-            resolveNodeReference(target.single())?.let {
-                return ListTargetResolution.Found(listTargetForNode(it))
-            }
+            return resolveSingleSegment(target.single())
         }
 
         resolveModelReference(target[0])?.let {
             return resolveModelPathTarget(it, target.drop(1))
-        }
-
-        if (target.size == 1) {
-            return resolveProjectModuleTarget(target.single())
         }
 
         val module = when (val resolution = resolveProjectModuleTarget(target[0])) {
@@ -453,27 +447,82 @@ class JetBrainsMpsAccess(
         return ListTargetResolution.Found(ListTarget.Node(node))
     }
 
-    private fun ambiguousModuleTarget(target: String, modules: List<SModule>): ListTargetResolution.Ambiguous =
-        ambiguousTarget("module", target, modules) {
-            "module\t${it.moduleName}\t${persistence.asString(it.moduleReference)}"
+    // A single navigation segment is resolved by counting every interpretation that actually matches — a serialized node
+    // reference, a serialized model reference, a project model by name, or a project module by name or reference — rather
+    // than by the segment's shape. A unique match wins; more than one (a module and a model sharing a name, or two
+    // same-named models) is reported ambiguous with one typed, serialized candidate per match, so the caller can retry
+    // with a reference. Serialized references and unique module names are unaffected: those forms match a single kind.
+    private fun resolveSingleSegment(segment: String): ListTargetResolution {
+        val candidates = LinkedHashMap<String, ListTarget>()
+
+        resolveNodeReference(segment)?.let {
+            candidates["node:${persistence.asString(it.reference)}"] = listTargetForNode(it)
         }
+        resolveModelReference(segment)?.let {
+            candidates["model:${persistence.asString(it.reference)}"] = ListTarget.Model(it)
+        }
+        matchingProjectModels(segment).forEach {
+            candidates["model:${persistence.asString(it.reference)}"] = ListTarget.Model(it)
+        }
+        matchingProjectModules(segment).forEach {
+            candidates["module:${persistence.asString(it.moduleReference)}"] = ListTarget.Module(it)
+        }
+
+        val targets = candidates.values.toList()
+        return when (targets.size) {
+            0 -> ListTargetResolution.Missing
+            1 -> ListTargetResolution.Found(targets.single())
+            else -> ambiguousSingleSegment(segment, targets)
+        }
+    }
+
+    private fun matchingProjectModels(segment: String): List<SModel> =
+        project.projectModulesWithGenerators
+            .asSequence()
+            .flatMap { it.models.asSequence() }
+            .filter { it.name.value == segment }
+            .distinctBy { persistence.asString(it.reference) }
+            .toList()
+
+    private fun ambiguousSingleSegment(segment: String, targets: List<ListTarget>): ListTargetResolution.Ambiguous =
+        ListTargetResolution.Ambiguous(
+            "ambiguous target $segment:\n" + targets.joinToString("\n", transform = ::candidateRow),
+        )
+
+    // One candidate line of a mixed-kind single-segment ambiguity, using the same per-kind row format each single-kind
+    // ambiguity below emits, so the "ambiguous …" listing reads the same however the candidates were counted.
+    private fun candidateRow(target: ListTarget): String =
+        when (target) {
+            is ListTarget.Module -> moduleRow(target.module)
+            is ListTarget.Model -> modelRow(target.model)
+            is ListTarget.RootNode -> rootNodeRow(target.node)
+            is ListTarget.Node -> childNodeRow(target.node)
+        }
+
+    private fun moduleRow(module: SModule): String =
+        "module\t${module.moduleName}\t${persistence.asString(module.moduleReference)}"
+
+    private fun modelRow(model: SModel): String =
+        "model\t${model.name.value}\t${persistence.asString(model.reference)}"
+
+    private fun rootNodeRow(node: SNode): String =
+        "root\t${nodeName(node) ?: "<unnamed>"}\t${persistence.asString(node.nodeId)}\t${persistence.asString(node.reference)}"
+
+    private fun childNodeRow(node: SNode): String =
+        "node\t${node.containmentLink?.role.orEmpty()}\t${nodeName(node) ?: "<unnamed>"}\t" +
+            "${persistence.asString(node.nodeId)}\t${persistence.asString(node.reference)}"
+
+    private fun ambiguousModuleTarget(target: String, modules: List<SModule>): ListTargetResolution.Ambiguous =
+        ambiguousTarget("module", target, modules, ::moduleRow)
 
     private fun ambiguousModelTarget(modelName: String, models: List<SModel>): ListTargetResolution.Ambiguous =
-        ambiguousTarget("model", modelName, models) {
-            "model\t${it.name.value}\t${persistence.asString(it.reference)}"
-        }
+        ambiguousTarget("model", modelName, models, ::modelRow)
 
     private fun ambiguousRootNodeTarget(target: String, nodes: List<SNode>): ListTargetResolution.Ambiguous =
-        ambiguousTarget("root node", target, nodes) {
-            "root\t${nodeName(it) ?: "<unnamed>"}\t" +
-                "${persistence.asString(it.nodeId)}\t${persistence.asString(it.reference)}"
-        }
+        ambiguousTarget("root node", target, nodes, ::rootNodeRow)
 
     private fun ambiguousChildNodeTarget(target: String, nodes: List<SNode>): ListTargetResolution.Ambiguous =
-        ambiguousTarget("child node", target, nodes) {
-            "node\t${it.containmentLink?.role.orEmpty()}\t${nodeName(it) ?: "<unnamed>"}\t" +
-                "${persistence.asString(it.nodeId)}\t${persistence.asString(it.reference)}"
-        }
+        ambiguousTarget("child node", target, nodes, ::childNodeRow)
 
     private fun <T> ambiguousTarget(
         kind: String,

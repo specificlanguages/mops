@@ -108,6 +108,19 @@ class FindInstancesSemanticsTest {
     }
 
     @Test
+    fun `scopes an instances search to a bare model name as a single segment`() {
+        val inModel = SharedMpsEnvironment.sharedMpsAccess.read {
+            findInstances(CONCEPT_DECLARATION, exact = false, limit = 0, scope = resolveScope(listOf(STRUCTURE_MODEL)))
+        }
+
+        assertTrue(inModel.nodes.isNotEmpty(), "the structure model should hold concept declarations")
+        assertTrue(
+            inModel.nodes.all { it.reference.contains("($STRUCTURE_MODEL)") },
+            "every model-scoped result must belong to the structure model: ${inModel.nodes}",
+        )
+    }
+
+    @Test
     fun `scopes an instances search to a node subtree returning only descendants`() {
         val inSubtree = SharedMpsEnvironment.sharedMpsAccess.read {
             findInstances(

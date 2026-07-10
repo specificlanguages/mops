@@ -2,6 +2,13 @@
 
 ## 0.3.0 (Unreleased)
 
+- Made a bare **Model Name** resolve as a single **Navigation Target** segment, so `mops list <model-name>` and a scope
+  clause `in <model-name>` both work without spelling out the owning module. A single segment now counts every
+  interpretation that matches — a serialized node reference, a serialized model reference, a project model by name, or a
+  project module by name or reference — and a unique match wins. A name that matches more than one thing (a module and a
+  same-named model, as most solutions have, or two same-named models in different modules) is reported ambiguous, one
+  typed serialized candidate per line, so a serialized reference disambiguates it. Serialized references and unique
+  module names are unaffected. See `mops explain scope`.
 - Added `mops find node-by-id <id> [in <scope>]` for the pasted-from-grep flow: given a bare **Node ID** in either
   spelling, it reports every node with that id — one per model, since a Node ID is unique only within its model — each
   as a standard node summary row with its full **Node Reference**. Zero matches is a successful empty result; a

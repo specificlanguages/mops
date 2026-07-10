@@ -29,6 +29,9 @@ SEGMENTS
     <module>                 A module, by name or serialized module reference.
     <module> <model>         A model within a module. A `.suffix` model segment
                              expands against the module name.
+    <model-name>             A model, by its full name (a single segment). A name
+                             that is also a module name, or names two models,
+                             is ambiguous (see RESOLUTION).
     <model-reference>        A model, by serialized model reference.
     <node-reference>         A Root Node or nested node subtree, by serialized
                              node reference.
