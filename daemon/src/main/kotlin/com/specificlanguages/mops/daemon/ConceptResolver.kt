@@ -76,18 +76,29 @@ class ConceptResolver(private val project: Project) {
 
     /** Concepts of every loaded language whose short name is exactly [shortName], one per qualified name. */
     private fun conceptsNamed(shortName: String): List<SAbstractConcept> =
-        languageRegistry.allLanguages
-            .flatMap { it.concepts }
-            .filter { it.name == shortName }
-            .distinctBy { it.qualifiedName }
+        allConcepts().filter { it.name == shortName }.distinctBy { it.qualifiedName }
 
     /** Qualified names of loaded concepts whose short name resembles [shortName], closest first. */
     private fun similarConceptNamesAcrossLanguages(shortName: String): List<String> =
-        languageRegistry.allLanguages
-            .flatMap { it.concepts }
+        rankBySimilarity(shortName, allConcepts()) { it.qualifiedName }
+
+    /** Every concept of every loaded language. */
+    private fun allConcepts(): List<SAbstractConcept> =
+        languageRegistry.allLanguages.flatMap { it.concepts }
+
+    /**
+     * The [project]ed names of [concepts] whose short name resembles [query], closest first and one per projected
+     * name, capped at [MAX_SUGGESTIONS].
+     */
+    private fun rankBySimilarity(
+        query: String,
+        concepts: Iterable<SAbstractConcept>,
+        project: (SAbstractConcept) -> String,
+    ): List<String> =
+        concepts
             .mapNotNull { concept ->
                 concept.name.takeIf(String::isNotBlank)
-                    ?.let { name -> similarity(shortName, name)?.let { concept.qualifiedName to it } }
+                    ?.let { name -> similarity(query, name)?.let { project(concept) to it } }
             }
             .distinctBy { it.first }
             .sortedWith(compareBy({ it.second }, { it.first }))
@@ -117,13 +128,7 @@ class ConceptResolver(private val project: Project) {
     private fun similarConceptNames(parsed: ConceptName): List<String> {
         val language = languageRegistry.allLanguages.firstOrNull { it.qualifiedName == parsed.language }
             ?: return emptyList()
-        return language.concepts
-            .mapNotNull { it.name.takeIf(String::isNotBlank) }
-            .distinct()
-            .mapNotNull { candidate -> similarity(parsed.shortName, candidate)?.let { candidate to it } }
-            .sortedWith(compareBy({ it.second }, { it.first }))
-            .take(MAX_SUGGESTIONS)
-            .map { it.first }
+        return rankBySimilarity(parsed.shortName, language.concepts) { it.name }
     }
 
     private fun notFound(message: String): MpsRequestException =
