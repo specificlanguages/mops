@@ -247,6 +247,30 @@ class JetBrainsMpsAccess(
             )
         }
 
+        override fun findNodeById(nodeId: String, scope: ResolvedScope, limit: Int): FindNodeByIdResponse {
+            val id = parseNodeIdOrNull(persistence, nodeId)
+                ?: throw MpsRequestException(
+                    code = MpsErrorCode.INVALID_REQUEST,
+                    message = "could not parse node id: $nodeId",
+                )
+
+            // A Node ID is unique within a model, so at most one node per model matches; collecting across the scope's
+            // models yields one row per model that holds it, never a guess between them.
+            val matches = when (val domain = searchDomainFor(scope)) {
+                is SearchDomain.MpsScope -> domain.searchScope.models.mapNotNull { it.getNode(id) }
+                is SearchDomain.Subtree -> subtreeNodes(domain.root).filter { it.nodeId == id }.toList()
+            }
+
+            val ordered = matches.sortedBy { persistence.asString(it.reference) }
+            val selected = if (limit > 0) ordered.take(limit) else ordered
+
+            return FindNodeByIdResponse(
+                limit = limit,
+                truncated = selected.size < ordered.size,
+                nodes = selected.map { nodeSummary(it, persistence) },
+            )
+        }
+
         override fun diagnoseModules(): ModulesDiagnosticsResponse =
             ModuleLoadDiagnostics(project).diagnoseModules()
 

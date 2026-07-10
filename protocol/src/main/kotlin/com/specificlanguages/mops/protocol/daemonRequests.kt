@@ -112,6 +112,22 @@ data class FindByNameRequest(
 ) : DaemonRequest
 
 /**
+ * Request to find every node whose **Node ID** equals [nodeId], across all models in scope. A Node ID is unique only
+ * within its model, so a search reports one match per model that holds it. [nodeId] accepts either spelling — the
+ * decimal form mops prints or the encoded form persisted in `.mps` files. Searches editable project sources by default;
+ * an explicit [scope] (the raw navigation-target segments of an `in` clause) is searched exhaustively, including
+ * read-only library and stub models within it. `["/"]` names the whole repository.
+ */
+@Serializable
+@SerialName("find-node-by-id")
+data class FindNodeByIdRequest(
+    override val token: String,
+    val nodeId: String,
+    val scope: List<String>? = null,
+    val limit: Int,
+) : DaemonRequest
+
+/**
  * Request to apply one batch of Edit Operations as a unit inside the project daemon, with best-effort atomicity.
  */
 @Serializable

@@ -2,6 +2,7 @@ package com.specificlanguages.mops.daemon.core
 
 import com.specificlanguages.mops.protocol.FindByNameResponse
 import com.specificlanguages.mops.protocol.FindInstancesResponse
+import com.specificlanguages.mops.protocol.FindNodeByIdResponse
 import com.specificlanguages.mops.protocol.FindUsagesResponse
 import com.specificlanguages.mops.protocol.NodeFilter
 import com.specificlanguages.mops.protocol.ModuleDiagnosticResponse
@@ -77,6 +78,18 @@ interface MpsRead {
         scope: ResolvedScope = ResolvedScope.EditableProjectSources,
         limit: Int,
     ): FindUsagesResponse
+
+    /**
+     * Finds every node whose **Node ID** equals [nodeId] across all models in [scope], one match per model that holds
+     * it — a Node ID is unique only within its model. [nodeId] accepts either spelling (decimal or the persisted encoded
+     * form). A malformed id fails with [MpsErrorCode.INVALID_REQUEST]; a well-formed id matching nothing returns an
+     * empty result, which is a success.
+     */
+    fun findNodeById(
+        nodeId: String,
+        scope: ResolvedScope = ResolvedScope.EditableProjectSources,
+        limit: Int,
+    ): FindNodeByIdResponse
 
     /**
      * Diagnoses the load state of the project's languages and Java-bearing modules, reporting for each unloaded one why

@@ -11,6 +11,7 @@ import picocli.CommandLine.ParentCommand
         FindInstancesCommand::class,
         FindUsagesCommand::class,
         FindRootByNameCommand::class,
+        FindNodeByIdCommand::class,
         RecursiveHelpCommand::class,
     ],
 )

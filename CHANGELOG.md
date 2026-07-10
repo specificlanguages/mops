@@ -2,6 +2,11 @@
 
 ## 0.3.0 (Unreleased)
 
+- Added `mops find node-by-id <id> [in <scope>]` for the pasted-from-grep flow: given a bare **Node ID** in either
+  spelling, it reports every node with that id — one per model, since a Node ID is unique only within its model — each
+  as a standard node summary row with its full **Node Reference**. Zero matches is a successful empty result; a
+  malformed id fails with a parse error. `in <scope>`, `--limit`, `--json`, and `--refs-only` behave as in the other
+  find subcommands. See `mops explain node-ref` and `mops explain scope`.
 - Made both **Node ID** spellings — the decimal form mops prints and the encoded form persisted in `.mps` files —
   resolve wherever a node id appears, including the id part of a serialized **Node Reference**. A reference copied
   straight from a `.mps` file now resolves the same as one from mops output, in `model get-node`, `find usages`, `list`,

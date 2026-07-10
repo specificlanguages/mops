@@ -786,6 +786,42 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `find-node-by-id request and nodes-by-id response JSON carry node results`() {
+        val request = FindNodeByIdRequest(token = "secret", nodeId = "1P8oQ4NaXDS", limit = 100, scope = listOf("/"))
+        val serializedRequest = ProtocolJson.encodeRequest(request)
+
+        assertContains(serializedRequest, """"type":"find-node-by-id"""")
+        assertContains(serializedRequest, """"nodeId":"1P8oQ4NaXDS"""")
+        assertContains(serializedRequest, """"limit":100""")
+        assertContains(serializedRequest, """"scope":["/"]""")
+        assertEquals(request, ProtocolJson.decodeRequest(serializedRequest))
+
+        assertEquals(
+            FindNodeByIdRequest(token = "secret", nodeId = "1P8oQ4NaXDS", limit = 100, scope = null),
+            ProtocolJson.decodeRequest(
+                """{"type":"find-node-by-id","token":"secret","nodeId":"1P8oQ4NaXDS","limit":100}""",
+            ),
+        )
+
+        val response = FindNodeByIdResponse(
+            limit = 100,
+            truncated = false,
+            nodes = listOf(
+                MpsNodeSummaryJson(
+                    type = "root",
+                    name = "JsonObject",
+                    concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                    reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905",
+                ),
+            ),
+        )
+        val serializedResponse = ProtocolJson.encodeResponse(response)
+
+        assertContains(serializedResponse, """"type":"nodes-by-id"""")
+        assertEquals(response, ProtocolJson.decodeResponse(serializedResponse))
+    }
+
+    @Test
     fun `find request JSON carries the scope segments and defaults them to absent`() {
         val usagesTarget = NodeTarget.NodeReference(
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",

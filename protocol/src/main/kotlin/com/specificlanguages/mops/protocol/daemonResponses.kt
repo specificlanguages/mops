@@ -102,6 +102,18 @@ data class FindByNameResponse(
 ) : DaemonResponse
 
 /**
+ * Successful response carrying bounded node-by-id search results — one per model whose [Node ID][FindNodeByIdRequest]
+ * matched. A well-formed id matching nothing yields an empty [nodes] list, which is a success, not a failure.
+ */
+@Serializable
+@SerialName("nodes-by-id")
+data class FindNodeByIdResponse(
+    val limit: Int,
+    val truncated: Boolean,
+    val nodes: List<MpsNodeSummaryJson>,
+) : DaemonResponse
+
+/**
  * Successful response for an applied Edit Operation batch.
  */
 @Serializable
