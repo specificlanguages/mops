@@ -1,7 +1,7 @@
 package com.specificlanguages.mops.daemon
 
 import com.intellij.ide.GeneralSettings
-import com.intellij.openapi.project.DumbService
+import com.intellij.testFramework.IndexingTestUtil
 import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.launcher.MpsLaunchArgs
 import de.itemis.mps.gradle.project.loader.EnvironmentKind
@@ -109,13 +109,16 @@ object SharedMpsEnvironment {
 
     // Mirrors ProjectLoader.withOpenProject, which the daemon boots through: pending platform events must be
     // flushed before the project's models become visible. Find operations are index-backed, so the project must
-    // additionally leave dumb mode before they return results; the daemon gets that time for free while it sets up
-    // its socket, but tests query immediately after opening.
+    // additionally finish indexing before they return results; the daemon gets that time for free while it sets up
+    // its socket, but tests query immediately after opening. waitForSmartMode is not enough — the unindexed-files
+    // scan is scheduled asynchronously, so a freshly opened project can be momentarily "smart" before the scan is
+    // even queued, and an index-backed find then sees an empty index. waitUntilIndexesAreReady forces the initial
+    // scan to be submitted and blocks until it completes. It must run off any read/write action (it is here).
     private fun openProject(projectPath: Path): Project {
         val project = environment.openProject(projectPath.toFile())
         environment.flushAllEvents()
         if (project is MPSProject) {
-            DumbService.getInstance(project.project).waitForSmartMode()
+            IndexingTestUtil.waitUntilIndexesAreReady(project.project)
         }
         return project
     }
