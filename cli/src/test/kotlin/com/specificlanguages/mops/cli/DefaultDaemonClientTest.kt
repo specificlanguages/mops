@@ -1,6 +1,9 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DefaultDaemonClient
+import com.specificlanguages.mops.protocol.FindingSeverity
+import com.specificlanguages.mops.protocol.ModelCheckFindingJson
+import com.specificlanguages.mops.protocol.ModelCheckResponse
 import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
@@ -178,6 +181,35 @@ class DefaultDaemonClientTest {
         usagesDaemon.join(5_000)
         assertContains(usagesDaemon.requestsReceived.single(), "\"type\":\"find-usages\"")
         assertContains(usagesDaemon.requestsReceived.single(), "\"scope\":[\"/\"]")
+    }
+
+    @Test
+    fun `check model sends target and limit request`() {
+        val response = ModelCheckResponse(
+            limit = 20,
+            truncated = false,
+            findings = listOf(
+                ModelCheckFindingJson(
+                    severity = FindingSeverity.ERROR,
+                    message = "Unresolved reference",
+                    node = MpsNodeSummaryJson(
+                        type = "node",
+                        name = null,
+                        concept = "jetbrains.mps.baseLanguage.structure.VariableReference",
+                        reference = "r:9363093b-3fa9-4e39-87cb-26240d0efa37(baselanguage.sandbox)/4LxqAFFLQFr",
+                    ),
+                ),
+            ),
+        )
+        val daemon = startPrerecordedDaemon(response)
+
+        val actual = DefaultDaemonClient(daemon.port, "secret").checkModel("baselanguage.sandbox", limit = 20)
+
+        daemon.join(5_000)
+        assertEquals(response, actual)
+        assertContains(daemon.requestsReceived.single(), "\"type\":\"model-check\"")
+        assertContains(daemon.requestsReceived.single(), "\"target\":\"baselanguage.sandbox\"")
+        assertContains(daemon.requestsReceived.single(), "\"limit\":20")
     }
 
     @Test

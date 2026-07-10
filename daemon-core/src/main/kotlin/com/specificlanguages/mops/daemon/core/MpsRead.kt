@@ -5,6 +5,7 @@ import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindUsagesResponse
 import com.specificlanguages.mops.protocol.ModuleDiagnosticResponse
 import com.specificlanguages.mops.protocol.ModulesDiagnosticsResponse
+import com.specificlanguages.mops.protocol.ModelCheckResponse
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import com.specificlanguages.mops.protocol.MpsNodeJson
 import com.specificlanguages.mops.protocol.NodeTarget
@@ -17,6 +18,15 @@ interface MpsRead {
     fun list(target: List<String>?, depth: Int): MpsListEntryJson
 
     fun getNode(target: NodeTarget, ancestry: Boolean = false): MpsNodeJson
+
+    /**
+     * Runs MPS's full **Model Check** (typesystem and checking rules) over the model addressed by [target] (the same
+     * model-target grammar `getNode` uses) and returns the findings, sorted most severe first and bounded by [limit]
+     * (a [limit] of `0` or less returns every finding). Read-only: the model is never modified or saved. Fails with
+     * [MpsErrorCode.MODEL_NOT_FOUND] when the target resolves to no model, or [MpsErrorCode.AMBIGUOUS_TARGET] when it
+     * matches more than one.
+     */
+    fun checkModel(target: String, limit: Int): ModelCheckResponse
 
     /**
      * Resolves the optional `in`-clause [segments] of a find into a validated [ResolvedScope], reusing the navigation

@@ -27,6 +27,7 @@ class JetBrainsMpsAccess(
     private val jsonNodeExporter: JsonNodeExporter = JsonNodeExporter(),
     private val editorNodeRenderer: EditorNodeRenderer = EditorNodeRenderer(),
     private val modelNodeResolver: ModelNodeResolver = ModelNodeResolver(logger),
+    private val modelChecker: ModelChecker = ModelChecker(),
     private val editBatchExecutor: EditBatchExecutor = EditBatchExecutor(modelNodeResolver),
     private val persistence: PersistenceFacade = PersistenceFacade.getInstance(),
     private val writeTransaction: WriteTransaction = WriteTransaction(),
@@ -85,6 +86,15 @@ class JetBrainsMpsAccess(
         override fun getNode(target: NodeTarget, ancestry: Boolean): MpsNodeJson =
             jsonNodeExporter.export(resolveNode(target), ancestry)
 
+        override fun checkModel(target: String, limit: Int): ModelCheckResponse {
+            val model = modelNodeResolver.findModelUnique(project, target)
+                ?: throw MpsRequestException(
+                    code = MpsErrorCode.MODEL_NOT_FOUND,
+                    message = "model not found: $target",
+                )
+            return modelChecker.check(project, model, limit)
+        }
+
         // Resolves the node to render and, unless [allowReflective], refuses a subtree whose concepts did not resolve.
         // The editor render itself is deliberately not done here: it must run on the EDT and would deadlock if driven
         // from inside this read action (see [MpsAccess.renderNode]). So this returns the node for the caller to render
@@ -136,7 +146,7 @@ class JetBrainsMpsAccess(
                 limit = limit,
                 truncated = selected.size < references.size,
                 usages = selected.map {
-                    MpsNodeUsageJson(role = it.link.name, owner = nodeSummary(it.sourceNode))
+                    MpsNodeUsageJson(role = it.link.name, owner = nodeSummary(it.sourceNode, persistence))
                 },
             )
         }
@@ -155,7 +165,7 @@ class JetBrainsMpsAccess(
             return FindInstancesResponse(
                 limit = limit,
                 truncated = selected.size < instances.size,
-                nodes = selected.map { nodeSummary(it) },
+                nodes = selected.map { nodeSummary(it, persistence) },
             )
         }
 
@@ -190,7 +200,7 @@ class JetBrainsMpsAccess(
             return FindByNameResponse(
                 limit = limit,
                 truncated = selected.size < ordered.size,
-                nodes = selected.map { nodeSummary(it) },
+                nodes = selected.map { nodeSummary(it, persistence) },
             )
         }
 
@@ -273,16 +283,6 @@ class JetBrainsMpsAccess(
         private fun resolveSubtreeNode(reference: String): SNode =
             resolveNodeReference(reference)
                 ?: throw MpsRequestException(MpsErrorCode.NODE_NOT_FOUND, "node not found: $reference")
-
-        protected fun nodeSummary(node: SNode): MpsNodeSummaryJson =
-            MpsNodeSummaryJson(
-                type = if (node.parent == null) "root" else "node",
-                name = nodeName(node),
-                concept = node.concept.qualifiedName,
-                conceptValid = node.concept.isValid,
-                reference = persistence.asString(node.reference),
-                parent = nodeParent(node, fullChain = false, persistence),
-            )
 
         private fun resolveNode(target: NodeTarget): SNode =
             modelNodeResolver.findNode(project, target)

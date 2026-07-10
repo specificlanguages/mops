@@ -42,6 +42,8 @@ dependencies {
     mpsRuntime(mpsZip.map {
         zipTree(it.singleFile).matching {
             include("lib/mps-core.jar")
+            // CheckerRegistry, which drives the full Model Check (see ModelChecker).
+            include("lib/mps-project-check.jar")
             // Editor cell rendering (headless node-to-text). See docs/mps/editor-cell-rendering.md.
             include("lib/mps-editor.jar")
             include("lib/mps-editor-api.jar")

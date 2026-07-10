@@ -5,6 +5,7 @@ import com.specificlanguages.mops.protocol.FindByNameResponse
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindUsagesResponse
 import com.specificlanguages.mops.protocol.MakeResponse
+import com.specificlanguages.mops.protocol.ModelCheckResponse
 import com.specificlanguages.mops.protocol.ModuleDiagnosticResponse
 import com.specificlanguages.mops.protocol.ModulesDiagnosticsResponse
 import com.specificlanguages.mops.protocol.ModelEditResponse
@@ -22,6 +23,12 @@ interface DaemonClient {
     fun ping(): PongResponse
     fun getNode(target: NodeTarget, ancestry: Boolean = false): ModelGetNodeResponse
     fun renderNode(target: NodeTarget, allowReflective: Boolean = false): ModelRenderNodeResponse
+
+    /**
+     * Runs MPS's full **Model Check** over the model named by [target] and returns the findings, bounded by [limit]
+     * (`0` or less returns every finding).
+     */
+    fun checkModel(target: String, limit: Int): ModelCheckResponse
     fun findUsages(target: NodeTarget, limit: Int, scope: List<String>? = null): FindUsagesResponse
     fun findInstances(concept: String, exact: Boolean, limit: Int, scope: List<String>? = null): FindInstancesResponse
     fun findByName(pattern: String, limit: Int, scope: List<String>? = null): FindByNameResponse

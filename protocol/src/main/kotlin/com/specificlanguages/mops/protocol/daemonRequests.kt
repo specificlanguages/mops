@@ -49,6 +49,21 @@ data class ModelRenderNodeRequest(
 ) : DaemonRequest
 
 /**
+ * Request to run MPS's full **Model Check** (typesystem and checking rules) over one **MPS Model**, addressed by the
+ * same model-target grammar `get-node` uses, and report the findings. Read-only: the model is never modified or saved.
+ *
+ * [limit] bounds how many findings are returned; the daemon sorts by severity (errors first) before truncating, so the
+ * most severe findings survive. A [limit] of `0` or less returns every finding.
+ */
+@Serializable
+@SerialName("model-check")
+data class ModelCheckRequest(
+    override val token: String,
+    val target: String,
+    val limit: Int,
+) : DaemonRequest
+
+/**
  * Request to find references to one resolved MPS node. Searches editable project sources by default; an explicit
  * [scope] (the raw navigation-target segments of an `in` clause) is searched exhaustively, including read-only library
  * and stub models within it. `["/"]` names the whole repository.

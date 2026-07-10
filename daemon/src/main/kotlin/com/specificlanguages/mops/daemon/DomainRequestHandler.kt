@@ -18,6 +18,8 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
                     text = mpsAccess.extra { renderNode(request.target, request.allowReflective) },
                 )
 
+                is ModelCheckRequest -> mpsAccess.read { checkModel(request.target, request.limit) }
+
                 is FindUsagesRequest -> mpsAccess.read {
                     findUsages(request.target, request.limit, resolveScope(request.scope))
                 }

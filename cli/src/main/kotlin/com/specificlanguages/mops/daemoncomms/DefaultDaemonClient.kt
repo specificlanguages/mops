@@ -17,6 +17,8 @@ import com.specificlanguages.mops.protocol.FindUsagesResponse
 import com.specificlanguages.mops.protocol.MakeModulesRequest
 import com.specificlanguages.mops.protocol.MakeProjectRequest
 import com.specificlanguages.mops.protocol.MakeResponse
+import com.specificlanguages.mops.protocol.ModelCheckRequest
+import com.specificlanguages.mops.protocol.ModelCheckResponse
 import com.specificlanguages.mops.protocol.DiagnoseModuleRequest
 import com.specificlanguages.mops.protocol.DiagnoseModulesRequest
 import com.specificlanguages.mops.protocol.ModuleDiagnosticResponse
@@ -72,6 +74,12 @@ class DefaultDaemonClient(
         exchange(
             ModelRenderNodeRequest(token = token, target = target, allowReflective = allowReflective),
             ModelRenderNodeResponse::class.java
+        )
+
+    override fun checkModel(target: String, limit: Int): ModelCheckResponse =
+        exchange(
+            ModelCheckRequest(token = token, target = target, limit = limit),
+            ModelCheckResponse::class.java
         )
 
     override fun findUsages(target: NodeTarget, limit: Int, scope: List<String>?): FindUsagesResponse =

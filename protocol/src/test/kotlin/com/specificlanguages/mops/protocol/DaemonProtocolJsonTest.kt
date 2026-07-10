@@ -582,6 +582,64 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `model-check request JSON carries the model target and limit`() {
+        val request = ModelCheckRequest(token = "secret", target = "baselanguage.sandbox", limit = 20)
+        val serialized = ProtocolJson.encodeRequest(request)
+
+        assertContains(serialized, """"type":"model-check"""")
+        assertContains(serialized, """"target":"baselanguage.sandbox"""")
+        assertContains(serialized, """"limit":20""")
+        assertEquals(request, ProtocolJson.decodeRequest(serialized))
+    }
+
+    @Test
+    fun `model-check response JSON carries findings with severity, node reference, name, and concept`() {
+        val model = "r:9363093b-3fa9-4e39-87cb-26240d0efa37(baselanguage.sandbox)"
+        val response = ModelCheckResponse(
+            limit = 20,
+            truncated = true,
+            findings = listOf(
+                ModelCheckFindingJson(
+                    severity = FindingSeverity.ERROR,
+                    message = "Unresolved reference",
+                    node = MpsNodeSummaryJson(
+                        type = "node",
+                        name = "b",
+                        concept = "jetbrains.mps.baseLanguage.structure.VariableReference",
+                        reference = "$model/4LxqAFFLQFr",
+                    ),
+                    category = "typesystem",
+                    rule = "reference",
+                ),
+                // A model-level finding names no node.
+                ModelCheckFindingJson(severity = FindingSeverity.WARNING, message = "deprecated model layout"),
+            ),
+        )
+        val serialized = ProtocolJson.encodeResponse(response)
+
+        assertContains(serialized, """"type":"model-check"""")
+        assertContains(serialized, """"severity":"error"""")
+        assertContains(serialized, """"severity":"warning"""")
+        assertContains(serialized, """"concept":"jetbrains.mps.baseLanguage.structure.VariableReference"""")
+        assertContains(serialized, """"reference":"$model/4LxqAFFLQFr"""")
+        assertContains(serialized, """"truncated":true""")
+        assertEquals(response, ProtocolJson.decodeResponse(serialized))
+    }
+
+    @Test
+    fun `a single finding round-trips for JSONL output`() {
+        val finding = ModelCheckFindingJson(
+            severity = FindingSeverity.INFO,
+            message = "informational note",
+        )
+        val encoded = ProtocolJson.encodeFinding(finding)
+
+        assertContains(encoded, """"severity":"info"""")
+        assertFalse(encoded.contains(""""node""""), "a nodeless finding must omit the node field: $encoded")
+        assertEquals(finding, ProtocolJson.decodeFinding(encoded))
+    }
+
+    @Test
     fun `find-usages request and response JSON carry usage results`() {
         val target = NodeTarget.NodeReference(
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
