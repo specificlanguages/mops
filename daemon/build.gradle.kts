@@ -19,8 +19,8 @@ plugins {
     id("com.specificlanguages.jbr-toolchain") version "1.0.2"
 }
 
-val mpsZip: Configuration by configurations.creating
-val mpsRuntime: Configuration by configurations.creating
+val mpsZip = configurations.register("mpsZip") { isCanBeConsumed = false }
+val mpsRuntime = configurations.register("mpsRuntime") { isCanBeConsumed = false }
 
 configurations {
     compileOnly { extendsFrom(mpsRuntime) }
@@ -39,21 +39,23 @@ dependencies {
     testImplementation("com.github.stefanbirkner:system-lambda:1.2.1")
     testImplementation("org.mockito.kotlin:mockito-kotlin:6.3.0")
 
-    mpsRuntime(zipTree({ mpsZip.singleFile }).matching {
-        include("lib/mps-core.jar")
-        include("lib/mps-collections.jar")
-        include("lib/mps-closures.jar")
-        include("lib/mps-environment.jar")
-        include("lib/mps-persistence.jar")
-        include("lib/mps-platform.jar")
-        include("lib/mps-openapi.jar")
-        include("lib/mps-references.jar")
-        include("lib/mps-constraints-runtime.jar")
-        include("lib/util.jar")
-        include("lib/util-8.jar")
-        include("lib/util_rt.jar")
-        include("lib/testFramework.jar")
-        include("lib/app.jar")
+    mpsRuntime(mpsZip.map {
+        zipTree(it.singleFile).matching {
+            include("lib/mps-core.jar")
+            include("lib/mps-collections.jar")
+            include("lib/mps-closures.jar")
+            include("lib/mps-environment.jar")
+            include("lib/mps-persistence.jar")
+            include("lib/mps-platform.jar")
+            include("lib/mps-openapi.jar")
+            include("lib/mps-references.jar")
+            include("lib/mps-constraints-runtime.jar")
+            include("lib/util.jar")
+            include("lib/util-8.jar")
+            include("lib/util_rt.jar")
+            include("lib/testFramework.jar")
+            include("lib/app.jar")
+        }
     })
     mpsZip("com.jetbrains:mps:2025.1.2")
 }
@@ -63,7 +65,7 @@ application {
     mainClass = "com.specificlanguages.mops.daemon.MainKt"
 }
 
-val testMpsRoot = mpsPlatformCache.getMpsRoot(configurations.named("mpsZip"))
+val testMpsRoot = mpsPlatformCache.getMpsRoot(mpsZip)
 
 // Keep in sync with MpsLaunchArgs.MPS_ADD_OPENS in the launcher project: --add-opens must be a JVM launch
 // argument, so the test JVM cannot apply the launcher's list at runtime the way it applies -D properties.
@@ -201,6 +203,6 @@ val checkDaemonRelocation by tasks.registering {
     }
 }
 
-tasks.named("check") {
+tasks.check {
     dependsOn(checkDaemonRelocation)
 }

@@ -129,7 +129,7 @@ tasks.register<Test>("integrationTest") {
     }
 }
 
-tasks.named("check") {
+tasks.check {
     dependsOn("integrationTest")
 }
 

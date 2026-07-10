@@ -17,11 +17,11 @@ subprojects {
     version = rootProject.version
 }
 
-tasks.named("check") {
+tasks.check {
     dependsOn(subprojects.map { "${it.path}:check" })
 }
 
-tasks.named("build") {
+tasks.build {
     dependsOn(subprojects.map { "${it.path}:build" })
 }
 

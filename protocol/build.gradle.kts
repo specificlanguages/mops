@@ -39,6 +39,6 @@ configurations.runtimeElements {
     outgoing.artifact(tasks.shadowJar)
 }
 
-tasks.named("assemble") {
+tasks.assemble {
     dependsOn(tasks.shadowJar)
 }
