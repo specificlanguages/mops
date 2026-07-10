@@ -7,7 +7,6 @@ import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
 import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.NodeTarget
-import kotlin.io.path.pathString
 import kotlin.io.path.readText
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -52,7 +51,7 @@ class ModelEditSemanticsTest {
                     EditBatch(
                         operations = listOf(
                             EditOperation.SetProperty(
-                                target = EditTarget.InModel(modelTarget = model.pathString, nodeId = JSON_FILE_NODE_ID),
+                                target = EditTarget.InModel(modelTarget = STRUCTURE_MODEL_NAME, nodeId = JSON_FILE_NODE_ID),
                                 name = "conceptAlias",
                             ),
                         ),
@@ -61,7 +60,7 @@ class ModelEditSemanticsTest {
             }
 
             val node = mpsAccess.read {
-                getNode(NodeTarget.InModel(modelTarget = model.pathString, nodeId = JSON_FILE_NODE_ID))
+                getNode(NodeTarget.InModel(modelTarget = STRUCTURE_MODEL_NAME, nodeId = JSON_FILE_NODE_ID))
             }
             assertNull(propertyValueOrNull(node, "conceptAlias"))
             val persisted = model.readText()
@@ -132,6 +131,7 @@ class ModelEditSemanticsTest {
 
     private companion object {
         const val STRUCTURE_MODEL_REFERENCE = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
+        const val STRUCTURE_MODEL_NAME = "com.specificlanguages.json.structure"
         const val JSON_FILE_NODE_ID = "2110045694544566904"
         const val JSON_FILE_NODE_REFERENCE = "$STRUCTURE_MODEL_REFERENCE/$JSON_FILE_NODE_ID"
         const val STRUCTURE_MODEL_PATH = "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps"

@@ -19,6 +19,4 @@ interface MpsWrite : MpsRead {
      * cannot be checked because its language did not load.
      */
     fun modelEdit(batch: EditBatch, constraints: ConstraintEnforcement = ConstraintEnforcement.BEST_EFFORT): ModelEditResponse
-
-    fun resave(modelTarget: String)
 }

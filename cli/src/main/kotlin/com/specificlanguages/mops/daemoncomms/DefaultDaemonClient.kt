@@ -25,8 +25,6 @@ import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.ModelGetNodeRequest
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
-import com.specificlanguages.mops.protocol.ModelResaveRequest
-import com.specificlanguages.mops.protocol.ModelResaveResponse
 import com.specificlanguages.mops.protocol.MpsListRequest
 import com.specificlanguages.mops.protocol.MpsListResponse
 import com.specificlanguages.mops.protocol.PingRequest
@@ -38,9 +36,7 @@ import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.InetAddress
 import java.net.Socket
-import java.nio.file.Path
 import java.time.Duration
-import kotlin.io.path.pathString
 
 /**
  * Synchronous daemon client.
@@ -63,12 +59,6 @@ class DefaultDaemonClient(
 
     fun stop(): StoppedResponse =
         exchange(StopRequest(token = token), StoppedResponse::class.java)
-
-    override fun resave(modelTarget: Path): ModelResaveResponse =
-        exchange(
-            ModelResaveRequest(token = token, modelTarget = modelTarget.pathString),
-            ModelResaveResponse::class.java
-        )
 
     override fun getNode(target: NodeTarget, ancestry: Boolean): ModelGetNodeResponse =
         exchange(

@@ -13,7 +13,6 @@ import picocli.CommandLine.ParentCommand
     subcommands = [
         ModelGetNodeCommand::class,
         ModelEditCommand::class,
-        ModelResaveCommand::class,
         RecursiveHelpCommand::class,
     ],
 )

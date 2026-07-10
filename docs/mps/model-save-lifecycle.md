@@ -7,7 +7,7 @@ safe only if nothing was written behind mops's back.
 
 **Answer:** in the headless daemon, no. Models are written to disk **only** when mops explicitly calls
 `SModel.save(...)` (through `WriteTransaction.WriteScope.saveWithResolveInfo`). MPS's one automatic model-save bridge is
-gated off in headless mode, and nothing else on the daemon's read/edit/resave paths saves.
+gated off in headless mode, and nothing else on the daemon's read/edit paths saves.
 
 Verified against MPS **2025.1.2** (`com.jetbrains:mps:2025.1.2`). Source references below are to the
 [JetBrains/MPS](https://github.com/JetBrains/MPS) repository, paths relative to its root.
@@ -52,7 +52,7 @@ app via `MPSHeadlessPlatformStarter` and sets `java.awt.headless=true`
 
 - Every other caller of `SaveRepositoryCommand` / `EditableSModelBase.save` is an interactive workbench action —
   refactoring dialogs, module/model properties, `MakeActionImpl`, migration wizards, VCS conflict tracking. None sit on
-  mops's read / `model edit` / `resave` paths.
+  mops's read / `model edit` paths.
 - The `autosave` string in `EditableSModelBase.resolveConflict0()` is a *warning message* shown on external-file
   conflict (it even notes MPS does "saveAll on each fs reload" — that is the `IdeMPSFileSaver` path above), not a
   self-scheduled save.

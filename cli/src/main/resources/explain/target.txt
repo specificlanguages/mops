@@ -5,7 +5,7 @@ FORMS
        "r:<model-id>(<model-name>)/<node-id>"
      Anatomy: the r: tag, the model id, the (model name), a slash, the node id.
   2. Model plus node id object:
-       {"model": "<model file or path>", "nodeId": "<node-id>"}
+       {"model": "<model name or reference>", "nodeId": "<node-id>"}
   3. Batch-local alias:
        "$name" — a node created earlier in the same batch via an "as" alias.
 

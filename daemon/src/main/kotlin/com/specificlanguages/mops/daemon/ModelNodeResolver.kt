@@ -10,7 +10,6 @@ import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SNode
 import org.jetbrains.mps.openapi.model.SNodeId
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
-import java.nio.file.Files
 import java.nio.file.Path
 
 class ModelNodeResolver(
@@ -33,19 +32,10 @@ class ModelNodeResolver(
             }
         }
 
-    fun findModel(project: Project, modelTarget: String): SModel? {
-        val candidates = matchingModels(project, modelTarget)
-        val model = candidates.firstOrNull()
-        if (model == null) {
-            logMissingModelTarget(project, modelTarget)
-        }
-        return model
-    }
-
     /**
      * Resolves a model target to a single model, failing with [MpsErrorCode.AMBIGUOUS_TARGET] when more than one model
      * matches. Used where addressing a wrong model would be a mutation, so an ambiguous target must never silently pick
-     * one (unlike [findModel]).
+     * one.
      */
     fun findModelUnique(project: Project, modelTarget: String): SModel? = findSingleModel(project, modelTarget)
 
@@ -75,16 +65,13 @@ class ModelNodeResolver(
         return model
     }
 
-    private fun matchingModels(project: Project, modelTarget: String): List<SModel> {
-        val targetPath = targetPath(modelTarget)
-        return modelCandidates(project)
+    private fun matchingModels(project: Project, modelTarget: String): List<SModel> =
+        modelCandidates(project)
             .filter { model ->
                 model.name.value == modelTarget ||
-                    persistence.asString(model.reference) == modelTarget ||
-                    targetPath != null && model.filePath() == targetPath
+                    persistence.asString(model.reference) == modelTarget
             }
             .toList()
-    }
 
     private fun logMissingModelTarget(project: Project, modelTarget: String) {
         val candidates = modelCandidates(project).toList()
@@ -99,17 +86,6 @@ class ModelNodeResolver(
             project.projectModulesWithGenerators.asSequence().flatMap { it.models.asSequence() } +
                 project.repository.modules.asSequence().flatMap { it.models.asSequence() }
             ).distinctBy { it.reference }
-
-    private fun targetPath(modelTarget: String): Path? =
-        runCatching {
-            Path.of(modelTarget).let { path ->
-                if (Files.exists(path)) {
-                    path.toRealPath()
-                } else {
-                    path.toAbsolutePath().normalize()
-                }
-            }
-        }.getOrNull()
 
     private fun SModel.filePath(): Path? =
         source.runCatching {

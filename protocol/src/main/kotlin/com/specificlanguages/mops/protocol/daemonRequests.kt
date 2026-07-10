@@ -21,16 +21,6 @@ data class PingRequest(override val token: String) : DaemonRequest
 data class StopRequest(override val token: String) : DaemonRequest
 
 /**
- * Request to resave one model target inside the project daemon.
- */
-@Serializable
-@SerialName("model-resave")
-data class ModelResaveRequest(
-    override val token: String,
-    val modelTarget: String,
-) : DaemonRequest
-
-/**
  * Request to export one node from the project daemon.
  */
 @Serializable

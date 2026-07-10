@@ -8,7 +8,6 @@ This checkout is a Gradle-rooted Kotlin prototype with two application subprojec
 ```sh
 mops --help
 mops --mps-home /path/to/mps daemon ping
-mops --mps-home /path/to/mps model resave path/to/model
 mops --mps-home /path/to/mps model edit --file edit-batch.json
 mops daemon status
 mops daemon stop
@@ -25,13 +24,6 @@ mops --mps-home <path> daemon ping
 Starts or reuses the persistent daemon for the current MPS project, exchanges one ping request over a loopback socket,
 and prints the structured response. The command walks upward from the current directory until it finds a `.mps`
 directory.
-
-```sh
-mops --mps-home <path> model resave <model-target>
-```
-
-Resaves one model target through the daemon-backed MPS APIs. The command infers the MPS project, starts or reuses a
-per-project daemon, and asks that daemon to persist the target model.
 
 ```sh
 mops --mps-home <path> model edit [--file PATH] [--constraints advisory|best-effort|strict]

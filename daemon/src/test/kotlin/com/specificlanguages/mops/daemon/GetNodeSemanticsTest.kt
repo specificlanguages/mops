@@ -5,7 +5,6 @@ import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.MpsNodeJson
 import com.specificlanguages.mops.protocol.MpsNodeReferenceTargetJson
 import com.specificlanguages.mops.protocol.NodeTarget
-import kotlin.io.path.pathString
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 import kotlin.test.Test
@@ -21,7 +20,7 @@ class GetNodeSemanticsTest {
 
     @Test
     fun `exports node json`() {
-        val node = getNodeInSharedProject(NodeTarget.InModel(structureModelPath(), JSON_FILE_NODE_ID))
+        val node = getNodeInSharedProject(NodeTarget.InModel(structureModelName(), JSON_FILE_NODE_ID))
 
         assertEquals(STRUCTURE_MODEL_REFERENCE, node.model)
         assertEquals("jetbrains.mps.lang.structure.structure.ConceptDeclaration", node.concept)
@@ -36,7 +35,7 @@ class GetNodeSemanticsTest {
 
     @Test
     fun `enriches reference targets with the target name and concept`() {
-        val node = getNodeInSharedProject(NodeTarget.InModel(structureModelPath(), JSON_FILE_NODE_ID))
+        val node = getNodeInSharedProject(NodeTarget.InModel(structureModelName(), JSON_FILE_NODE_ID))
 
         // Cross-model target: extends points at BaseConcept in jetbrains.mps.lang.core.structure.
         val extends = requireNotNull(node.references).single { it.role == "extends" }
@@ -75,7 +74,7 @@ class GetNodeSemanticsTest {
 
     @Test
     fun `accepts compact regular node id`() {
-        val node = getNodeInSharedProject(NodeTarget.InModel(structureModelPath(), "1P8oQ4NaXDS"))
+        val node = getNodeInSharedProject(NodeTarget.InModel(structureModelName(), "1P8oQ4NaXDS"))
 
         assertEquals(JSON_FILE_NODE_ID, node.id)
         assertEquals("JsonFile", propertyValue(node, "name"))
@@ -123,7 +122,7 @@ class GetNodeSemanticsTest {
 
     @Test
     fun `omits parent role from addressed non-root node`() {
-        val node = getNodeInSharedProject(NodeTarget.InModel(structureModelPath(), "1P8oQ4NaXDT"))
+        val node = getNodeInSharedProject(NodeTarget.InModel(structureModelName(), "1P8oQ4NaXDT"))
 
         assertEquals("jetbrains.mps.lang.structure.structure.InterfaceConceptReference", node.concept)
         assertNull(node.role)
@@ -131,7 +130,7 @@ class GetNodeSemanticsTest {
 
     @Test
     fun `includes the immediate parent of an addressed node`() {
-        val node = getNodeInSharedProject(NodeTarget.InModel(structureModelPath(), "1P8oQ4NaXDT"))
+        val node = getNodeInSharedProject(NodeTarget.InModel(structureModelName(), "1P8oQ4NaXDT"))
 
         val parent = assertNotNull(node.parent)
         assertEquals("root", parent.type)
@@ -211,8 +210,7 @@ class GetNodeSemanticsTest {
         return requireNotNull(linkDeclaration.references).single { it.role == "target" }.target
     }
 
-    private fun structureModelPath(): String =
-        SharedMpsEnvironment.sharedProjectPath.resolve(STRUCTURE_MODEL_PATH).pathString
+    private fun structureModelName(): String = "com.specificlanguages.json.structure"
 
     private companion object {
         const val STRUCTURE_MODEL_REFERENCE = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"

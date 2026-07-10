@@ -19,12 +19,6 @@ class DaemonProtocolJsonTest {
             ProtocolJson.decodeRequest("""{"type":"stop","token":"secret"}"""),
         )
         assertEquals(
-            ModelResaveRequest(token = "secret", modelTarget = "/project/models/main.mps"),
-            ProtocolJson.decodeRequest(
-                """{"type":"model-resave","token":"secret","modelTarget":"/project/models/main.mps"}""",
-            ),
-        )
-        assertEquals(
             ModelGetNodeRequest(
                 token = "secret",
                 target = NodeTarget.InModel(
@@ -770,11 +764,11 @@ class DaemonProtocolJsonTest {
 
     @Test
     fun `decoding a request that omits a required non-null field is rejected`() {
-        // A required non-null field (modelTarget) omitted from the JSON is rejected rather than left null.
+        // A required non-null field (module) omitted from the JSON is rejected rather than left null.
         val exception = assertFailsWith<SerializationException> {
-            ProtocolJson.decodeRequest("""{"type":"model-resave","token":"secret"}""")
+            ProtocolJson.decodeRequest("""{"type":"diagnose-module","token":"secret"}""")
         }
-        assertContains(exception.message ?: "", "modelTarget")
+        assertContains(exception.message ?: "", "module")
     }
 
     @Test

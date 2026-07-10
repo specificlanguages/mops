@@ -39,7 +39,7 @@ class CommandHelpTest {
         val output = runHelp("model", "--help")
 
         assertContains(output, "get-node")
-        assertContains(output, "resave")
+        assertContains(output, "edit")
     }
 
     @Test
@@ -102,7 +102,6 @@ class CommandHelpTest {
             arrayOf("find", "root-by-name"),
             arrayOf("model", "get-node"),
             arrayOf("model", "edit"),
-            arrayOf("model", "resave"),
             arrayOf("daemon", "ping"),
             arrayOf("daemon", "status"),
             arrayOf("daemon", "stop"),

@@ -23,8 +23,6 @@ import com.specificlanguages.mops.protocol.ModelEditRequest
 import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.ModelGetNodeRequest
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
-import com.specificlanguages.mops.protocol.ModelResaveRequest
-import com.specificlanguages.mops.protocol.ModelResaveResponse
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import com.specificlanguages.mops.protocol.MpsListRequest
 import com.specificlanguages.mops.protocol.MpsListResponse
@@ -168,15 +166,6 @@ class DomainRequestHandlerTest {
     }
 
     @Test
-    fun `model-resave writes and wraps the target`() {
-        val response = handler.handleDomainRequest(ModelResaveRequest(TOKEN, modelTarget = "some.model"))
-
-        assertEquals(ModelResaveResponse(modelTarget = "some.model"), response)
-        verify(operations).resave("some.model")
-        verifyNoMoreInteractions(operations)
-    }
-
-    @Test
     fun `make-modules makes the requested modules and returns the result directly`() {
         val expected = MakeResponse(MakeOutcome.SUCCESS, moduleCount = 2, messages = emptyList())
         whenever(make.makeModules(listOf("moduleA", "moduleB"))).thenReturn(expected)
@@ -237,10 +226,11 @@ class DomainRequestHandlerTest {
 
     @Test
     fun `a request exception on a write path maps to its error code`() {
+        val batch = EditBatch(operations = emptyList())
         doThrow(MpsRequestException(MpsErrorCode.MODEL_NOT_FOUND, "model not found: some.model"))
-            .whenever(operations).resave("some.model")
+            .whenever(operations).modelEdit(batch)
 
-        val response = handler.handleDomainRequest(ModelResaveRequest(TOKEN, modelTarget = "some.model"))
+        val response = handler.handleDomainRequest(ModelEditRequest(TOKEN, batch))
 
         assertEquals(errorResponse("MODEL_NOT_FOUND", "model not found: some.model"), response)
     }

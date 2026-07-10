@@ -28,11 +28,6 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
 
                 is ModelEditRequest -> mpsAccess.write { modelEdit(request.batch, request.constraints) }
 
-                is ModelResaveRequest -> {
-                    mpsAccess.write { resave(request.modelTarget) }
-                    ModelResaveResponse(modelTarget = request.modelTarget)
-                }
-
                 is MpsListRequest -> MpsListResponse(
                     root = mpsAccess.read { list(target = request.target, depth = request.depth) },
                 )

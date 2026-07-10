@@ -32,7 +32,7 @@ class DefaultDaemonClientTest {
 
         val actual = DefaultDaemonClient(daemon.port, "secret").getNode(
             NodeTarget.InModel(
-                modelTarget = "/project/models/main.mps",
+                modelTarget = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
                 nodeId = "2110045694544566904",
             ),
         )
@@ -41,7 +41,7 @@ class DefaultDaemonClientTest {
         assertEquals(response, actual)
         assertContains(daemon.requestsReceived.single(), "\"type\":\"model-get-node\"")
         assertContains(daemon.requestsReceived.single(), "\"target\"")
-        assertContains(daemon.requestsReceived.single(), "\"modelTarget\":\"/project/models/main.mps\"")
+        assertContains(daemon.requestsReceived.single(), "\"modelTarget\":\"r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)\"")
         assertContains(daemon.requestsReceived.single(), "\"nodeId\":\"2110045694544566904\"")
     }
 

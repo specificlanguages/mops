@@ -249,27 +249,6 @@ class JetBrainsMpsAccess(
     ) : JetBrainsMpsRead(), MpsWrite {
         override fun modelEdit(batch: EditBatch, constraints: ConstraintEnforcement): ModelEditResponse =
             editBatchExecutor.apply(project, batch, writeScope, constraints)
-
-        override fun resave(modelTarget: String) {
-            val model = modelNodeResolver.findModel(project, modelTarget)
-                ?: throw MpsRequestException(
-                    code = MpsErrorCode.MODEL_NOT_FOUND,
-                    message = "model not found: $modelTarget",
-                )
-            val editable = writeScope.asEditable(model)
-                ?: throw MpsRequestException(
-                    code = MpsErrorCode.MODEL_READ_ONLY,
-                    message = "model is not editable: ${model.name.longName}",
-                )
-
-            when (val outcome = writeScope.saveWithResolveInfo(listOf(editable))) {
-                SaveOutcome.Saved -> Unit
-                is SaveOutcome.SaveFailed -> throw MpsRequestException(
-                    code = MpsErrorCode.SAVE_FAILED,
-                    message = "model save failed for ${outcome.model.name.longName}: ${outcome.result}",
-                )
-            }
-        }
     }
 
     private inner class JetBrainsMpsMake : MpsMake {

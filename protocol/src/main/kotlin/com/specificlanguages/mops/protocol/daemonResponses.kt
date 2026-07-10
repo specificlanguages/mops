@@ -42,13 +42,6 @@ class StoppedResponse : DaemonResponse {
 }
 
 /**
- * Successful response for a completed or already-current model resave operation.
- */
-@Serializable
-@SerialName("model-resave")
-data class ModelResaveResponse(val modelTarget: String) : DaemonResponse
-
-/**
  * Successful response carrying one JSON node export object.
  */
 @Serializable
