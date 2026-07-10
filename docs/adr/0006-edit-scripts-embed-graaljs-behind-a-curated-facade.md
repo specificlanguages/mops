@@ -1,5 +1,10 @@
 # Edit Scripts embed GraalJS behind a curated facade
 
+> **Status: PLANNED — NOT IMPLEMENTED.** This ADR records a design decision that has not been built. There is no
+> `mops model eval` command, no embedded GraalJS engine, no `.d.ts` facade, and no script timeout in the source; the
+> `model` command group registers only `get-node`, `edit`, and `resave`. The design below stands as the intended
+> direction, not a description of current behavior.
+
 An **Edit Script** (`mops model eval`) is JavaScript executed by the daemon on an embedded GraalJS engine with host
 access denied: the script sees only a curated facade of **Node Handles**, entry globals, and the existing **Edit
 Operations** as methods — never raw MPS objects. The whole script runs as one write action over the same

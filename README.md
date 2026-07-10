@@ -34,13 +34,21 @@ Resaves one model target through the daemon-backed MPS APIs. The command infers 
 per-project daemon, and asks that daemon to persist the target model.
 
 ```sh
-mops --mps-home <path> model edit [--file PATH]
+mops --mps-home <path> model edit [--file PATH] [--constraints advisory|best-effort|strict]
 ```
 
 Applies a JSON batch of edit operations through the daemon. Run `mops explain edit` for the operation reference. An
 operation that names a concept resolves it the same way `find instances` does: a dropped `.structure.` infix is
 forgiven, and a name that does not resolve fails the batch (changing nothing) with the same diagnosis — unknown
 language, unloaded language, or a "did you mean" among a loaded language's concepts.
+
+`--constraints` selects how the batch treats MPS constraints and concepts whose language did not load (default
+`best-effort`):
+
+- `advisory` - evaluate constraints and report violations, but apply and save the batch anyway.
+- `best-effort` - a violation blocks the batch (nothing is saved); a concept that cannot be checked because its
+  language did not load is skipped and reported as a warning.
+- `strict` - like `best-effort` for violations, but a concept that cannot be checked aborts the batch.
 
 ```sh
 mops --mps-home <path> model get-node [--ancestry] <node-reference>
@@ -53,6 +61,16 @@ id, properties, references, and child subtree, plus a `parent` object describing
 containment `role` by which the node sits in it, a `type` of `root` or `node`, and the parent's name, concept, and
 reference. A Root Node has no `parent`. `--ancestry` nests `parent` recursively up to the Root Node instead of carrying
 only the immediate parent.
+
+```sh
+mops --mps-home <path> list [--depth N] [--json] [TARGET_SEGMENT...]
+mops --mps-home <path> ls   [--depth N] [--json] [TARGET_SEGMENT...]
+```
+
+Lists an MPS navigation target as a bounded tree. Space-separated target segments address a module, model, or node; omit
+them for the project root, or pass `/` for the repository root. `--depth` bounds the descendant depth from 0 to 8
+(default 1). Text output is one indented tab-separated row per entry, tagged by kind (`project`, `repository`, `module`,
+`model`, `root`, or `node`); `--json` prints the semantic tree.
 
 ```sh
 mops --mps-home <path> find instances [--exact] [--limit N] [--json] <concept>
@@ -90,6 +108,16 @@ by its position in its model. A non-root owner appends its immediate parent as t
 only when more matches exist than were returned.
 
 ```sh
+mops --mps-home <path> find root-by-name [--limit N] [--json] <pattern> [in <scope-segment>...]
+```
+
+Finds Root Nodes by name using MPS Go-to-Node pattern matching. The pattern supports camel-hump and `*` wildcards (see
+`mops explain name-pattern`). By default it searches **Editable Project Sources**; append `in <scope-segments>` to
+search a module, model, or the whole repository (`in /`), where only root-bearing scopes are valid (see
+`mops explain scope`). It defaults to `--limit 100`, treats `--limit 0` as unlimited, and rejects negative limits. Text
+output is tab-separated rows in the same shape as `find instances`; `--json` prints the structured response.
+
+```sh
 mops --mps-home <path> diagnose modules [--all] [--json]
 ```
 
@@ -118,6 +146,25 @@ generated/compiled yet), `BROKEN_DEPENDENCIES` (blocked by depended-on modules, 
 in the daemon log).
 
 ```sh
+mops --mps-home <path> make modules [--json] <module>...
+mops --mps-home <path> make project [--json]
+```
+
+Runs the MPS make (generation and compilation) through the daemon. `make modules` makes the named modules (by module
+name or serialized module reference) and their transitive dependency closure, so an un-made dependency is made too;
+`make project` makes every generatable module in the project. Both exit non-zero when the make reports errors; `--json`
+prints the make result as JSON.
+
+```sh
+mops explain [--schema] [PATH]
+```
+
+Prints reference pages for the mops Notations, the textual formats mops exchanges with agents. It is pure and offline:
+it never starts a daemon, resolves a project root, or requires `--mps-home`. With no argument it lists the topics; a dot-
+path such as `edit` or `edit.copyAsChild` prints that page, and an unknown path exits non-zero with sibling suggestions.
+`--schema` prints the generated JSON Schema for the edit-batch Notation (only with the `edit` topic).
+
+```sh
 mops daemon status [--all]
 mops daemon stop [--all]
 ```
@@ -131,10 +178,10 @@ Daemon records, logs, working files, and isolated IDEA config and system directo
 default the CLI stores them under `~/.mops/daemon`; pass `--daemon-home <path>` to use another directory. Each project
 gets a stable hashed subdirectory under `projects/`, including:
 
-- `daemon.json` - atomic daemon record with port, token, PID, protocol version, daemon version, project path, MPS home,
-  log path, and startup time
+- `daemon.json` - atomic daemon record with port, token, PID, daemon version, project path, MPS home, Java home,
+  workspace path, and startup time
 - `logs/daemon.log` - daemon startup and runtime log for the current prototype
-- `daemon/idea-config` and `daemon/idea-system` - isolated IDEA directories passed to the daemon JVM
+- `daemon/config` and `daemon/system` - isolated IDEA directories passed to the daemon JVM
 
 Daemon commands use loopback socket IPC with a per-daemon token. Requests are serialized by the daemon. Stale daemon
 records are removed when the recorded process or socket is no longer reachable.
