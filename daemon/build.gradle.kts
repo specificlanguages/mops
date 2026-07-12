@@ -42,6 +42,9 @@ dependencies {
     mpsRuntime(mpsZip.map {
         zipTree(it.singleFile).matching {
             include("lib/mps-core.jar")
+            // ModelGenerationStatusManager, which detects whether a module is built from stale sources (see
+            // ModuleLoadDiagnostics and docs/mps/model-generation-status.md).
+            include("lib/mps-generator.jar")
             // CheckerRegistry, which drives the full Model Check (see ModelChecker).
             include("lib/mps-project-check.jar")
             // Editor cell rendering (headless node-to-text). See docs/mps/editor-cell-rendering.md.

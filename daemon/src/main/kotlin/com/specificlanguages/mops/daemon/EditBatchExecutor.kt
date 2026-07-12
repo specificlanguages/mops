@@ -20,6 +20,7 @@ import jetbrains.mps.core.aspects.constraints.rules.kinds.ContainmentContext
 import jetbrains.mps.project.Project
 import jetbrains.mps.scope.ErrorScope
 import jetbrains.mps.smodel.CopyUtil
+import jetbrains.mps.smodel.SModelInternal
 import jetbrains.mps.smodel.constraints.ConstraintsCanBeFacade
 import jetbrains.mps.smodel.constraints.ModelConstraints
 import jetbrains.mps.smodel.language.ConceptRegistry
@@ -59,6 +60,7 @@ class EditBatchExecutor(
         val referencePlacements = mutableListOf<ReferencePlacement>()
         val uncheckable = UncheckableLanguages()
         val conceptResolver = ConceptResolver(project)
+        val moduleLoadDiagnostics = ModuleLoadDiagnostics(project)
         var mutated = false
 
         fun fail(code: MpsErrorCode, message: String): Nothing {
@@ -66,6 +68,22 @@ class EditBatchExecutor(
                 reload(affectedModels)
             }
             throw MpsRequestException(code = code, message = message)
+        }
+
+        // Refuses to edit a model that imports a project language whose runtime is unbuilt or stale (built from older
+        // sources than the files on disk): editing through such a runtime can resolve a concept or role to an identity
+        // that contradicts the sources and write it into the model. Runs once, when a model first becomes affected —
+        // before any mutation on it — so the whole batch is rejected up front. See [ModuleLoadDiagnostics].
+        fun guardModelLanguagesUsable(index: Int, model: SModel) {
+            val used = (model as? SModelInternal)?.importedLanguageIds() ?: return
+            val unusable = moduleLoadDiagnostics.unusableUsedLanguages(used)
+            if (unusable.isNotEmpty()) {
+                fail(
+                    MpsErrorCode.LANGUAGE_NOT_LOADED,
+                    "operation $index target model ${model.name.longName}: " +
+                        unusableLanguagesMessage("this model", unusable),
+                )
+            }
         }
 
         // Resolves any target form to a node: a batch-local alias (must already be bound), a serialized node reference,
@@ -127,6 +145,7 @@ class EditBatchExecutor(
                         "operation $index target model has unsaved changes: ${editableModel.name.longName}",
                     )
                 }
+                guardModelLanguagesUsable(index, editableModel)
                 affectedModels.add(editableModel)
             }
             return node
@@ -158,6 +177,7 @@ class EditBatchExecutor(
                         "operation $index destination model has unsaved changes: ${editableModel.name.longName}",
                     )
                 }
+                guardModelLanguagesUsable(index, editableModel)
                 affectedModels.add(editableModel)
             }
             return model

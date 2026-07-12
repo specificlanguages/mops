@@ -61,13 +61,19 @@ class ConceptResolverFormatTest {
     }
 
     @Test
-    fun `unbuilt short name message names the languages and offers both remedies`() {
-        val message = ConceptResolver.unbuiltShortNameMessage("Expression", listOf("exprs", "other.lang"))
+    fun `unusable short name message names the languages with reasons and offers both remedies`() {
+        val message = ConceptResolver.unusableShortNameMessage(
+            "Expression",
+            listOf(
+                UnusableLanguage("exprs", LanguageUnusableReason.UNBUILT),
+                UnusableLanguage("other.lang", LanguageUnusableReason.STALE),
+            ),
+        )
 
         assertContains(message, "\"Expression\" cannot be resolved")
-        assertContains(message, "  - exprs")
-        assertContains(message, "  - other.lang")
-        assertContains(message, "mops make exprs")
+        assertContains(message, "  - exprs: not built")
+        assertContains(message, "  - other.lang: built from older sources than the files on disk")
+        assertContains(message, "mops make modules exprs")
         assertContains(message, "qualified concept name")
     }
 

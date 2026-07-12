@@ -9,6 +9,7 @@ import jetbrains.mps.project.AbstractModule
 import jetbrains.mps.project.DevKit
 import jetbrains.mps.project.Project
 import jetbrains.mps.project.Solution
+import jetbrains.mps.generator.ModelGenerationStatusManager
 import jetbrains.mps.project.facets.JavaModuleFacet
 import jetbrains.mps.smodel.Generator
 import jetbrains.mps.smodel.Language
@@ -45,11 +46,42 @@ internal fun moduleLoadRootCauseLines(problem: ModuleLoadProblemJson): String =
 private fun moduleLoadRootCauses(problem: ModuleLoadProblemJson): List<ModuleLoadProblemJson> =
     if (problem.causes.isEmpty()) listOf(problem) else problem.causes.flatMap(::moduleLoadRootCauses)
 
+/** Why a project language's compiled runtime cannot be trusted for name-based resolution. */
+enum class LanguageUnusableReason { UNBUILT, STALE }
+
+/**
+ * A project language whose compiled runtime must not be used for name-based concept resolution: it is either not built
+ * ([LanguageUnusableReason.UNBUILT]) or built from older sources than the files on disk
+ * ([LanguageUnusableReason.STALE]). Both fail the same way — a name may resolve to a concept whose identity contradicts
+ * the sources — so callers treat them alike and only distinguish [reason] in the message they show.
+ */
+data class UnusableLanguage(val name: String, val reason: LanguageUnusableReason) {
+    val explanation: String
+        get() = when (reason) {
+            LanguageUnusableReason.UNBUILT -> "not built"
+            LanguageUnusableReason.STALE -> "built from older sources than the files on disk"
+        }
+}
+
+/**
+ * Refusal message for an operation blocked because [subject] (a model, a concept name, …) would resolve through
+ * [languages] whose runtimes are unbuilt or stale. Lists each with its reason and the make command that fixes it.
+ */
+fun unusableLanguagesMessage(subject: String, languages: List<UnusableLanguage>): String =
+    "$subject cannot be used while these project languages are not up to date, since name-based resolution through " +
+        "them may return a concept whose identity contradicts the sources:\n" +
+        languages.joinToString("\n") { "  - ${it.name}: ${it.explanation}" } +
+        "\nrebuild them, for example 'mops make modules ${languages.first().name}'."
+
 class ModuleLoadDiagnostics(private val project: Project) {
 
     private val repository = project.repository
     private val languageRegistry: LanguageRegistry = project.getComponent(LanguageRegistry::class.java)
     private val persistence: PersistenceFacade = PersistenceFacade.getInstance()
+    // Absent only if the generator platform component were unregistered (it is not, headless — the command-line make
+    // worker obtains it the same way); when absent, staleness cannot be judged and only the unbuilt case is reported.
+    private val generationStatus: ModelGenerationStatusManager? =
+        project.getComponent(ModelGenerationStatusManager::class.java)
 
     fun diagnoseModules(): ModulesDiagnosticsResponse {
         val entries = mutableListOf<ModuleLoadDiagnosticJson>()
@@ -83,18 +115,72 @@ class ModuleLoadDiagnostics(private val project: Project) {
     }
 
     /**
-     * Qualified names of the project's languages that are present but whose runtime is not loaded — languages that
-     * could define concepts yet are not built. Sorted and de-duplicated; absent languages are excluded, as they define
-     * nothing buildable. A caller resolving a bare short concept name uses this to refuse guessing uniqueness while a
-     * language it cannot see might also carry the name. Must run inside a read action.
+     * The project's languages, across the whole project, whose runtime is unbuilt or stale (built from older sources
+     * than the files on disk). A caller resolving a bare short concept name uses this to refuse guessing uniqueness:
+     * counting matches is trustworthy only when every project language is up to date, since an unbuilt language could
+     * carry the name unseen and a stale one could carry it under the wrong identity. Sorted by name, one per language.
+     * Must run inside a read action.
      */
-    fun unbuiltProjectLanguages(): List<String> =
+    fun unusableProjectLanguages(): List<UnusableLanguage> =
         projectLanguages()
             .mapNotNull { it.sourceModule }
-            .filterNot { runtimeLoaded(it) }
-            .map { nameOf(it) }
-            .distinct()
-            .sorted()
+            .distinctBy { it.moduleReference }
+            .mapNotNull(::classifyUsability)
+            .distinctBy { it.name }
+            .sortedBy { it.name }
+
+    /**
+     * The project languages reachable from [usedLanguages] through the used-language graph whose runtime is unbuilt or
+     * stale. Walks used languages to a fixpoint over project language modules — the same closure `make` builds (see
+     * [ProjectMake]) — because MPS treats a used language as an already-built dependency and never surfaces its source
+     * module through a plain dependency query, so a language used only transitively (a language a used language itself
+     * uses) would otherwise be missed. Non-project (library) languages cannot be rebuilt here and are skipped. Sorted
+     * by name, one per language. Must run inside a read action.
+     */
+    fun unusableUsedLanguages(usedLanguages: Collection<SLanguage>): List<UnusableLanguage> {
+        val projectLanguageModules = projectLanguageModulesByLanguage()
+        val found = linkedMapOf<String, UnusableLanguage>()
+        val visited = hashSetOf<SModule>()
+        val queued = HashSet(usedLanguages)
+        val queue = ArrayDeque(usedLanguages)
+        while (queue.isNotEmpty()) {
+            val module = projectLanguageModules[queue.removeFirst()] ?: continue
+            if (!visited.add(module)) continue
+            classifyUsability(module)?.let { found.putIfAbsent(it.name, it) }
+            for (used in module.usedLanguages) {
+                if (queued.add(used)) queue.addLast(used)
+            }
+        }
+        return found.values.sortedBy { it.name }
+    }
+
+    /**
+     * Classifies a module as unbuilt, stale, or usable (null). Unbuilt takes precedence — a stale check needs a
+     * runtime. A read-only (packaged, jar-shipped) module is never stale in our sense: its classes come pre-built from
+     * the classpath and cannot be regenerated here, yet its bundled source models report `generationRequired` (they
+     * carry no reachable generation cache), so it must be excluded or every project would look stale through its
+     * library languages.
+     */
+    private fun classifyUsability(module: SModule): UnusableLanguage? = when {
+        !runtimeLoaded(module) -> UnusableLanguage(nameOf(module), LanguageUnusableReason.UNBUILT)
+        (module as? AbstractModule)?.isReadOnly == true -> null
+        isStale(module) -> UnusableLanguage(nameOf(module), LanguageUnusableReason.STALE)
+        else -> null
+    }
+
+    /**
+     * Whether any of [module]'s models needs regeneration — its current content differs from what was recorded when it
+     * was last generated — which means the module's compiled runtime is out of date with its sources. See
+     * `docs/mps/model-generation-status.md`.
+     */
+    private fun isStale(module: SModule): Boolean {
+        val generationStatus = generationStatus ?: return false
+        return module.models.any { generationStatus.generationRequired(it) }
+    }
+
+    private fun projectLanguageModulesByLanguage(): Map<SLanguage, Language> =
+        project.getProjectModules(Language::class.java)
+            .associateBy { MetaAdapterFactory.getLanguage(it.moduleReference) }
 
     fun diagnoseModule(reference: String): ModuleDiagnosticResponse {
         val module = resolveModule(reference)

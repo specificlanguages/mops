@@ -34,7 +34,7 @@ class ConceptResolver(private val project: Project) {
 
     /** The resolved concept, or an [MpsRequestException] carrying a diagnosis of why the name did not resolve. */
     fun resolve(name: String): SAbstractConcept {
-        resolveQualified(name)?.let { return it }
+        resolveQualified(name)?.let { return checkLanguageUsable(it) }
 
         // A bare short name (no dots) never keys MPS's qualified-name index, so resolve it by counting matches across
         // loaded languages instead. A dotted name that reaches here is a qualified attempt whose language is the more
@@ -75,11 +75,25 @@ class ConceptResolver(private val project: Project) {
             throw ambiguous(ambiguousShortNameMessage(shortName, matches.map { it.qualifiedName }.sorted()))
         }
 
-        val unbuilt = ModuleLoadDiagnostics(project).unbuiltProjectLanguages()
-        if (unbuilt.isNotEmpty()) throw languageNotLoaded(unbuiltShortNameMessage(shortName, unbuilt))
+        val unusable = ModuleLoadDiagnostics(project).unusableProjectLanguages()
+        if (unusable.isNotEmpty()) throw languageNotLoaded(unusableShortNameMessage(shortName, unusable))
 
         return matches.singleOrNull()
             ?: throw notFound(shortNameNotFoundMessage(shortName, similarConceptNamesAcrossLanguages(shortName)))
+    }
+
+    /**
+     * Refuses a resolved concept whose owning language — or a project language it transitively uses — is unbuilt or
+     * stale, so a name never resolves through a compiled runtime that contradicts the sources on disk. Returns the
+     * concept unchanged when every language in its closure is up to date. Library concepts have no project language in
+     * their closure and always pass. See [ModuleLoadDiagnostics.unusableUsedLanguages].
+     */
+    private fun checkLanguageUsable(concept: SAbstractConcept): SAbstractConcept {
+        val unusable = ModuleLoadDiagnostics(project).unusableUsedLanguages(listOf(concept.language))
+        if (unusable.isNotEmpty()) {
+            throw languageNotLoaded(unusableLanguagesMessage("concept \"${concept.qualifiedName}\"", unusable))
+        }
+        return concept
     }
 
     /** Concepts of every loaded language whose short name is exactly [shortName], one per qualified name. */
@@ -151,11 +165,12 @@ class ConceptResolver(private val project: Project) {
     companion object {
         private const val MAX_SUGGESTIONS = 5
 
-        fun unbuiltShortNameMessage(shortName: String, unbuiltLanguages: List<String>): String =
-            "the short concept name \"$shortName\" cannot be resolved while these project languages are not built, " +
-                "since any of them may also define it:\n" +
-                unbuiltLanguages.joinToString("\n") { "  - $it" } +
-                "\nbuild them (for example 'mops make ${unbuiltLanguages.first()}') or use a qualified concept name."
+        fun unusableShortNameMessage(shortName: String, languages: List<UnusableLanguage>): String =
+            "the short concept name \"$shortName\" cannot be resolved while these project languages are not up to " +
+                "date, since any of them may also define it:\n" +
+                languages.joinToString("\n") { "  - ${it.name}: ${it.explanation}" } +
+                "\nrebuild them (for example 'mops make modules ${languages.first().name}') or use a qualified " +
+                "concept name."
 
         fun ambiguousShortNameMessage(shortName: String, qualifiedCandidates: List<String>): String =
             "concept name \"$shortName\" is ambiguous; it names ${qualifiedCandidates.size} concepts across loaded " +
