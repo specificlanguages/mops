@@ -391,6 +391,66 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `model edit request JSON round-trips a relative alias target as a compact path string`() {
+        val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
+        val request = ModelEditRequest(
+            token = "secret",
+            batch = EditBatch(
+                operations = listOf(
+                    EditOperation.CopyAsChild(
+                        target = EditTarget.NodeReference("$model/1"),
+                        source = EditTarget.NodeReference("$model/2"),
+                        role = "members",
+                        alias = "\$copy",
+                    ),
+                    EditOperation.SetProperty(
+                        target = EditTarget.RelativeAlias(
+                            "\$copy",
+                            listOf(
+                                EditTarget.PathStep("operands", ChildPosition.Index(1)),
+                                EditTarget.PathStep("name", ChildPosition.Only),
+                            ),
+                        ),
+                        name = "value",
+                        value = "renamed",
+                    ),
+                ),
+            ),
+        )
+
+        val serialized = ProtocolJson.encodeRequest(request)
+
+        assertContains(serialized, """"target":"${'$'}copy/operands[1]/name"""")
+        assertEquals(request, ProtocolJson.decodeRequest(serialized))
+    }
+
+    @Test
+    fun `a relative alias target decodes identically from its string and object forms`() {
+        val expected = EditTarget.RelativeAlias(
+            "\$copy",
+            listOf(
+                EditTarget.PathStep("left", ChildPosition.Only),
+                EditTarget.PathStep("expression", ChildPosition.Only),
+            ),
+        )
+
+        val fromString = ProtocolJson.decodeBatch(
+            """{"operations":[{"op":"delete","target":"${'$'}copy/left/expression"}]}""",
+        )
+        val fromObject = ProtocolJson.decodeBatch(
+            """{"operations":[{"op":"delete","target":{"base":"${'$'}copy","path":"left/expression"}}]}""",
+        )
+        // The object form may drop the '$' sigil on base; it normalizes to the same alias.
+        val fromBareBase = ProtocolJson.decodeBatch(
+            """{"operations":[{"op":"delete","target":{"base":"copy","path":"left/expression"}}]}""",
+        )
+
+        assertEquals(expected, (fromString.operations.single() as EditOperation.Delete).target)
+        assertEquals(expected, (fromObject.operations.single() as EditOperation.Delete).target)
+        assertEquals(expected, (fromBareBase.operations.single() as EditOperation.Delete).target)
+    }
+
+    @Test
     fun `model edit request JSON round-trips root operations and model destinations`() {
         val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
         val request = ModelEditRequest(

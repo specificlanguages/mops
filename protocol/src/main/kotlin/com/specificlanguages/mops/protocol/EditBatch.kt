@@ -215,14 +215,79 @@ sealed interface ChildPosition {
 }
 
 /**
- * Target of an edit operation. Encoded either as a bare reference string (a `$`-prefixed alias or a node reference) or
- * as a `{model, nodeId}` object; decoding mirrors that shape.
+ * Target of an edit operation. Encoded either as a bare reference string (a `$`-prefixed alias, an alias with a
+ * descending role path, or a node reference) or as a `{model, nodeId}` / `{base, path}` object; decoding mirrors that
+ * shape.
  */
 @Serializable(with = EditTargetSerializer::class)
 sealed interface EditTarget {
     data class NodeReference(val nodeReference: String) : EditTarget
     data class InModel(val modelTarget: String, val nodeId: String) : EditTarget
     data class Alias(val alias: String) : EditTarget
+
+    /**
+     * A node addressed relative to a batch-local [alias] (its `$`-prefixed name) by a [path] of Containment Role steps
+     * descending from it — e.g. `"$copy/left"` or `{"base": "$copy", "path": "operands[1]/name"}`. Lets a later
+     * operation reach inside a freshly created subtree without knowing the descendant's id. [alias] carries the `$`
+     * sigil, matching [Alias].
+     */
+    data class RelativeAlias(val alias: String, val path: List<PathStep>) : EditTarget
+
+    /**
+     * One step of a [RelativeAlias] path: descend the Containment [role] to the child at [position]. A bare `role`
+     * segment defaults to [ChildPosition.Only]; a bracketed `role[first|last|only|<int>]` names another position,
+     * following the `explain position` notation.
+     */
+    data class PathStep(val role: String, val position: ChildPosition)
+}
+
+/**
+ * Parses a [EditTarget.RelativeAlias] path — `/`-separated role segments, each `role` or `role[position]` — into its
+ * steps. Throws [ProtocolJsonException] on an empty path, an empty segment, or a malformed position.
+ */
+internal fun parseAliasPath(pathString: String): List<EditTarget.PathStep> {
+    if (pathString.isEmpty()) throw ProtocolJsonException("relative edit target path is empty")
+    return pathString.split("/").map { segment ->
+        if (segment.isEmpty()) throw ProtocolJsonException("relative edit target path has an empty segment: \"$pathString\"")
+        parseAliasPathSegment(segment)
+    }
+}
+
+private fun parseAliasPathSegment(segment: String): EditTarget.PathStep {
+    val open = segment.indexOf('[')
+    if (open < 0) {
+        return EditTarget.PathStep(segment, ChildPosition.Only)
+    }
+    if (!segment.endsWith("]")) {
+        throw ProtocolJsonException("relative edit target path segment is malformed (expected role[position]): \"$segment\"")
+    }
+    val role = segment.substring(0, open)
+    if (role.isEmpty()) throw ProtocolJsonException("relative edit target path segment has no role: \"$segment\"")
+    val token = segment.substring(open + 1, segment.length - 1)
+    val position = when (token) {
+        "first" -> ChildPosition.First
+        "last" -> ChildPosition.Last
+        "only" -> ChildPosition.Only
+        else -> token.toIntOrNull()?.let { ChildPosition.Index(it) }
+            ?: throw ProtocolJsonException(
+                "relative edit target position must be first, last, only, or an integer: \"$token\"",
+            )
+    }
+    return EditTarget.PathStep(role, position)
+}
+
+/** Renders a [EditTarget.RelativeAlias] back to its canonical `$alias/role[position]/…` string. */
+private fun renderRelativeAlias(target: EditTarget.RelativeAlias): String {
+    val sigiled = if (target.alias.startsWith("$")) target.alias else "$${target.alias}"
+    val path = target.path.joinToString("/") { step ->
+        when (val position = step.position) {
+            ChildPosition.Only -> step.role
+            ChildPosition.First -> "${step.role}[first]"
+            ChildPosition.Last -> "${step.role}[last]"
+            is ChildPosition.Index -> "${step.role}[${position.index}]"
+        }
+    }
+    return "$sigiled/$path"
 }
 
 internal object EditTargetSerializer : KSerializer<EditTarget> {
@@ -233,6 +298,7 @@ internal object EditTargetSerializer : KSerializer<EditTarget> {
             ?: throw UnsupportedJsonOnlySerializerException("EditTarget")
         val element = when (value) {
             is EditTarget.Alias -> JsonPrimitive(value.alias)
+            is EditTarget.RelativeAlias -> JsonPrimitive(renderRelativeAlias(value))
             is EditTarget.NodeReference -> JsonPrimitive(value.nodeReference)
             is EditTarget.InModel -> JsonObject(
                 mapOf(
@@ -251,11 +317,26 @@ internal object EditTargetSerializer : KSerializer<EditTarget> {
 
         (element as? JsonPrimitive)?.takeIf { it.isString }?.let { primitive ->
             val value = primitive.content
-            return if (value.startsWith("$")) EditTarget.Alias(value) else EditTarget.NodeReference(value)
+            if (!value.startsWith("$")) return EditTarget.NodeReference(value)
+            // A '$'-prefixed string is an alias; a '/' after the alias name descends a role path into it.
+            val slash = value.indexOf('/')
+            return if (slash < 0) {
+                EditTarget.Alias(value)
+            } else {
+                EditTarget.RelativeAlias(value.substring(0, slash), parseAliasPath(value.substring(slash + 1)))
+            }
         }
 
         val targetObject = element as? JsonObject
             ?: throw ProtocolJsonException("edit target must be a node reference string or JSON object, got: $element")
+
+        val base = targetObject.stringField("base")
+        if (base != null) {
+            val pathString = targetObject.stringField("path")
+                ?: throw ProtocolJsonException("relative edit target requires a \"path\" string alongside \"base\"")
+            val alias = if (base.startsWith("$")) base else "$$base"
+            return EditTarget.RelativeAlias(alias, parseAliasPath(pathString))
+        }
 
         val nodeReference = targetObject.stringField("nodeReference")
         if (!nodeReference.isNullOrBlank()) {

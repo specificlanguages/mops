@@ -86,15 +86,45 @@ class EditBatchExecutor(
             }
         }
 
-        // Resolves any target form to a node: a batch-local alias (must already be bound), a serialized node reference,
-        // or a model plus node id. A forward reference to an unbound alias fails.
+        // Resolves an already-bound alias to its node, failing on a forward reference to an unbound alias.
+        fun resolveAlias(index: Int, alias: String): SNode =
+            aliases[aliasName(alias)]
+                ?: fail(
+                    MpsErrorCode.TARGET_RESOLUTION_FAILED,
+                    "operation $index alias is not defined earlier in the batch: $alias",
+                )
+
+        // Resolves any target form to a node: a batch-local alias (must already be bound), a relative address descending
+        // a role path from a bound alias, a serialized node reference, or a model plus node id. A forward reference to an
+        // unbound alias fails.
         fun resolveNode(index: Int, target: EditTarget): SNode {
             if (target is EditTarget.Alias) {
-                return aliases[aliasName(target.alias)]
-                    ?: fail(
-                        MpsErrorCode.TARGET_RESOLUTION_FAILED,
-                        "operation $index alias is not defined earlier in the batch: ${target.alias}",
-                    )
+                return resolveAlias(index, target.alias)
+            }
+            if (target is EditTarget.RelativeAlias) {
+                var current = resolveAlias(index, target.alias)
+                for (step in target.path) {
+                    // Validate the role resolves uniquely on the current node before descending, so a bad or ambiguous
+                    // role reports as such rather than as a missing child.
+                    when (resolveContainment(current, step.role)) {
+                        is ContainmentResolution.Found -> {}
+                        ContainmentResolution.Missing -> fail(
+                            MpsErrorCode.ROLE_NOT_FOUND,
+                            "operation $index relative path role not found: ${step.role} on ${current.concept.qualifiedName}",
+                        )
+                        is ContainmentResolution.Ambiguous -> fail(
+                            MpsErrorCode.AMBIGUOUS_ROLE,
+                            "operation $index ambiguous relative path role ${step.role} on ${current.concept.qualifiedName}",
+                        )
+                    }
+                    current = locateChild(current, step.role, step.position)
+                        ?: fail(
+                            MpsErrorCode.NODE_NOT_FOUND,
+                            "operation $index relative path child not found: role ${step.role}, position ${step.position} " +
+                                "on ${current.concept.qualifiedName}",
+                        )
+                }
+                return current
             }
             val node = try {
                 resolveTarget(project, target)
@@ -196,20 +226,18 @@ class EditBatchExecutor(
                 ?: fail(MpsErrorCode.MODEL_EDIT_FAILED, "operation $index concept is not instantiable: $fqn")
         }
 
-        fun resolveContainmentOrFail(index: Int, parent: SNode, role: String): SContainmentLink {
-            val links = parent.concept.containmentLinks.filter { it.name == role }
-            return when (links.size) {
-                1 -> links.single()
-                0 -> fail(
+        fun resolveContainmentOrFail(index: Int, parent: SNode, role: String): SContainmentLink =
+            when (val resolution = resolveContainment(parent, role)) {
+                is ContainmentResolution.Found -> resolution.link
+                ContainmentResolution.Missing -> fail(
                     MpsErrorCode.ROLE_NOT_FOUND,
                     "operation $index containment role not found: $role on ${parent.concept.qualifiedName}",
                 )
-                else -> fail(
+                is ContainmentResolution.Ambiguous -> fail(
                     MpsErrorCode.AMBIGUOUS_ROLE,
                     "operation $index ambiguous containment role $role on ${parent.concept.qualifiedName}",
                 )
             }
-        }
 
         fun resolveReferenceLinkOrFail(index: Int, node: SNode, role: String): SReferenceLink {
             val links = node.concept.referenceLinks.filter { it.name == role }
@@ -608,6 +636,7 @@ class EditBatchExecutor(
     private fun resolveTarget(project: Project, target: EditTarget): SNode? =
         when (target) {
             is EditTarget.Alias -> error("alias targets must be rejected before resolution")
+            is EditTarget.RelativeAlias -> error("relative alias targets must be rejected before resolution")
             is EditTarget.InModel -> modelNodeResolver.findNode(
                 project,
                 NodeTarget.InModel(modelTarget = target.modelTarget, nodeId = target.nodeId),
@@ -625,6 +654,15 @@ class EditBatchExecutor(
      * so "$root" and "root" denote the same alias whether written in "as" or in a reference.
      */
     private fun aliasName(alias: String): String = alias.removePrefix("$")
+
+    private fun resolveContainment(node: SNode, role: String): ContainmentResolution {
+        val links = node.concept.containmentLinks.filter { it.name == role }
+        return when (links.size) {
+            0 -> ContainmentResolution.Missing
+            1 -> ContainmentResolution.Found(links.single())
+            else -> ContainmentResolution.Ambiguous(links)
+        }
+    }
 
     private fun resolveProperty(node: SNode, name: String): PropertyResolution {
         val properties = node.concept.properties.filter { it.name == name }.toList()
@@ -900,4 +938,10 @@ private sealed interface PropertyResolution {
     data class Found(val property: SProperty) : PropertyResolution
     data class Ambiguous(val properties: List<SProperty>) : PropertyResolution
     data object Missing : PropertyResolution
+}
+
+private sealed interface ContainmentResolution {
+    data class Found(val link: SContainmentLink) : ContainmentResolution
+    data class Ambiguous(val links: List<SContainmentLink>) : ContainmentResolution
+    data object Missing : ContainmentResolution
 }

@@ -32,8 +32,9 @@ object EditSchema {
     private const val INLINE_REFERENCE_SERIAL_NAME = "InlineReference"
 
     // The two hand-authored union fragments: EditTarget's custom serializer accepts a bare reference string (a node
-    // reference or a $alias) or a {model, nodeId} object; ChildPosition's accepts the "first"/"last"/"only" keywords or
-    // a bare integer index (deliberately not an {index: N} object).
+    // reference, a $alias, or a $alias/role-path relative address), a {model, nodeId} object, or a {base, path} relative
+    // address; ChildPosition's accepts the "first"/"last"/"only" keywords or a bare integer index (deliberately not an
+    // {index: N} object).
     private val EDIT_TARGET_FRAGMENT: JsonObject = buildJsonObject {
         putJsonArray("anyOf") {
             addJsonObject { put("type", "string") }
@@ -44,6 +45,15 @@ object EditSchema {
                     putJsonObject("nodeId") { put("type", "string") }
                 }
                 putJsonArray("required") { add("model"); add("nodeId") }
+                put("additionalProperties", false)
+            }
+            addJsonObject {
+                put("type", "object")
+                putJsonObject("properties") {
+                    putJsonObject("base") { put("type", "string") }
+                    putJsonObject("path") { put("type", "string") }
+                }
+                putJsonArray("required") { add("base"); add("path") }
                 put("additionalProperties", false)
             }
         }

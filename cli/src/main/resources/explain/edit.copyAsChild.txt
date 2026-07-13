@@ -14,6 +14,10 @@ SEMANTICS
   destination parent's Role. The copy gets fresh node ids. References inside the
   subtree keep their targets, but the referenced nodes are not themselves copied.
 
+  With an "as" alias, a later operation can edit inside the fresh copy without
+  learning a descendant's id: address it relative to the alias by role path, e.g.
+  "$copy/members[0]/name" (see target, form 4).
+
 EXAMPLE
 {
   "operations": [

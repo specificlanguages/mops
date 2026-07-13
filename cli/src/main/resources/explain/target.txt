@@ -8,13 +8,30 @@ FORMS
        {"model": "<model name or reference>", "nodeId": "<node-id>"}
   3. Batch-local alias:
        "$name" — a node created earlier in the same batch via an "as" alias.
+  4. Relative to a batch-local alias — descend a Containment Role path into a node
+     the same batch just created, so you can edit inside a fresh copy or subtree
+     without a get-node round-trip to learn a descendant's id:
+       "$name/role/role[position]/…"
+       {"base": "$name", "path": "role/role[position]/…"}
+     Each segment is a Containment Role name; a bare "role" is that Role's single
+     child, and "role[position]" selects one child using the position notation
+     ("first", "last", "only", or a zero-based integer). See: position.
 
 EXAMPLE
 {
   "operations": [
     {
-      "op": "delete",
-      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
+      "op": "copyAsChild",
+      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+      "source": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544569357",
+      "role": "content",
+      "as": "$copy"
+    },
+    {
+      "op": "setProperty",
+      "target": "$copy/items[0]/name",
+      "name": "name",
+      "value": "renamed"
     }
   ]
 }

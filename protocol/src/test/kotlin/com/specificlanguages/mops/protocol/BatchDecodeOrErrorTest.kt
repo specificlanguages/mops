@@ -112,6 +112,16 @@ class BatchDecodeOrErrorTest {
     }
 
     @Test
+    fun `a malformed relative alias path is an invalid target`() {
+        val f = failure("""{"operations":[{"op":"delete","target":"${'$'}copy/left["}]}""")
+        assertEquals(BatchDecodeErrorCategory.InvalidTarget, f.category)
+        assertEquals(
+            """operations[0]: delete field "target" is not a valid target — see: mops explain target""",
+            f.detail,
+        )
+    }
+
+    @Test
     fun `invalid position points at position page`() {
         val f = failure("""{"operations":[{"op":"addChild","target":"m/1","role":"r","concept":"c","position":"middle"}]}""")
         assertEquals(BatchDecodeErrorCategory.InvalidPosition, f.category)
