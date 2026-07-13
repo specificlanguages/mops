@@ -5,7 +5,9 @@ import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
+import com.specificlanguages.mops.protocol.ModelDestination
 import com.specificlanguages.mops.protocol.ModelEditResponse
+import com.specificlanguages.mops.protocol.MpsNodePropertyJson
 import com.specificlanguages.mops.protocol.NodeTarget
 import kotlin.io.path.readText
 import kotlin.test.Test
@@ -61,6 +63,34 @@ class ModelEditSemanticsTest {
             assertEquals(ModelEditResponse(created = emptyMap(), violations = emptyList()), response)
             val node = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_NODE_REFERENCE)) }
             assertEquals("RenamedJsonFile", propertyValue(node, "name"))
+        }
+    }
+
+    @Test
+    fun `set boolean property to true persists and reads back`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
+            // Create a fresh concept whose boolean `rootable` property defaults to unset (false), then set it to true.
+            val created = mpsAccess.write {
+                modelEdit(
+                    EditBatch(
+                        operations = listOf(
+                            EditOperation.AddRoot(
+                                model = ModelDestination(STRUCTURE_MODEL_REFERENCE),
+                                concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                                properties = listOf(MpsNodePropertyJson(name = "name", value = "BooleanProbe")),
+                                alias = "\$c",
+                            ),
+                            EditOperation.SetProperty(target = EditTarget.Alias("\$c"), name = "rootable", value = "true"),
+                        ),
+                    ),
+                )
+            }
+
+            val createdRef = created.created.getValue("c")
+            val node = mpsAccess.read { getNode(NodeTarget.NodeReference(createdRef)) }
+            assertEquals("true", propertyValue(node, "rootable"))
+            // Persisted role for `rootable` is `19KtqR`; MPS stores boolean true as the literal string "true".
+            assertContains(projectPath.resolve(STRUCTURE_MODEL_PATH).readText(), """<property role="19KtqR" value="true" />""")
         }
     }
 

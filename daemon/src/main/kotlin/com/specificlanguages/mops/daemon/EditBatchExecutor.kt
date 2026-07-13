@@ -360,7 +360,7 @@ class EditBatchExecutor(
             children: List<InlineChild>?,
         ) {
             properties?.forEach { property ->
-                SNodeAccessUtil.setPropertyValue(node, resolvePropertyOrFail(index, node, property.name), property.value)
+                setPropertyFromString(node, resolvePropertyOrFail(index, node, property.name), property.value)
             }
             references?.forEach { reference ->
                 val link = resolveReferenceLinkOrFail(index, node, reference.role)
@@ -426,7 +426,7 @@ class EditBatchExecutor(
                     val node = requireEditableNode(index, operation.target)
                     val property = resolvePropertyOrFail(index, node, operation.name)
                     try {
-                        SNodeAccessUtil.setPropertyValue(node, property, operation.value)
+                        setPropertyFromString(node, property, operation.value)
                         mutated = true
                     } catch (exception: Exception) {
                         fail(
@@ -921,6 +921,23 @@ class EditBatchExecutor(
 
     private fun reload(models: Iterable<EditableSModel>) {
         models.forEach { it.reloadFromSource() }
+    }
+}
+
+/**
+ * Sets [property] on [node] from a persisted-form string, or clears it when [value] is null.
+ *
+ * Uses [SNodeAccessUtil.setProperty] (the String overload) rather than [SNodeAccessUtil.setPropertyValue] (the Object
+ * overload) so the value goes through the property datatype's `fromString` conversion. Passing a raw string to the
+ * Object overload silently fails for non-string datatypes: e.g. a boolean property handed the string "true" (instead of
+ * a converted `Boolean`) ends up unset. Reads are symmetric — [SNode.getProperty] renders the typed value back via
+ * `toString` — so the string overload round-trips every datatype.
+ */
+private fun setPropertyFromString(node: SNode, property: SProperty, value: String?) {
+    if (value == null) {
+        SNodeAccessUtil.setPropertyValue(node, property, null)
+    } else {
+        SNodeAccessUtil.setProperty(node, property, value)
     }
 }
 
