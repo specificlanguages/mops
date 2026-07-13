@@ -34,7 +34,7 @@ class RenderNodeSemanticsTest {
         assertEquals(MpsErrorCode.LANGUAGE_NOT_LOADED, exception.code)
         assertContains(exception.message, "com.specificlanguages.json")
         assertContains(exception.message, "NOT_BUILT")
-        assertContains(exception.message, "mops module make")
+        assertContains(exception.message, "mops make modules com.specificlanguages.json")
         assertContains(exception.message, "--allow-reflective")
     }
 

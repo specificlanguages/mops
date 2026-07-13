@@ -873,8 +873,8 @@ private class UncheckableLanguages {
 
     fun strictFailureMessage(): String =
         "constraints could not be checked because these languages are not loaded: " +
-            "${languages.joinToString()} — compile them, or rerun with --constraints=best-effort to skip " +
-            "the unchecked constraints"
+            "${languages.joinToString()} — build them (e.g. 'mops make modules ${languages.joinToString(" ")}') and " +
+            "retry, or rerun with --constraints=best-effort to skip the unchecked constraints"
 
     fun warnings(): List<String> = uncheckableLanguageWarnings(languages.toList())
 }

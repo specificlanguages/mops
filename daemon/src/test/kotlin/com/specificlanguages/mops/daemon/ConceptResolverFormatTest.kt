@@ -4,6 +4,7 @@ import com.specificlanguages.mops.protocol.ModuleLoadProblemJson
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 
 class ConceptResolverFormatTest {
@@ -119,6 +120,22 @@ class ConceptResolverFormatTest {
         assertContains(message, "its language \"a.b\" is not loaded")
         assertContains(message, "  - dep.one: ABSENT — not present in the repository")
         assertContains(message, "  - dep.two: NOT_BUILT — classes not built yet")
+        assertContains(message, "run 'mops diagnose module a.b' for the full dependency tree")
+        // An absent dependency is not something a make fixes, so the make remedy is withheld here.
+        assertFalse(message.contains("mops make modules"), "unexpected make remedy in: $message")
+    }
+
+    @Test
+    fun `unloaded language message names the make command when the cause is only an unbuilt module`() {
+        val problem = ModuleLoadProblemJson(
+            module = "a.b",
+            reason = "NOT_BUILT",
+            detail = "the module should have classes but they have not been built yet",
+        )
+
+        val message = ConceptResolver.unloadedLanguageMessage(ConceptName("a.b", "Foo"), problem)
+
+        assertContains(message, "run 'mops make modules a.b' to build it, then retry")
         assertContains(message, "run 'mops diagnose module a.b' for the full dependency tree")
     }
 }

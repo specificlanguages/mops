@@ -143,18 +143,28 @@ class JetBrainsMpsAccess(
         // the same way `find instances` reports an unloaded language, and point at making it or rendering reflectively.
         private fun unrenderableSubtreeMessage(languages: List<String>): String {
             val diagnostics = ModuleLoadDiagnostics(project)
-            val causes = languages.joinToString("\n") { language ->
-                val diagnostic = diagnostics.diagnoseModule(language).module
+            val diagnosed = languages.map { it to diagnostics.diagnoseModule(it).module }
+            val causes = diagnosed.joinToString("\n") { (language, diagnostic) ->
                 when {
                     diagnostic.problem != null -> moduleLoadRootCauseLines(diagnostic.problem!!)
                     !diagnostic.present -> "  - $language: not a module known to this project"
                     else -> "  - $language: a concept used here is not defined in it"
                 }
             }
+            // The languages a make would fix (unbuilt, alone or through their dependency closure); an absent or
+            // otherwise unbuildable one is left to the diagnosis and --allow-reflective rather than a misleading make.
+            val buildable = diagnosed.mapNotNull { (language, diagnostic) ->
+                language.takeIf { diagnostic.problem?.let(::loadFixableByMake) == true }
+            }
+            val remedy = if (buildable.isEmpty()) {
+                "Run `mops diagnose module <language>` for the full cause, or pass --allow-reflective to render anyway."
+            } else {
+                "Make the affected languages (`mops make modules ${buildable.joinToString(" ")}`), then retry; run " +
+                    "`mops diagnose module <language>` for the full cause, or pass --allow-reflective to render anyway."
+            }
             return "cannot render: this subtree uses languages that are not loaded, so their concepts did not resolve:\n" +
                 "$causes\n" +
-                "Make the affected languages (e.g. `mops module make ${languages.first()}`; run " +
-                "`mops diagnose module <language>` for the full cause), or pass --allow-reflective to render anyway."
+                remedy
         }
 
         override fun findUsages(target: NodeTarget, scope: ResolvedScope, limit: Int): FindUsagesResponse {

@@ -17,8 +17,9 @@ object ConceptValidityGuard {
     fun messageFor(node: SNode): String {
         val address = runCatching { PersistenceFacade.getInstance().asString(node.reference) }.getOrNull()
             ?: node.nodeId.toString()
+        val language = languageName(node.concept)
         return "MPS Concept of node $address could not be resolved (${node.concept.qualifiedName}); " +
-            "its owning language is most likely not compiled — compile the language and retry"
+            "its owning language '$language' is most likely not compiled — run 'mops make modules $language' and retry"
     }
 
     /** Best-effort qualified name of [concept]'s owning language, used to group warnings once per language. */

@@ -201,6 +201,12 @@ class ConceptResolver(private val project: Project) {
                 append(":\n")
                 append(moduleLoadRootCauseLines(problem))
             }
+            // When the language is only unbuilt (it, or its dependency closure), a make fixes it — name the exact
+            // command so the caller can build and retry without deducing the remedy. When something a make cannot fix
+            // is in the way (an absent module, a runtime that failed to register), the diagnosis line below stands alone.
+            if (problem != null && loadFixableByMake(problem)) {
+                append("\nrun 'mops make modules ${parsed.language}' to build it, then retry")
+            }
             append("\nrun 'mops diagnose module ${parsed.language}' for the full dependency tree")
         }
 

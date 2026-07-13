@@ -46,6 +46,25 @@ internal fun moduleLoadRootCauseLines(problem: ModuleLoadProblemJson): String =
 private fun moduleLoadRootCauses(problem: ModuleLoadProblemJson): List<ModuleLoadProblemJson> =
     if (problem.causes.isEmpty()) listOf(problem) else problem.causes.flatMap(::moduleLoadRootCauses)
 
+/**
+ * Whether every root cause of [problem] is a module that has simply not been built yet, so a make — which builds the
+ * named module and its whole dependency closure — resolves all of them. False when any root cause is something a make
+ * cannot fix (an absent module, a runtime that failed to register, a disabled or missing Java facet); suggesting a make
+ * there would only misdirect.
+ */
+internal fun loadFixableByMake(problem: ModuleLoadProblemJson): Boolean =
+    moduleLoadRootCauses(problem).all { it.reason == NOT_BUILT }
+
+// The reason codes a module load problem is classified into, shared between the diagnosis that produces them and the
+// messages that read them back (e.g. to tell a build-fixable cause from one a make cannot help).
+private const val ABSENT = "ABSENT"
+private const val NOT_A_MODULE = "NOT_A_MODULE"
+private const val NO_JAVA_FACET = "NO_JAVA_FACET"
+private const val CLASSES_DISABLED = "CLASSES_DISABLED"
+private const val NOT_BUILT = "NOT_BUILT"
+private const val BROKEN_DEPENDENCIES = "BROKEN_DEPENDENCIES"
+private const val RUNTIME_LOAD_FAILED = "RUNTIME_LOAD_FAILED"
+
 /** Why a project language's compiled runtime cannot be trusted for name-based resolution. */
 enum class LanguageUnusableReason { UNBUILT, STALE }
 
@@ -359,15 +378,5 @@ class ModuleLoadDiagnostics(private val project: Project) {
     ) {
         fun toJson(): ModuleLoadProblemJson =
             ModuleLoadProblemJson(module = module, reason = reason, detail = detail, causes = causes.map { it.toJson() })
-    }
-
-    private companion object {
-        const val ABSENT = "ABSENT"
-        const val NOT_A_MODULE = "NOT_A_MODULE"
-        const val NO_JAVA_FACET = "NO_JAVA_FACET"
-        const val CLASSES_DISABLED = "CLASSES_DISABLED"
-        const val NOT_BUILT = "NOT_BUILT"
-        const val BROKEN_DEPENDENCIES = "BROKEN_DEPENDENCIES"
-        const val RUNTIME_LOAD_FAILED = "RUNTIME_LOAD_FAILED"
     }
 }
