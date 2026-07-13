@@ -20,6 +20,8 @@ import jetbrains.mps.core.aspects.constraints.rules.kinds.ContainmentContext
 import jetbrains.mps.project.Project
 import jetbrains.mps.scope.ErrorScope
 import jetbrains.mps.smodel.CopyUtil
+import jetbrains.mps.smodel.ModelDependencyScanner
+import jetbrains.mps.smodel.ModelImports
 import jetbrains.mps.smodel.SModelInternal
 import jetbrains.mps.smodel.constraints.ConstraintsCanBeFacade
 import jetbrains.mps.smodel.constraints.ModelConstraints
@@ -605,6 +607,12 @@ class EditBatchExecutor(
             return ModelEditResponse(created = emptyMap(), violations = violations, warnings = warnings)
         }
 
+        // The batch will be saved: bring each affected model's declared dependencies in line with the content it now
+        // holds, so a headless edit does not leave a model using an undeclared language or referencing an unimported
+        // model. This is reached only on a saving path — a batch that failed or was blocked reloaded the models above
+        // and returned before here — so a rejected edit adds no imports.
+        ensureUsedImports(affectedModels, placements, rootPlacements, referencePlacements)
+
         return when (val saveOutcome = writeScope.saveWithResolveInfo(affectedModels)) {
             SaveOutcome.Saved -> ModelEditResponse(
                 created = aliases.mapValues { (_, node) -> persistence.asString(node.reference) },
@@ -615,6 +623,53 @@ class EditBatchExecutor(
                 MpsErrorCode.SAVE_FAILED,
                 "model save failed for ${saveOutcome.model.name.longName}: ${saveOutcome.result}",
             )
+        }
+    }
+
+    /**
+     * Adds any missing used-language and model imports the batch's content newly requires, mirroring the MPS editor,
+     * which adds a language or model import as a side effect of creating a node or a reference. For each affected model,
+     * the content the batch introduced there is scanned: every instantiated concept's language must be among the
+     * model's used languages, and every reference's target model among its imported models.
+     *
+     * The scan covers the whole subtree of each created, copied, or moved root — so inline children and copied
+     * descendants contribute their languages and cross-model references, not just the operation's top node — plus any
+     * pre-existing node that had a reference set on it, whose (possibly cross-model) target would otherwise be missed.
+     * Only imports genuinely absent are added, leaving existing (including implicit) imports untouched. Runs inside the
+     * edit's write transaction, so the added imports are saved together with the edit or discarded together with it.
+     */
+    private fun ensureUsedImports(
+        affectedModels: Iterable<EditableSModel>,
+        placements: List<Placement>,
+        rootPlacements: List<RootPlacement>,
+        referencePlacements: List<ReferencePlacement>,
+    ) {
+        val createdRoots = placements.map { it.child } + rootPlacements.map { it.node }
+        for (model in affectedModels) {
+            val createdInModel = createdRoots.filter { it.model === model }
+            val referenceSourcesInModel = referencePlacements.map { it.node }.filter { it.model === model }
+            val scanned = SNodeUtil.getDescendants(createdInModel).toMutableList()
+            scanned.addAll(referenceSourcesInModel)
+            if (scanned.isEmpty()) {
+                continue
+            }
+
+            val scanner = ModelDependencyScanner().walk(scanned)
+            val imports = ModelImports(model)
+
+            addMissing(scanner.usedLanguages, imports.usedLanguages, imports::addUsedLanguage)
+            addMissing(scanner.crossModelReferences, imports.importedModels, imports::addModelImport)
+        }
+    }
+
+    // Adds each of [required] not already in [declared] via [add], so an existing (including implicit) import is left
+    // untouched and only genuinely absent dependencies are introduced.
+    private fun <T> addMissing(required: Iterable<T>, declared: Collection<T>, add: (T) -> Unit) {
+        val present = declared.toHashSet()
+        for (item in required) {
+            if (present.add(item)) {
+                add(item)
+            }
         }
     }
 
