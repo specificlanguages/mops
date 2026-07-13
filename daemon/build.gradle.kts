@@ -155,6 +155,15 @@ tasks.test {
             "-Didea.home.path=${testMpsRoot.get()}",
             "-Didea.config.path=$configDir",
             "-Didea.system.path=$systemDir",
+            // Log synchronously instead of through the platform's AsyncLog. AsyncLog dispatches records to a coroutine
+            // over a channel and closes that channel when the application is disposed. The environment is disposed
+            // during JVM shutdown (see SharedMpsEnvironment), but platform background threads (coroutine dispatchers
+            // finalizing cancelled jobs, the AppDelayQueue "Periodic tasks thread") outlive that dispose and keep
+            // logging. Their records hit the already-closed channel, AsyncLog.log's check(trySend().isSuccess) throws,
+            // and the uncaught IllegalStateException prints a stack trace per thread to stderr after the tests finish.
+            // The synchronous path has no channel and no such race. Read at AsyncLogKt.<clinit>, so it must be a
+            // launch-time -D, not a runtime System.setProperty.
+            "-Dintellij.platform.log.sync=true",
         )
     }
 }
