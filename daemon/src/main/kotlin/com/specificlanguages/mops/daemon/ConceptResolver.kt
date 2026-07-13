@@ -168,9 +168,8 @@ class ConceptResolver(private val project: Project) {
         fun unusableShortNameMessage(shortName: String, languages: List<UnusableLanguage>): String =
             "the short concept name \"$shortName\" cannot be resolved while these project languages are not up to " +
                 "date, since any of them may also define it:\n" +
-                languages.joinToString("\n") { "  - ${it.name}: ${it.explanation}" } +
-                "\nrebuild them (for example 'mops make modules ${languages.first().name}') or use a qualified " +
-                "concept name."
+                unusableLanguageList(languages) +
+                "\nrebuild them (for example '${makeModulesExample(languages)}') or use a qualified concept name."
 
         fun ambiguousShortNameMessage(shortName: String, qualifiedCandidates: List<String>): String =
             "concept name \"$shortName\" is ambiguous; it names ${qualifiedCandidates.size} concepts across loaded " +

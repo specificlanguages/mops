@@ -63,6 +63,13 @@ data class UnusableLanguage(val name: String, val reason: LanguageUnusableReason
         }
 }
 
+/** [languages] as a bulleted `  - name: reason` list, one per line — the shared body of every unusable-language message. */
+fun unusableLanguageList(languages: List<UnusableLanguage>): String =
+    languages.joinToString("\n") { "  - ${it.name}: ${it.explanation}" }
+
+/** The make command that rebuilds the first of [languages], used as the example remedy in refusal messages. */
+fun makeModulesExample(languages: List<UnusableLanguage>): String = "mops make modules ${languages.first().name}"
+
 /**
  * Refusal message for an operation blocked because [subject] (a model, a concept name, …) would resolve through
  * [languages] whose runtimes are unbuilt or stale. Lists each with its reason and the make command that fixes it.
@@ -70,8 +77,8 @@ data class UnusableLanguage(val name: String, val reason: LanguageUnusableReason
 fun unusableLanguagesMessage(subject: String, languages: List<UnusableLanguage>): String =
     "$subject cannot be used while these project languages are not up to date, since name-based resolution through " +
         "them may return a concept whose identity contradicts the sources:\n" +
-        languages.joinToString("\n") { "  - ${it.name}: ${it.explanation}" } +
-        "\nrebuild them, for example 'mops make modules ${languages.first().name}'."
+        unusableLanguageList(languages) +
+        "\nrebuild them, for example '${makeModulesExample(languages)}'."
 
 class ModuleLoadDiagnostics(private val project: Project) {
 
