@@ -42,6 +42,10 @@ class ModelCheckSemanticsTest {
         val errors = response.findings.filter { it.severity == FindingSeverity.ERROR }
         assertTrue(errors.isNotEmpty(), "the broken reference must be reported as an error; got ${response.findings}")
 
+        // Totals count the full finding set; the unbounded run shows everything, so they match the findings.
+        assertEquals(errors.size, response.totals.errors)
+        assertEquals(response.findings.size, response.totals.total)
+
         // The offending node is the VariableReference whose target no longer resolves.
         val finding = errors.single { it.message.contains("Unresolved reference") }
         val node = assertNotNull(finding.node, "the finding must name the offending node")

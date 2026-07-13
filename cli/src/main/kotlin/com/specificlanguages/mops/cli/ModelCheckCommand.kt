@@ -2,6 +2,7 @@ package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
+import com.specificlanguages.mops.protocol.ModelCheckResponse
 import com.specificlanguages.mops.protocol.ProtocolJson
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
@@ -54,11 +55,7 @@ class ModelCheckCommand(private val daemonClient: DaemonClient? = null) : CliCom
         when (outputFormat) {
             OutputFormat.HUMAN -> {
                 response.findings.forEach(::renderHuman)
-                if (response.truncated) {
-                    // The daemon returns only the bounded slice, not the total, so this signals more findings exist
-                    // without claiming a count it does not have.
-                    println("truncated\tonly the most severe findings are shown; raise --limit or pass 0 to see all")
-                }
+                println(summaryLine(response))
             }
 
             OutputFormat.JSONL -> response.findings.forEach { println(ProtocolJson.encodeFinding(it)) }
@@ -70,6 +67,22 @@ class ModelCheckCommand(private val daemonClient: DaemonClient? = null) : CliCom
         finding.node?.let { columns += listOf(it.name ?: "<unnamed>", it.concept, it.reference) }
         println(columns.joinToString("\t"))
     }
+
+    // Closes human output with total counts by severity over the full (pre-truncation) finding set, so zero errors is
+    // legible without re-running unbounded. When findings were dropped the truncation notice folds in as "(showing N)".
+    private fun summaryLine(response: ModelCheckResponse): String {
+        val totals = response.totals
+        if (totals.total == 0) return "no findings"
+        val counts = listOf(
+            count(totals.errors, "error"),
+            count(totals.warnings, "warning"),
+            count(totals.infos, "info", "infos"),
+        ).joinToString(", ")
+        return if (response.truncated) "$counts (showing ${response.findings.size})" else counts
+    }
+
+    private fun count(n: Int, singular: String, plural: String = "${singular}s"): String =
+        "$n ${if (n == 1) singular else plural}"
 
     private fun resolveFormat(): OutputFormat {
         val requested = format ?: return OutputFormat.HUMAN

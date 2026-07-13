@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.protocol.FindingSeverity
+import com.specificlanguages.mops.protocol.ModelCheckFindingCounts
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
 import com.specificlanguages.mops.protocol.ModelCheckResponse
 import jetbrains.mps.checkers.ModelCheckerBuilder
@@ -32,6 +33,7 @@ class ModelChecker(private val persistence: PersistenceFacade = PersistenceFacad
         return ModelCheckResponse(
             limit = limit,
             truncated = selected.size < findings.size,
+            totals = ModelCheckFindingCounts.of(findings),
             findings = selected,
         )
     }

@@ -658,6 +658,7 @@ class DaemonProtocolJsonTest {
         val response = ModelCheckResponse(
             limit = 20,
             truncated = true,
+            totals = ModelCheckFindingCounts(errors = 1, warnings = 1, infos = 0),
             findings = listOf(
                 ModelCheckFindingJson(
                     severity = FindingSeverity.ERROR,
@@ -683,6 +684,7 @@ class DaemonProtocolJsonTest {
         assertContains(serialized, """"concept":"jetbrains.mps.baseLanguage.structure.VariableReference"""")
         assertContains(serialized, """"reference":"$model/4LxqAFFLQFr"""")
         assertContains(serialized, """"truncated":true""")
+        assertContains(serialized, """"totals":{"errors":1,"warnings":1,"infos":0}""")
         assertEquals(response, ProtocolJson.decodeResponse(serialized))
     }
 

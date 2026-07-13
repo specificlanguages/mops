@@ -4,6 +4,7 @@ import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.FindingSeverity
+import com.specificlanguages.mops.protocol.ModelCheckFindingCounts
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
 import com.specificlanguages.mops.protocol.ModelCheckResponse
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
@@ -37,7 +38,12 @@ class ModelCheckCommandTest {
     fun `model check prints a readable severity-sorted list by default`() {
         val client = mock<DaemonClient>()
         whenever(client.checkModel(MODEL, 20)).thenReturn(
-            ModelCheckResponse(limit = 20, truncated = false, findings = listOf(ERROR_FINDING, WARNING_FINDING)),
+            ModelCheckResponse(
+                limit = 20,
+                truncated = false,
+                totals = ModelCheckFindingCounts(errors = 1, warnings = 1, infos = 0),
+                findings = listOf(ERROR_FINDING, WARNING_FINDING),
+            ),
         )
         var exitCode = Int.MIN_VALUE
 
@@ -52,15 +58,82 @@ class ModelCheckCommandTest {
         assertContains(stdout, "error\tUnresolved reference\tb\tjetbrains.mps.baseLanguage.structure.VariableReference\t$MODEL/ref")
         assertContains(stdout, "warning\tmodel-level note")
         // The human list is the user-facing payload only: no daemon wrapper fields.
-        assertFalse(stdout.contains("truncated"), "a non-truncated result must not print a truncation line: $stdout")
         assertFalse(stdout.contains("\"limit\""), "human output must not leak wrapper fields: $stdout")
+    }
+
+    @Test
+    fun `model check ends human output with a severity summary line`() {
+        val client = mock<DaemonClient>()
+        whenever(client.checkModel(MODEL, 20)).thenReturn(
+            ModelCheckResponse(
+                limit = 20,
+                truncated = false,
+                totals = ModelCheckFindingCounts(errors = 1, warnings = 1, infos = 0),
+                findings = listOf(ERROR_FINDING, WARNING_FINDING),
+            ),
+        )
+
+        val stdout = tapSystemOut {
+            CommandLine(ModelCheckCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(MODEL)
+        }
+
+        assertEquals("1 error, 1 warning, 0 infos", stdout.trim().lines().last())
+    }
+
+    @Test
+    fun `a model with findings but no errors reads zero errors in the summary`() {
+        val client = mock<DaemonClient>()
+        whenever(client.checkModel(MODEL, 20)).thenReturn(
+            ModelCheckResponse(
+                limit = 20,
+                truncated = false,
+                totals = ModelCheckFindingCounts(errors = 0, warnings = 3, infos = 12),
+                findings = listOf(WARNING_FINDING),
+            ),
+        )
+
+        val stdout = tapSystemOut {
+            CommandLine(ModelCheckCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(MODEL)
+        }
+
+        assertEquals("0 errors, 3 warnings, 12 infos", stdout.trim().lines().last())
+    }
+
+    @Test
+    fun `an empty result summarises as no findings`() {
+        val client = mock<DaemonClient>()
+        whenever(client.checkModel(MODEL, 20)).thenReturn(
+            ModelCheckResponse(
+                limit = 20,
+                truncated = false,
+                totals = ModelCheckFindingCounts(errors = 0, warnings = 0, infos = 0),
+                findings = emptyList(),
+            ),
+        )
+
+        val stdout = tapSystemOut {
+            CommandLine(ModelCheckCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(MODEL)
+        }
+
+        assertEquals("no findings", stdout.trim())
     }
 
     @Test
     fun `model check prints one finding object per line as jsonl`() {
         val client = mock<DaemonClient>()
         whenever(client.checkModel(MODEL, 20)).thenReturn(
-            ModelCheckResponse(limit = 20, truncated = false, findings = listOf(ERROR_FINDING, WARNING_FINDING)),
+            ModelCheckResponse(
+                limit = 20,
+                truncated = false,
+                totals = ModelCheckFindingCounts(errors = 1, warnings = 1, infos = 0),
+                findings = listOf(ERROR_FINDING, WARNING_FINDING),
+            ),
         )
         var exitCode = Int.MIN_VALUE
 
@@ -81,10 +154,15 @@ class ModelCheckCommandTest {
     }
 
     @Test
-    fun `model check reports a truncation line when findings were dropped`() {
+    fun `the summary folds in how many findings were shown when truncated`() {
         val client = mock<DaemonClient>()
         whenever(client.checkModel(MODEL, 1)).thenReturn(
-            ModelCheckResponse(limit = 1, truncated = true, findings = listOf(ERROR_FINDING)),
+            ModelCheckResponse(
+                limit = 1,
+                truncated = true,
+                totals = ModelCheckFindingCounts(errors = 3, warnings = 2, infos = 5),
+                findings = listOf(ERROR_FINDING),
+            ),
         )
         var exitCode = Int.MIN_VALUE
 
@@ -96,14 +174,20 @@ class ModelCheckCommandTest {
 
         assertEquals(0, exitCode)
         verify(client).checkModel(MODEL, 1)
-        assertContains(stdout, "truncated")
+        // Total counts are over the full set; the shown count folds into the same line.
+        assertEquals("3 errors, 2 warnings, 5 infos (showing 1)", stdout.trim().lines().last())
     }
 
     @Test
     fun `model check rejects an unknown format`() {
         val client = mock<DaemonClient>()
         whenever(client.checkModel(MODEL, 20)).thenReturn(
-            ModelCheckResponse(limit = 20, truncated = false, findings = emptyList()),
+            ModelCheckResponse(
+                limit = 20,
+                truncated = false,
+                totals = ModelCheckFindingCounts(errors = 0, warnings = 0, infos = 0),
+                findings = emptyList(),
+            ),
         )
         var exitCode = Int.MIN_VALUE
 

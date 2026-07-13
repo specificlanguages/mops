@@ -2,6 +2,7 @@ package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DefaultDaemonClient
 import com.specificlanguages.mops.protocol.FindingSeverity
+import com.specificlanguages.mops.protocol.ModelCheckFindingCounts
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
 import com.specificlanguages.mops.protocol.ModelCheckResponse
 import com.specificlanguages.mops.protocol.ModelEditResponse
@@ -188,6 +189,7 @@ class DefaultDaemonClientTest {
         val response = ModelCheckResponse(
             limit = 20,
             truncated = false,
+            totals = ModelCheckFindingCounts(errors = 1, warnings = 0, infos = 0),
             findings = listOf(
                 ModelCheckFindingJson(
                     severity = FindingSeverity.ERROR,
