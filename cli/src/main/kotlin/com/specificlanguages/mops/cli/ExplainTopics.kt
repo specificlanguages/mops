@@ -34,8 +34,24 @@ object ExplainTopics {
 
     /** Returns the verbatim page for [path], or throws [UnknownTopicException] when it does not resolve. */
     fun page(path: String): String {
-        if (path !in allTopics) throw unknownTopic(path)
-        return readResource(path) ?: throw unknownTopic(path)
+        val topic = resolve(path) ?: throw unknownTopic(path)
+        return readResource(topic) ?: throw unknownTopic(path)
+    }
+
+    /**
+     * Resolves [path] to a canonical topic name, or returns null.
+     *
+     * Besides the canonical names, accepts a top-level topic qualified by any valid topic prefix (e.g. `edit.target`
+     * or `edit.delete.target` for `target`): pages cross-reference top-level topics by bare name, and readers of an
+     * `edit.*` page naturally qualify those names with the namespace they are in.
+     */
+    private fun resolve(path: String): String? {
+        if (path in allTopics) return path
+        val lastDot = path.lastIndexOf('.')
+        if (lastDot < 0) return null
+        val prefix = path.substring(0, lastDot)
+        val leaf = path.substring(lastDot + 1)
+        return leaf.takeIf { prefix in allTopics && leaf in topLevelTopics }
     }
 
     /** Returns the build-generated JSON Schema for the edit-batch Notation, embedded as a classpath resource. */
@@ -59,9 +75,11 @@ object ExplainTopics {
             val candidateParts = candidate.split(".")
             candidateParts.size == parts.size && candidateParts.dropLast(1).joinToString(".") == parentPrefix
         }.ifEmpty { allTopics }
+        // Qualified top-level aliases (see resolve) are invocable too, so offer them as suggestions.
+        val aliases = if (parentPrefix in allTopics) topLevelTopics.map { "$parentPrefix.$it" } else emptyList()
         // Nearest sibling by edit distance, but credit a shared prefix so `edit.addNode` suggests `edit.addChild`
         // (which shares the `edit.add` prefix) over an equidistant `edit.moveAsChild`.
-        val suggestion = siblings.minByOrNull { levenshtein(path, it) - commonPrefixLength(path, it) }
+        val suggestion = (siblings + aliases).minByOrNull { levenshtein(path, it) - commonPrefixLength(path, it) }
         val didYouMean = suggestion?.let { "did you mean $it? " }.orEmpty()
         return UnknownTopicException("unknown topic \"$path\" — ${didYouMean}valid: ${siblings.joinToString(", ")}")
     }

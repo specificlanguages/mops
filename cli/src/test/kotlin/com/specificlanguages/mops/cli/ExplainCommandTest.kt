@@ -54,6 +54,11 @@ class ExplainCommandTest {
     }
 
     @Test
+    fun `explain accepts a top-level topic qualified by its referencing namespace`() {
+        assertEquals(runExplain("target"), runExplain("edit.target"))
+    }
+
+    @Test
     fun `explain edit --schema prints the generated schema and exits zero`() {
         val output = runExplain("edit", "--schema")
 
@@ -87,6 +92,17 @@ class ExplainCommandTest {
     }
 
     @Test
+    fun `did-you-mean also suggests qualified top-level aliases`() {
+        var exitCode = Int.MIN_VALUE
+        val stderr = tapSystemErr {
+            exitCode = newCommandLine().execute("explain", "edit.targt")
+        }
+
+        assertNotEquals(0, exitCode)
+        assertContains(stderr, "did you mean edit.target")
+    }
+
+    @Test
     fun `every operation has a matching explain page`() {
         for (op in EditNotation.operationNames) {
             assertTrue(resourceExists("edit.$op"), "missing explain/edit.$op.txt")
@@ -116,18 +132,34 @@ class ExplainCommandTest {
     }
 
     @Test
-    fun `every drill-down pointer resolves to an existing topic`() {
+    fun `every drill-down pointer resolves through the CLI topic lookup`() {
         for (topic in allTopics) {
-            val page = pageText(topic)
-            val pointers = sectionBody(page, "SEE ALSO").ifBlank { sectionBody(page, "DRILL DOWN") }
-            // Prose hints (e.g. a `mops ...` command line) use backticks; only bare pointer lines name topics.
-            val pointerLines = pointers.lines().filterNot { it.contains('`') }.joinToString(" ")
-            val tokens = pointerLines.split(Regex("[\\s,]+")).filter { it.isNotBlank() }
-            assertTrue(tokens.isNotEmpty(), "$topic must name drill-down paths")
-            for (token in tokens) {
-                assertContains(allTopics, token, message = "$topic points at unknown topic '$token'")
+            val pointers = pointersOf(topic)
+            assertTrue(pointers.isNotEmpty(), "$topic must name drill-down paths")
+            for (pointer in pointers) {
+                assertEquals(pageText(pointer), ExplainTopics.page(pointer),
+                    "$topic points at '$pointer', which must be invocable as printed")
             }
         }
+    }
+
+    @Test
+    fun `every drill-down pointer also resolves qualified by the page that prints it`() {
+        for (topic in allTopics) {
+            for (pointer in pointersOf(topic).filterNot { it.contains('.') }) {
+                assertEquals(ExplainTopics.page(pointer), ExplainTopics.page("$topic.$pointer"),
+                    "'$topic.$pointer' must resolve to the same page as '$pointer'")
+            }
+        }
+    }
+
+    /** Topic names printed in a page's SEE ALSO (or DRILL DOWN) section. */
+    private fun pointersOf(topic: String): List<String> {
+        val page = pageText(topic)
+        val pointers = sectionBody(page, "SEE ALSO").ifBlank { sectionBody(page, "DRILL DOWN") }
+        // Prose hints (e.g. a `mops ...` command line) use backticks; only bare pointer lines name topics.
+        val pointerLines = pointers.lines().filterNot { it.contains('`') }.joinToString(" ")
+        return pointerLines.split(Regex("[\\s,]+")).filter { it.isNotBlank() }
     }
 
     @Test
