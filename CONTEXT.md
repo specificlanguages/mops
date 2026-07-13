@@ -172,6 +172,20 @@ The representation of an **MPS Node** inside an **Edit Script**: named access to
 _Avoid_: node object, wrapper
 _Related_: Edit Script, MPS Node
 
+**Materialize**:
+An **Edit Operation** materializes an **MPS Node** when it brings the node into its model fresh or as a copy. A **Move Leaf** does not materialize the node it adopts — that node already existed and keeps its identity.
+_Related_: Edit Operation, Copy Leaf, Move Leaf, Edit Plugin
+
+**Edit Plugin**:
+Language-aware behavior that runs automatically when an **Edit Operation** materializes a **Concept Instance** of a concept the plugin declares, adjusting model state according to its language's rules and disclosing what it did through **Hints**. mops dispatches to **Edit Plugins** itself; it does not invoke behaviors that languages register with MPS for IDE editing, such as paste post-processors.
+_Avoid_: plugin without qualification (MPS languages have a plugin aspect), hook
+_Related_: Materialize, Hint, Concept Instance
+
+**Hint**:
+A free-text disclosure in an edit response describing something done automatically on the user's behalf, such as an **Edit Plugin**'s adjustment. A **Hint** reports work done, not a problem — it is distinct from a warning.
+_Avoid_: warning, notice
+_Related_: Edit Plugin
+
 **Constraint**:
 A language-defined rule that restricts whether an edit is well-formed, such as which **MPS Concepts** may fill an **MPS Link**, a link's cardinality, or whether a node may be a **Child** of another node.
 _Avoid_: rule, validation
@@ -271,6 +285,18 @@ Domain expert: No. Dangling references are a reference-resolution concern, which
 Dev: When we wrap a node that carries an annotation, does the annotation end up on the wrapper?
 
 Domain expert: No. An annotation is a **Child** of the annotated node, so it travels with the wrapped node's **Node Subtree**. Moving it onto the wrapper is a separate, explicit edit.
+
+Dev: An edit plugin rewrote a property during a copy — do we emit a warning about it?
+
+Domain expert: No. An **Edit Plugin** doing its declared job is not a problem, so it is disclosed as a **Hint**, never a warning. Warnings keep their signal value for things that may be wrong.
+
+Dev: A move rearranged a node whose concept an edit plugin declares. Does the plugin run on it?
+
+Domain expert: No. A **Move Leaf** does not **Materialize** its node — the node already existed and keeps its identity. **Edit Plugins** run only on materialized nodes: fresh ones and copies.
+
+Dev: A copied subtree mixes nodes from several languages. Does a match near the root stop dispatch below it?
+
+Domain expert: No. Each **Edit Plugin** is offered every materialized **Concept Instance** of its declared concepts, wherever it sits in the subtree. One plugin's match never hides a node from another plugin.
 
 Dev: Does copying a node bring its references along?
 
