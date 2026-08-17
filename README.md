@@ -199,8 +199,9 @@ working directory. With `--all`, it reads every known daemon record.
 ## Daemon State
 
 Daemon records, logs, working files, and isolated IDEA config and system directories live outside the MPS project. By
-default the CLI stores them under `~/.mops/daemon`; pass `--daemon-home <path>` to use another directory. Each project
-gets a stable hashed subdirectory under `projects/`, including:
+default the CLI stores them under `$XDG_CACHE_HOME/mops/daemon`, falling back to `~/.cache/mops/daemon` when
+`XDG_CACHE_HOME` is unset; pass `--daemon-home <path>` to use another directory. Each project gets a stable hashed
+subdirectory under `projects/`, including:
 
 - `daemon.json` - atomic daemon record with port, token, PID, daemon version, project path, MPS home, Java home,
   workspace path, and startup time

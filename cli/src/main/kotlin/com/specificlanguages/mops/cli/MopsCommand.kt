@@ -80,7 +80,7 @@ class MopsCommand(
 
     private fun createDaemonPool(): DefaultDaemonPool {
         val resolvedDaemonHome =
-            daemonHome?.let(workingDirectory::resolve) ?: Path.of(System.getProperty("user.home"), ".mops", "daemon")
+            daemonHome?.let(workingDirectory::resolve) ?: defaultDaemonHome()
         val daemonPool = DefaultDaemonPool.forDaemonHome(resolvedDaemonHome)
         return daemonPool
     }

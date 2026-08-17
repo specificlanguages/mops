@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Moved the default daemon home from `~/.mops/daemon` to the XDG cache directory: mops now uses
+  `$XDG_CACHE_HOME/mops/daemon`, falling back to `~/.cache/mops/daemon` when `XDG_CACHE_HOME` is unset, empty, or
+  relative. `--daemon-home` continues to override the default.
+
 ## 0.3.0 - 2026-08-17
 
 - Made a bare **Model Name** resolve as a single **Navigation Target** segment, so `mops list <model-name>` and a scope
