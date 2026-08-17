@@ -22,7 +22,7 @@ import kotlin.io.path.isRegularFile
 @Command(
     name = "mops-daemon",
     mixinStandardHelpOptions = true,
-    version = ["mops-daemon 0.3.0-SNAPSHOT"],
+    versionProvider = MopsDaemonVersionProvider::class,
     description = ["Serve loopback daemon requests until stopped or idle."],
 )
 class MopsDaemonCommand : Runnable {

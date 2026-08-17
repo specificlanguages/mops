@@ -14,7 +14,7 @@ import kotlin.io.path.isDirectory
 @Command(
     name = "mops",
     mixinStandardHelpOptions = true,
-    version = ["mops 0.3.0-SNAPSHOT"],
+    versionProvider = MopsVersionProvider::class,
     description = ["Kotlin CLI for the daemon-backed MPS prototype."],
     subcommands = [
         DaemonOperations::class,

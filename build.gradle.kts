@@ -10,7 +10,6 @@ plugins {
 }
 
 group = "com.specificlanguages.mops"
-version = "0.3.0-SNAPSHOT"
 
 subprojects {
     group = rootProject.group
@@ -23,6 +22,28 @@ tasks.check {
 
 tasks.build {
     dependsOn(subprojects.map { "${it.path}:build" })
+}
+
+tasks.register("verifyReleaseVersion") {
+    group = "verification"
+    description = "Checks that the project version is a release and matches -PreleaseVersion."
+
+    val expectedVersion = providers.gradleProperty("releaseVersion")
+    inputs.property("releaseVersion", expectedVersion)
+    inputs.property("projectVersion", project.version.toString())
+
+    doLast {
+        val expected = expectedVersion.orNull
+            ?: throw GradleException("Specify the release version with -PreleaseVersion=<version>.")
+        val actual = project.version.toString()
+
+        if (actual.endsWith("-SNAPSHOT")) {
+            throw GradleException("Project version $actual is a snapshot; create a release commit first.")
+        }
+        if (actual != expected) {
+            throw GradleException("Project version $actual does not match release version $expected.")
+        }
+    }
 }
 
 tasks.register<Sync>("installMops") {

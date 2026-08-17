@@ -20,6 +20,23 @@ dependencies {
 
 val relocatedPackage = "com.specificlanguages.mops.shaded.kotlinx.serialization"
 
+val generateMopsVersion by tasks.registering(WriteProperties::class) {
+    destinationFile = layout.buildDirectory.file("generated/mops-version/mops-version.properties").get().asFile
+    property("version", project.version.toString())
+}
+
+sourceSets.main {
+    resources.srcDir(layout.buildDirectory.dir("generated/mops-version"))
+}
+
+tasks.processResources {
+    dependsOn(generateMopsVersion)
+}
+
+tasks.test {
+    systemProperty("mops.expectedVersion", project.version.toString())
+}
+
 tasks.shadowJar {
     // Keep the default "all" classifier so the shaded jar never collides with the thin jar used for compilation.
     configurations = listOf(relocatedSerialization)
