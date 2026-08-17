@@ -1,0 +1,86 @@
+name: Release mops
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version without the v prefix
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+
+    steps:
+      - name: Require main and a stable semantic version
+        env:
+          RELEASE_REF: ${{ github.ref }}
+        run: |
+          if [[ "$RELEASE_REF" != "refs/heads/main" ]]; then
+            echo "Releases must run from main, not $RELEASE_REF" >&2
+            exit 1
+          fi
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Release version must have the form X.Y.Z: $VERSION" >&2
+            exit 1
+          fi
+
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Reject an existing tag
+        run: |
+          if git show-ref --verify --quiet "refs/tags/v${VERSION}"; then
+            echo "Tag v${VERSION} already exists" >&2
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Validate release commit
+        run: ./gradlew verifyReleaseVersion -PreleaseVersion="$VERSION"
+
+      - name: Test and assemble
+        run: ./gradlew check :cli:distZip
+
+      - name: Smoke-test distribution
+        run: |
+          archive="cli/build/distributions/mops-${VERSION}.zip"
+          mkdir unpacked
+          unzip -q "$archive" -d unpacked
+          reported="$("unpacked/mops-${VERSION}/bin/mops" --version)"
+          if [[ "$reported" != "mops ${VERSION}" ]]; then
+            echo "Expected 'mops ${VERSION}', got '$reported'" >&2
+            exit 1
+          fi
+
+      - name: Create checksum
+        working-directory: cli/build/distributions
+        run: sha256sum "mops-${VERSION}.zip" > "mops-${VERSION}_checksums.txt"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${VERSION}" \
+            "cli/build/distributions/mops-${VERSION}.zip" \
+            "cli/build/distributions/mops-${VERSION}_checksums.txt" \
+            --target "$GITHUB_SHA" \
+            --title "mops ${VERSION}" \
+            --generate-notes

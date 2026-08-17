@@ -221,3 +221,16 @@ records are removed when the recorded process or socket is no longer reachable.
 ```
 
 The repository is a Gradle-rooted Kotlin prototype with two application subprojects: `cli/` and `daemon/`.
+
+## Release
+
+Releases are published from explicit release commits on `main`:
+
+1. Change `version` in `gradle.properties` from the development snapshot to the exact release version.
+2. Replace `Unreleased` in the corresponding `CHANGELOG.md` heading with the release date and merge the release commit.
+3. Run the **Release mops** workflow from `main`, entering the version without the `v` prefix.
+4. After publication, change `gradle.properties` to the next development `-SNAPSHOT` version.
+
+The workflow verifies the version, runs all checks, smoke-tests the ZIP distribution, generates its SHA-256 checksum,
+and publishes both files in a GitHub Release. It creates the `v<version>` tag at the tested release commit; release tags
+must not be created manually.
