@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0 (Unreleased)
+## 0.3.0 - 2026-08-17
 
 - Made a bare **Model Name** resolve as a single **Navigation Target** segment, so `mops list <model-name>` and a scope
   clause `in <model-name>` both work without spelling out the owning module. A single segment now counts every
