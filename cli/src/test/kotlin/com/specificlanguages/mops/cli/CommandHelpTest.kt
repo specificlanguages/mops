@@ -14,15 +14,18 @@ class CommandHelpTest {
 
         assertContains(output, "daemon")
         assertContains(output, "list, ls")
-        assertContains(output, "model")
+        assertContains(output, "get")
+        assertContains(output, "render")
+        assertContains(output, "edit")
+        assertContains(output, "check")
         assertContains(output, "--project-root")
     }
 
     @Test
-    fun `model help lists edit subcommand`() {
-        val output = runHelp("model", "--help")
+    fun `edit help lists model subcommand`() {
+        val output = runHelp("edit", "--help")
 
-        assertContains(output, "edit")
+        assertContains(output, "model")
     }
 
     @Test
@@ -35,12 +38,11 @@ class CommandHelpTest {
     }
 
     @Test
-    fun `model help lists model subcommands`() {
-        val output = runHelp("model", "--help")
-
-        assertContains(output, "get-node")
-        assertContains(output, "edit")
-        assertContains(output, "render-node")
+    fun `verb help lists object subcommands`() {
+        assertContains(runHelp("get", "--help"), "node")
+        assertContains(runHelp("render", "--help"), "node")
+        assertContains(runHelp("edit", "--help"), "model")
+        assertContains(runHelp("check", "--help"), "model")
     }
 
     @Test
@@ -58,20 +60,20 @@ class CommandHelpTest {
         val output = runHelp("help")
 
         assertContains(output, "Usage:")
-        assertContains(output, "model")
+        assertContains(output, "get")
     }
 
     @Test
     fun `help verb prints group usage`() {
-        val output = runHelp("help", "model")
+        val output = runHelp("help", "edit")
 
         assertContains(output, "Usage:")
-        assertContains(output, "edit")
+        assertContains(output, "model")
     }
 
     @Test
     fun `help verb prints leaf usage`() {
-        val output = runHelp("help", "model", "edit")
+        val output = runHelp("help", "edit", "model")
 
         assertContains(output, "Usage:")
         assertContains(output, "--file")
@@ -81,7 +83,7 @@ class CommandHelpTest {
 
     @Test
     fun `group help verb prints leaf usage`() {
-        val output = runHelp("model", "help", "edit")
+        val output = runHelp("edit", "help", "model")
 
         assertContains(output, "Usage:")
         assertContains(output, "--file")
@@ -103,9 +105,14 @@ class CommandHelpTest {
             arrayOf("find", "usages"),
             arrayOf("find", "root-by-name"),
             arrayOf("find", "node-by-id"),
-            arrayOf("model", "get-node"),
-            arrayOf("model", "render-node"),
-            arrayOf("model", "edit"),
+            arrayOf("get", "node"),
+            arrayOf("render", "node"),
+            arrayOf("edit", "model"),
+            arrayOf("check", "model"),
+            arrayOf("make", "module"),
+            arrayOf("make", "project"),
+            arrayOf("diagnose", "module"),
+            arrayOf("diagnose", "project"),
             arrayOf("daemon", "ping"),
             arrayOf("daemon", "status"),
             arrayOf("daemon", "stop"),

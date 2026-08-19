@@ -6,15 +6,13 @@ import com.specificlanguages.mops.protocol.ProtocolJson
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
-import picocli.CommandLine.ParentCommand
 
 @Command(
     name = "module",
     description = ["Diagnose the load state of one module, addressed by name or serialized module reference."],
 )
-class DiagnoseModuleCommand(private val daemonClient: DaemonClient? = null) : CliCommand() {
-    @ParentCommand
-    lateinit var diagnose: DiagnoseOperations
+class DiagnoseModuleCommand(private val environment: CommandEnvironment) : CliCommand() {
+    constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
 
     @Option(names = ["--json"], description = ["Print the full diagnosis as JSON."])
     var json: Boolean = false
@@ -28,7 +26,7 @@ class DiagnoseModuleCommand(private val daemonClient: DaemonClient? = null) : Cl
     lateinit var module: String
 
     override fun run() {
-        val client = daemonClient ?: diagnose.root.ensureDaemon()
+        val client = environment.daemon()
         val response = client.diagnoseModule(module)
 
         if (json) {

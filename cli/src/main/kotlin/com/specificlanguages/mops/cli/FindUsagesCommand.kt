@@ -8,7 +8,6 @@ import com.specificlanguages.mops.protocol.NodeTarget
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
-import picocli.CommandLine.ParentCommand
 
 @Command(
     name = "usages",
@@ -18,9 +17,8 @@ import picocli.CommandLine.ParentCommand
             "repository. See `mops explain scope`.",
     ],
 )
-class FindUsagesCommand(private val daemonClient: DaemonClient? = null) : CliCommand() {
-    @ParentCommand
-    lateinit var find: FindOperations
+class FindUsagesCommand(private val environment: CommandEnvironment) : CliCommand() {
+    constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
 
     @Option(
         names = ["--json"],
@@ -61,7 +59,7 @@ class FindUsagesCommand(private val daemonClient: DaemonClient? = null) : CliCom
         require(limit >= 0) { "limit must not be negative" }
         require(!(refsOnly && json)) { "--refs-only cannot be combined with --json" }
         val (targetTokens, scope) = splitUsagesArguments(arguments.toList())
-        val client = daemonClient ?: find.root.ensureDaemon()
+        val client = environment.daemon()
         val response = client.findUsages(target = nodeTarget(targetTokens), limit = limit, scope = scope)
         when {
             json -> println(ProtocolJson.encodeResponse(response))

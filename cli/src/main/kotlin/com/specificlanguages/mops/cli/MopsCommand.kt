@@ -16,23 +16,13 @@ import kotlin.io.path.isDirectory
     mixinStandardHelpOptions = true,
     versionProvider = MopsVersionProvider::class,
     description = ["Kotlin CLI for the daemon-backed MPS prototype."],
-    subcommands = [
-        DaemonOperations::class,
-        FindOperations::class,
-        MpsListCommand::class,
-        ModelOperations::class,
-        DiagnoseOperations::class,
-        MakeOperations::class,
-        ExplainCommand::class,
-        RecursiveHelpCommand::class,
-    ],
 )
 class MopsCommand(
     /**
      * The working directory for the CLI. All paths are resolved relative to this directory.
      */
-    val workingDirectory: Path = Path.of(System.getProperty("user.dir"))
-) : Runnable {
+    override val workingDirectory: Path = Path.of(System.getProperty("user.dir"))
+) : Runnable, CommandEnvironment {
 
     init {
         require(workingDirectory.isAbsolute) { "working directory must be absolute: $workingDirectory" }
@@ -72,11 +62,11 @@ class MopsCommand(
 
     private var daemonPool: DefaultDaemonPool? = null
 
-    fun ensureDaemonPool(): DaemonPool =
+    override fun daemonPool(): DaemonPool =
         daemonPool ?: createDaemonPool().also { daemonPool = it }
 
-    fun ensureDaemon(projectPathHint: Path = workingDirectory): DaemonClient =
-        ensureDaemonPool().ensureDaemon(createDaemonContext(projectPathHint))
+    override fun daemon(projectPathHint: Path): DaemonClient =
+        daemonPool().ensureDaemon(createDaemonContext(projectPathHint))
 
     private fun createDaemonPool(): DefaultDaemonPool {
         val resolvedDaemonHome =
@@ -103,7 +93,7 @@ class MopsCommand(
 
     fun resolveMpsHome(): Path? = mpsHome?.let(workingDirectory::resolve)
 
-    fun resolveProjectPath(start: Path = workingDirectory): Path {
+    override fun projectPath(start: Path): Path {
         projectRoot?.let { configuredProjectRoot ->
             val resolved = workingDirectory.resolve(configuredProjectRoot).normalize()
             if (resolved.resolve(".mps").isDirectory()) {
@@ -114,6 +104,8 @@ class MopsCommand(
 
         return MopsCommand.resolveProjectPath(start)
     }
+
+    fun resolveProjectPath(start: Path = workingDirectory): Path = projectPath(start)
 
     companion object {
         fun resolveProjectPath(start: Path): Path {

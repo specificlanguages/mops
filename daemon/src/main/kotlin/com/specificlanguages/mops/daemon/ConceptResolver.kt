@@ -205,7 +205,7 @@ class ConceptResolver(private val project: Project) {
             // command so the caller can build and retry without deducing the remedy. When something a make cannot fix
             // is in the way (an absent module, a runtime that failed to register), the diagnosis line below stands alone.
             if (problem != null && loadFixableByMake(problem)) {
-                append("\nrun 'mops make modules ${parsed.language}' to build it, then retry")
+                append("\nrun 'mops make module ${parsed.language}' to build it, then retry")
             }
             append("\nrun 'mops diagnose module ${parsed.language}' for the full dependency tree")
         }

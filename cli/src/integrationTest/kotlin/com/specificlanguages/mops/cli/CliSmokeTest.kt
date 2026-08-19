@@ -90,8 +90,8 @@ class CliSmokeTest {
                 "--daemon-home",
                 daemonHome.pathString,
                 *javaAndMpsHomeArgs(),
-                "model",
                 "edit",
+                "model",
                 "--file",
                 batchFile.pathString,
             )

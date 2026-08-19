@@ -6,7 +6,6 @@ import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
-import picocli.CommandLine.ParentCommand
 
 @Command(
     name = "root-by-name",
@@ -16,9 +15,8 @@ import picocli.CommandLine.ParentCommand
             "root-bearing scopes are valid. See `mops explain name-pattern` and `mops explain scope`.",
     ],
 )
-class FindRootByNameCommand(private val daemonClient: DaemonClient? = null) : CliCommand() {
-    @ParentCommand
-    lateinit var find: FindOperations
+class FindRootByNameCommand(private val environment: CommandEnvironment) : CliCommand() {
+    constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
 
     @Option(
         names = ["--json"],
@@ -68,7 +66,7 @@ class FindRootByNameCommand(private val daemonClient: DaemonClient? = null) : Cl
         require(pattern.isNotBlank()) { "pattern must not be blank" }
         require(!(refsOnly && json)) { "--refs-only cannot be combined with --json" }
         val scope = scopeClauseSegments(scopeClause)
-        val client = daemonClient ?: find.root.ensureDaemon()
+        val client = environment.daemon()
         val response = client.findByName(pattern = pattern, limit = limit, scope = scope)
         when {
             json -> println(ProtocolJson.encodeResponse(response))

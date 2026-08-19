@@ -7,18 +7,16 @@ import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.ProtocolJson
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
-import picocli.CommandLine.ParentCommand
 import java.nio.file.Path
 import kotlin.io.path.readText
 
 @Command(
-    name = "edit",
+    name = "model",
     description = ["Apply a JSON batch of edit operations."],
     footer = ["Operation reference: mops explain edit"],
 )
-class ModelEditCommand(private val daemonClient: DaemonClient? = null) : CliCommand() {
-    @ParentCommand
-    lateinit var model: ModelOperations
+class ModelEditCommand(private val environment: CommandEnvironment) : CliCommand() {
+    constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
 
     @Option(
         names = ["--file"],
@@ -42,7 +40,7 @@ class ModelEditCommand(private val daemonClient: DaemonClient? = null) : CliComm
         val batch = readBatch()
         require(batch.operations.isNotEmpty()) { "edit batch must contain at least one operation" }
 
-        val client = daemonClient ?: model.root.ensureDaemon()
+        val client = environment.daemon()
         val response = client.modelEdit(batch, resolveConstraints())
         println(ProtocolJson.encodeResponse(response))
     }
@@ -64,7 +62,7 @@ class ModelEditCommand(private val daemonClient: DaemonClient? = null) : CliComm
     private fun inputText(): String =
         file?.let { fileName ->
             val path = Path.of(fileName)
-            val resolved = if (path.isAbsolute) path else model.root.workingDirectory.resolve(path)
+            val resolved = if (path.isAbsolute) path else environment.workingDirectory.resolve(path)
             resolved.readText()
         } ?: System.`in`.bufferedReader().readText()
 }

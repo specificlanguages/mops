@@ -1,7 +1,7 @@
 # Model save lifecycle (does MPS auto-save?)
 
 **Question this answers:** can the running MPS platform persist an in-memory model change to disk without mops asking —
-via idle auto-save, save-on-close, save-on-command, or a background flush? This matters for `model edit` atomicity:
+via idle auto-save, save-on-close, save-on-command, or a background flush? This matters for `edit model` atomicity:
 mops reverts a failed batch with `EditableSModel.reloadFromSource()`, which only recovers the on-disk state, so it is
 safe only if nothing was written behind mops's back.
 
@@ -52,7 +52,7 @@ app via `MPSHeadlessPlatformStarter` and sets `java.awt.headless=true`
 
 - Every other caller of `SaveRepositoryCommand` / `EditableSModelBase.save` is an interactive workbench action —
   refactoring dialogs, module/model properties, `MakeActionImpl`, migration wizards, VCS conflict tracking. None sit on
-  mops's read / `model edit` paths.
+  mops's read / `edit model` paths.
 - The `autosave` string in `EditableSModelBase.resolveConflict0()` is a *warning message* shown on external-file
   conflict (it even notes MPS does "saveAll on each fs reload" — that is the `IdeMPSFileSaver` path above), not a
   self-scheduled save.
@@ -60,11 +60,11 @@ app via `MPSHeadlessPlatformStarter` and sets `java.awt.headless=true`
   project at the end of `executeWithProject` without a save. Closing the daemon drops unsaved in-memory changes rather
   than flushing them.
 
-## Consequence for `model edit` atomicity
+## Consequence for `edit model` atomicity
 
 Because no background save exists in the daemon, `reloadFromSource()` is a sound revert for a batch that failed **before**
 mops called save: the on-disk copy is still the pre-batch state, and reloading discards the in-memory mutations. The
-real limits on `model edit` atomicity are therefore the explicit-save ones, not a surprise auto-save:
+real limits on `edit model` atomicity are therefore the explicit-save ones, not a surprise auto-save:
 
 - `saveWithResolveInfo` writes affected models one at a time and stops at the first failure, so a batch spanning several
   models can leave earlier models already persisted.

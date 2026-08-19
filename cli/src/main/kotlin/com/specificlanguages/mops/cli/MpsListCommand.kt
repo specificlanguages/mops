@@ -8,16 +8,14 @@ import com.specificlanguages.mops.protocol.MpsListSummaryJson
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
-import picocli.CommandLine.ParentCommand
 
 @Command(
     name = "list",
     aliases = ["ls"],
     description = ["List an MPS navigation target as a bounded tree."],
 )
-class MpsListCommand(private val daemonClient: DaemonClient? = null) : CliCommand() {
-    @ParentCommand
-    lateinit var root: MopsCommand
+class MpsListCommand(private val environment: CommandEnvironment) : CliCommand() {
+    constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
 
     @Option(
         names = ["--depth"],
@@ -76,7 +74,7 @@ class MpsListCommand(private val daemonClient: DaemonClient? = null) : CliComman
 
         val requestedTarget = target.takeIf { it.isNotEmpty() }
 
-        val client = daemonClient ?: root.ensureDaemon()
+        val client = environment.daemon()
         val response = client.list(
             target = requestedTarget,
             depth = depth ?: DEFAULT_DEPTH,

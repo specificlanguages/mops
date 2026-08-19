@@ -8,7 +8,7 @@ import org.jetbrains.mps.openapi.model.SNodeAccessUtil
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 
 /**
- * Builds the summary vocabulary `find` and `model check` share for one node: whether it is a Root Node, its name,
+ * Builds the summary vocabulary `find` and `check model` share for one node: whether it is a Root Node, its name,
  * **MPS Concept** qualified name, concept validity, serialized Node Reference, and immediate parent.
  */
 internal fun nodeSummary(node: SNode, persistence: PersistenceFacade): MpsNodeSummaryJson =

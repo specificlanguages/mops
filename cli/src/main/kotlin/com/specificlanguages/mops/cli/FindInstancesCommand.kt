@@ -8,7 +8,6 @@ import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
-import picocli.CommandLine.ParentCommand
 
 @Command(
     name = "instances",
@@ -19,9 +18,8 @@ import picocli.CommandLine.ParentCommand
             "`mops explain scope`.",
     ],
 )
-class FindInstancesCommand(private val daemonClient: DaemonClient? = null) : CliCommand() {
-    @ParentCommand
-    lateinit var find: FindOperations
+class FindInstancesCommand(private val environment: CommandEnvironment) : CliCommand() {
+    constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
 
     @Option(
         names = ["--json"],
@@ -100,7 +98,7 @@ class FindInstancesCommand(private val daemonClient: DaemonClient? = null) : Cli
             named?.let { add(NodeFilter.Named(it)) }
             role?.let { add(NodeFilter.Role(it)) }
         }
-        val client = daemonClient ?: find.root.ensureDaemon()
+        val client = environment.daemon()
         val response = client.findInstances(
             concept = concept,
             exact = exact,

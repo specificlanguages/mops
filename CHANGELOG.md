@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Breaking:** Regularized the CLI around the verb-first `mops <verb> <object>` shape. `model get-node` is now
+  `get node`, `model render-node` is `render node`, `model edit` is `edit model`, `model check` is `check model`,
+  `make modules` is the singular `make module` (and still accepts multiple module arguments), and `diagnose modules`
+  is `diagnose project`. `list`, `find`, `make project`, `diagnose module`, `daemon`, and `explain` keep their existing
+  paths. Commands now receive their runtime environment through constructor injection rather than their Picocli parent
+  chain.
 - Moved the default daemon home from `~/.mops/daemon` to the XDG cache directory: mops now uses
   `$XDG_CACHE_HOME/mops/daemon`, falling back to `~/.cache/mops/daemon` when `XDG_CACHE_HOME` is unset, empty, or
   relative. `--daemon-home` continues to override the default.

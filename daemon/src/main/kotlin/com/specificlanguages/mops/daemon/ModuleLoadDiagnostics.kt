@@ -87,7 +87,7 @@ fun unusableLanguageList(languages: List<UnusableLanguage>): String =
     languages.joinToString("\n") { "  - ${it.name}: ${it.explanation}" }
 
 /** The make command that rebuilds the first of [languages], used as the example remedy in refusal messages. */
-fun makeModulesExample(languages: List<UnusableLanguage>): String = "mops make modules ${languages.first().name}"
+fun makeModulesExample(languages: List<UnusableLanguage>): String = "mops make module ${languages.first().name}"
 
 /**
  * Refusal message for an operation blocked because [subject] (a model, a concept name, …) would resolve through

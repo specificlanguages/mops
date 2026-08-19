@@ -6,7 +6,6 @@ import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
-import picocli.CommandLine.ParentCommand
 
 @Command(
     name = "node-by-id",
@@ -18,9 +17,8 @@ import picocli.CommandLine.ParentCommand
             "node subtree, or the whole repository (`in /`). See `mops explain node-ref` and `mops explain scope`.",
     ],
 )
-class FindNodeByIdCommand(private val daemonClient: DaemonClient? = null) : CliCommand() {
-    @ParentCommand
-    lateinit var find: FindOperations
+class FindNodeByIdCommand(private val environment: CommandEnvironment) : CliCommand() {
+    constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
 
     @Option(
         names = ["--json"],
@@ -70,7 +68,7 @@ class FindNodeByIdCommand(private val daemonClient: DaemonClient? = null) : CliC
         require(id.isNotBlank()) { "id must not be blank" }
         require(!(refsOnly && json)) { "--refs-only cannot be combined with --json" }
         val scope = scopeClauseSegments(scopeClause)
-        val client = daemonClient ?: find.root.ensureDaemon()
+        val client = environment.daemon()
         val response = client.findNodeById(nodeId = id, limit = limit, scope = scope)
         when {
             json -> println(ProtocolJson.encodeResponse(response))

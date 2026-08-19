@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * How `mops model edit` treats **Constraints** and concepts it cannot check.
+ * How `mops edit model` treats **Constraints** and concepts it cannot check.
  *
  * - [ADVISORY]: evaluate constraints and report violations, but apply and save the batch anyway.
  * - [BEST_EFFORT]: evaluate constraints; a violation blocks the batch (nothing is saved). A concept whose language did

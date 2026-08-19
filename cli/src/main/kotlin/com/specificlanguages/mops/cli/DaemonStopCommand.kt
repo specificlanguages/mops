@@ -11,20 +11,16 @@ import picocli.CommandLine.*
  * stale process because the record is no longer useful for future autostart decisions.
  */
 @Command(name = "stop", description = ["Stop a daemon process."])
-class DaemonStopCommand : CliCommand() {
-    @ParentCommand
-    lateinit var parent: DaemonOperations
-
+class DaemonStopCommand(private val environment: CommandEnvironment) : CliCommand() {
     @Option(names = ["--all"], description = ["Stop daemons for all projects."])
     var all: Boolean = false
 
     override fun run() {
-        val root = parent.root
-        val pool = root.ensureDaemonPool()
+        val pool = environment.daemonPool()
 
         val recordSpec =
             if (all) DaemonPool.Spec.All
-            else DaemonPool.Spec.ForProject(root.resolveProjectPath())
+            else DaemonPool.Spec.ForProject(environment.projectPath())
 
         val selected = pool.findRecords(recordSpec)
 

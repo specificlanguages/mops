@@ -19,7 +19,7 @@ object ConceptValidityGuard {
             ?: node.nodeId.toString()
         val language = languageName(node.concept)
         return "MPS Concept of node $address could not be resolved (${node.concept.qualifiedName}); " +
-            "its owning language '$language' is most likely not compiled — run 'mops make modules $language' and retry"
+            "its owning language '$language' is most likely not compiled — run 'mops make module $language' and retry"
     }
 
     /** Best-effort qualified name of [concept]'s owning language, used to group warnings once per language. */

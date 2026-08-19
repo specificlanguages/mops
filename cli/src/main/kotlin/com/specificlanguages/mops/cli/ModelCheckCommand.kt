@@ -7,15 +7,13 @@ import com.specificlanguages.mops.protocol.ProtocolJson
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
-import picocli.CommandLine.ParentCommand
 
 @Command(
-    name = "check",
+    name = "model",
     description = ["Run MPS's full Model Check over one model and report the findings."],
 )
-class ModelCheckCommand(private val daemonClient: DaemonClient? = null) : CliCommand() {
-    @ParentCommand
-    lateinit var model: ModelOperations
+class ModelCheckCommand(private val environment: CommandEnvironment) : CliCommand() {
+    constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
 
     @Option(
         names = ["--format"],
@@ -49,7 +47,7 @@ class ModelCheckCommand(private val daemonClient: DaemonClient? = null) : CliCom
         require(limit >= 0) { "limit must not be negative" }
         val outputFormat = resolveFormat()
 
-        val client = daemonClient ?: model.root.ensureDaemon()
+        val client = environment.daemon()
         val response = client.checkModel(target, limit)
 
         when (outputFormat) {

@@ -5,15 +5,13 @@ import com.specificlanguages.mops.protocol.NodeTarget
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
-import picocli.CommandLine.ParentCommand
 
 @Command(
-    name = "render-node",
+    name = "node",
     description = ["Render one MPS node as the plain text of its default editor."],
 )
-class ModelRenderNodeCommand(private val daemonClient: DaemonClient? = null) : CliCommand() {
-    @ParentCommand
-    lateinit var model: ModelOperations
+class ModelRenderNodeCommand(private val environment: CommandEnvironment) : CliCommand() {
+    constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
 
     @Option(
         names = ["--allow-reflective"],
@@ -32,7 +30,7 @@ class ModelRenderNodeCommand(private val daemonClient: DaemonClient? = null) : C
     lateinit var nodeTarget: Array<String>
 
     override fun run() {
-        val client = daemonClient ?: model.root.ensureDaemon()
+        val client = environment.daemon()
         val response = when (nodeTarget.size) {
             1 -> client.renderNode(NodeTarget.NodeReference(nodeTarget[0]), allowReflective)
             2 -> client.renderNode(NodeTarget.InModel(modelTarget = nodeTarget[0], nodeId = nodeTarget[1]), allowReflective)

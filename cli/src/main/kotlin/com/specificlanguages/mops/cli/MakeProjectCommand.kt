@@ -4,7 +4,6 @@ import com.specificlanguages.mops.daemoncomms.DaemonClient
 import picocli.CommandLine.Command
 import picocli.CommandLine.IExitCodeGenerator
 import picocli.CommandLine.Option
-import picocli.CommandLine.ParentCommand
 
 /**
  * Runs the MPS make on every generatable module in the project. Exits non-zero when the make reports errors.
@@ -13,9 +12,8 @@ import picocli.CommandLine.ParentCommand
     name = "project",
     description = ["Make every generatable module in the project."],
 )
-class MakeProjectCommand(private val daemonClient: DaemonClient? = null) : CliCommand(), IExitCodeGenerator {
-    @ParentCommand
-    lateinit var make: MakeOperations
+class MakeProjectCommand(private val environment: CommandEnvironment) : CliCommand(), IExitCodeGenerator {
+    constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
 
     @Option(names = ["--json"], description = ["Print the make result as JSON."])
     var json: Boolean = false
@@ -23,7 +21,7 @@ class MakeProjectCommand(private val daemonClient: DaemonClient? = null) : CliCo
     private var exitCode: Int = 0
 
     override fun run() {
-        val client = daemonClient ?: make.root.ensureDaemon()
+        val client = environment.daemon()
         exitCode = renderMakeResult(client.makeProject(), json)
     }
 

@@ -99,7 +99,7 @@ object EditSchema {
 
         val root = buildJsonObject {
             put("\$schema", "https://json-schema.org/draft/2020-12/schema")
-            put("title", "mops model edit batch")
+            put("title", "mops edit model batch")
             put("type", "object")
             putJsonObject("properties") {
                 putJsonObject("operations") {

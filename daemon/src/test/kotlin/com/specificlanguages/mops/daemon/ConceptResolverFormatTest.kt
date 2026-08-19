@@ -74,7 +74,7 @@ class ConceptResolverFormatTest {
         assertContains(message, "\"Expression\" cannot be resolved")
         assertContains(message, "  - exprs: not built")
         assertContains(message, "  - other.lang: built from older sources than the files on disk")
-        assertContains(message, "mops make modules exprs")
+        assertContains(message, "mops make module exprs")
         assertContains(message, "qualified concept name")
     }
 
@@ -122,7 +122,7 @@ class ConceptResolverFormatTest {
         assertContains(message, "  - dep.two: NOT_BUILT — classes not built yet")
         assertContains(message, "run 'mops diagnose module a.b' for the full dependency tree")
         // An absent dependency is not something a make fixes, so the make remedy is withheld here.
-        assertFalse(message.contains("mops make modules"), "unexpected make remedy in: $message")
+        assertFalse(message.contains("mops make module"), "unexpected make remedy in: $message")
     }
 
     @Test
@@ -135,7 +135,7 @@ class ConceptResolverFormatTest {
 
         val message = ConceptResolver.unloadedLanguageMessage(ConceptName("a.b", "Foo"), problem)
 
-        assertContains(message, "run 'mops make modules a.b' to build it, then retry")
+        assertContains(message, "run 'mops make module a.b' to build it, then retry")
         assertContains(message, "run 'mops diagnose module a.b' for the full dependency tree")
     }
 }

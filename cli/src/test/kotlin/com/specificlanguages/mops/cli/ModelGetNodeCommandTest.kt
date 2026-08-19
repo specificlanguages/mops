@@ -22,7 +22,7 @@ class ModelGetNodeCommandTest {
         var exitCode = Int.MIN_VALUE
 
         val stderr = tapSystemErr {
-            exitCode = newCommandLine().execute("model", "get-node")
+            exitCode = newCommandLine().execute("get", "node")
         }
 
         assertEquals(2, exitCode)

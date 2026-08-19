@@ -21,7 +21,7 @@ class ModelRenderNodeCommandTest {
         var exitCode = Int.MIN_VALUE
 
         val stderr = tapSystemErr {
-            exitCode = newCommandLine().execute("model", "render-node")
+            exitCode = newCommandLine().execute("render", "node")
         }
 
         assertEquals(2, exitCode)

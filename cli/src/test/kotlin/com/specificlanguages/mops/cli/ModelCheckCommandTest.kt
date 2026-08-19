@@ -26,7 +26,7 @@ class ModelCheckCommandTest {
         var exitCode = Int.MIN_VALUE
 
         val stderr = tapSystemErr {
-            exitCode = newCommandLine().execute("model", "check")
+            exitCode = newCommandLine().execute("check", "model")
         }
 
         assertEquals(2, exitCode)

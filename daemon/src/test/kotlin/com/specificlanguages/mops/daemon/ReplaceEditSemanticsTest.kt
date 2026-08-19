@@ -189,7 +189,7 @@ class ReplaceEditSemanticsTest {
             assertTrue(response.warnings.isEmpty(), "deleting a referenced node produces no warnings")
 
             // add's id is gone; main()'s call to it now dangles. mops does not detect or rewrite it at edit time —
-            // the unresolved reference is left in the model (observable here, and to `mops model check`).
+            // the unresolved reference is left in the model (observable here, and to `mops check model`).
             val calledFromMain = references(member(mpsAccess, "main"))
                 .single { it.role == "baseMethodDeclaration" && it.target.node == addId }
             assertTrue(!calledFromMain.target.resolved, "the inbound call must now be unresolved (dangling)")

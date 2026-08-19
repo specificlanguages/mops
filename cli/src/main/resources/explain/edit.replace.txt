@@ -27,7 +27,7 @@ SEMANTICS
 
   Inbound References to a deleted node are left dangling: mops does not detect, warn,
   or rewrite them. To keep a node's inbound References alive, adopt it with a Move
-  Leaf rather than rebuilding it. `mops model check` reports any dangling References.
+  Leaf rather than rebuilding it. `mops check model` reports any dangling References.
 
 EXAMPLE
   Replace a LinkDeclaration with a fresh one that adopts an existing node (kept by

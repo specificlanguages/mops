@@ -5,7 +5,7 @@ SHAPE
   {"operations": [ <operation>, ... ]}
 
   Each <operation> is a JSON object tagged by an "op" field. mops reads the batch
-  from stdin or --file (see: mops model edit --help).
+  from stdin or --file (see: mops edit model --help).
 
 OPERATIONS
   setProperty   set or clear a node's property
@@ -42,7 +42,7 @@ CHOOSING AN OPERATION
 
   Dangling References: edit does not detect, warn about, or rewrite inbound
   References left dangling when a node is deleted — that is Model Check territory.
-  Run `find usages` before to see what points at a node, and `model check` after to
+  Run `find usages` before to see what points at a node, and `check model` after to
   catch anything left dangling. To keep inbound References alive across a
   rearrangement, adopt the node with a Move Leaf rather than rebuilding it.
 

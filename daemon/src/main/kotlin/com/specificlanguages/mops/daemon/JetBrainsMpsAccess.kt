@@ -159,7 +159,7 @@ class JetBrainsMpsAccess(
             val remedy = if (buildable.isEmpty()) {
                 "Run `mops diagnose module <language>` for the full cause, or pass --allow-reflective to render anyway."
             } else {
-                "Make the affected languages (`mops make modules ${buildable.joinToString(" ")}`), then retry; run " +
+                "Make the affected languages (`mops make module ${buildable.joinToString(" ")}`), then retry; run " +
                     "`mops diagnose module <language>` for the full cause, or pass --allow-reflective to render anyway."
             }
             return "cannot render: this subtree uses languages that are not loaded, so their concepts did not resolve:\n" +

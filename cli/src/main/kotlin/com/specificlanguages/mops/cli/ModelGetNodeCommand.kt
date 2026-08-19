@@ -6,12 +6,10 @@ import com.specificlanguages.mops.protocol.ProtocolJson
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
-import picocli.CommandLine.ParentCommand
 
-@Command(name = "get-node", description = ["Export one MPS node as JSON."])
-class ModelGetNodeCommand(private val daemonClient: DaemonClient? = null) : CliCommand() {
-    @ParentCommand
-    lateinit var model: ModelOperations
+@Command(name = "node", description = ["Export one MPS node as JSON."])
+class ModelGetNodeCommand(private val environment: CommandEnvironment) : CliCommand() {
+    constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
 
     @Option(
         names = ["--ancestry"],
@@ -28,7 +26,7 @@ class ModelGetNodeCommand(private val daemonClient: DaemonClient? = null) : CliC
     lateinit var nodeTarget: Array<String>
 
     override fun run() {
-        val client = daemonClient ?: model.root.ensureDaemon()
+        val client = environment.daemon()
         val response = when (nodeTarget.size) {
             1 -> client.getNode(NodeTarget.NodeReference(nodeTarget[0]), ancestry)
             2 -> client.getNode(NodeTarget.InModel(modelTarget = nodeTarget[0], nodeId = nodeTarget[1]), ancestry)
