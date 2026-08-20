@@ -10,6 +10,8 @@ import groovy.lang.GroovyClassLoader
 import groovy.lang.GroovyShell
 import jetbrains.mps.project.Project
 import org.codehaus.groovy.control.CompilerConfiguration
+import java.io.File
+import java.nio.file.Path
 
 class CodeModeExecutor(private val access: MpsAccess, private val project: Project) {
     fun execute(request: CodeRunRequest): CodeResultResponse {
@@ -84,7 +86,7 @@ private object CodeResultAdapter {
     fun render(value: Any?): String? = when (value) {
         null -> null
         is String -> value
-        is Char, is Boolean, is Number -> value.toString()
+        is Char, is Boolean, is Number, is File, is Path -> value.toString()
         is Map<*, *> -> value.entries.joinToString(separator = ",", prefix = "{", postfix = "}") { json(it.key.toString()) + ":" + renderJson(it.value) }
         is Iterable<*> -> value.joinToString(separator = ",", prefix = "[", postfix = "]") { renderJson(it) }
         is Array<*> -> value.joinToString(separator = ",", prefix = "[", postfix = "]") { renderJson(it) }
@@ -97,7 +99,7 @@ private object CodeResultAdapter {
 
     private fun renderJson(value: Any?): String = when (value) {
         null -> "null"
-        is String, is Char -> json(value.toString())
+        is String, is Char, is File, is Path -> json(value.toString())
         is Boolean, is Number -> value.toString()
         is Map<*, *>, is Iterable<*>, is Array<*>, is BooleanArray, is IntArray, is LongArray, is DoubleArray -> render(value)!!
         else -> error("unsupported Code Mode result ${value.javaClass.name}; return a supported representation")
