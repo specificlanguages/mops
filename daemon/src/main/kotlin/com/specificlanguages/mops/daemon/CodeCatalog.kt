@@ -5,6 +5,10 @@ import com.specificlanguages.mops.daemon.core.MpsRead
 import com.specificlanguages.mops.daemon.core.MpsWrite
 import com.specificlanguages.mops.protocol.CodeCatalogRequest
 import com.specificlanguages.mops.protocol.CodeCatalogResponse
+import java.lang.reflect.GenericArrayType
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
+import java.lang.reflect.WildcardType
 
 object CodeCatalog {
     private data class Operation(val path: String, val signature: String, val access: String)
@@ -13,17 +17,55 @@ object CodeCatalog {
         reflect("mops.read", MpsRead::class.java, "read")
         reflect("mops.edit", MpsRead::class.java, "edit")
         reflect("mops.edit", MpsWrite::class.java, "edit")
-        reflect("mops.read", CodeReadServices::class.java, "read")
-        reflect("mops.edit", CodeEditServices::class.java, "edit")
         reflect("mops", MpsExtra::class.java, "outside")
+        add(Operation("mops.read.getModule", "mops.read.getModule(NavigationTarget target)", "read"))
+        add(Operation("mops.edit.getModule", "mops.edit.getModule(NavigationTarget target)", "edit"))
+        add(Operation(
+            "mops.edit.createLanguage",
+            "mops.edit.createLanguage(String moduleName, descriptor: String = null, withGenerator: Boolean = false)",
+            "edit",
+        ))
+        add(Operation(
+            "mops.edit.createSolution",
+            "mops.edit.createSolution(String moduleName, descriptor: String = null, usagePreset: String = 'not-generated')",
+            "edit",
+        ))
+        add(Operation(
+            "mops.edit.createDevkit",
+            "mops.edit.createDevkit(String moduleName, descriptor: String = null)",
+            "edit",
+        ))
+        add(Operation(
+            "mops.edit.createGenerator",
+            "mops.edit.createGenerator(LanguageHandle language, String alias, standalone: Boolean = false, descriptor: String = null)",
+            "edit",
+        ))
         add(Operation("mops.help", "mops.help(String path = null)", "outside"))
     }.distinctBy { it.path }.sortedBy { it.path }
 
     private fun MutableList<Operation>.reflect(prefix: String, type: Class<*>, access: String) {
-        type.declaredMethods.filterNot { it.isSynthetic }.forEach { method ->
-            val parameters = method.parameters.joinToString(", ") { it.parameterizedType.typeName.substringAfterLast('.') }
+        type.declaredMethods.filterNot { it.isSynthetic || '$' in it.name }.forEach { method ->
+            val parameters = method.parameters.joinToString(", ") { renderType(it.parameterizedType) }
             add(Operation("$prefix.${method.name}", "$prefix.${method.name}($parameters)", access))
         }
+    }
+
+    private fun renderType(type: Type): String = when (type) {
+        is Class<*> -> when {
+            type.isArray -> "${renderType(type.componentType)}[]"
+            type == java.lang.Boolean.TYPE -> "boolean"
+            type == java.lang.Integer.TYPE -> "int"
+            type == java.lang.Long.TYPE -> "long"
+            else -> type.simpleName
+        }
+        is ParameterizedType -> buildString {
+            append(renderType(type.rawType))
+            append(type.actualTypeArguments.joinToString(", ", "<", ">", transform = ::renderType))
+        }
+        is WildcardType -> type.upperBounds.firstOrNull()?.takeUnless { it == Any::class.java }
+            ?.let { "? extends ${renderType(it)}" } ?: "?"
+        is GenericArrayType -> "${renderType(type.genericComponentType)}[]"
+        else -> type.typeName.substringAfterLast('.')
     }
 
     fun response(request: CodeCatalogRequest) = CodeCatalogResponse(
