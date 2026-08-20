@@ -162,15 +162,30 @@ An **MPS Node** together with all nodes reachable from it through **Containment 
 _Avoid_: node tree, branch
 _Related_: Containment Link, Child
 
-**Edit Script**:
-A **Notation**: a JavaScript program that reads model state and performs **Edit Operations** through **Node Handles** within one transaction. An **Edit Script** is a second edit front-end alongside the edit batch JSON; both express the same **Edit Operations**.
-_Avoid_: macro, plugin
-_Related_: Edit Operation, Node Handle, Notation
+**Code Mode**:
+An environment in which users and agents compose multiple operations against an open **MPS Project** within one program. **Code Mode** complements individual mops commands, which remain the interface for direct operations.
+_Avoid_: Edit Script, eval mode
+_Related_: MPS Project, Access Block, Edit Operation, Node Handle
+
+**Access Block**:
+An independent section of a **Code Mode** program that gives its body either read access or edit access to an **MPS Project**. Code outside an **Access Block** may use operations that must run without MPS model access.
+_Avoid_: transaction when the block is read-only
+_Related_: Code Mode, Code Service, MPS Project, Edit Operation
+
+**Code Service**:
+A named capability made available to a **Code Mode** program by mops or a plugin. A **Code Service** states the model access its operations require.
+_Avoid_: command, raw MPS API
+_Related_: Code Mode, Access Block, Service Catalog
+
+**Service Catalog**:
+The discoverable description of the **Code Services** available to **Code Mode** for an **MPS Project**, including their operation signatures and usage information.
+_Avoid_: command help, service registry
+_Related_: Code Mode, Code Service, MPS Project
 
 **Node Handle**:
-The representation of an **MPS Node** inside an **Edit Script**: named access to the node's properties, **References**, and **Children**, plus its **Edit Operations** as methods. A **Node Handle** is live — it reflects edits made earlier in the same script.
+The mops-supported representation of an **MPS Node** inside **Code Mode**. A **Node Handle** may be retained between **Access Blocks**, but inspecting or changing its node requires suitable model access; trusted code may retrieve the underlying **MPS Node** as an unsupported escape hatch.
 _Avoid_: node object, wrapper
-_Related_: Edit Script, MPS Node
+_Related_: Code Mode, Access Block, MPS Node
 
 **Materialize**:
 An **Edit Operation** materializes an **MPS Node** when it brings the node into its model fresh or as a copy. A **Move Leaf** does not materialize the node it adopts — that node already existed and keeps its identity.

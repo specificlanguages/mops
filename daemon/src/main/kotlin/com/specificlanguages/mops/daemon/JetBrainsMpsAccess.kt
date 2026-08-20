@@ -21,7 +21,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 
 class JetBrainsMpsAccess(
-    private val project: Project,
+    internal val project: Project,
     logger: DaemonLogger,
     private val mpsListExporter: MpsListExporter = MpsListExporter(),
     private val jsonNodeExporter: JsonNodeExporter = JsonNodeExporter(),

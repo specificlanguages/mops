@@ -64,6 +64,14 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
 
                 is MakeProjectRequest -> mpsAccess.extra { makeProject() }
 
+                is CodeRunRequest -> {
+                    val access = mpsAccess as? JetBrainsMpsAccess
+                        ?: error("Code Mode requires the JetBrains MPS runtime")
+                    CodeModeExecutor(access, access.project).execute(request)
+                }
+
+                is CodeCatalogRequest -> CodeCatalog.response(request)
+
                 else -> errorResponse("UNSUPPORTED_REQUEST", "unsupported request type: ${request::class.simpleName}")
             }
         } catch (exception: MpsRequestException) {

@@ -9,6 +9,26 @@ import kotlin.test.assertFalse
 
 class DaemonProtocolJsonTest {
     @Test
+    fun `code requests and results round-trip source identity options and output`() {
+        val request = CodeRunRequest(
+            token = "secret",
+            source = "return [answer: 42]",
+            sourceName = "answer.groovy",
+            constraints = ConstraintEnforcement.STRICT,
+            timeoutMillis = 12_345,
+        )
+        assertEquals(request, ProtocolJson.decodeRequest(ProtocolJson.encodeRequest(request)))
+
+        val catalog = CodeCatalogRequest("secret", "mops.read", json = true)
+        assertEquals(catalog, ProtocolJson.decodeRequest(ProtocolJson.encodeRequest(catalog)))
+
+        val result = CodeResultResponse("{\"answer\":42}")
+        assertEquals(result, ProtocolJson.decodeResponse(ProtocolJson.encodeResponse(result)))
+        val quiet = CodeResultResponse(null)
+        assertEquals(quiet, ProtocolJson.decodeResponse(ProtocolJson.encodeResponse(quiet)))
+    }
+
+    @Test
     fun `request JSON decodes to concrete daemon request messages`() {
         assertEquals(
             PingRequest(token = "secret"),

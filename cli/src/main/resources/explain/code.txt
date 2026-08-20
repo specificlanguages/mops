@@ -1,0 +1,19 @@
+Code Mode — execute Groovy code over an open MPS project
+
+Run a program from a file with `mops code run FILE`, or pipe source to `mops code run` (a missing FILE and `-` both
+mean stdin). The source is evaluated as a function body: an explicit top-level return or the final expression is the
+command result.
+
+Results are printed out: strings are printed verbatim, structured values as JSON, and null produces no output.
+
+Every run receives `mops`, the supported Code Service root, and `project`, the raw `jetbrains.mps.project.Project`.
+Use `mops.read { read -> ... }` for model reads and `mops.edit { edit -> ... }` for edits. These blocks cannot nest.
+Make and editor rendering must run outside an Access Block. Each successful edit block commits independently.
+
+The code is not sandboxed and runs with full access to the filesystem, network, process, reflection, and MPS.
+
+Groovy dependency injection (`@Grab` and related transforms) is disabled to avoid classpath issues. A fresh environment
+(Groovy binding and script classloader) is used for every run.
+
+The default timeout is 900 seconds; pass `--timeout 0` to disable it. Use `mops code help [PATH]` for daemon-backed
+service discovery, `--json` for its machine-readable form, or `mops.help(PATH)` while exploring in a program.

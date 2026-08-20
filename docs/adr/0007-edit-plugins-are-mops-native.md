@@ -30,8 +30,8 @@ other language would use.
   clobber real data; the structure language's own factory unconditionally resets a concept's `extends`.
 - **Hardcode `conceptId` handling in the write-executor** — rejected: solves one built-in language and leaves every
   user DSL unserved.
-- **JavaScript plugins on the Edit Script facade (ADR-0006)** — rejected for now: Edit Scripts are not built, and
-  the plugin mechanism must not wait for them.
+- **Code Mode plugins (ADR-0008)** — deferred: the Edit Plugin mechanism must not wait for Code Mode or its separate
+  classpath-provider follow-up.
 - **MPS-aspect-discovered plugins** (a `mops`/`hooks` aspect on a language) — deferred: a possible future front end
   that would feed the same SPI, not a replacement for it.
 

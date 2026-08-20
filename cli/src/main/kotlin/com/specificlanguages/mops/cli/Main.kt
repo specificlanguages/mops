@@ -47,6 +47,10 @@ fun newCommandLine(workingDirectory: Path = Path.of("").absolute()): CommandLine
         addLeaf("status", DaemonStatusCommand(rootCommand))
         addLeaf("stop", DaemonStopCommand(rootCommand))
     }
+    val code = CommandLine(CodeOperations())
+    code.addLeaf("run", CodeRunCommand(rootCommand))
+    code.addLeaf("help", CodeHelpCommand(rootCommand))
+    root.addSubcommand("code", code)
     root.addLeaf("list", MpsListCommand(rootCommand))
     root.addLeaf("explain", ExplainCommand())
     root.addLeaf("help", RecursiveHelpCommand())

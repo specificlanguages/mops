@@ -191,3 +191,21 @@ data class MakeModulesRequest(
 @Serializable
 @SerialName("make-project")
 data class MakeProjectRequest(override val token: String) : DaemonRequest
+
+@Serializable
+@SerialName("code-run")
+data class CodeRunRequest(
+    override val token: String,
+    val source: String,
+    val sourceName: String,
+    val constraints: ConstraintEnforcement = ConstraintEnforcement.BEST_EFFORT,
+    val timeoutMillis: Long = 900_000,
+) : DaemonRequest
+
+@Serializable
+@SerialName("code-catalog")
+data class CodeCatalogRequest(
+    override val token: String,
+    val path: String? = null,
+    val json: Boolean = false,
+) : DaemonRequest

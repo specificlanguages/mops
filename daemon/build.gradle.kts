@@ -63,6 +63,9 @@ dependencies {
             include("lib/util_rt.jar")
             include("lib/testFramework.jar")
             include("lib/app.jar")
+            // Compile against the Groovy runtime owned by the selected MPS distribution. It remains compile-only and
+            // is never copied into the mops daemon distribution.
+            include("lib/groovy.jar")
         }
     })
     mpsZip("com.jetbrains:mps:2025.1.2")

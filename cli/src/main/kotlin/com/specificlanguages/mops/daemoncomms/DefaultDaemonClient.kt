@@ -38,11 +38,16 @@ import com.specificlanguages.mops.protocol.PingRequest
 import com.specificlanguages.mops.protocol.PongResponse
 import com.specificlanguages.mops.protocol.StopRequest
 import com.specificlanguages.mops.protocol.StoppedResponse
+import com.specificlanguages.mops.protocol.CodeCatalogRequest
+import com.specificlanguages.mops.protocol.CodeCatalogResponse
+import com.specificlanguages.mops.protocol.CodeResultResponse
+import com.specificlanguages.mops.protocol.CodeRunRequest
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.InetAddress
 import java.net.Socket
+import java.net.SocketTimeoutException
 import java.time.Duration
 
 /**
@@ -54,7 +59,8 @@ import java.time.Duration
 class DefaultDaemonClient(
     private val port: Int,
     private val token: String,
-    private val timeout: Duration = Duration.ofSeconds(5)
+    private val timeout: Duration = Duration.ofSeconds(5),
+    private val daemonPid: Long? = null,
 ) : DaemonClient {
 
     private var lastPongResponse: PongResponse? = null
@@ -160,6 +166,22 @@ class DefaultDaemonClient(
             timeout = MAKE_TIMEOUT,
         )
 
+    override fun runCode(
+        source: String,
+        sourceName: String,
+        constraints: ConstraintEnforcement,
+        timeout: Duration,
+    ): CodeResultResponse = exchange(
+        CodeRunRequest(token, source, sourceName, constraints, timeout.toMillis()),
+        CodeResultResponse::class.java,
+        timeout = timeout,
+    )
+
+    override fun codeCatalog(path: String?, json: Boolean): CodeCatalogResponse = exchange(
+        CodeCatalogRequest(token, path, json),
+        CodeCatalogResponse::class.java,
+    )
+
     private fun <T : DaemonResponse> exchange(
         request: DaemonRequest,
         responseType: Class<T>,
@@ -179,14 +201,22 @@ class DefaultDaemonClient(
     }
 
     private fun exchangeLine(request: DaemonRequest, timeout: Duration): String {
-        return Socket(InetAddress.getLoopbackAddress(), port).use { socket ->
-            socket.soTimeout = timeout.toMillis().toInt()
-            PrintWriter(socket.getOutputStream(), true).use { writer ->
-                BufferedReader(InputStreamReader(socket.getInputStream())).use { reader ->
-                    writer.println(ProtocolJson.encodeRequest(request))
-                    reader.readLine() ?: throw IllegalStateException("daemon closed connection")
+        try {
+            return Socket(InetAddress.getLoopbackAddress(), port).use { socket ->
+                socket.soTimeout = timeout.toMillis().coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                PrintWriter(socket.getOutputStream(), true).use { writer ->
+                    BufferedReader(InputStreamReader(socket.getInputStream())).use { reader ->
+                        writer.println(ProtocolJson.encodeRequest(request))
+                        reader.readLine() ?: throw IllegalStateException("daemon closed connection")
+                    }
                 }
             }
+        } catch (timeoutFailure: SocketTimeoutException) {
+            if (request is CodeRunRequest) {
+                daemonPid?.let { ProcessHandle.of(it).ifPresent(ProcessHandle::destroyForcibly) }
+                throw IllegalStateException("Code Mode timed out after ${request.timeoutMillis} ms; the project daemon was terminated")
+            }
+            throw timeoutFailure
         }
     }
 
@@ -195,6 +225,6 @@ class DefaultDaemonClient(
         // zero soTimeout blocks indefinitely; the daemon closing the socket still unblocks the read with EOF.
         private val MAKE_TIMEOUT: Duration = Duration.ZERO
 
-        fun fromRecord(record: DaemonRecord) = DefaultDaemonClient(record.port, record.token)
+        fun fromRecord(record: DaemonRecord) = DefaultDaemonClient(record.port, record.token, daemonPid = record.pid)
     }
 }

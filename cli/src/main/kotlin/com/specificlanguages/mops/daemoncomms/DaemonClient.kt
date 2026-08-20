@@ -17,6 +17,9 @@ import com.specificlanguages.mops.protocol.NodeFilter
 import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.MpsListResponse
 import com.specificlanguages.mops.protocol.PongResponse
+import com.specificlanguages.mops.protocol.CodeCatalogResponse
+import com.specificlanguages.mops.protocol.CodeResultResponse
+import java.time.Duration
 
 /**
  * The client talking to a remote daemon process.
@@ -62,4 +65,11 @@ interface DaemonClient {
      * Runs the MPS make on every generatable module in the project. May block for a long time.
      */
     fun makeProject(): MakeResponse
+    fun runCode(
+        source: String,
+        sourceName: String,
+        constraints: ConstraintEnforcement,
+        timeout: Duration,
+    ): CodeResultResponse
+    fun codeCatalog(path: String?, json: Boolean): CodeCatalogResponse
 }

@@ -170,6 +170,14 @@ data class MakeResponse(
     val messages: List<MakeMessageJson>,
 ) : DaemonResponse
 
+@Serializable
+@SerialName("code-result")
+data class CodeResultResponse(val output: String?) : DaemonResponse
+
+@Serializable
+@SerialName("code-catalog")
+data class CodeCatalogResponse(val output: String) : DaemonResponse
+
 /**
  * Startup message emitted on daemon stdout when the loopback server is ready to accept authenticated requests.
  */
