@@ -25,6 +25,35 @@ _Related_: Module Reference
 An **MPS Module** that belongs to an **MPS Project**, including its generators when they are part of that project. Dependency and platform modules available alongside the project are not **Project Modules**.
 _Related_: dependency module, platform module
 
+**Module Creation Operation**:
+One of four project-level operations that creates a language, solution, devkit, or generator as a **Project Module**. Each operation is available both as a direct mops command and as a **Code Service**.
+_Avoid_: generic create-module operation
+_Related_: Project Module, Code Service, Module Handle, Module Creation Report
+
+**Module Handle**:
+The common mops-supported representation of an **MPS Module** inside **Code Mode**, specialized as a language, solution, devkit, or generator handle. It may be retained between **Access Blocks**, but supported inspection or modification requires suitable model access; `facets` exposes the MPS facet instances directly without access or compatibility guarantees, and `sModule` exposes the underlying MPS module as an unsupported escape hatch. A **Module Creation Operation** returns a typed handle for its primary newly created module rather than a creation report or raw MPS object; `getModule` resolves a **Navigation Target** to an existing handle.
+_Avoid_: module object, creation report
+_Related_: Code Mode, Access Block, MPS Module, Module Creation Operation
+
+**Module Creation Report**:
+The structured CLI result of a **Module Creation Operation**, identifying the primary module and every companion artifact created with it.
+_Avoid_: Module Handle
+_Related_: Module Creation Operation, Project Module
+
+**Solution Usage Preset**:
+A named facet configuration applied when creating a solution according to its intended use. The supported presets are `not-generated` (the default, with no generation-target facets), `text`, `java`, `java-tests`, and `java-mps-plugin`; they do not add dependencies, languages, devkits, or model contents.
+_Avoid_: solution kind, raw facet options
+_Related_: Module Creation Operation, Project Module
+
+**Embedded Generator**:
+A generator whose descriptor is stored inside its source language's `.mpl` descriptor. It is tied to that language from creation.
+_Avoid_: Language-owned Generator
+_Related_: Standalone Generator, Project Module
+
+**Standalone Generator**:
+A generator persisted and registered through its own `.mpst` descriptor while remaining tied to a source language. "Standalone" describes descriptor persistence, not the absence of a language relationship.
+_Related_: Embedded Generator, Project Module
+
 **MPS Repository**:
 The complete MPS repository visible to an MPS project session, including **Project Modules** and dependency or platform modules.
 _Related_: Git repository, source repository
@@ -183,7 +212,7 @@ _Avoid_: command help, service registry
 _Related_: Code Mode, Code Service, MPS Project
 
 **Node Handle**:
-The mops-supported representation of an **MPS Node** inside **Code Mode**. A **Node Handle** may be retained between **Access Blocks**, but inspecting or changing its node requires suitable model access; trusted code may retrieve the underlying **MPS Node** as an unsupported escape hatch.
+The mops-supported representation of an **MPS Node** inside **Code Mode**. A **Node Handle** may be retained between **Access Blocks**, but inspecting or changing its node requires suitable model access; trusted code may retrieve the underlying **MPS Node** through the unsupported `sNode` escape hatch.
 _Avoid_: node object, wrapper
 _Related_: Code Mode, Access Block, MPS Node
 
