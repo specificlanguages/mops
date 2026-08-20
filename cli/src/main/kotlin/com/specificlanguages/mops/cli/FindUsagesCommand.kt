@@ -2,8 +2,6 @@ package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.DaemonResponse
-import com.specificlanguages.mops.protocol.ProtocolJson
-import com.specificlanguages.mops.protocol.MpsNodeUsageJson
 import com.specificlanguages.mops.protocol.NodeTarget
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
@@ -62,13 +60,13 @@ class FindUsagesCommand(private val environment: CommandEnvironment) : CliComman
         val client = environment.daemon()
         val response = client.findUsages(target = nodeTarget(targetTokens), limit = limit, scope = scope)
         when {
-            json -> println(ProtocolJson.encodeResponse(response))
+            json -> println(renderJson(response))
             refsOnly -> {
                 response.usages.forEach { println(it.owner.reference) }
                 if (response.truncated) reportTruncationOnStderr(response.usages.size)
             }
             else -> {
-                response.usages.forEach(::renderText)
+                response.usages.forEach { println(renderText(it, fullConcept)) }
                 if (response.truncated) {
                     println(listOf("truncated", response.usages.size, "more results not shown").joinToString("\t"))
                 }
@@ -83,18 +81,4 @@ class FindUsagesCommand(private val environment: CommandEnvironment) : CliComman
             else -> error("expected one node reference or model target plus node id, optionally followed by `in <scope>`")
         }
 
-    private fun renderText(usage: MpsNodeUsageJson) {
-        val owner = usage.owner
-        println(
-            (
-                listOf(
-                    "usage",
-                    usage.role,
-                    owner.name ?: "<unnamed>",
-                    displayConcept(owner.concept, fullConcept),
-                    owner.reference,
-                ) + parentColumns(owner.parent, fullConcept)
-            ).joinToString("\t"),
-        )
-    }
 }

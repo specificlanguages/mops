@@ -1,8 +1,6 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DaemonClient
-import com.specificlanguages.mops.protocol.ProtocolJson
-import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
@@ -71,13 +69,13 @@ class FindNodeByIdCommand(private val environment: CommandEnvironment) : CliComm
         val client = environment.daemon()
         val response = client.findNodeById(nodeId = id, limit = limit, scope = scope)
         when {
-            json -> println(ProtocolJson.encodeResponse(response))
+            json -> println(renderJson(response))
             refsOnly -> {
                 response.nodes.forEach { println(it.reference) }
                 if (response.truncated) reportTruncationOnStderr(response.nodes.size)
             }
             else -> {
-                response.nodes.forEach(::renderText)
+                response.nodes.forEach { println(renderText(it, fullConcept)) }
                 if (response.truncated) {
                     println(listOf("truncated", response.nodes.size, "more results not shown").joinToString("\t"))
                 }
@@ -85,16 +83,4 @@ class FindNodeByIdCommand(private val environment: CommandEnvironment) : CliComm
         }
     }
 
-    private fun renderText(node: MpsNodeSummaryJson) {
-        println(
-            (
-                listOf(
-                    node.type,
-                    node.name ?: "<unnamed>",
-                    displayConcept(node.concept, fullConcept),
-                    node.reference,
-                ) + parentColumns(node.parent, fullConcept)
-            ).joinToString("\t"),
-        )
-    }
 }

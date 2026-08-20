@@ -3,7 +3,6 @@ package com.specificlanguages.mops.cli
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
 import com.specificlanguages.mops.protocol.ModelCheckResponse
-import com.specificlanguages.mops.protocol.ProtocolJson
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
@@ -56,7 +55,7 @@ class ModelCheckCommand(private val environment: CommandEnvironment) : CliComman
                 println(summaryLine(response))
             }
 
-            OutputFormat.JSONL -> response.findings.forEach { println(ProtocolJson.encodeFinding(it)) }
+            OutputFormat.JSONL -> response.findings.forEach { println(renderJson(it)) }
         }
     }
 

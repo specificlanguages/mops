@@ -3,7 +3,6 @@ package com.specificlanguages.mops.cli
 import com.specificlanguages.mops.protocol.MakeMessageKind
 import com.specificlanguages.mops.protocol.MakeOutcome
 import com.specificlanguages.mops.protocol.MakeResponse
-import com.specificlanguages.mops.protocol.ProtocolJson
 
 /**
  * Prints a [MakeResponse] and returns the process exit code: `1` when the make failed, `0` otherwise (including when
@@ -11,7 +10,7 @@ import com.specificlanguages.mops.protocol.ProtocolJson
  */
 fun renderMakeResult(response: MakeResponse, json: Boolean): Int {
     if (json) {
-        println(ProtocolJson.encodeResponse(response))
+        println(renderJson(response))
         return if (response.outcome == MakeOutcome.FAILED) 1 else 0
     }
 

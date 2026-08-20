@@ -3,7 +3,6 @@ package com.specificlanguages.mops.cli
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.ModuleLoadDiagnosticJson
 import com.specificlanguages.mops.protocol.ModuleLoadProblemJson
-import com.specificlanguages.mops.protocol.ProtocolJson
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 
@@ -25,7 +24,7 @@ class DiagnoseModulesCommand(private val environment: CommandEnvironment) : CliC
         val response = client.diagnoseModules()
 
         if (json) {
-            println(ProtocolJson.encodeResponse(response))
+            println(renderJson(response))
             return
         }
 

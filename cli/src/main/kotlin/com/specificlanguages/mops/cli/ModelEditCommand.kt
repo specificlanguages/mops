@@ -42,7 +42,7 @@ class ModelEditCommand(private val environment: CommandEnvironment) : CliCommand
 
         val client = environment.daemon()
         val response = client.modelEdit(batch, resolveConstraints())
-        println(ProtocolJson.encodeResponse(response))
+        println(renderJson(response))
     }
 
     private fun resolveConstraints(): ConstraintEnforcement {
