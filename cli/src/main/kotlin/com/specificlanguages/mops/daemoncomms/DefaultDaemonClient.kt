@@ -42,6 +42,12 @@ import com.specificlanguages.mops.protocol.CodeCatalogRequest
 import com.specificlanguages.mops.protocol.CodeCatalogResponse
 import com.specificlanguages.mops.protocol.CodeResultResponse
 import com.specificlanguages.mops.protocol.CodeRunRequest
+import com.specificlanguages.mops.protocol.CreateLanguageRequest
+import com.specificlanguages.mops.protocol.CreateSolutionRequest
+import com.specificlanguages.mops.protocol.CreateDevkitRequest
+import com.specificlanguages.mops.protocol.CreateGeneratorRequest
+import com.specificlanguages.mops.protocol.ModuleCreationResponse
+import com.specificlanguages.mops.protocol.SolutionUsagePreset
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintWriter
@@ -181,6 +187,18 @@ class DefaultDaemonClient(
         CodeCatalogRequest(token, path, json),
         CodeCatalogResponse::class.java,
     )
+
+    override fun createLanguage(moduleName: String, descriptor: String?, withGenerator: Boolean, dryRun: Boolean) =
+        exchange(CreateLanguageRequest(token, moduleName, descriptor, withGenerator, dryRun), ModuleCreationResponse::class.java)
+
+    override fun createSolution(moduleName: String, descriptor: String?, usagePreset: SolutionUsagePreset, dryRun: Boolean) =
+        exchange(CreateSolutionRequest(token, moduleName, descriptor, usagePreset, dryRun), ModuleCreationResponse::class.java)
+
+    override fun createDevkit(moduleName: String, descriptor: String?, dryRun: Boolean) =
+        exchange(CreateDevkitRequest(token, moduleName, descriptor, dryRun), ModuleCreationResponse::class.java)
+
+    override fun createGenerator(language: String, alias: String, standalone: Boolean, descriptor: String?, dryRun: Boolean) =
+        exchange(CreateGeneratorRequest(token, language, alias, standalone, descriptor, dryRun), ModuleCreationResponse::class.java)
 
     private fun <T : DaemonResponse> exchange(
         request: DaemonRequest,

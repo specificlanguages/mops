@@ -178,6 +178,13 @@ data class CodeResultResponse(val output: String?) : DaemonResponse
 @SerialName("code-catalog")
 data class CodeCatalogResponse(val output: String) : DaemonResponse
 
+@Serializable
+@SerialName("module-creation")
+data class ModuleCreationResponse(
+    val plan: ModuleCreationPlan? = null,
+    val report: ModuleCreationReport? = null,
+) : DaemonResponse
+
 /**
  * Startup message emitted on daemon stdout when the loopback server is ready to accept authenticated requests.
  */

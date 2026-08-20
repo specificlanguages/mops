@@ -103,6 +103,10 @@ object ProtocolJson {
 
     fun decodeListEntry(text: String): MpsListEntryJson = json.decodeFromString(text)
 
+    fun encodeModuleCreationPlan(plan: ModuleCreationPlan): String = json.encodeToString(plan)
+
+    fun encodeModuleCreationReport(report: ModuleCreationReport): String = json.encodeToString(report)
+
     fun encodeRecord(record: DaemonRecord): String = json.encodeToString(record)
 
     fun decodeRecord(text: String): DaemonRecord = json.decodeFromString(text)

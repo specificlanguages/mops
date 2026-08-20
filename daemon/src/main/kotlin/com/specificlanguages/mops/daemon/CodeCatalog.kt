@@ -13,6 +13,8 @@ object CodeCatalog {
         reflect("mops.read", MpsRead::class.java, "read")
         reflect("mops.edit", MpsRead::class.java, "edit")
         reflect("mops.edit", MpsWrite::class.java, "edit")
+        reflect("mops.read", CodeReadServices::class.java, "read")
+        reflect("mops.edit", CodeEditServices::class.java, "edit")
         reflect("mops", MpsExtra::class.java, "outside")
         add(Operation("mops.help", "mops.help(String path = null)", "outside"))
     }.distinctBy { it.path }.sortedBy { it.path }

@@ -209,3 +209,48 @@ data class CodeCatalogRequest(
     val path: String? = null,
     val json: Boolean = false,
 ) : DaemonRequest
+
+@Serializable
+sealed interface CreateModuleRequest : DaemonRequest {
+    val dryRun: Boolean
+}
+
+@Serializable
+@SerialName("create-language")
+data class CreateLanguageRequest(
+    override val token: String,
+    val moduleName: String,
+    val descriptor: String? = null,
+    val withGenerator: Boolean = false,
+    override val dryRun: Boolean = false,
+) : CreateModuleRequest
+
+@Serializable
+@SerialName("create-solution")
+data class CreateSolutionRequest(
+    override val token: String,
+    val moduleName: String,
+    val descriptor: String? = null,
+    val usagePreset: SolutionUsagePreset = SolutionUsagePreset.NOT_GENERATED,
+    override val dryRun: Boolean = false,
+) : CreateModuleRequest
+
+@Serializable
+@SerialName("create-devkit")
+data class CreateDevkitRequest(
+    override val token: String,
+    val moduleName: String,
+    val descriptor: String? = null,
+    override val dryRun: Boolean = false,
+) : CreateModuleRequest
+
+@Serializable
+@SerialName("create-generator")
+data class CreateGeneratorRequest(
+    override val token: String,
+    val language: String,
+    val alias: String,
+    val standalone: Boolean = false,
+    val descriptor: String? = null,
+    override val dryRun: Boolean = false,
+) : CreateModuleRequest

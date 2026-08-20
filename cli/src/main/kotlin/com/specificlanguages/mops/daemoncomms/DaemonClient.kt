@@ -20,6 +20,8 @@ import com.specificlanguages.mops.protocol.PongResponse
 import com.specificlanguages.mops.protocol.CodeCatalogResponse
 import com.specificlanguages.mops.protocol.CodeResultResponse
 import java.time.Duration
+import com.specificlanguages.mops.protocol.ModuleCreationResponse
+import com.specificlanguages.mops.protocol.SolutionUsagePreset
 
 /**
  * The client talking to a remote daemon process.
@@ -72,4 +74,8 @@ interface DaemonClient {
         timeout: Duration,
     ): CodeResultResponse
     fun codeCatalog(path: String?, json: Boolean): CodeCatalogResponse
+    fun createLanguage(moduleName: String, descriptor: String?, withGenerator: Boolean, dryRun: Boolean): ModuleCreationResponse
+    fun createSolution(moduleName: String, descriptor: String?, usagePreset: SolutionUsagePreset, dryRun: Boolean): ModuleCreationResponse
+    fun createDevkit(moduleName: String, descriptor: String?, dryRun: Boolean): ModuleCreationResponse
+    fun createGenerator(language: String, alias: String, standalone: Boolean, descriptor: String?, dryRun: Boolean): ModuleCreationResponse
 }

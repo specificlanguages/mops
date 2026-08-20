@@ -20,7 +20,7 @@ class CodeModeExecutor(private val access: MpsAccess, private val project: Proje
         try {
             val binding = Binding()
             binding.setVariable("project", project)
-            binding.setVariable("mops", CodeModeRoot(access, request.constraints))
+            binding.setVariable("mops", CodeModeRoot(access, project, request.constraints))
             val result = GroovyShell(loader, binding, CompilerConfiguration()).evaluate(request.source, request.sourceName)
             return CodeResultResponse(CodeResultAdapter.render(result))
         } catch (failure: Throwable) {
@@ -42,14 +42,17 @@ class CodeModeExecutor(private val access: MpsAccess, private val project: Proje
     }
 }
 
-class CodeModeRoot(private val access: MpsAccess, private val defaultConstraints: ConstraintEnforcement) {
+class CodeModeRoot(private val access: MpsAccess, private val project: Project, private val defaultConstraints: ConstraintEnforcement) {
     private var block: String? = null
 
-    fun <T> read(body: Closure<T>): T = enter("read") { access.read { body.call(this) } }
+    fun <T> read(body: Closure<T>): T = enter("read") { access.read { body.call(CodeReadServices(this, project)) } }
 
     fun <T> edit(options: Map<String, Any?>, body: Closure<T>): T {
         val constraints = options["constraints"]?.toString()?.let(ConstraintEnforcement::valueOf) ?: defaultConstraints
-        return enter("edit") { access.write { body.call(CodeEditServices(this, constraints)) } }
+        return enter("edit") { access.write {
+            val services = CodeEditServices(this, constraints, project)
+            body.call(services).also { services.persist() }
+        } }
     }
 
     fun <T> edit(body: Closure<T>): T = edit(emptyMap<String, Any>(), body)
@@ -75,11 +78,73 @@ class CodeModeRoot(private val access: MpsAccess, private val defaultConstraints
     }
 }
 
+open class CodeReadServices(
+    private val delegate: com.specificlanguages.mops.daemon.core.MpsRead,
+    protected val project: Project,
+) : com.specificlanguages.mops.daemon.core.MpsRead by delegate {
+    fun getModule(target: String): ModuleHandle = getModule(listOf(target))
+    fun getModule(target: List<String>): ModuleHandle {
+        require(target.size == 1) { "module Navigation Target must contain exactly one segment" }
+        val value = target.single()
+        val persistence = org.jetbrains.mps.openapi.persistence.PersistenceFacade.getInstance()
+        val matches = project.repository.modules.filter {
+            it.moduleName == value || persistence.asString(it.moduleReference) == value
+        }
+        require(matches.isNotEmpty()) { "module not found: $value" }
+        require(matches.size == 1) { "ambiguous module: $value" }
+        return moduleHandle(matches.single())
+    }
+}
+
 class CodeEditServices(
     private val delegate: com.specificlanguages.mops.daemon.core.MpsWrite,
     private val constraints: ConstraintEnforcement,
-) : com.specificlanguages.mops.daemon.core.MpsWrite by delegate {
+    project: Project,
+) : CodeReadServices(delegate, project), com.specificlanguages.mops.daemon.core.MpsWrite by delegate {
+    private val creator = ModuleCreator(project)
     fun modelEdit(batch: com.specificlanguages.mops.protocol.EditBatch) = delegate.modelEdit(batch, constraints)
+
+    @JvmOverloads fun createLanguage(moduleName: String, options: Map<String, Any?> = emptyMap()): LanguageHandle {
+        options.requireOnly("descriptor", "withGenerator")
+        val response = creator.createLanguage(com.specificlanguages.mops.protocol.CreateLanguageRequest(
+            "", moduleName, options["descriptor"]?.toString(), options["withGenerator"] as? Boolean ?: false,
+        ))
+        return getModule(response.report!!.primary.moduleReference) as LanguageHandle
+    }
+
+    @JvmOverloads fun createSolution(moduleName: String, options: Map<String, Any?> = emptyMap()): SolutionHandle {
+        options.requireOnly("descriptor", "usagePreset")
+        val preset = options["usagePreset"]?.toString()?.replace('-', '_')?.uppercase()
+            ?.let(com.specificlanguages.mops.protocol.SolutionUsagePreset::valueOf)
+            ?: com.specificlanguages.mops.protocol.SolutionUsagePreset.NOT_GENERATED
+        val response = creator.createSolution(com.specificlanguages.mops.protocol.CreateSolutionRequest(
+            "", moduleName, options["descriptor"]?.toString(), preset,
+        ))
+        return getModule(response.report!!.primary.moduleReference) as SolutionHandle
+    }
+
+    @JvmOverloads fun createDevkit(moduleName: String, options: Map<String, Any?> = emptyMap()): DevkitHandle {
+        options.requireOnly("descriptor")
+        val response = creator.createDevkit(com.specificlanguages.mops.protocol.CreateDevkitRequest(
+            "", moduleName, options["descriptor"]?.toString(),
+        ))
+        return getModule(response.report!!.primary.moduleReference) as DevkitHandle
+    }
+
+    @JvmOverloads fun createGenerator(language: LanguageHandle, alias: String, options: Map<String, Any?> = emptyMap()): GeneratorHandle {
+        options.requireOnly("standalone", "descriptor")
+        val response = creator.createGenerator(com.specificlanguages.mops.protocol.CreateGeneratorRequest(
+            "", language.moduleReference, alias, options["standalone"] as? Boolean ?: false, options["descriptor"]?.toString(),
+        ))
+        return getModule(response.report!!.primary.moduleReference) as GeneratorHandle
+    }
+
+    internal fun persist() = creator.persist()
+}
+
+private fun Map<String, Any?>.requireOnly(vararg names: String) {
+    val unknown = keys - names.toSet()
+    require(unknown.isEmpty()) { "unknown named option(s): ${unknown.sorted().joinToString()}" }
 }
 
 private object CodeResultAdapter {
