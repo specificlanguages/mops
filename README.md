@@ -1,4 +1,5 @@
 # mops
+![](https://github.com/DSLFoundry/mops/blob/master/docs/mops-logo.png)
 
 `mops` is a small helper CLI for helping LLMs work with JetBrains MPS models.
 This checkout is a Gradle-rooted Kotlin prototype with two application subprojects: `cli/` and `daemon/`.
