@@ -28,22 +28,16 @@ An **MPS Module** that belongs to an **MPS Project**, including its generators w
 _Related_: dependency module, platform module
 
 **Module Creation Operation**:
-One of four project-level operations that creates a language, solution, devkit, or generator as a **Project Module**. Each operation is available both as a direct mops command and as a **Code Service**.
+One of four project-level operations that creates a language, solution, devkit, or generator as a **Project Module**. Each operation is available as a direct mops command; in **Code Mode**, language, solution, and devkit creation extend the **MPS Project**, while generator creation extends its source language.
 _Avoid_: generic create-module operation
-_Related_: Project Module, Code Service, Module Handle, Module Creation Report
+_Related_: Project Module, Code Mode Extension, Module Creation Report
 
 **Model Creation Operation**:
-An operation that creates an **MPS Model** in a selected **Project Module**. It is available both as a direct mops command and through the owning **Module Handle** in **Code Mode**, where it returns a **Model Handle**.
-_Related_: MPS Model, Project Module, Code Service, Model Handle
-
-**Module Handle**:
-The common mops-supported representation of an **MPS Module** inside **Code Mode**, specialized as a language, solution, devkit, or generator handle. It may be retained between **Access Blocks**, but supported inspection or modification requires suitable model access; `facets` exposes the MPS facet instances directly without access or compatibility guarantees, and `sModule` exposes the underlying MPS module as an unsupported escape hatch. A **Module Creation Operation** returns a typed handle for its primary newly created module rather than a creation report or raw MPS object; `getModule` resolves a **Navigation Target** to an existing handle.
-_Avoid_: module object, creation report
-_Related_: Code Mode, Access Block, MPS Module, Module Creation Operation
+An operation that creates an **MPS Model** in a selected **Project Module**. It is available both as a direct mops command and as a **Code Mode Extension** on the owning MPS module object.
+_Related_: MPS Model, Project Module, Code Mode Extension
 
 **Module Creation Report**:
 The structured CLI result of a **Module Creation Operation**, identifying the primary module and every companion artifact created with it.
-_Avoid_: Module Handle
 _Related_: Module Creation Operation, Project Module
 
 **Solution Usage Preset**:
@@ -75,11 +69,6 @@ _Related_: Project and Libraries
 **MPS Model**:
 A named model contained in an **MPS Module**. An **MPS Model** owns zero or more **Root Nodes**.
 _Related_: model file
-
-**Model Handle**:
-The mops-supported representation of an **MPS Model** inside **Code Mode**. It identifies its owning **Module Handle** and may be retained between **Access Blocks**, but supported inspection or modification requires suitable model access; trusted code may retrieve the underlying MPS model through an unsupported escape hatch.
-_Avoid_: model object, creation report
-_Related_: Code Mode, Access Block, MPS Model, Module Handle, Model Creation Operation
 
 **MPS Concept**:
 A language concept that classifies an **MPS Node**.
@@ -203,29 +192,29 @@ _Avoid_: node tree, branch
 _Related_: Containment Link, Child
 
 **Code Mode**:
-An environment in which users and agents compose multiple operations against an open **MPS Project** within one program. **Code Mode** complements individual mops commands, which remain the interface for direct operations.
+An environment in which users and agents compose operations against an open **MPS Project** using native MPS objects and **Code Mode Extensions** within one program. Retained MPS objects keep their native MPS lifetime and validity semantics; mops neither prolongs their validity nor reacquires invalidated objects. When an MPS node, model, or module crosses the program-result boundary, Code Mode recursively replaces it with its serialized reference, or `null` when it has none, without otherwise summarizing its contents. **Code Mode** complements individual mops commands, which remain the interface for direct operations.
 _Avoid_: Edit Script, eval mode
-_Related_: MPS Project, Access Block, Edit Operation, Node Handle
+_Related_: MPS Project, Access Block, Edit Operation, Code Mode Extension
 
 **Access Block**:
-An independent section of a **Code Mode** program that gives its body either read access or edit access to an **MPS Project**. Code outside an **Access Block** may use operations that must run without MPS model access.
+An independent, non-nesting section of a **Code Mode** program entered through `read` or `command` on an **MPS Project**. Starting a block while MPS model access is already held is rejected. A command block runs as an MPS command on the event-dispatch thread with write access and undo semantics. A successful command saves all project changes; a failed command retains MPS's native partial-change behavior rather than promising rollback. Code outside an **Access Block** may use operations that must run without MPS model access.
 _Avoid_: transaction when the block is read-only
-_Related_: Code Mode, Code Service, MPS Project, Edit Operation
+_Related_: Code Mode, MPS Project, Edit Operation
 
-**Code Service**:
-A named capability made available to a **Code Mode** program by mops or a plugin. A **Code Service** states the model access its operations require.
-_Avoid_: command, raw MPS API
-_Related_: Code Mode, Access Block, Service Catalog
-
-**Service Catalog**:
-The discoverable description of the **Code Services** available to **Code Mode** for an **MPS Project**, including their operation signatures and usage information.
+**Code Mode Reference**:
+The discoverable description of the built-in and plugin-provided **Code Mode Extensions** available to **Code Mode** for an **MPS Project**. It groups extensions by native MPS receiver type, identifies each **Code Mode Extension Bundle**, and includes signatures, access requirements, and usage documentation generated from KDoc at build time without reproducing the native MPS API. It is available through the global `help` function in a program and through `mops code help` at the CLI; lookup accepts no argument, a native MPS class, a native MPS object, or a textual extension path.
 _Avoid_: command help, service registry
-_Related_: Code Mode, Code Service, MPS Project
+_Related_: Code Mode, Code Mode Extension, MPS Project
 
-**Node Handle**:
-The mops-supported representation of an **MPS Node** inside **Code Mode**. A **Node Handle** may be retained between **Access Blocks**, but inspecting or changing its node requires suitable model access; trusted code may retrieve the underlying **MPS Node** through the unsupported `sNode` escape hatch.
-_Avoid_: node object, wrapper
-_Related_: Code Mode, Access Block, MPS Node
+**Code Mode Extension**:
+A mops-supported convenience exposed as a Groovy extension method on a native MPS object in **Code Mode**. Operations prefer this form whenever they have an unambiguous primary MPS object and the resulting call remains natural; an extension that needs the daemon's **MPS Project** may obtain its one process-scoped project. An extension declares one access requirement: `none`, `read`, `command`, or `extra`, where `extra` requires no active model access because the operation coordinates access itself. The extension's contract belongs to mops, while the receiver and its native API retain the contract of the selected MPS version.
+_Avoid_: handle, wrapper
+_Related_: Code Mode, Code Mode Extension Bundle, MPS Node, MPS Model, MPS Module
+
+**Code Mode Extension Bundle**:
+A self-describing built-in or plugin contribution that declares a stable bundle ID and version and packages Groovy extension classes together with their generated **Code Mode Reference** metadata. Built-in and plugin bundles use the same loading and discovery contract. A bundle is rejected as a whole when its implementation and reference metadata disagree or when its extension signature duplicates one from another bundle.
+_Avoid_: service provider
+_Related_: Code Mode, Code Mode Extension, Code Mode Reference
 
 **Materialize**:
 An **Edit Operation** materializes an **MPS Node** when it brings the node into its model fresh or as a copy. A **Move Leaf** does not materialize the node it adopts — that node already existed and keeps its identity.
