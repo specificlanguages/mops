@@ -21,6 +21,11 @@ object CodeCatalog {
         add(Operation("mops.read.getModule", "mops.read.getModule(NavigationTarget target)", "read"))
         add(Operation("mops.edit.getModule", "mops.edit.getModule(NavigationTarget target)", "edit"))
         add(Operation(
+            "ModuleHandle.createModel",
+            "ModuleHandle.createModel(String modelName, boolean filePerRoot = false): ModelHandle",
+            "edit",
+        ))
+        add(Operation(
             "mops.edit.createLanguage",
             "mops.edit.createLanguage(String moduleName, descriptor: String = null, withGenerator: Boolean = false)",
             "edit",

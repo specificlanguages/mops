@@ -185,6 +185,13 @@ data class ModuleCreationResponse(
     val report: ModuleCreationReport? = null,
 ) : DaemonResponse
 
+@Serializable
+@SerialName("model-creation")
+data class ModelCreationResponse(
+    val plan: ModelCreationPlan? = null,
+    val report: ModelCreationReport? = null,
+) : DaemonResponse
+
 /**
  * Startup message emitted on daemon stdout when the loopback server is ready to accept authenticated requests.
  */

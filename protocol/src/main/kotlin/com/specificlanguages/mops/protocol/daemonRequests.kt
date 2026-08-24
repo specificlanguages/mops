@@ -254,3 +254,13 @@ data class CreateGeneratorRequest(
     val descriptor: String? = null,
     override val dryRun: Boolean = false,
 ) : CreateModuleRequest
+
+@Serializable
+@SerialName("create-model")
+data class CreateModelRequest(
+    override val token: String,
+    val modelName: String,
+    val module: String,
+    val filePerRoot: Boolean = false,
+    val dryRun: Boolean = false,
+) : DaemonRequest

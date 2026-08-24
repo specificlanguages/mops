@@ -76,6 +76,7 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
                 is CreateSolutionRequest -> mpsAccess.write { creator().run { createSolution(request).also { if (!request.dryRun) persist() } } }
                 is CreateDevkitRequest -> mpsAccess.write { creator().run { createDevkit(request).also { if (!request.dryRun) persist() } } }
                 is CreateGeneratorRequest -> mpsAccess.write { creator().run { createGenerator(request).also { if (!request.dryRun) persist() } } }
+                is CreateModelRequest -> mpsAccess.write { ModelCreator((mpsAccess as JetBrainsMpsAccess).project).create(request) }
 
                 else -> errorResponse("UNSUPPORTED_REQUEST", "unsupported request type: ${request::class.simpleName}")
             }

@@ -22,6 +22,7 @@ import com.specificlanguages.mops.protocol.CodeResultResponse
 import java.time.Duration
 import com.specificlanguages.mops.protocol.ModuleCreationResponse
 import com.specificlanguages.mops.protocol.SolutionUsagePreset
+import com.specificlanguages.mops.protocol.ModelCreationResponse
 
 /**
  * The client talking to a remote daemon process.
@@ -78,4 +79,5 @@ interface DaemonClient {
     fun createSolution(moduleName: String, descriptor: String?, usagePreset: SolutionUsagePreset, dryRun: Boolean): ModuleCreationResponse
     fun createDevkit(moduleName: String, descriptor: String?, dryRun: Boolean): ModuleCreationResponse
     fun createGenerator(language: String, alias: String, standalone: Boolean, descriptor: String?, dryRun: Boolean): ModuleCreationResponse
+    fun createModel(modelName: String, module: String, filePerRoot: Boolean, dryRun: Boolean): ModelCreationResponse
 }

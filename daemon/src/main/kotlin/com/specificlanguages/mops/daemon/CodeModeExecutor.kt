@@ -42,15 +42,17 @@ class CodeModeExecutor(private val access: MpsAccess, private val project: Proje
     }
 }
 
-class CodeModeRoot(private val access: MpsAccess, private val project: Project, private val defaultConstraints: ConstraintEnforcement) {
-    private var block: String? = null
+class CodeAccessContext { var block: String? = null }
 
-    fun <T> read(body: Closure<T>): T = enter("read") { access.read { body.call(CodeReadServices(this, project)) } }
+class CodeModeRoot(private val access: MpsAccess, private val project: Project, private val defaultConstraints: ConstraintEnforcement) {
+    private val context = CodeAccessContext()
+
+    fun <T> read(body: Closure<T>): T = enter("read") { access.read { body.call(CodeReadServices(this, project, context)) } }
 
     fun <T> edit(options: Map<String, Any?>, body: Closure<T>): T {
         val constraints = options["constraints"]?.toString()?.let(ConstraintEnforcement::valueOf) ?: defaultConstraints
         return enter("edit") { access.write {
-            val services = CodeEditServices(this, constraints, project)
+            val services = CodeEditServices(this, constraints, project, context)
             body.call(services).also { services.persist() }
         } }
     }
@@ -67,13 +69,13 @@ class CodeModeRoot(private val access: MpsAccess, private val project: Project, 
     fun help(path: String? = null): String = CodeCatalog.text(path)
 
     private fun <T> enter(kind: String, action: () -> T): T {
-        check(block == null) { "Nested access blocks are not allowed; the current $block block already owns model access" }
-        block = kind
-        return try { action() } finally { block = null }
+        check(context.block == null) { "Nested access blocks are not allowed; the current ${context.block} block already owns model access" }
+        context.block = kind
+        return try { action() } finally { context.block = null }
     }
 
     private fun <T> outside(action: () -> T): T {
-        check(block == null) { "this operation must run outside an access block" }
+        check(context.block == null) { "this operation must run outside an access block" }
         return action()
     }
 }
@@ -81,6 +83,7 @@ class CodeModeRoot(private val access: MpsAccess, private val project: Project, 
 open class CodeReadServices(
     private val delegate: com.specificlanguages.mops.daemon.core.MpsRead,
     protected val project: Project,
+    private val context: CodeAccessContext = CodeAccessContext(),
 ) : com.specificlanguages.mops.daemon.core.MpsRead by delegate {
     fun getModule(target: String): ModuleHandle = getModule(listOf(target))
     fun getModule(target: List<String>): ModuleHandle {
@@ -92,7 +95,7 @@ open class CodeReadServices(
         }
         require(matches.isNotEmpty()) { "module not found: $value" }
         require(matches.size == 1) { "ambiguous module: $value" }
-        return moduleHandle(matches.single())
+        return moduleHandle(matches.single(), context, project)
     }
 }
 
@@ -100,7 +103,8 @@ class CodeEditServices(
     private val delegate: com.specificlanguages.mops.daemon.core.MpsWrite,
     private val constraints: ConstraintEnforcement,
     project: Project,
-) : CodeReadServices(delegate, project), com.specificlanguages.mops.daemon.core.MpsWrite by delegate {
+    context: CodeAccessContext = CodeAccessContext().also { it.block = "edit" },
+) : CodeReadServices(delegate, project, context), com.specificlanguages.mops.daemon.core.MpsWrite by delegate {
     private val creator = ModuleCreator(project)
     fun modelEdit(batch: com.specificlanguages.mops.protocol.EditBatch) = delegate.modelEdit(batch, constraints)
 

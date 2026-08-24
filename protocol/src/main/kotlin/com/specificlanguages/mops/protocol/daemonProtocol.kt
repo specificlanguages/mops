@@ -107,6 +107,10 @@ object ProtocolJson {
 
     fun encodeModuleCreationReport(report: ModuleCreationReport): String = json.encodeToString(report)
 
+    fun encodeModelCreationPlan(plan: ModelCreationPlan): String = json.encodeToString(plan)
+
+    fun encodeModelCreationReport(report: ModelCreationReport): String = json.encodeToString(report)
+
     fun encodeRecord(record: DaemonRecord): String = json.encodeToString(record)
 
     fun decodeRecord(text: String): DaemonRecord = json.decodeFromString(text)

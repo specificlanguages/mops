@@ -32,6 +32,10 @@ One of four project-level operations that creates a language, solution, devkit, 
 _Avoid_: generic create-module operation
 _Related_: Project Module, Code Service, Module Handle, Module Creation Report
 
+**Model Creation Operation**:
+An operation that creates an **MPS Model** in a selected **Project Module**. It is available both as a direct mops command and through the owning **Module Handle** in **Code Mode**, where it returns a **Model Handle**.
+_Related_: MPS Model, Project Module, Code Service, Model Handle
+
 **Module Handle**:
 The common mops-supported representation of an **MPS Module** inside **Code Mode**, specialized as a language, solution, devkit, or generator handle. It may be retained between **Access Blocks**, but supported inspection or modification requires suitable model access; `facets` exposes the MPS facet instances directly without access or compatibility guarantees, and `sModule` exposes the underlying MPS module as an unsupported escape hatch. A **Module Creation Operation** returns a typed handle for its primary newly created module rather than a creation report or raw MPS object; `getModule` resolves a **Navigation Target** to an existing handle.
 _Avoid_: module object, creation report
@@ -71,6 +75,11 @@ _Related_: Project and Libraries
 **MPS Model**:
 A named model contained in an **MPS Module**. An **MPS Model** owns zero or more **Root Nodes**.
 _Related_: model file
+
+**Model Handle**:
+The mops-supported representation of an **MPS Model** inside **Code Mode**. It identifies its owning **Module Handle** and may be retained between **Access Blocks**, but supported inspection or modification requires suitable model access; trusted code may retrieve the underlying MPS model through an unsupported escape hatch.
+_Avoid_: model object, creation report
+_Related_: Code Mode, Access Block, MPS Model, Module Handle, Model Creation Operation
 
 **MPS Concept**:
 A language concept that classifies an **MPS Node**.

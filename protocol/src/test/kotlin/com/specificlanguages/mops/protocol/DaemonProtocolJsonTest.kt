@@ -9,6 +9,16 @@ import kotlin.test.assertFalse
 
 class DaemonProtocolJsonTest {
     @Test
+    fun `model creation contracts round trip`() {
+        val request = CreateModelRequest("secret", ".main", "m:1(example)", filePerRoot = true, dryRun = true)
+        assertEquals(request, ProtocolJson.decodeRequest(ProtocolJson.encodeRequest(request)))
+        val response = ModelCreationResponse(plan = ModelCreationPlan(
+            "example.main", "example", "m:1(example)", ModelPersistence.FILE_PER_ROOT, "/p/main.model",
+        ))
+        assertEquals(response, ProtocolJson.decodeResponse(ProtocolJson.encodeResponse(response)))
+    }
+
+    @Test
     fun `code requests and results round-trip source identity options and output`() {
         val request = CodeRunRequest(
             token = "secret",

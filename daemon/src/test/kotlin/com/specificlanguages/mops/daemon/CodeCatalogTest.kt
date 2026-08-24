@@ -23,6 +23,12 @@ class CodeCatalogTest {
     }
 
     @Test
+    fun `model creation is discoverable on module handles`() {
+        assertContains(CodeCatalog.text("ModuleHandle.createModel"),
+            "ModuleHandle.createModel(String modelName, boolean filePerRoot = false): ModelHandle")
+    }
+
+    @Test
     fun `catalog hides implementation methods`() {
         val help = CodeCatalog.text("mops.edit")
 

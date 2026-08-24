@@ -46,6 +46,8 @@ import com.specificlanguages.mops.protocol.CreateLanguageRequest
 import com.specificlanguages.mops.protocol.CreateSolutionRequest
 import com.specificlanguages.mops.protocol.CreateDevkitRequest
 import com.specificlanguages.mops.protocol.CreateGeneratorRequest
+import com.specificlanguages.mops.protocol.CreateModelRequest
+import com.specificlanguages.mops.protocol.ModelCreationResponse
 import com.specificlanguages.mops.protocol.ModuleCreationResponse
 import com.specificlanguages.mops.protocol.SolutionUsagePreset
 import java.io.BufferedReader
@@ -199,6 +201,9 @@ class DefaultDaemonClient(
 
     override fun createGenerator(language: String, alias: String, standalone: Boolean, descriptor: String?, dryRun: Boolean) =
         exchange(CreateGeneratorRequest(token, language, alias, standalone, descriptor, dryRun), ModuleCreationResponse::class.java)
+
+    override fun createModel(modelName: String, module: String, filePerRoot: Boolean, dryRun: Boolean) =
+        exchange(CreateModelRequest(token, modelName, module, filePerRoot, dryRun), ModelCreationResponse::class.java)
 
     private fun <T : DaemonResponse> exchange(
         request: DaemonRequest,

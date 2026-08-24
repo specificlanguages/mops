@@ -43,6 +43,7 @@ fun newCommandLine(workingDirectory: Path = Path.of("").absolute()): CommandLine
         addLeaf("solution", CreateSolutionCommand(rootCommand))
         addLeaf("devkit", CreateDevkitCommand(rootCommand))
         addLeaf("generator", CreateGeneratorCommand(rootCommand))
+        addLeaf("model", CreateModelCommand(rootCommand))
     }
     root.addGroup("diagnose", DiagnoseOperations()) {
         addLeaf("module", DiagnoseModuleCommand(rootCommand))
