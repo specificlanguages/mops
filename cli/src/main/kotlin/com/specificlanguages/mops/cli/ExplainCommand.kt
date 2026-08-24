@@ -12,7 +12,7 @@ import picocli.CommandLine.Parameters
  */
 @Command(
     name = "explain",
-    description = ["Explain mops Notations (the textual formats mops exchanges with agents)."],
+    description = ["Explain mops notations (the textual formats mops exchanges with agents)."],
 )
 class ExplainCommand : CliCommand() {
     @Parameters(
@@ -25,7 +25,7 @@ class ExplainCommand : CliCommand() {
 
     @Option(
         names = ["--schema"],
-        description = ["Print the generated JSON Schema for the edit-batch Notation (only with the edit topic)."],
+        description = ["Print the generated JSON Schema for the edit-batch notation (only with the edit topic)."],
     )
     var schema: Boolean = false
 

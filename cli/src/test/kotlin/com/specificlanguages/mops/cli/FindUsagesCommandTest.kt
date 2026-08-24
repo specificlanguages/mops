@@ -84,7 +84,7 @@ class FindUsagesCommandTest {
     }
 
     @Test
-    fun `find usages accepts a model target and node id`() {
+    fun `find usages accepts a model target and node ID`() {
         val client = mock<DaemonClient>()
         val target = NodeTarget.InModel(
             modelTarget = "com.specificlanguages.json.structure",
@@ -123,7 +123,7 @@ class FindUsagesCommandTest {
     }
 
     @Test
-    fun `find usages passes the in-clause scope after a model target and node id`() {
+    fun `find usages passes the in-clause scope after a model target and node ID`() {
         val client = mock<DaemonClient>()
         val target = NodeTarget.InModel(
             modelTarget = "com.specificlanguages.json.structure",

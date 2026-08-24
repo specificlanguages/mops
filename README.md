@@ -51,10 +51,10 @@ mops --mps-home <path> get node [--ancestry] <model-target> <node-id>
 ```
 
 Exports one resolved node as a JSON tree through the daemon, addressed by a serialized node reference or by a model
-target plus node id. An unresolved target fails with `NODE_NOT_FOUND`. The exported object carries the node's concept,
+target plus node ID. An unresolved target fails with `NODE_NOT_FOUND`. The exported object carries the node's concept,
 id, properties, references, and child subtree, plus a `parent` object describing its immediate containing node: the
 containment `role` by which the node sits in it, a `type` of `root` or `node`, and the parent's name, concept, and
-reference. A Root Node has no `parent`. `--ancestry` nests `parent` recursively up to the Root Node instead of carrying
+reference. A root node has no `parent`. `--ancestry` nests `parent` recursively up to the root node instead of carrying
 only the immediate parent.
 
 ```sh
@@ -69,7 +69,7 @@ them for the project root, or pass `/` for the repository root. `--depth` bounds
 
 `--limit N` caps how many children each level shows (default 50; `0` is unlimited). A level wider than the cap is
 truncated and gains a final `truncated <shown> <total>` row so the omission is explicit. `--summary` replaces the
-target's children with grouped counts — per **Role** (with the dominant concepts) for a node, per concept for a model's
+target's children with grouped counts — per **role** (with the dominant concepts) for a node, per concept for a model's
 roots, per model for a module, per kind for the project or repository — and cannot be combined with `--depth`. `--role
 ROLE` lists only the target node's children in one containment role and is valid only for a node target.
 
@@ -83,8 +83,8 @@ mops --mps-home <path> render node [--allow-reflective] <model-target> <node-id>
 
 Renders one resolved node as the plain text of its default editor — the way it would appear in the MPS editor — and
 prints it verbatim, preserving the editor's line breaks and indentation. Addressed the same way as `get node`: a
-serialized node reference, or a model target plus node id. An unresolved target fails with `NODE_NOT_FOUND`. Any node
-is renderable, not only Root Nodes; the output is a quick overview for reading, not a round-trippable serialization.
+serialized node reference, or a model target plus node ID. An unresolved target fails with `NODE_NOT_FOUND`. Any node
+is renderable, not only root nodes; the output is a quick overview for reading, not a round-trippable serialization.
 
 If any concept in the node's subtree does not resolve — its language is not loaded — the command fails with
 `LANGUAGE_NOT_LOADED`. It diagnoses each unloaded language through the same machinery as `find instances` (naming the
@@ -97,7 +97,7 @@ language's own notation), which the command prints as-is.
 mops --mps-home <path> find instances [--exact] [--limit N] [--full-concept] [--refs-only] [--json] <concept>
 ```
 
-Searches **Editable Project Sources** for nodes that are instances of a fully qualified MPS concept
+Searches **editable project sources** for nodes that are instances of a fully qualified MPS concept
 (`<language>.structure.<ConceptName>`), including subconcepts and MPS interface matches by default. `--exact` restricts
 results to nodes whose direct concept is the queried one. An existing concept with no matches succeeds with no rows.
 
@@ -121,7 +121,7 @@ mops --mps-home <path> find usages [--limit N] [--full-concept] [--refs-only] [-
 mops --mps-home <path> find usages [--limit N] [--full-concept] [--refs-only] [--json] <model-target> <node-id>
 ```
 
-Searches **Editable Project Sources** for references to one resolved target node, addressed the same way as
+Searches **editable project sources** for references to one resolved target node, addressed the same way as
 `get node`. An unresolved target fails with `NODE_NOT_FOUND`. Text output is tab-separated rows of `usage`, the
 reference role, and the owning node's name (or `<unnamed>`), concept, and reference; the owner is typed `root` or `node`
 by its position in its model. A non-root owner appends its immediate parent as trailing `parent`, parent name (or
@@ -137,8 +137,8 @@ only when more matches exist than were returned.
 mops --mps-home <path> find root-by-name [--limit N] [--full-concept] [--refs-only] [--json] <pattern> [in <scope-segment>...]
 ```
 
-Finds Root Nodes by name using MPS Go-to-Node pattern matching. The pattern supports camel-hump and `*` wildcards (see
-`mops explain name-pattern`). By default it searches **Editable Project Sources**; append `in <scope-segments>` to
+Finds root nodes by name using MPS Go-to-Node pattern matching. The pattern supports camel-hump and `*` wildcards (see
+`mops explain name-pattern`). By default it searches **editable project sources**; append `in <scope-segments>` to
 search a module, model, or the whole repository (`in /`), where only root-bearing scopes are valid (see
 `mops explain scope`). It defaults to `--limit 100`, treats `--limit 0` as unlimited, and rejects negative limits. Text
 output is tab-separated rows in the same shape as `find instances`, including the short-concept default with
@@ -186,10 +186,10 @@ prints the make result as JSON.
 mops explain [--schema] [PATH]
 ```
 
-Prints reference pages for the mops Notations, the textual formats mops exchanges with agents. It is pure and offline:
+Prints reference pages for the mops notations, the textual formats mops exchanges with agents. It is pure and offline:
 it never starts a daemon, resolves a project root, or requires `--mps-home`. With no argument it lists the topics; a dot-
 path such as `edit` or `edit.copyAsChild` prints that page, and an unknown path exits non-zero with sibling suggestions.
-`--schema` prints the generated JSON Schema for the edit-batch Notation (only with the `edit` topic).
+`--schema` prints the generated JSON Schema for the edit-batch notation (only with the `edit` topic).
 
 ```sh
 mops daemon status [--all]

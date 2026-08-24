@@ -97,7 +97,7 @@ class EditBatchExecutor(
                 )
 
         // Resolves any target form to a node: a batch-local alias (must already be bound), a relative address descending
-        // a role path from a bound alias, a serialized node reference, or a model plus node id. A forward reference to an
+        // a role path from a bound alias, a serialized node reference, or a model plus node ID. A forward reference to an
         // unbound alias fails.
         fun resolveNode(index: Int, target: EditTarget): SNode {
             if (target is EditTarget.Alias) {
@@ -274,7 +274,7 @@ class EditBatchExecutor(
             // The canonical `to` form (the full EditTarget grammar, aliases included) resolves like every other target.
             reference.to?.let { return resolveNode(index, it) }
 
-            // The get-node-shaped `target` form: a bare node id resolves within the owner model, a `model/nodeId` pair
+            // The get-node-shaped `target` form: a bare node ID resolves within the owner model, a `model/nodeId` pair
             // globally.
             val target = reference.target
                 ?: fail(MpsErrorCode.TARGET_RESOLUTION_FAILED, "operation $index reference ${reference.role} has no target")
@@ -282,7 +282,7 @@ class EditBatchExecutor(
             val nodeId = target.node
                 ?: fail(
                     MpsErrorCode.TARGET_RESOLUTION_FAILED,
-                    "operation $index reference ${reference.role} is missing a target node id",
+                    "operation $index reference ${reference.role} is missing a target node ID",
                 )
             val resolved = if (targetModel == null) {
                 parseNodeIdOrNull(persistence, nodeId)?.let(ownerModel::getNode)
@@ -350,7 +350,7 @@ class EditBatchExecutor(
 
         // Sets properties and references on [node] and builds its nested children, recursively. Each child is a fresh
         // node spec, a Move Leaf (adopting an existing node identity-preservingly), or a Copy Leaf (deep-copying with
-        // fresh ids).
+        // fresh IDs).
         fun populate(
             index: Int,
             model: SModel,

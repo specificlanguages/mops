@@ -1,6 +1,6 @@
-scope — the Search Scope clause on `mops find`.
+scope — the search scope clause on `mops find`.
 
-A find command searches Editable Project Sources by default. Append a scope
+A find command searches editable project sources by default. Append a scope
 clause to search somewhere else, exhaustively:
 
     mops find instances    <concept> in <segment>...
@@ -8,7 +8,7 @@ clause to search somewhere else, exhaustively:
     mops find root-by-name <pattern> in <segment>...
     mops find node-by-id   <id>      in <segment>...
 
-`find root-by-name` searches Root Nodes only, so it accepts a repository,
+`find root-by-name` searches root nodes only, so it accepts a repository,
 module, or model scope, but not a node or root-node subtree scope.
 
 Everything after the first freestanding `in` argument is scope segments, so a
@@ -16,16 +16,16 @@ query argument literally named `in` is never mistaken for the clause. `in` with
 no following segments is an error.
 
 DEFAULT VS EXPLICIT
-  No clause          Editable Project Sources — the editable models you may
+  No clause          editable project sources — the editable models you may
                      modify, excluding read-only libraries and stub models.
   Explicit scope     Searched exhaustively, including read-only content within
                      it. Naming a scope is already an intentional act.
 
 SEGMENTS
-  The segments are Navigation Target segments — the same grammar `mops list`
+  The segments are navigation target segments — the same grammar `mops list`
   navigates. A scope resolves to one of:
 
-    /                        The whole MPS Repository (replaces the old --all).
+    /                        The whole MPS repository (replaces the old --all).
     <module>                 A module, by name or serialized module reference.
     <module> <model>         A model within a module. A `.suffix` model segment
                              expands against the module name.
@@ -33,14 +33,14 @@ SEGMENTS
                              that is also a module name, or names two models,
                              is ambiguous (see RESOLUTION).
     <model-reference>        A model, by serialized model reference.
-    <node-reference>         A Root Node or nested node subtree, by serialized
+    <node-reference>         A root node or nested node subtree, by serialized
                              node reference.
     <module> <model> <node>...
                              A node subtree, addressed segment by segment by
-                             Node Name or Node ID.
+                             node name or node ID.
 
   A module, model, or repository scope maps to an MPS search scope directly. A
-  Root Node or nested-node scope searches the containing model and keeps only
+  root node or nested-node scope searches the containing model and keeps only
   matches within that node's subtree.
 
 RESOLUTION

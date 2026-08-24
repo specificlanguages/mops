@@ -28,8 +28,8 @@ class NodeIdSpellingTest {
     }
 
     @Test
-    fun `returns null for a malformed id`() {
-        assertNull(parseNodeIdOrNull(persistence, "not a node id"))
+    fun `returns null for a malformed ID`() {
+        assertNull(parseNodeIdOrNull(persistence, "not a node ID"))
     }
 
     @Test

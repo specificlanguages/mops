@@ -5,7 +5,7 @@ FIELDS
   target  (required) the node to delete — see target
 
 SEMANTICS
-  Removes the target node together with its whole Node Subtree from its model.
+  Removes the target node together with its whole node subtree from its model.
 
 EXAMPLE
 {

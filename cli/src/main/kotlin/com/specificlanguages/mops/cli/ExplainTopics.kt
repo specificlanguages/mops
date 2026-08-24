@@ -21,7 +21,7 @@ object ExplainTopics {
     fun index(): String {
         val width = topLevelTopics.maxOf { it.length }
         return buildString {
-            appendLine("mops explain — reference for mops Notations (the textual formats mops exchanges with agents).")
+            appendLine("mops explain — reference for mops notations (the textual formats mops exchanges with agents).")
             appendLine()
             appendLine("Topics:")
             for (topic in topLevelTopics) {

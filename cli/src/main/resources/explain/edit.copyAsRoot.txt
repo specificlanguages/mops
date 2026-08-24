@@ -1,4 +1,4 @@
-edit.copyAsRoot — copy a Node Subtree into a model as a new Root Node.
+edit.copyAsRoot — copy a node subtree into a model as a new root node.
 
 FIELDS
   op          "copyAsRoot"
@@ -9,10 +9,10 @@ FIELDS
               in later operations as $name (the leading $ is required in references)
 
 SEMANTICS
-  Deep-copies source and attaches the copy as a Root Node of the destination
-  model, assigning fresh Node IDs so the copy is a distinct node rather than a
-  duplicate identity. source may be a root or a child and may live in a read-only
-  model. The placement is checked against the can-be-root Constraint.
+  Deep-copies source and attaches the copy as a root node of the destination
+  model, assigning fresh node IDs so the copy is a distinct node rather than a
+  duplicate identity. Source may be a root or a child and may live in a read-only
+  model. The placement is checked against the can-be-root constraint.
 
 EXAMPLE
   Copy a root, then rename the copy through its alias:

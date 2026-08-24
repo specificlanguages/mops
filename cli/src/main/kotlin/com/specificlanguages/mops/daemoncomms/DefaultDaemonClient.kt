@@ -232,7 +232,7 @@ class DefaultDaemonClient(
         } catch (timeoutFailure: SocketTimeoutException) {
             if (request is CodeRunRequest) {
                 daemonPid?.let { ProcessHandle.of(it).ifPresent(ProcessHandle::destroyForcibly) }
-                throw IllegalStateException("Code Mode timed out after ${request.timeoutMillis} ms; the project daemon was terminated")
+                throw IllegalStateException("Execution in code mode timed out after ${request.timeoutMillis} ms; the project daemon was terminated")
             }
             throw timeoutFailure
         }

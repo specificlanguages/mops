@@ -44,7 +44,7 @@ class InlineLeafEditSemanticsTest {
 
             val holder = mpsAccess.read { getNode(NodeTarget.NodeReference(response.created.getValue("holder"))) }
             val moved = childrenInRole(holder, "propertyDeclaration").single()
-            // Identity preserved: the adopted node keeps its exact node id, so any inbound reference still resolves.
+            // Identity preserved: the adopted node keeps its exact node ID, so any inbound reference still resolves.
             assertEquals(JSON_STRING_VALUE_ID, moved.id)
             assertEquals("value", propertyValueOrNull(moved, "name"))
 
@@ -77,7 +77,7 @@ class InlineLeafEditSemanticsTest {
             val holder = mpsAccess.read { getNode(NodeTarget.NodeReference(response.created.getValue("holder"))) }
             val copy = childrenInRole(holder, "propertyDeclaration").single()
             assertEquals("value", propertyValueOrNull(copy, "name"))
-            assertNotEquals(JSON_STRING_VALUE_ID, copy.id, "the copy must receive a fresh node id")
+            assertNotEquals(JSON_STRING_VALUE_ID, copy.id, "the copy must receive a fresh node ID")
 
             // The source is untouched.
             val jsonString = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_STRING_REF)) }
@@ -171,7 +171,7 @@ class InlineLeafEditSemanticsTest {
     }
 
     @Test
-    fun `an inline reference target accepts a bare node id in the persisted spelling`() {
+    fun `an inline reference target accepts a bare node ID in the persisted spelling`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
             val response = mpsAccess.write {
                 modelEdit(
@@ -182,7 +182,7 @@ class InlineLeafEditSemanticsTest {
                             concept = LINK_DECLARATION,
                             properties = listOf(MpsNodePropertyJson(name = "role", value = "viaEncodedId")),
                             references = listOf(
-                                // A bare node id (no model) resolves within the owner model; here in the encoded
+                                // A bare node ID (no model) resolves within the owner model; here in the encoded
                                 // spelling MPS persists, which must resolve the same as the decimal form.
                                 InlineReference(
                                     role = "target",
@@ -228,7 +228,7 @@ class InlineLeafEditSemanticsTest {
         const val JSON_STRING_VALUE_REF = "$STRUCTURE_MODEL/$JSON_STRING_VALUE_ID"
         const val JSON_ARRAY_REF = "$STRUCTURE_MODEL/2110045694544569357"
         const val IJSON_VALUE_ID = "2110045694544566909"
-        // The same node id in the encoded spelling MPS persists in .mps files.
+        // The same node ID in the encoded spelling MPS persists in .mps files.
         const val IJSON_VALUE_ENCODED_ID = "1P8oQ4NaXDX"
     }
 }

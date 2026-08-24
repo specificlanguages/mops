@@ -1,14 +1,14 @@
-edit.deleteChild — delete a child selected by Role and position.
+edit.deleteChild — delete a child selected by role and position.
 
 FIELDS
   op        "deleteChild"
   target    (required) the parent node — see target
-  role      (required) the Containment Role to delete a Child from
-  position  (optional, default only) which child under that Role — see position
+  role      (required) the containment role to delete a child from
+  position  (optional, default only) which child under that role — see position
 
 SEMANTICS
-  Deletes one Child under the parent's Containment Role. With the default "only",
-  the Role must hold exactly one child; otherwise position selects which child to
+  Deletes one child under the parent's containment role. With the default "only",
+  the role must hold exactly one child; otherwise position selects which child to
   delete.
 
 EXAMPLE

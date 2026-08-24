@@ -78,12 +78,12 @@ class FindNodeByIdSemanticsTest {
     fun `fails with a parse error rather than an empty result on a malformed id`() {
         val exception = assertFailsWith<MpsRequestException> {
             SharedMpsEnvironment.sharedMpsAccess.read {
-                findNodeById("not a node id", limit = 0)
+                findNodeById("not a node ID", limit = 0)
             }
         }
 
         assertEquals(MpsErrorCode.INVALID_REQUEST, exception.code)
-        assertContains(exception.message, "could not parse node id")
+        assertContains(exception.message, "could not parse node ID")
     }
 
     private companion object {

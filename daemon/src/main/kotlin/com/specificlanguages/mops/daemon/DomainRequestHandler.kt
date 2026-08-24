@@ -66,7 +66,7 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
 
                 is CodeRunRequest -> {
                     val access = mpsAccess as? JetBrainsMpsAccess
-                        ?: error("Code Mode requires the JetBrains MPS runtime")
+                        ?: error("Running code mode requires the JetBrains MPS runtime")
                     CodeModeExecutor(access, access.project).execute(request)
                 }
 

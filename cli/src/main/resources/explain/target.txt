@@ -1,19 +1,19 @@
-target — how an Edit Operation names a node.
+target — how an edit operation names a node.
 
 FORMS
-  1. Node Reference string:
+  1. node reference string:
        "r:<model-id>(<model-name>)/<node-id>"
-     Anatomy: the r: tag, the model id, the (model name), a slash, the node id.
-  2. Model plus node id object:
+     Anatomy: the r: tag, the model ID, the (model name), a slash, the node ID.
+  2. Model plus node ID object:
        {"model": "<model name or reference>", "nodeId": "<node-id>"}
   3. Batch-local alias:
        "$name" — a node created earlier in the same batch via an "as" alias.
-  4. Relative to a batch-local alias — descend a Containment Role path into a node
+  4. Relative to a batch-local alias — descend a containment role path into a node
      the same batch just created, so you can edit inside a fresh copy or subtree
-     without a get-node round-trip to learn a descendant's id:
+     without a get-node round-trip to learn a descendant's ID:
        "$name/role/role[position]/…"
        {"base": "$name", "path": "role/role[position]/…"}
-     Each segment is a Containment Role name; a bare "role" is that Role's single
+     Each segment is a containment role name; a bare "role" is that role's single
      child, and "role[position]" selects one child using the position notation
      ("first", "last", "only", or a zero-based integer). See: position.
 

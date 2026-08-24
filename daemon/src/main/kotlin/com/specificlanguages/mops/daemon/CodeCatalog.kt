@@ -75,7 +75,7 @@ object CodeCatalog {
     fun text(path: String?): String {
         val selected = select(path)
         return buildString {
-            appendLine("Code Mode services")
+            appendLine("code mode services")
             selected.forEach { appendLine("${it.signature}  [${it.access}]") }
         }.trimEnd()
     }
@@ -86,5 +86,5 @@ object CodeCatalog {
 
     private fun select(path: String?): List<Operation> = if (path == null) operations else operations.filter {
         it.path == path || it.path.startsWith("$path.")
-    }.also { require(it.isNotEmpty()) { "unknown Code Service path: $path" } }
+    }.also { require(it.isNotEmpty()) { "unknown code service path: $path" } }
 }

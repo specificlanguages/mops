@@ -18,7 +18,7 @@ import kotlin.test.assertEquals
 @ResourceLock("system-streams")
 class ModelGetNodeCommandTest {
     @Test
-    fun `model get-node requires a node reference or model target plus node id`() {
+    fun `model get-node requires a node reference or model target plus node ID`() {
         var exitCode = Int.MIN_VALUE
 
         val stderr = tapSystemErr {
@@ -33,7 +33,7 @@ class ModelGetNodeCommandTest {
     }
 
     @Test
-    fun `model get-node prints json node export for model target and node id`() {
+    fun `model get-node prints json node export for model target and node ID`() {
         val client = mock<DaemonClient>()
         val target = NodeTarget.InModel(
             modelTarget = "com.specificlanguages.json.structure",

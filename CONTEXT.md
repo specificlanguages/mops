@@ -2,6 +2,8 @@
 
 mops helps users and agents inspect and work with JetBrains MPS projects from a CLI. This glossary keeps MPS project vocabulary precise when discussing navigation, lookup, and model operations.
 
+Domain concepts use title case in this glossary and other internal domain documents so their use as defined terms is visible. User-facing messages and documentation use ordinary lowercase prose for these terms.
+
 ## Language
 
 **MPS Project**:

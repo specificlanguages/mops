@@ -18,7 +18,7 @@ object ConceptValidityGuard {
         val address = runCatching { PersistenceFacade.getInstance().asString(node.reference) }.getOrNull()
             ?: node.nodeId.toString()
         val language = languageName(node.concept)
-        return "MPS Concept of node $address could not be resolved (${node.concept.qualifiedName}); " +
+        return "MPS concept of node $address could not be resolved (${node.concept.qualifiedName}); " +
             "its owning language '$language' is most likely not compiled — run 'mops make module $language' and retry"
     }
 

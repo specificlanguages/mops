@@ -34,7 +34,7 @@ class ModelRenderNodeCommand(private val environment: CommandEnvironment) : CliC
         val response = when (nodeTarget.size) {
             1 -> client.renderNode(NodeTarget.NodeReference(nodeTarget[0]), allowReflective)
             2 -> client.renderNode(NodeTarget.InModel(modelTarget = nodeTarget[0], nodeId = nodeTarget[1]), allowReflective)
-            else -> error("expected one node reference or model target plus node id")
+            else -> error("expected one node reference or model target plus node ID")
         }
 
         println(response.text)

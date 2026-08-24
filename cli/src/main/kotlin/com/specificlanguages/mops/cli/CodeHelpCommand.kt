@@ -4,7 +4,7 @@ import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 
-@Command(name = "help", description = ["Show Code Services from the selected project daemon."])
+@Command(name = "help", description = ["Show code services from the selected project daemon."])
 class CodeHelpCommand(private val environment: CommandEnvironment) : CliCommand() {
     @Parameters(index = "0", arity = "0..1", paramLabel = "PATH")
     var path: String? = null

@@ -4,11 +4,11 @@ FIELDS
   op          "wrap"
   target      (required) the node to wrap — see target
   concept     (required) the wrapper's concept (fully-qualified name)
-  role        (required) the wrapper's Containment Role the target moves under
+  role        (required) the wrapper's containment role the target moves under
   properties  (optional) inline properties of the wrapper — see inline-subtree
   references  (optional) inline references of the wrapper — see inline-subtree
   children    (optional) inline children built alongside the target under the
-              wrapper, including Move/Copy Leaves — see inline-subtree
+              wrapper, including move/copy leaves — see inline-subtree
   position    (optional, default last) where the target lands among any inline-built
               siblings in role — see position
   as          (optional) batch-local alias bound to the wrapper; reference it in
@@ -16,9 +16,9 @@ FIELDS
 
 SEMANTICS
   A fresh wrapper node of concept takes the target's exact place — same parent,
-  Containment Role, and sibling index, or Root Node position in the same model when
+  containment role, and sibling index, or root node position in the same model when
   the target is a root. The target then moves under the wrapper's role at position,
-  keeping its identity (so inbound References to it keep resolving) and its whole
+  keeping its identity (so inbound references to it keep resolving) and its whole
   subtree. The wrapper is built like an addChild inline spec; its properties,
   references, and children fill out the rest of it.
 

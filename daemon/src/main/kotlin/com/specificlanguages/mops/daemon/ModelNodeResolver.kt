@@ -29,7 +29,7 @@ class ModelNodeResolver(
                 val nodeId = parseNodeIdOrNull(persistence, target.nodeId)
                     ?: throw MpsRequestException(
                         code = MpsErrorCode.INVALID_REQUEST,
-                        message = "could not parse node id: ${target.nodeId}",
+                        message = "could not parse node ID: ${target.nodeId}",
                     )
                 model.getNode(nodeId)
             }

@@ -50,7 +50,7 @@ class FindInstancesCommand(private val environment: CommandEnvironment) : CliCom
         names = ["--named"],
         paramLabel = "PATTERN",
         description = [
-            "Keep only instances whose Node Name matches this Go-to-Node pattern; supports camel-hump and '*' " +
+            "Keep only instances whose node name matches this Go-to-Node pattern; supports camel-hump and '*' " +
                 "wildcards. See `mops explain name-pattern`.",
         ],
     )
@@ -60,8 +60,7 @@ class FindInstancesCommand(private val environment: CommandEnvironment) : CliCom
         names = ["--role"],
         paramLabel = "ROLE",
         description = [
-            "Keep only instances filling this containment role in their parent. Root Nodes have no role and never " +
-                "match.",
+            "Keep only instances filling this containment role in their parent.",
         ],
     )
     var role: String? = null
@@ -84,7 +83,7 @@ class FindInstancesCommand(private val environment: CommandEnvironment) : CliCom
     @Parameters(
         index = "1..*",
         paramLabel = "[in SCOPE_SEGMENT...]",
-        description = ["Optional Search Scope clause: the literal `in` followed by navigation-target segments."],
+        description = ["Optional search scope clause: the literal `in` followed by navigation-target segments."],
     )
     var scopeClause: List<String> = emptyList()
 

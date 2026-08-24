@@ -8,7 +8,7 @@ import picocli.CommandLine.Parameters
 @Command(
     name = "root-by-name",
     description = [
-        "Find Root Nodes by name using MPS Go-to-Node pattern matching. Searches editable project sources by " +
+        "Find root nodes by name using MPS Go-to-Node pattern matching. Searches editable project sources by " +
             "default; append `in <scope-segments>` to search a module, model, or the whole repository (`in /`). Only " +
             "root-bearing scopes are valid. See `mops explain name-pattern` and `mops explain scope`.",
     ],
@@ -55,7 +55,7 @@ class FindRootByNameCommand(private val environment: CommandEnvironment) : CliCo
     @Parameters(
         index = "1..*",
         paramLabel = "[in SCOPE_SEGMENT...]",
-        description = ["Optional Search Scope clause: the literal `in` followed by navigation-target segments."],
+        description = ["Optional search scope clause: the literal `in` followed by navigation-target segments."],
     )
     var scopeClause: List<String> = emptyList()
 

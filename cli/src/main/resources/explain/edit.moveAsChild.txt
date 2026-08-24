@@ -1,15 +1,15 @@
-edit.moveAsChild — move an existing node to a new parent Role.
+edit.moveAsChild — move an existing node to a new parent role.
 
 FIELDS
   op        "moveAsChild"
   target    (required) the node to move — see target
   into      (required) the new parent node — see target
-  role      (required) the Containment Role under the new parent
+  role      (required) the containment role under the new parent
   position  (optional, default last) placement among children — see position
 
 SEMANTICS
   Detaches the target node from its current location and inserts it under the
-  "into" parent's Containment Role at position. The node keeps its identity.
+  "into" parent's containment role at position. The node keeps its identity.
 
 EXAMPLE
 {

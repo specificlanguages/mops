@@ -37,7 +37,7 @@ class CodeModeExecutor(private val access: MpsAccess, private val project: Proje
 
     private fun rejectDependencyInjection(source: String) {
         require(!Regex("(?m)^\\s*@(?:groovy\\.lang\\.)?(?:Grab|Grapes|GrabConfig|GrabResolver)\\b").containsMatchIn(source)) {
-            "Groovy dependency injection is disabled in Code Mode; use classes from the daemon/MPS classpath"
+            "Groovy dependency injection is disabled in code mode; use classes from the daemon/MPS classpath"
         }
     }
 }
@@ -67,13 +67,13 @@ class CodeModeRoot(private val access: MpsAccess, private val project: Project, 
     fun help(path: String? = null): String = CodeCatalog.text(path)
 
     private fun <T> enter(kind: String, action: () -> T): T {
-        check(block == null) { "Access Blocks cannot be nested; the current $block block already owns model access" }
+        check(block == null) { "Nested access blocks are not allowed; the current $block block already owns model access" }
         block = kind
         return try { action() } finally { block = null }
     }
 
     private fun <T> outside(action: () -> T): T {
-        check(block == null) { "this operation must run outside an Access Block" }
+        check(block == null) { "this operation must run outside an access block" }
         return action()
     }
 }
@@ -84,7 +84,7 @@ open class CodeReadServices(
 ) : com.specificlanguages.mops.daemon.core.MpsRead by delegate {
     fun getModule(target: String): ModuleHandle = getModule(listOf(target))
     fun getModule(target: List<String>): ModuleHandle {
-        require(target.size == 1) { "module Navigation Target must contain exactly one segment" }
+        require(target.size == 1) { "module navigation target must contain exactly one segment" }
         val value = target.single()
         val persistence = org.jetbrains.mps.openapi.persistence.PersistenceFacade.getInstance()
         val matches = project.repository.modules.filter {
@@ -159,7 +159,7 @@ private object CodeResultAdapter {
         is IntArray -> value.joinToString(separator = ",", prefix = "[", postfix = "]")
         is LongArray -> value.joinToString(separator = ",", prefix = "[", postfix = "]")
         is DoubleArray -> value.joinToString(separator = ",", prefix = "[", postfix = "]")
-        else -> error("unsupported Code Mode result ${value.javaClass.name}; return a string, primitive, map, collection, or array")
+        else -> error("unsupported code mode result ${value.javaClass.name}; return a string, primitive, map, collection, or array")
     }
 
     private fun renderJson(value: Any?): String = when (value) {
@@ -167,7 +167,7 @@ private object CodeResultAdapter {
         is String, is Char, is File, is Path -> json(value.toString())
         is Boolean, is Number -> value.toString()
         is Map<*, *>, is Iterable<*>, is Array<*>, is BooleanArray, is IntArray, is LongArray, is DoubleArray -> render(value)!!
-        else -> error("unsupported Code Mode result ${value.javaClass.name}; return a supported representation")
+        else -> error("unsupported code mode result ${value.javaClass.name}; return a supported representation")
     }
 
     private fun json(value: String): String = buildString {

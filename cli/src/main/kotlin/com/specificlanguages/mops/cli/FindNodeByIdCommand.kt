@@ -8,8 +8,8 @@ import picocli.CommandLine.Parameters
 @Command(
     name = "node-by-id",
     description = [
-        "Find every node with a given Node ID. A Node ID is unique only within its model, so this reports one match " +
-            "per model that holds it, each with its full node reference — never guessing one over another. The id " +
+        "Find every node with a given node ID. A node ID is unique only within its model, so this reports one match " +
+            "per model that holds it, each with its full node reference — never guessing one over another. The ID " +
             "accepts either spelling: the decimal form mops prints, or the encoded form persisted in .mps files. " +
             "Searches editable project sources by default; append `in <scope-segments>` to search a module, model, " +
             "node subtree, or the whole repository (`in /`). See `mops explain node-ref` and `mops explain scope`.",
@@ -57,13 +57,13 @@ class FindNodeByIdCommand(private val environment: CommandEnvironment) : CliComm
     @Parameters(
         index = "1..*",
         paramLabel = "[in SCOPE_SEGMENT...]",
-        description = ["Optional Search Scope clause: the literal `in` followed by navigation-target segments."],
+        description = ["Optional search scope clause: the literal `in` followed by navigation-target segments."],
     )
     var scopeClause: List<String> = emptyList()
 
     override fun run() {
         require(limit >= 0) { "limit must not be negative" }
-        require(id.isNotBlank()) { "id must not be blank" }
+        require(id.isNotBlank()) { "ID must not be blank" }
         require(!(refsOnly && json)) { "--refs-only cannot be combined with --json" }
         val scope = scopeClauseSegments(scopeClause)
         val client = environment.daemon()

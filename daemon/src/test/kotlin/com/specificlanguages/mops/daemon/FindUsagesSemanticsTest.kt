@@ -34,7 +34,7 @@ class FindUsagesSemanticsTest {
     }
 
     @Test
-    fun `finds reference usages of a model target and node id`() {
+    fun `finds reference usages of a model target and node ID`() {
         val payload = SharedMpsEnvironment.sharedMpsAccess.read {
             findUsages(
                 NodeTarget.InModel(modelTarget = "com.specificlanguages.json.structure", nodeId = IJSON_VALUE_NODE_ID),

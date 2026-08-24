@@ -95,7 +95,7 @@ sealed interface EditOperation {
 
     /**
      * Deep-copies [source] into the [target] parent's containment [role] at [position], assigning the copy fresh node
-     * ids so it is a distinct node rather than a duplicate identity. [source] may live in a read-only model.
+     * IDs so it is a distinct node rather than a duplicate identity. [source] may live in a read-only model.
      */
     @Serializable
     @SerialName("copyAsChild")
@@ -124,7 +124,7 @@ sealed interface EditOperation {
     ) : EditOperation, CreatingOperation
 
     /**
-     * Deep-copies [source] into the destination [model] as a new Root Node, assigning the copy fresh node ids. [source]
+     * Deep-copies [source] into the destination [model] as a new Root Node, assigning the copy fresh node IDs. [source]
      * may be a root or a child and may live in a read-only model.
      */
     @Serializable
@@ -148,7 +148,7 @@ sealed interface EditOperation {
 
     /**
      * Replaces the [target] node in place with [with], an Inline Subtree position: a fresh-node spec, a Move Leaf that
-     * adopts an existing node identity-preservingly, or a Copy Leaf that deep-copies with fresh ids. The replacement
+     * adopts an existing node identity-preservingly, or a Copy Leaf that deep-copies with fresh IDs. The replacement
      * takes the target's exact slot — same parent, Containment Role, and sibling index, or Root Node position in the
      * same model when the target is a root — and the remainder of the target's old subtree is deleted. A bare Move Leaf
      * of a descendant of [target] is an unwrap. Any [role] carried by [with] is ignored: the slot comes from the target.
@@ -228,7 +228,7 @@ sealed interface EditTarget {
     /**
      * A node addressed relative to a batch-local [alias] (its `$`-prefixed name) by a [path] of Containment Role steps
      * descending from it — e.g. `"$copy/left"` or `{"base": "$copy", "path": "operands[1]/name"}`. Lets a later
-     * operation reach inside a freshly created subtree without knowing the descendant's id. [alias] carries the `$`
+     * operation reach inside a freshly created subtree without knowing the descendant's ID. [alias] carries the `$`
      * sigil, matching [Alias].
      */
     data class RelativeAlias(val alias: String, val path: List<PathStep>) : EditTarget

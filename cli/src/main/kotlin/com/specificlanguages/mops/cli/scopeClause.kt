@@ -22,7 +22,7 @@ internal fun scopeClauseSegments(tail: List<String>): List<String>? {
 /**
  * Splits a `find usages` positional list into its node-target tokens and the optional scope clause.
  *
- * The node target is one token (a serialized reference) or two (a model target and a node id). The scope clause begins
+ * The node target is one token (a serialized reference) or two (a model target and a node ID). The scope clause begins
  * at the first freestanding `in` argument, which is never at index 0, so a target token literally named `in` is left
  * with the query.
  */

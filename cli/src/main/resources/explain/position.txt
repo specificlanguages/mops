@@ -1,9 +1,9 @@
-position — where a child sits among the children of a Containment Role.
+position — where a child sits among the children of a containment role.
 
 FORMS
   "first"   before all existing children
   "last"    after all existing children
-  "only"    the single child of a single-valued Role
+  "only"    the single child of a single-valued role
   3         a bare integer: the zero-based index among existing children
 
   Accepted by addChild, copyAsChild and moveAsChild (default "last") and by

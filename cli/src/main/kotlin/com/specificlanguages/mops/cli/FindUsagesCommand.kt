@@ -78,7 +78,7 @@ class FindUsagesCommand(private val environment: CommandEnvironment) : CliComman
         when (targetTokens.size) {
             1 -> NodeTarget.NodeReference(targetTokens[0])
             2 -> NodeTarget.InModel(modelTarget = targetTokens[0], nodeId = targetTokens[1])
-            else -> error("expected one node reference or model target plus node id, optionally followed by `in <scope>`")
+            else -> error("expected one node reference or model target plus node ID, optionally followed by `in <scope>`")
         }
 
 }

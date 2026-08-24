@@ -56,7 +56,7 @@ class GetNodeSemanticsTest {
         SharedMpsEnvironment.withProjectCopy(
             prepare = { project ->
                 val model = project.resolve(STRUCTURE_MODEL_PATH)
-                // Repoint references to IJsonValue at a node id that no longer exists, leaving them dangling. Only the
+                // Repoint references to IJsonValue at a node ID that no longer exists, leaving them dangling. Only the
                 // ref sites use node="...", the IJsonValue definition uses id="...", so it stays intact.
                 model.writeText(model.readText().replace("""node="1P8oQ4NaXDX"""", """node="1P8oQ4NbZZZ0""""))
             },
@@ -73,7 +73,7 @@ class GetNodeSemanticsTest {
     }
 
     @Test
-    fun `accepts compact regular node id`() {
+    fun `accepts compact regular node ID`() {
         val node = getNodeInSharedProject(NodeTarget.InModel(structureModelName(), "1P8oQ4NaXDS"))
 
         assertEquals(JSON_FILE_NODE_ID, node.id)
@@ -129,15 +129,15 @@ class GetNodeSemanticsTest {
     }
 
     @Test
-    fun `fails with a parse error rather than not found on a malformed node id`() {
+    fun `fails with a parse error rather than not found on a malformed node ID`() {
         val exception = assertFailsWith<MpsRequestException> {
             SharedMpsEnvironment.sharedMpsAccess.read {
-                getNode(NodeTarget.InModel(structureModelName(), "not a node id"))
+                getNode(NodeTarget.InModel(structureModelName(), "not a node ID"))
             }
         }
 
         assertEquals(MpsErrorCode.INVALID_REQUEST, exception.code)
-        assertContains(exception.message, "could not parse node id")
+        assertContains(exception.message, "could not parse node ID")
     }
 
     @Test
@@ -236,7 +236,7 @@ class GetNodeSemanticsTest {
         const val STRUCTURE_MODEL_REFERENCE = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
         const val CORE_STRUCTURE_MODEL_REFERENCE = "r:00000000-0000-4000-0000-011c89590288(jetbrains.mps.lang.core.structure)"
         const val JSON_FILE_NODE_ID = "2110045694544566904"
-        // The same node id in the encoded spelling MPS persists in .mps files.
+        // The same node ID in the encoded spelling MPS persists in .mps files.
         const val JSON_FILE_ENCODED_NODE_ID = "1P8oQ4NaXDS"
         const val JSON_FILE_NODE_REFERENCE = "$STRUCTURE_MODEL_REFERENCE/$JSON_FILE_NODE_ID"
         const val EDITOR_MODEL_REFERENCE = "r:4984d1ec-a1c9-4ad1-8af7-b206011783d5(com.specificlanguages.json.editor)"

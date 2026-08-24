@@ -17,7 +17,7 @@ import kotlin.test.assertEquals
 @ResourceLock("system-streams")
 class ModelRenderNodeCommandTest {
     @Test
-    fun `model render-node requires a node reference or model target plus node id`() {
+    fun `model render-node requires a node reference or model target plus node ID`() {
         var exitCode = Int.MIN_VALUE
 
         val stderr = tapSystemErr {
@@ -30,7 +30,7 @@ class ModelRenderNodeCommandTest {
     }
 
     @Test
-    fun `model render-node prints the rendered text for model target and node id`() {
+    fun `model render-node prints the rendered text for model target and node ID`() {
         val client = mock<DaemonClient>()
         val target = NodeTarget.InModel(modelTarget = "json.sandbox", nodeId = "4Twci\$d7zxq")
         whenever(client.renderNode(target, false)).thenReturn(ModelRenderNodeResponse("{\n  \"foo\": 1\n}"))

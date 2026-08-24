@@ -186,7 +186,7 @@ class ModelEditSemanticsTest {
         const val STRUCTURE_MODEL_REFERENCE = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
         const val STRUCTURE_MODEL_NAME = "com.specificlanguages.json.structure"
         const val JSON_FILE_NODE_ID = "2110045694544566904"
-        // The same node id in the encoded spelling MPS persists in .mps files.
+        // The same node ID in the encoded spelling MPS persists in .mps files.
         const val JSON_FILE_ENCODED_NODE_ID = "1P8oQ4NaXDS"
         const val JSON_FILE_NODE_REFERENCE = "$STRUCTURE_MODEL_REFERENCE/$JSON_FILE_NODE_ID"
         const val STRUCTURE_MODEL_PATH = "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps"

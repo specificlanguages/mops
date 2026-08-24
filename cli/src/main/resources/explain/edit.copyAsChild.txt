@@ -1,21 +1,21 @@
-edit.copyAsChild — copy a Node Subtree under a Containment Role.
+edit.copyAsChild — copy a node subtree under a containment role.
 
 FIELDS
   op        "copyAsChild"
   target    (required) the destination parent node — see target
-  source    (required) the node whose Node Subtree is copied — see target
-  role      (required) the Containment Role for the copy
+  source    (required) the node whose node subtree is copied — see target
+  role      (required) the containment role for the copy
   position  (optional, default last) placement among children — see position
   as        (optional) batch-local alias bound to the copy; reference it in later
             operations as $name (the leading $ is required in references)
 
 SEMANTICS
-  Deep-copies the source Node Subtree (Containment Links only) under the
-  destination parent's Role. The copy gets fresh node ids. References inside the
+  Deep-copies the source node subtree (containment links only) under the
+  destination parent's role. The copy gets fresh node IDs. References inside the
   subtree keep their targets, but the referenced nodes are not themselves copied.
 
   With an "as" alias, a later operation can edit inside the fresh copy without
-  learning a descendant's id: address it relative to the alias by role path, e.g.
+  learning a descendant's ID: address it relative to the alias by role path, e.g.
   "$copy/members[0]/name" (see target, form 4).
 
 EXAMPLE

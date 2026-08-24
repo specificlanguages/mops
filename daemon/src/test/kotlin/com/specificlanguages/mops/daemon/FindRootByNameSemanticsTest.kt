@@ -119,7 +119,7 @@ class FindRootByNameSemanticsTest {
         }
 
         assertEquals(MpsErrorCode.UNSUPPORTED_TARGET, exception.code)
-        assertContains(exception.message, "find root-by-name searches Root Nodes only")
+        assertContains(exception.message, "find root-by-name searches root nodes only")
         assertContains(exception.message, "find instances <concept> --named <pattern>")
         assertContains(exception.message, "mops explain scope")
     }

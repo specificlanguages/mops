@@ -29,7 +29,7 @@ class ModelGetNodeCommand(private val environment: CommandEnvironment) : CliComm
         val response = when (nodeTarget.size) {
             1 -> client.getNode(NodeTarget.NodeReference(nodeTarget[0]), ancestry)
             2 -> client.getNode(NodeTarget.InModel(modelTarget = nodeTarget[0], nodeId = nodeTarget[1]), ancestry)
-            else -> error("expected one node reference or model target plus node id")
+            else -> error("expected one node reference or model target plus node ID")
         }
 
         println(renderJson(response.node))

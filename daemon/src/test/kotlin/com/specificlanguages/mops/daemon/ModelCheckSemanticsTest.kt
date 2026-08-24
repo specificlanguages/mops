@@ -64,7 +64,7 @@ class ModelCheckSemanticsTest {
         assertEquals(MpsErrorCode.MODEL_NOT_FOUND, failure.code)
     }
 
-    // Repoints the `add` body's reference to parameter `a` at a node id that no longer exists, leaving the
+    // Repoints the `add` body's reference to parameter `a` at a node ID that no longer exists, leaving the
     // VariableReference dangling. Only the ref site uses node="4LxqAFFLH2G"; the parameter itself uses id="...", so it
     // stays intact and the model still loads.
     private fun breakReferenceToParameterA(projectPath: Path) {

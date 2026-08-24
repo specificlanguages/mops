@@ -193,7 +193,7 @@ class ModuleCreator(private val project: Project) {
 
     private fun validateModuleName(name: String) {
         if (!Regex("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*").matches(name))
-            fail(MpsErrorCode.INVALID_MODULE_NAME, "invalid Module Name: $name")
+            fail(MpsErrorCode.INVALID_MODULE_NAME, "invalid module name: $name")
     }
 
     private fun validateAlias(alias: String) {
@@ -203,7 +203,7 @@ class ModuleCreator(private val project: Project) {
 
     private fun validateNameFree(name: String) {
         if (project.repository.modules.any { it.moduleName == name })
-            fail(MpsErrorCode.MODULE_NAME_COLLISION, "Module Name already exists in the MPS Repository: $name")
+            fail(MpsErrorCode.MODULE_NAME_COLLISION, "module name already exists in the MPS repository: $name")
     }
 
     private fun resolveLanguage(target: String): Language {

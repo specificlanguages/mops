@@ -6,7 +6,7 @@ import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 
-@Command(name = "create", description = ["Create a Project Module."])
+@Command(name = "create", description = ["Create a project module."])
 class CreateOperations : CommandGroup()
 
 abstract class CreateModuleCommand(protected val environment: CommandEnvironment) : CliCommand() {
@@ -43,7 +43,7 @@ abstract class CreateModuleCommand(protected val environment: CommandEnvironment
     }
 }
 
-@Command(name = "language", description = ["Create a language Project Module."])
+@Command(name = "language", description = ["Create a language project module."])
 class CreateLanguageCommand(environment: CommandEnvironment) : CreateModuleCommand(environment) {
     constructor(client: DaemonClient) : this(DaemonClientCommandEnvironment(client))
     @Parameters(index = "0", paramLabel = "MODULE_NAME") lateinit var moduleName: String
@@ -51,7 +51,7 @@ class CreateLanguageCommand(environment: CommandEnvironment) : CreateModuleComma
     @Option(names = ["--with-generator"]) var withGenerator = false
     override fun run() = render(environment.daemon().createLanguage(moduleName, descriptor, withGenerator, dryRun))
 }
-@Command(name = "solution", description = ["Create a solution Project Module."])
+@Command(name = "solution", description = ["Create a solution project module."])
 class CreateSolutionCommand(environment: CommandEnvironment) : CreateModuleCommand(environment) {
     @Parameters(index = "0", paramLabel = "MODULE_NAME") lateinit var moduleName: String
     @Option(names = ["--descriptor"], paramLabel = "FILE") var descriptor: String? = null
@@ -59,7 +59,7 @@ class CreateSolutionCommand(environment: CommandEnvironment) : CreateModuleComma
     override fun run() = render(environment.daemon().createSolution(moduleName, descriptor,
         SolutionUsagePreset.valueOf(usagePreset.replace('-', '_').uppercase()), dryRun))
 }
-@Command(name = "devkit", description = ["Create a devkit Project Module."])
+@Command(name = "devkit", description = ["Create a devkit project module."])
 class CreateDevkitCommand(environment: CommandEnvironment) : CreateModuleCommand(environment) {
     @Parameters(index = "0", paramLabel = "MODULE_NAME") lateinit var moduleName: String
     @Option(names = ["--descriptor"], paramLabel = "FILE") var descriptor: String? = null

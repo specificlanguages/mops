@@ -1,14 +1,14 @@
-edit.setReference — point or clear a node's Reference.
+edit.setReference — point or clear a node's reference.
 
 FIELDS
   op       "setReference"
-  target   (required) the node holding the Reference — see target
-  role     (required) the Role of the Reference Link to set
-  to       (optional) the node to point at; omit or null to clear the Reference
+  target   (required) the node holding the reference — see target
+  role     (required) the role of the reference link to set
+  to       (optional) the node to point at; omit or null to clear the reference
 
 SEMANTICS
-  Sets the Reference under role on the target node to point at the "to" node,
-  which may live in another model. Omitting "to" (or null) clears the Reference.
+  Sets the reference under role on the target node to point at the "to" node,
+  which may live in another model. Omitting "to" (or null) clears the reference.
 
 EXAMPLE
 {

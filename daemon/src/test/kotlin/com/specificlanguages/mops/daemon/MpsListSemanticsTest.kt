@@ -195,7 +195,7 @@ class MpsListSemanticsTest {
     }
 
     @Test
-    fun `lists root node addressed by compact node id`() {
+    fun `lists root node addressed by compact node ID`() {
         val root = SharedMpsEnvironment.sharedMpsAccess.read {
             list(listOf("com.specificlanguages.json", "com.specificlanguages.json.structure", "1P8oQ4NaXDS"), depth = 1)
         }

@@ -1,4 +1,4 @@
-edit — the edit-batch Notation: an ordered batch of Edit Operations applied as a unit,
+edit — the edit-batch notation: an ordered batch of edit operations applied as a unit,
 with best-effort atomicity.
 
 SHAPE
@@ -9,42 +9,42 @@ SHAPE
 
 OPERATIONS
   setProperty   set or clear a node's property
-  setReference  point or clear a node's Reference (by Role)
-  addChild      create a child node under a Containment Role
-  copyAsChild   copy a Node Subtree under a Containment Role
-  moveAsChild   move an existing node to a new parent Role
+  setReference  point or clear a node's reference (by role)
+  addChild      create a child node under a containment role
+  copyAsChild   copy a node subtree under a containment role
+  moveAsChild   move an existing node to a new parent role
   delete        delete a node
-  deleteChild   delete a child selected by Role and position
-  addRoot       create a Root Node directly in a model
-  copyAsRoot    copy a Node Subtree into a model as a Root Node
-  moveAsRoot    move an existing node to Root Node position of a model
+  deleteChild   delete a child selected by role and position
+  addRoot       create a root node directly in a model
+  copyAsRoot    copy a node subtree into a model as a root node
+  moveAsRoot    move an existing node to root node position of a model
   replace       swap a node in place for a new subtree, keeping its exact slot
   wrap          put a new node around an existing one, keeping its exact slot
   unwrap        strip a wrapper, keeping one descendant in its place
 
 CHOOSING AN OPERATION
   Rearranging existing structure? Prefer replace, wrap, and unwrap over
-  delete-and-rebuild. Each keeps the target's exact slot (parent, Role, index) and
-  preserves node identity, so inbound References keep resolving — rebuilding from
-  scratch mints fresh ids and silently orphans them.
+  delete-and-rebuild. Each keeps the target's exact slot (parent, role, index) and
+  preserves node identity, so inbound references keep resolving — rebuilding from
+  scratch mints fresh IDs and silently orphans them.
     replace  swap a node for a new subtree in its place — edit.replace
     wrap     put a new node around one, keeping its slot — edit.wrap
     unwrap   strip a wrapper, promoting one descendant — edit.unwrap
 
-  Reusing a node inside a new subtree (addChild, addRoot, replace, wrap)? A Move
-  Leaf adopts it by identity, so inbound References stay alive; a Copy Leaf mints an
-  independent duplicate with fresh ids. Move preserves, copy mints — see
+  Reusing a node inside a new subtree (addChild, addRoot, replace, wrap)? A move
+  leaf adopts it by identity, so inbound references stay alive; a copy leaf mints an
+  independent duplicate with fresh IDs. Move preserves, copy mints — see
   inline-subtree.
 
   Annotations travel with their node: MPS attributes are children of the node they
   annotate, so wrapping or moving a node carries them along — they never migrate to
   a wrapper.
 
-  Dangling References: edit does not detect, warn about, or rewrite inbound
-  References left dangling when a node is deleted — that is Model Check territory.
+  Dangling references: edit does not detect, warn about, or rewrite inbound
+  references left dangling when a node is deleted — that is model check territory.
   Run `find usages` before to see what points at a node, and `check model` after to
-  catch anything left dangling. To keep inbound References alive across a
-  rearrangement, adopt the node with a Move Leaf rather than rebuilding it.
+  catch anything left dangling. To keep inbound references alive across a
+  rearrangement, adopt the node with a move leaf rather than rebuilding it.
 
 NOTES
   Atomicity is best-effort, not guaranteed. If an operation fails before the batch
@@ -56,7 +56,7 @@ NOTES
   its new node to a batch-local "as" alias (e.g. "as": "root") that later operations
   target as "$root". The leading $ is the reference sigil — required when targeting an
   alias, and not part of the name.
-  Constraints: edits are checked against MPS Constraints. A Constraint Violation
+  constraints: edits are checked against MPS constraints. A constraint violation
   blocks the batch and is reported. --no-constraints forces the edit through but
   still reports every violation.
 

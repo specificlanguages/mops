@@ -261,7 +261,7 @@ class JetBrainsMpsAccess(
             val id = parseNodeIdOrNull(persistence, nodeId)
                 ?: throw MpsRequestException(
                     code = MpsErrorCode.INVALID_REQUEST,
-                    message = "could not parse node id: $nodeId",
+                    message = "could not parse node ID: $nodeId",
                 )
 
             // A Node ID is unique within a model, so at most one node per model matches; collecting across the scope's
@@ -287,8 +287,8 @@ class JetBrainsMpsAccess(
         override fun diagnoseModule(module: String): ModuleDiagnosticResponse =
             ModuleLoadDiagnostics(project).diagnoseModule(module)
 
-        // `find root-by-name` searches Root Nodes only, so its scope must bear roots: the default editable project
-        // sources, the whole repository, a module, or a model. A subtree scope (a Root Node or nested node) has no
+        // `find root-by-name` searches root nodes only, so its scope must bear roots: the default editable project
+        // sources, the whole repository, a module, or a model. A subtree scope (a root node or nested node) has no
         // roots of its own, so it is rejected with a pointer to the named-descendant search instead.
         private fun rootBearingScope(scope: ResolvedScope): SearchScope =
             when (scope) {
@@ -298,7 +298,7 @@ class JetBrainsMpsAccess(
                 is ResolvedScope.Model -> ModelsScope(listOf(resolveModel(scope.modelReference)))
                 is ResolvedScope.Subtree -> throw MpsRequestException(
                     code = MpsErrorCode.UNSUPPORTED_TARGET,
-                    message = "find root-by-name searches Root Nodes only, and a node or root-node scope holds none — " +
+                    message = "find root-by-name searches root nodes only, and a node or root-node scope holds none — " +
                         "use `mops find instances <concept> --named <pattern>` to search named descendants of a node.\n" +
                         "see: mops explain scope",
                 )
@@ -330,7 +330,7 @@ class JetBrainsMpsAccess(
             }
 
         // Maps a resolved scope to the domain a find runs over. A repository, module, or model scope becomes an MPS
-        // Search Scope searched with the platform's index-backed FindUsagesFacade; a subtree scope becomes the scope
+        // search scope searched with the platform's index-backed FindUsagesFacade; a subtree scope becomes the scope
         // node itself, whose subtree the find walks node-by-node instead. Each reference re-resolves deterministically
         // because resolution already ruled out ambiguity.
         private fun searchDomainFor(scope: ResolvedScope): SearchDomain =
@@ -594,7 +594,7 @@ class JetBrainsMpsAccess(
 
     // Compiles one requested filter into a predicate over a found node. A Named filter reuses the Go-to-Node name
     // matcher `find root-by-name` uses, so an unnamed node never matches; a Role filter tests the node's containment
-    // role, which a Root Node lacks and so never matches.
+    // role, which a root node lacks and so never matches.
     private fun compileFilter(filter: NodeFilter): (SNode) -> Boolean =
         when (filter) {
             is NodeFilter.Named -> {

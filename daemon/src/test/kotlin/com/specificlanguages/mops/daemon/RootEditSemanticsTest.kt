@@ -48,7 +48,7 @@ class RootEditSemanticsTest {
     }
 
     @Test
-    fun `copyAsRoot copies a node into root position with fresh node ids and persists`() {
+    fun `copyAsRoot copies a node into root position with fresh node IDs and persists`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
             val response = mpsAccess.write {
                 modelEdit(
@@ -63,7 +63,7 @@ class RootEditSemanticsTest {
             }
 
             val copyRef = response.created.getValue("copy")
-            assertNotEquals(JSON_FILE_REF, copyRef, "the copy must receive a fresh node id")
+            assertNotEquals(JSON_FILE_REF, copyRef, "the copy must receive a fresh node ID")
 
             val copy = mpsAccess.read { getNode(NodeTarget.NodeReference(copyRef)) }
             val source = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_REF)) }

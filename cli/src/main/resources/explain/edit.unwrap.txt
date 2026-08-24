@@ -8,9 +8,9 @@ FIELDS
 
 SEMANTICS
   The kept descendant, with its whole subtree, takes the target's exact place — same
-  parent, Containment Role, and sibling index, or Root Node position in the same
+  parent, containment role, and sibling index, or root node position in the same
   model when the target is a root. The rest of the target's subtree is deleted. The
-  kept node keeps its identity, so inbound References to it keep resolving.
+  kept node keeps its identity, so inbound references to it keep resolving.
 
   keep may be any proper descendant, not just a direct child, so a multi-level strip
   is one operation. If keep does not resolve to a proper descendant of target, the

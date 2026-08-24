@@ -24,7 +24,7 @@ import kotlin.test.assertEquals
 
 class DefaultDaemonClientTest {
     @Test
-    fun `get node sends model target and node id request`() {
+    fun `get node sends model target and node ID request`() {
         val response = ModelGetNodeResponse(
             node = MpsNodeJson(
                 model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",

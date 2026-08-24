@@ -1,21 +1,21 @@
-node-ref — the Node Reference Notation.
+node-ref — the node reference notation.
 
 FORMS
   r:<model-id>(<model-name>)/<node-id>
 
-  A Node Reference is a globally usable handle to one MPS node. Decompose it to
+  A node reference is a globally usable handle to one MPS node. Decompose it to
   orient yourself:
     <model-id>    the model's stable UUID
     <model-name>  the model's qualified name, in parentheses
-    <node-id>     the node's id within that model, after the slash
+    <node-id>     the node's ID within that model, after the slash
 
   The <node-id> has two interchangeable spellings: the decimal form mops prints,
   and the shorter encoded form persisted in .mps files (e.g. 1P8oQ4NaXDS). A
-  reference resolves the same whichever spelling its id uses, so one copied from
+  reference resolves the same whichever spelling its ID uses, so one copied from
   a .mps file works verbatim.
 
   It is half-opaque: read the parts to understand what you are looking at, but
-  copy a Node Reference WHOLE from mops output. Never construct one from pieces.
+  copy a node reference WHOLE from mops output. Never construct one from pieces.
 
 EXAMPLE
 {

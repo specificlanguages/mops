@@ -9,7 +9,7 @@ import picocli.CommandLine.Parameters
 
 @Command(
     name = "model",
-    description = ["Run MPS's full Model Check over one model and report the findings."],
+    description = ["Run MPS's full model check over one model and report the findings."],
 )
 class ModelCheckCommand(private val environment: CommandEnvironment) : CliCommand() {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))

@@ -51,7 +51,7 @@ class InlineLeafBaseLanguageSemanticsTest {
             assertEquals("add", propertyValueOrNull(childrenInRole(calculator2, "member").single { it.id == addId }, "name"))
             assertTrue(childrenInRole(calculator(mpsAccess), "member").none { it.id == addId })
 
-            // The inbound call in main() still resolves to it: the Reference stored the node id, which is unchanged.
+            // The inbound call in main() still resolves to it: the Reference stored the node ID, which is unchanged.
             val calledFromMain = references(member(mpsAccess, "main"))
                 .single { it.role == "baseMethodDeclaration" && it.target.node == addId }
             assertTrue(calledFromMain.target.resolved, "the inbound method call must still resolve after the move")
@@ -86,7 +86,7 @@ class InlineLeafBaseLanguageSemanticsTest {
             val copyClass = mpsAccess.read { getNode(NodeTarget.NodeReference(response.created.getValue("copy"))) }
             val clone = childrenInRole(copyClass, "member").single()
             assertEquals("add", propertyValueOrNull(clone, "name"))
-            assertNotEquals(addId, clone.id, "the clone must receive a fresh node id")
+            assertNotEquals(addId, clone.id, "the clone must receive a fresh node ID")
 
             val cloneParameterIds = childrenInRole(clone, "parameter").mapNotNull { it.id }.toSet()
             assertEquals(2, cloneParameterIds.size)
