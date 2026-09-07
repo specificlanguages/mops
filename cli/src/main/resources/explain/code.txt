@@ -6,9 +6,11 @@ command result.
 
 Results are printed out: strings are printed verbatim, structured values as JSON, and null produces no output.
 
-Every run receives `mops`, the supported code service root, and `project`, the raw `jetbrains.mps.project.Project`.
-Use `mops.read { read -> ... }` for model reads and `mops.edit { edit -> ... }` for edits. These blocks cannot nest.
-Make and editor rendering must run outside an access block. Each successful edit block commits independently.
+Every run receives `project`, the daemon's native `jetbrains.mps.project.Project`. Values returned by resolvers and
+creation extensions are native MPS objects. Use `project.read { ... }` for model reads and `project.command { ... }`
+for mutations. Access blocks cannot nest or start under already-held model access. Make and editor rendering run
+outside access blocks. A successful command saves project changes; commands are non-transactional, so failure may leave
+native partial changes or external side effects.
 
 The code is not sandboxed and runs with full access to the filesystem, network, process, reflection, and MPS.
 
@@ -16,4 +18,4 @@ Groovy dependency injection (`@Grab` and related transforms) is disabled to avoi
 (Groovy binding and script classloader) is used for every run.
 
 The default timeout is 900 seconds; pass `--timeout 0` to disable it. Use `mops code help [PATH]` for daemon-backed
-service discovery, `--json` for its machine-readable form, or `mops.help(PATH)` while exploring in a program.
+extension discovery, `--json` for its machine-readable form, or global `help(PATH)` while exploring in a program.

@@ -2,7 +2,6 @@ package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.protocol.CodeRunRequest
-import com.specificlanguages.mops.protocol.ConstraintEnforcement
 import jetbrains.mps.project.Project
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -42,6 +41,6 @@ class CodeModeExecutorTest {
     }
 
     private fun run(source: String): String? = executor.execute(
-        CodeRunRequest("token", source, "test.groovy", ConstraintEnforcement.BEST_EFFORT),
+        CodeRunRequest("token", source, "test.groovy"),
     ).output
 }

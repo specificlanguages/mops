@@ -2,18 +2,19 @@ package com.specificlanguages.mops.cli
 
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
+import com.specificlanguages.mops.cli.explain.ExplainTopics
 import com.specificlanguages.mops.protocol.ChildPosition
 import com.specificlanguages.mops.protocol.EditNotation
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
 import com.specificlanguages.mops.protocol.ProtocolJson
-import org.junit.jupiter.api.parallel.ResourceLock
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.parallel.ResourceLock
 
 @ResourceLock("system-streams")
 class ExplainCommandTest {

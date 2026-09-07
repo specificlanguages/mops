@@ -1,0 +1,125 @@
+package com.specificlanguages.mops.cli.find
+
+import com.specificlanguages.mops.cli.common.CliCommand
+import com.specificlanguages.mops.cli.common.CommandEnvironment
+import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
+import com.specificlanguages.mops.cli.output.renderJson
+import com.specificlanguages.mops.daemoncomms.DaemonClient
+import com.specificlanguages.mops.protocol.DaemonResponse
+import com.specificlanguages.mops.protocol.NodeFilter
+import picocli.CommandLine.Command
+import picocli.CommandLine.Option
+import picocli.CommandLine.Parameters
+
+@Command(
+    name = "instances",
+    description = [
+        "Find instances of one MPS concept, optionally narrowed by `--named` and `--role` (which AND together with " +
+            "each other and the scope). Searches editable project sources by default; append `in <scope-segments>` to " +
+            "search a module, model, or subtree exhaustively, or `in /` for the whole repository. See " +
+            "`mops explain scope`.",
+    ],
+)
+class FindInstancesCommand(private val environment: CommandEnvironment) : CliCommand() {
+    constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
+
+    @Option(
+        names = ["--json"],
+        description = ["Print instance results as JSON."],
+    )
+    var json: Boolean = false
+
+    @Option(
+        names = ["--full-concept"],
+        description = ["Show fully qualified concept names in text output instead of short names."],
+    )
+    var fullConcept: Boolean = false
+
+    @Option(
+        names = ["--refs-only"],
+        description = [
+            "Print one serialized node reference per line and nothing else, for piping. Cannot combine with --json; " +
+                "truncation is reported on stderr.",
+        ],
+    )
+    var refsOnly: Boolean = false
+
+    @Option(
+        names = ["--exact"],
+        description = ["Match only nodes whose direct concept is the queried concept."],
+    )
+    var exact: Boolean = false
+
+    @Option(
+        names = ["--named"],
+        paramLabel = "PATTERN",
+        description = [
+            "Keep only instances whose node name matches this Go-to-Node pattern; supports camel-hump and '*' " +
+                "wildcards. See `mops explain name-pattern`.",
+        ],
+    )
+    var named: String? = null
+
+    @Option(
+        names = ["--role"],
+        paramLabel = "ROLE",
+        description = [
+            "Keep only instances filling this containment role in their parent.",
+        ],
+    )
+    var role: String? = null
+
+    @Option(
+        names = ["--limit"],
+        paramLabel = "N",
+        description = ["Maximum instances to return. Defaults to 100; 0 means unlimited."],
+    )
+    var limit: Int = 100
+
+    @Parameters(
+        index = "0",
+        arity = "1",
+        paramLabel = "CONCEPT",
+        description = ["Fully qualified MPS concept name."],
+    )
+    lateinit var concept: String
+
+    @Parameters(
+        index = "1..*",
+        paramLabel = "[in SCOPE_SEGMENT...]",
+        description = ["Optional search scope clause: the literal `in` followed by navigation-target segments."],
+    )
+    var scopeClause: List<String> = emptyList()
+
+    override fun run() {
+        require(limit >= 0) { "limit must not be negative" }
+        require(!(refsOnly && json)) { "--refs-only cannot be combined with --json" }
+        val scope = scopeClauseSegments(scopeClause)
+        val filters = buildList {
+            named?.let { add(NodeFilter.Named(it)) }
+            role?.let { add(NodeFilter.Role(it)) }
+        }
+        val client = environment.daemon()
+        val response = client.findInstances(
+            concept = concept,
+            exact = exact,
+            scope = scope,
+            filters = filters,
+            limit = limit,
+        )
+        when {
+            json -> println(renderJson(response))
+            refsOnly -> {
+                response.nodes.forEach { println(it.reference) }
+                if (response.truncated) reportTruncationOnStderr(response.nodes.size)
+            }
+            else -> {
+                response.nodes.forEach { println(renderText(it, fullConcept)) }
+                if (response.truncated) {
+                    println(listOf("truncated", response.nodes.size, "more results not shown").joinToString("\t"))
+                }
+            }
+        }
+    }
+
+}

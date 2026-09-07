@@ -24,12 +24,11 @@ class DaemonProtocolJsonTest {
             token = "secret",
             source = "return [answer: 42]",
             sourceName = "answer.groovy",
-            constraints = ConstraintEnforcement.STRICT,
             timeoutMillis = 12_345,
         )
         assertEquals(request, ProtocolJson.decodeRequest(ProtocolJson.encodeRequest(request)))
 
-        val catalog = CodeCatalogRequest("secret", "mops.read", json = true)
+        val catalog = CodeCatalogRequest("secret", "Project.read", json = true)
         assertEquals(catalog, ProtocolJson.decodeRequest(ProtocolJson.encodeRequest(catalog)))
 
         val result = CodeResultResponse("{\"answer\":42}")

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.networknt.schema.JsonSchema
 import com.networknt.schema.JsonSchemaFactory
 import com.networknt.schema.SpecVersion
+import com.specificlanguages.mops.cli.explain.ExplainTopics
 import com.specificlanguages.mops.protocol.EditNotation
 import com.specificlanguages.mops.protocol.ProtocolJson
 import kotlin.test.Test

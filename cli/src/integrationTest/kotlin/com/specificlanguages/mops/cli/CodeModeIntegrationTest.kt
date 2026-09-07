@@ -38,10 +38,11 @@ class CodeModeIntegrationTest {
                 project,
                 "--daemon-home", daemonHome.pathString,
                 *javaAndMpsHomeArgs(),
-                "code", "help", "mops.read",
+                "code", "help", "Project",
             )
             assertEquals(0, help.exitCode, help.output)
-            assertContains(help.stdout, "mops.read.list")
+            assertContains(help.stdout, "Project.read")
+            assertContains(help.stdout, "Project.command")
         } finally {
             stopDaemons(project, daemonHome)
         }

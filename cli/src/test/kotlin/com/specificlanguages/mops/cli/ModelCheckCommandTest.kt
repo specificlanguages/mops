@@ -2,6 +2,7 @@ package com.specificlanguages.mops.cli
 
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
+import com.specificlanguages.mops.cli.check.ModelCheckCommand
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.FindingSeverity
 import com.specificlanguages.mops.protocol.ModelCheckFindingCounts
@@ -9,15 +10,15 @@ import com.specificlanguages.mops.protocol.ModelCheckFindingJson
 import com.specificlanguages.mops.protocol.ModelCheckResponse
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import com.specificlanguages.mops.protocol.ProtocolJson
+import kotlin.test.Test
+import kotlin.test.assertContains
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import org.junit.jupiter.api.parallel.ResourceLock
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import picocli.CommandLine
-import kotlin.test.Test
-import kotlin.test.assertContains
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 
 @ResourceLock("system-streams")
 class ModelCheckCommandTest {

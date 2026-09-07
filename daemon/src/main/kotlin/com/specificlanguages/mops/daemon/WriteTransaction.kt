@@ -23,7 +23,8 @@ class WriteTransaction {
 
         project.modelAccess.executeCommandInEDT {
             try {
-                future.complete(project.modelAccess.computeWriteAction { WriteScope.body() })
+                // executeCommandInEDT already establishes the command's write context.
+                future.complete(WriteScope.body())
             } catch (t: Throwable) {
                 future.completeExceptionally(t)
             }

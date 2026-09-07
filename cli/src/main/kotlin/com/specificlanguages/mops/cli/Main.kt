@@ -1,12 +1,45 @@
 package com.specificlanguages.mops.cli
 
-import com.specificlanguages.mops.daemoncomms.DaemonPool
-import com.specificlanguages.mops.daemoncomms.DefaultDaemonPool
+import com.specificlanguages.mops.cli.check.CheckOperations
+import com.specificlanguages.mops.cli.check.ModelCheckCommand
+import com.specificlanguages.mops.cli.code.CodeHelpCommand
+import com.specificlanguages.mops.cli.code.CodeOperations
+import com.specificlanguages.mops.cli.code.CodeRunCommand
+import com.specificlanguages.mops.cli.create.CreateDevkitCommand
+import com.specificlanguages.mops.cli.create.CreateGeneratorCommand
+import com.specificlanguages.mops.cli.create.CreateLanguageCommand
+import com.specificlanguages.mops.cli.create.CreateModelCommand
+import com.specificlanguages.mops.cli.create.CreateOperations
+import com.specificlanguages.mops.cli.create.CreateSolutionCommand
+import com.specificlanguages.mops.cli.daemon.DaemonOperations
+import com.specificlanguages.mops.cli.daemon.DaemonPingCommand
+import com.specificlanguages.mops.cli.daemon.DaemonStatusCommand
+import com.specificlanguages.mops.cli.daemon.DaemonStopCommand
+import com.specificlanguages.mops.cli.diagnose.DiagnoseModuleCommand
+import com.specificlanguages.mops.cli.diagnose.DiagnoseModulesCommand
+import com.specificlanguages.mops.cli.diagnose.DiagnoseOperations
+import com.specificlanguages.mops.cli.edit.EditOperations
+import com.specificlanguages.mops.cli.edit.ModelEditCommand
+import com.specificlanguages.mops.cli.explain.ExplainCommand
+import com.specificlanguages.mops.cli.find.FindInstancesCommand
+import com.specificlanguages.mops.cli.find.FindNodeByIdCommand
+import com.specificlanguages.mops.cli.find.FindOperations
+import com.specificlanguages.mops.cli.find.FindRootByNameCommand
+import com.specificlanguages.mops.cli.find.FindUsagesCommand
+import com.specificlanguages.mops.cli.get.GetOperations
+import com.specificlanguages.mops.cli.get.ModelGetNodeCommand
+import com.specificlanguages.mops.cli.help.RecursiveHelpCommand
+import com.specificlanguages.mops.cli.list.MpsListCommand
+import com.specificlanguages.mops.cli.make.MakeModulesCommand
+import com.specificlanguages.mops.cli.make.MakeOperations
+import com.specificlanguages.mops.cli.make.MakeProjectCommand
+import com.specificlanguages.mops.cli.render.ModelRenderNodeCommand
+import com.specificlanguages.mops.cli.render.RenderOperations
+import java.lang.Exception
 import java.nio.file.Path
 import kotlin.io.path.absolute
 import kotlin.system.exitProcess
 import picocli.CommandLine
-import java.lang.Exception
 
 fun main(args: Array<String>) {
     exitProcess(newCommandLine().execute(*args))

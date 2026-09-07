@@ -1,15 +1,16 @@
 package com.specificlanguages.mops.cli
 
+import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.daemoncomms.DaemonPool
 import com.specificlanguages.mops.daemoncomms.DefaultDaemonPool
 import com.specificlanguages.mops.launcher.MpsDistributionLayout
 import com.specificlanguages.mops.protocol.DaemonContext
+import java.nio.file.Path
+import kotlin.io.path.isDirectory
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
-import java.nio.file.Path
-import kotlin.io.path.isDirectory
 
 @Command(
     name = "mops",

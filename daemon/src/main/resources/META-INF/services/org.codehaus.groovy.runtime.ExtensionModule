@@ -1,0 +1,3 @@
+moduleName=mops-code-mode
+moduleVersion=1.0
+extensionClasses=com.specificlanguages.mops.daemon.CodeModeExtensions

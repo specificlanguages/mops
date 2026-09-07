@@ -2,23 +2,24 @@ package com.specificlanguages.mops.cli
 
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
+import com.specificlanguages.mops.cli.list.MpsListCommand
 import com.specificlanguages.mops.daemoncomms.DaemonClient
-import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import com.specificlanguages.mops.protocol.MpsListResponse
 import com.specificlanguages.mops.protocol.MpsListSummaryGroupJson
 import com.specificlanguages.mops.protocol.MpsListSummaryJson
+import com.specificlanguages.mops.protocol.ProtocolJson
+import kotlin.test.Test
+import kotlin.test.assertContains
+import kotlin.test.assertEquals
+import org.junit.jupiter.api.parallel.ResourceLock
 import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.isNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.junit.jupiter.api.parallel.ResourceLock
 import picocli.CommandLine
-import kotlin.test.Test
-import kotlin.test.assertContains
-import kotlin.test.assertEquals
 
 @ResourceLock("system-streams")
 class MpsListCommandTest {

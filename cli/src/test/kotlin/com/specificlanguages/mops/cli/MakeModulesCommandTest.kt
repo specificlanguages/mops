@@ -2,19 +2,20 @@ package com.specificlanguages.mops.cli
 
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
+import com.specificlanguages.mops.cli.make.MakeModulesCommand
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.MakeMessageJson
 import com.specificlanguages.mops.protocol.MakeMessageKind
 import com.specificlanguages.mops.protocol.MakeOutcome
 import com.specificlanguages.mops.protocol.MakeResponse
 import com.specificlanguages.mops.protocol.ProtocolJson
+import kotlin.test.Test
+import kotlin.test.assertEquals
 import org.junit.jupiter.api.parallel.ResourceLock
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import picocli.CommandLine
-import kotlin.test.Test
-import kotlin.test.assertEquals
 
 @ResourceLock("system-streams")
 class MakeModulesCommandTest {

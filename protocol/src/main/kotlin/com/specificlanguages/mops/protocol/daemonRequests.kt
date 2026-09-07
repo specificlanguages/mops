@@ -198,7 +198,6 @@ data class CodeRunRequest(
     override val token: String,
     val source: String,
     val sourceName: String,
-    val constraints: ConstraintEnforcement = ConstraintEnforcement.BEST_EFFORT,
     val timeoutMillis: Long = 900_000,
 ) : DaemonRequest
 

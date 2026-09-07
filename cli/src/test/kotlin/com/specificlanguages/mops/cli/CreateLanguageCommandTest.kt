@@ -1,14 +1,15 @@
 package com.specificlanguages.mops.cli
 
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
+import com.specificlanguages.mops.cli.create.CreateLanguageCommand
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import picocli.CommandLine
-import kotlin.test.Test
-import kotlin.test.assertEquals
 
 class CreateLanguageCommandTest {
     @Test

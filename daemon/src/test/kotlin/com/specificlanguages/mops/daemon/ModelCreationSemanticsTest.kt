@@ -6,15 +6,14 @@ import kotlin.test.*
 
 class ModelCreationSemanticsTest {
     @Test
-    fun `code mode retains a module handle and returns a model handle from an edit block`() {
+    fun `code mode retains a native module and returns a native model from a command block`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
             val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project).execute(CodeRunRequest(
                 "", """
-                    def owner
-                    mops.read { owner = it.getModule('com.specificlanguages.json') }
-                    mops.edit {
+                    def owner = project.read { project.module('com.specificlanguages.json') }
+                    project.command {
                       def model = owner.createModel('.fromCode')
-                      [name: model.modelName, owner: model.module.moduleName, reference: model.modelReference]
+                      [name: model.name.value, owner: model.module.moduleName, model: model]
                     }
                 """.trimIndent(), "model-creation.groovy",
             ))

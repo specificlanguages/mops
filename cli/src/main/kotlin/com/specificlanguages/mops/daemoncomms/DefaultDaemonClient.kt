@@ -177,10 +177,9 @@ class DefaultDaemonClient(
     override fun runCode(
         source: String,
         sourceName: String,
-        constraints: ConstraintEnforcement,
         timeout: Duration,
     ): CodeResultResponse = exchange(
-        CodeRunRequest(token, source, sourceName, constraints, timeout.toMillis()),
+        CodeRunRequest(token, source, sourceName, timeout.toMillis()),
         CodeResultResponse::class.java,
         timeout = timeout,
     )

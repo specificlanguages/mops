@@ -71,7 +71,6 @@ interface DaemonClient {
     fun runCode(
         source: String,
         sourceName: String,
-        constraints: ConstraintEnforcement,
         timeout: Duration,
     ): CodeResultResponse
     fun codeCatalog(path: String?, json: Boolean): CodeCatalogResponse

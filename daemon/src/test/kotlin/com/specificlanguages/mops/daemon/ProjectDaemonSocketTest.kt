@@ -37,7 +37,7 @@ import kotlin.test.assertTrue
 
 /**
  * Unit tests for the MPS-free socket loop in [ProjectDaemon], driven over a real loopback socket with
- * an in-memory [MpsAccess]. No MPS boot is triggered, so these run in milliseconds.
+ * an in-memory [com.specificlanguages.mops.daemon.core.MpsAccess]. No MPS boot is triggered, so these run in milliseconds.
  */
 class ProjectDaemonSocketTest {
     @TempDir

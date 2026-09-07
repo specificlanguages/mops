@@ -6,33 +6,26 @@ import kotlin.test.assertFalse
 
 class CodeCatalogTest {
     @Test
-    fun `creation help shows positional values and named options`() {
-        val help = CodeCatalog.text("mops.edit.createLanguage")
-
-        assertContains(
-            help,
-            "mops.edit.createLanguage(String moduleName, descriptor: String = null, withGenerator: Boolean = false)",
-        )
-        assertFalse("?>" in help)
+    fun `creation help uses native receivers and return types`() {
+        assertContains(CodeCatalog.text("Project.createLanguage"), "Project.createLanguage(String name, Map options = [:]): Language")
+        assertContains(CodeCatalog.text("Language.createGenerator"), "Language.createGenerator(String alias, Map options = [:]): Generator")
+        assertContains(CodeCatalog.text("SModule.createModel"), "SModule.createModel(String name, boolean filePerRoot = false): SModel")
     }
 
     @Test
-    fun `module lookup is discoverable under read and edit access`() {
-        assertContains(CodeCatalog.text("mops.read.getModule"), "mops.read.getModule(NavigationTarget target)")
-        assertContains(CodeCatalog.text("mops.edit.getModule"), "mops.edit.getModule(NavigationTarget target)")
+    fun `access blocks and resolvers are discoverable on project`() {
+        val help = CodeCatalog.text("Project")
+        assertContains(help, "Project.read")
+        assertContains(help, "Project.command")
+        assertContains(help, "Project.module")
+        assertContains(help, "[read]")
     }
 
     @Test
-    fun `model creation is discoverable on module handles`() {
-        assertContains(CodeCatalog.text("ModuleHandle.createModel"),
-            "ModuleHandle.createModel(String modelName, boolean filePerRoot = false): ModelHandle")
-    }
-
-    @Test
-    fun `catalog hides implementation methods`() {
-        val help = CodeCatalog.text("mops.edit")
-
-        assertFalse("persist" in help)
-        assertFalse("$" in help)
+    fun `clean break catalog omits handles and service root`() {
+        val help = CodeCatalog.text(null)
+        assertFalse("Handle" in help)
+        assertFalse("mops.read" in help)
+        assertFalse("mops.edit" in help)
     }
 }

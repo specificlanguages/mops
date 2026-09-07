@@ -5,6 +5,7 @@ import org.junit.jupiter.api.parallel.ResourceLock
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 @ResourceLock("system-streams")
 class CommandHelpTest {
@@ -79,6 +80,11 @@ class CommandHelpTest {
         assertContains(output, "--file")
         assertContains(output, "--constraints")
         assertContains(output, "Operation reference: mops explain edit")
+    }
+
+    @Test
+    fun `code run has no run-wide constraints option`() {
+        assertFalse(runHelp("code", "run", "--help").contains("--constraints"))
     }
 
     @Test
