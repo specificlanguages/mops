@@ -18,7 +18,6 @@ import java.util.concurrent.ExecutionException
 
 object CodeModeExtensions {
     private val persistence get() = PersistenceFacade.getInstance()
-
     /** Runs a non-nesting MPS read action and returns the closure value. Access: none. */
     @CodeModeExtension(MpsAccessLevel.NONE)
     @JvmStatic
@@ -115,12 +114,9 @@ object CodeModeExtensions {
         requireOwner(project); requireCommand("Project.createLanguage"); options.requireOnly(
             "descriptor", "withGenerator"
         )
-        val response = ModuleCreator(project).createLanguage(
-            CreateLanguageRequest(
-                "", name, options["descriptor"]?.toString(), options["withGenerator"] as? Boolean ?: false
-            )
-        )
-        return resolveCreated(project, response.report!!.primary.moduleReference) as Language
+        return ModuleCreator(project).createLanguage(
+            name, options["descriptor"]?.toString(), options["withGenerator"] as? Boolean ?: false,
+        ).primary as Language
     }
 
     /** Creates and returns a native MPS solution. Access: command. */
@@ -134,12 +130,7 @@ object CodeModeExtensions {
         val preset =
             options["usagePreset"]?.toString()?.replace('-', '_')?.uppercase()?.let(SolutionUsagePreset::valueOf)
                 ?: SolutionUsagePreset.NOT_GENERATED
-        val response = ModuleCreator(project).createSolution(
-            CreateSolutionRequest(
-                "", name, options["descriptor"]?.toString(), preset
-            )
-        )
-        return resolveCreated(project, response.report!!.primary.moduleReference) as Solution
+        return ModuleCreator(project).createSolution(name, options["descriptor"]?.toString(), preset).primary as Solution
     }
 
     /** Creates and returns a native MPS devkit. Access: command. */
@@ -148,9 +139,7 @@ object CodeModeExtensions {
     @JvmOverloads
     fun createDevkit(project: Project, name: String, options: Map<String, Any?> = emptyMap()): DevKit {
         requireOwner(project); requireCommand("Project.createDevkit"); options.requireOnly("descriptor")
-        val response =
-            ModuleCreator(project).createDevkit(CreateDevkitRequest("", name, options["descriptor"]?.toString()))
-        return resolveCreated(project, response.report!!.primary.moduleReference) as DevKit
+        return ModuleCreator(project).createDevkit(name, options["descriptor"]?.toString()).primary as DevKit
     }
 
     /** Creates and returns a generator owned by this language. Access: command. */
@@ -161,16 +150,9 @@ object CodeModeExtensions {
         requireCommand("Language.createGenerator"); options.requireOnly("standalone", "descriptor")
         val project = CodeModeProjectProvider.project()
         check(project.isProjectModule(language)) { "language belongs to a different MPS project" }
-        val response = ModuleCreator(project).createGenerator(
-            CreateGeneratorRequest(
-                "",
-                persistence.asString(language.moduleReference),
-                alias,
-                options["standalone"] as? Boolean ?: false,
-                options["descriptor"]?.toString()
-            )
-        )
-        return resolveCreated(project, response.report!!.primary.moduleReference) as Generator
+        return ModuleCreator(project).createGenerator(
+            language.moduleName!!, alias, options["standalone"] as? Boolean ?: false, options["descriptor"]?.toString(),
+        ).primary as Generator
     }
 
     /** Creates and returns a model owned by this module. Access: command. */
@@ -192,10 +174,6 @@ object CodeModeExtensions {
     private fun requireOwner(project: Project) {
         check(CodeModeProjectProvider.project() === project) { "project belongs to a different Code Mode session" }
     }
-
-    private fun resolveCreated(project: Project, reference: String): SModule = requireNotNull(
-        persistence.createModuleReference(reference).resolve(project.repository)
-    ) { "created module is no longer registered: $reference" }
 
     private fun Map<String, Any?>.requireOnly(vararg names: String) {
         val unknown = keys - names.toSet()

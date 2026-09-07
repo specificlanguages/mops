@@ -72,10 +72,10 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
 
                 is CodeCatalogRequest -> CodeCatalog.response(request)
 
-                is CreateLanguageRequest -> mpsAccess.write { creator().run { createLanguage(request).also { if (!request.dryRun) persist() } } }
-                is CreateSolutionRequest -> mpsAccess.write { creator().run { createSolution(request).also { if (!request.dryRun) persist() } } }
-                is CreateDevkitRequest -> mpsAccess.write { creator().run { createDevkit(request).also { if (!request.dryRun) persist() } } }
-                is CreateGeneratorRequest -> mpsAccess.write { creator().run { createGenerator(request).also { if (!request.dryRun) persist() } } }
+                is CreateLanguageRequest -> mpsAccess.write { moduleResponse(request.dryRun) { createLanguage(request) } }
+                is CreateSolutionRequest -> mpsAccess.write { moduleResponse(request.dryRun) { createSolution(request) } }
+                is CreateDevkitRequest -> mpsAccess.write { moduleResponse(request.dryRun) { createDevkit(request) } }
+                is CreateGeneratorRequest -> mpsAccess.write { moduleResponse(request.dryRun) { createGenerator(request) } }
                 is CreateModelRequest -> mpsAccess.write { ModelCreator((mpsAccess as JetBrainsMpsAccess).project).create(request) }
 
                 else -> errorResponse("UNSUPPORTED_REQUEST", "unsupported request type: ${request::class.simpleName}")
@@ -89,5 +89,10 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
     private fun errorResponse(code: String, message: String): DaemonErrorResponse =
         DaemonErrorResponse(errorCode = code, message = message, workspacePath = workspacePath.pathString)
 
-    private fun creator() = ModuleCreator((mpsAccess as JetBrainsMpsAccess).project)
+    private fun moduleResponse(dryRun: Boolean, operation: ModuleCreationCliAdapter.() -> ModuleCreationResponse): ModuleCreationResponse {
+        val creator = ModuleCreator((mpsAccess as JetBrainsMpsAccess).project)
+        return ModuleCreationCliAdapter(creator).operation().also {
+            if (!dryRun) creator.persist()
+        }
+    }
 }

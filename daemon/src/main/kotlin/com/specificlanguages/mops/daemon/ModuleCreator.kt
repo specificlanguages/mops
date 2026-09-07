@@ -2,7 +2,12 @@ package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
-import com.specificlanguages.mops.protocol.*
+import com.specificlanguages.mops.protocol.FacetMementoJson
+import com.specificlanguages.mops.protocol.GeneratorPersistence
+import com.specificlanguages.mops.protocol.ModuleCreationPlan
+import com.specificlanguages.mops.protocol.ModuleCreationPlanEntry
+import com.specificlanguages.mops.protocol.ModuleKind
+import com.specificlanguages.mops.protocol.SolutionUsagePreset
 import jetbrains.mps.persistence.DefaultModelRoot
 import jetbrains.mps.persistence.MementoImpl
 import jetbrains.mps.project.*
@@ -31,70 +36,90 @@ class ModuleCreator(private val project: Project) {
     }.toAbsolutePath().normalize()
     private val persistence = PersistenceFacade.getInstance()
 
-    fun createLanguage(request: CreateLanguageRequest): ModuleCreationResponse {
-        val descriptor = descriptorPath(request.moduleName, ModuleKind.LANGUAGE, request.descriptor)
-        preflight(request.moduleName, descriptor, ".mpl")
-        val generatorName = if (request.withGenerator) nextGeneratorName(request.moduleName) else null
+    fun createLanguage(name: String, descriptorOverride: String? = null, withGenerator: Boolean = false): CreatedModules {
+        val descriptor = descriptorPath(name, ModuleKind.LANGUAGE, descriptorOverride)
+        preflight(name, descriptor, ".mpl")
+        val generatorName = if (withGenerator) nextGeneratorName(name) else null
         val generatorDirectory = generatorName?.let { firstEmbeddedGeneratorDirectory(descriptor.parent) }
-        val plan = ModuleCreationPlan(
-            planEntry(request.moduleName, ModuleKind.LANGUAGE, descriptor),
-            generatorName?.let {
-                listOf(planEntry(it, ModuleKind.GENERATOR, descriptor, alias = "main", persistence = GeneratorPersistence.EMBEDDED,
-                    generatorDirectory = generatorDirectory.toString()))
-            } ?: emptyList(),
-        )
-        if (request.dryRun) return ModuleCreationResponse(plan = plan)
-
         prepareDescriptor(descriptor)
-        val language = createLanguageModule(request.moduleName, descriptor)
+        val language = createLanguageModule(name, descriptor)
         val companions = generatorName?.let {
             val generator = createGeneratorModule(language, it, "main", false, descriptor, generatorDirectory!!)
             LanguageProducer.createTemplateModelIfNoneYet(mpsProject, generator)
-            listOf(reportEntry(generator, descriptor, language, GeneratorPersistence.EMBEDDED))
+            listOf(generator)
         } ?: emptyList()
-        return ModuleCreationResponse(report = ModuleCreationReport(reportEntry(language, descriptor), companions))
+        return CreatedModules(language, companions)
     }
 
-    fun createSolution(request: CreateSolutionRequest): ModuleCreationResponse {
-        val descriptor = descriptorPath(request.moduleName, ModuleKind.SOLUTION, request.descriptor)
-        preflight(request.moduleName, descriptor, ".msd")
-        val plan = ModuleCreationPlan(planEntry(request.moduleName, ModuleKind.SOLUTION, descriptor, facets = plannedFacets(request.usagePreset)))
-        if (request.dryRun) return ModuleCreationResponse(plan = plan)
+    fun createSolution(name: String, descriptorOverride: String? = null,
+                       preset: SolutionUsagePreset = SolutionUsagePreset.NOT_GENERATED): CreatedModules {
+        val descriptor = descriptorPath(name, ModuleKind.SOLUTION, descriptorOverride)
+        preflight(name, descriptor, ".msd")
         prepareDescriptor(descriptor)
-        val module = createSolutionModule(request.moduleName, descriptor, request.usagePreset)
-        return ModuleCreationResponse(report = ModuleCreationReport(reportEntry(module, descriptor)))
+        return CreatedModules(createSolutionModule(name, descriptor, preset))
     }
 
-    fun createDevkit(request: CreateDevkitRequest): ModuleCreationResponse {
-        val descriptor = descriptorPath(request.moduleName, ModuleKind.DEVKIT, request.descriptor)
-        preflight(request.moduleName, descriptor, ".devkit")
-        val plan = ModuleCreationPlan(planEntry(request.moduleName, ModuleKind.DEVKIT, descriptor))
-        if (request.dryRun) return ModuleCreationResponse(plan = plan)
+    fun createDevkit(name: String, descriptorOverride: String? = null): CreatedModules {
+        val descriptor = descriptorPath(name, ModuleKind.DEVKIT, descriptorOverride)
+        preflight(name, descriptor, ".devkit")
         prepareDescriptor(descriptor)
-        val module = instantiate(DevkitDescriptor().apply { namespace = request.moduleName; id = ModuleId.regular() }, descriptor) as DevKit
+        val module = instantiate(DevkitDescriptor().apply { namespace = name; id = ModuleId.regular() }, descriptor) as DevKit
         mpsProject.addModule(module)
         module.setChanged()
-        return ModuleCreationResponse(report = ModuleCreationReport(reportEntry(module, descriptor)))
+        return CreatedModules(module)
     }
 
-    fun createGenerator(request: CreateGeneratorRequest): ModuleCreationResponse {
-        require(request.standalone || request.descriptor == null) { "descriptor override is valid only for a standalone generator" }
-        validateAlias(request.alias)
-        val language = resolveLanguage(request.language)
+    fun createGenerator(languageTarget: String, alias: String, standalone: Boolean = false,
+                        descriptorOverride: String? = null): CreatedModules {
+        require(standalone || descriptorOverride == null) { "descriptor override is valid only for a standalone generator" }
+        validateAlias(alias)
+        val language = resolveLanguage(languageTarget)
         val name = nextGeneratorName(requireNotNull(language.moduleName))
-        val persistenceMode = if (request.standalone) GeneratorPersistence.STANDALONE else GeneratorPersistence.EMBEDDED
         val languageDescriptor = requireNotNull((language as AbstractModule).descriptorFile).path.let(Path::of).toAbsolutePath().normalize()
-        val descriptor = if (request.standalone) descriptorPath(name, ModuleKind.GENERATOR, request.descriptor) else languageDescriptor
-        if (request.standalone) preflight(name, descriptor, ".mpst") else validateNameFree(name)
-        val generatorDirectory = if (request.standalone) descriptor.parent else firstEmbeddedGeneratorDirectory(languageDescriptor.parent)
-        if (!request.standalone) validateEmptyTarget(generatorDirectory)
-        val plan = ModuleCreationPlan(planEntry(name, ModuleKind.GENERATOR, descriptor,
-            persistence.asString(language.moduleReference), request.alias, persistenceMode, generatorDirectory.toString()))
-        if (request.dryRun) return ModuleCreationResponse(plan = plan)
+        val descriptor = if (standalone) descriptorPath(name, ModuleKind.GENERATOR, descriptorOverride) else languageDescriptor
+        if (standalone) preflight(name, descriptor, ".mpst") else validateNameFree(name)
+        val generatorDirectory = if (standalone) descriptor.parent else firstEmbeddedGeneratorDirectory(languageDescriptor.parent)
+        if (!standalone) validateEmptyTarget(generatorDirectory)
         generatorDirectory.createDirectories()
-        if (request.standalone) Files.createFile(descriptor)
-        val generator = createGeneratorModule(language, name, request.alias, request.standalone, descriptor, generatorDirectory)
-        return ModuleCreationResponse(report = ModuleCreationReport(reportEntry(generator, descriptor, language, persistenceMode)))
+        if (standalone) Files.createFile(descriptor)
+        return CreatedModules(createGeneratorModule(language, name, alias, standalone, descriptor, generatorDirectory))
+    }
+
+    fun planLanguage(name: String, descriptorOverride: String?, withGenerator: Boolean): ModuleCreationPlan {
+        val descriptor = descriptorPath(name, ModuleKind.LANGUAGE, descriptorOverride)
+        preflight(name, descriptor, ".mpl")
+        val generatorName = if (withGenerator) nextGeneratorName(name) else null
+        val generatorDirectory = generatorName?.let { firstEmbeddedGeneratorDirectory(descriptor.parent) }
+        return ModuleCreationPlan(planEntry(name, ModuleKind.LANGUAGE, descriptor), generatorName?.let {
+            listOf(planEntry(it, ModuleKind.GENERATOR, descriptor, alias = "main", persistence = GeneratorPersistence.EMBEDDED,
+                generatorDirectory = generatorDirectory.toString()))
+        } ?: emptyList())
+    }
+
+    fun planSolution(name: String, descriptorOverride: String?, preset: SolutionUsagePreset): ModuleCreationPlan {
+        val descriptor = descriptorPath(name, ModuleKind.SOLUTION, descriptorOverride)
+        preflight(name, descriptor, ".msd")
+        return ModuleCreationPlan(planEntry(name, ModuleKind.SOLUTION, descriptor, facets = plannedFacets(preset)))
+    }
+
+    fun planDevkit(name: String, descriptorOverride: String?): ModuleCreationPlan {
+        val descriptor = descriptorPath(name, ModuleKind.DEVKIT, descriptorOverride)
+        preflight(name, descriptor, ".devkit")
+        return ModuleCreationPlan(planEntry(name, ModuleKind.DEVKIT, descriptor))
+    }
+
+    fun planGenerator(languageTarget: String, alias: String, standalone: Boolean, descriptorOverride: String?): ModuleCreationPlan {
+        require(standalone || descriptorOverride == null) { "descriptor override is valid only for a standalone generator" }
+        validateAlias(alias)
+        val language = resolveLanguage(languageTarget)
+        val name = nextGeneratorName(requireNotNull(language.moduleName))
+        val languageDescriptor = requireNotNull((language as AbstractModule).descriptorFile).path.let(Path::of).toAbsolutePath().normalize()
+        val descriptor = if (standalone) descriptorPath(name, ModuleKind.GENERATOR, descriptorOverride) else languageDescriptor
+        if (standalone) preflight(name, descriptor, ".mpst") else validateNameFree(name)
+        val generatorDirectory = if (standalone) descriptor.parent else firstEmbeddedGeneratorDirectory(languageDescriptor.parent)
+        if (!standalone) validateEmptyTarget(generatorDirectory)
+        return ModuleCreationPlan(planEntry(name, ModuleKind.GENERATOR, descriptor, persistence.asString(language.moduleReference), alias,
+            if (standalone) GeneratorPersistence.STANDALONE else GeneratorPersistence.EMBEDDED, generatorDirectory.toString()))
     }
 
     private fun createLanguageModule(name: String, descriptor: Path): Language {
@@ -227,32 +252,6 @@ class ModuleCreator(private val project: Project) {
                           persistence: GeneratorPersistence? = null, generatorDirectory: String? = null,
                           facets: List<FacetMementoJson> = emptyList()) =
         ModuleCreationPlanEntry(name, kind, descriptor.toString(), source, alias, persistence, generatorDirectory, facets)
-
-    private fun reportEntry(module: SModule, descriptor: Path, language: Language? = null,
-                            generatorPersistence: GeneratorPersistence? = null) = ModuleCreationEntry(
-        persistence.asString(module.moduleReference), requireNotNull(module.moduleName), kind(module), descriptor.toString(),
-        language?.let { persistence.asString(it.moduleReference) }, (module as? Generator)?.moduleDescriptor?.alias, generatorPersistence,
-        (module as? AbstractModule)?.moduleDescriptor?.moduleFacetDescriptors?.map { facet ->
-            FacetMementoJson(
-                facet.type,
-                facet.memento.keys.associateWith { requireNotNull(facet.memento.get(it)) },
-                facet.memento.text,
-                facet.memento.children.map(::mementoJson),
-            )
-        } ?: emptyList(),
-    )
-
-    private fun kind(module: SModule) = when (module) {
-        is Language -> ModuleKind.LANGUAGE; is Solution -> ModuleKind.SOLUTION; is DevKit -> ModuleKind.DEVKIT
-        is Generator -> ModuleKind.GENERATOR; else -> error("unsupported module ${module.javaClass.name}")
-    }
-
-    private fun mementoJson(value: org.jetbrains.mps.openapi.persistence.Memento): MementoJson = MementoJson(
-        value.type,
-        value.keys.associateWith { requireNotNull(value.get(it)) },
-        value.text,
-        value.children.map(::mementoJson),
-    )
 
     private fun plannedFacets(preset: SolutionUsagePreset): List<FacetMementoJson> = when (preset) {
         SolutionUsagePreset.NOT_GENERATED -> emptyList()

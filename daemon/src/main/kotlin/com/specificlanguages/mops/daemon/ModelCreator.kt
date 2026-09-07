@@ -27,8 +27,20 @@ class ModelCreator(private val project: Project) {
 
     fun create(request: CreateModelRequest): ModelCreationResponse {
         val module = resolveProjectModule(request.module)
-        val actualName = expandName(request.modelName, requireNotNull(module.moduleName))
-        val format = if (request.filePerRoot) ModelPersistence.FILE_PER_ROOT else ModelPersistence.SINGLE_FILE
+        val preparation = prepare(module, request.modelName, request.filePerRoot)
+        if (request.dryRun) return ModelCreationResponse(plan = preparation.plan)
+        val created = create(preparation)
+        return ModelCreationResponse(report = ModelCreationReport(preparation.actualName, persistence.asString(created.model.reference),
+            requireNotNull(module.moduleName), persistence.asString(module.moduleReference), preparation.format, created.location))
+    }
+
+    fun create(module: SModule, requestedName: String, filePerRoot: Boolean): SModel =
+        create(prepare(module, requestedName, filePerRoot)).model
+
+    private fun prepare(module: SModule, requestedName: String, filePerRoot: Boolean): ModelCreationPreparation {
+        check(project.isProjectModule(module)) { "module is not a project module: ${module.moduleName}" }
+        val actualName = expandName(requestedName, requireNotNull(module.moduleName))
+        val format = if (filePerRoot) ModelPersistence.FILE_PER_ROOT else ModelPersistence.SINGLE_FILE
         val modelName = SModelName(actualName)
         val observations = module.modelRoots.mapIndexed { index, root -> inspect(index, root, modelName, format) }
         val candidates = observations.filter { it.problem == null }
@@ -39,16 +51,19 @@ class ModelCreator(private val project: Project) {
         val selected = candidates.single()
         val plan = ModelCreationPlan(actualName, requireNotNull(module.moduleName), persistence.asString(module.moduleReference),
             format, selected.location!!)
-        if (request.dryRun) return ModelCreationResponse(plan = plan)
+        return ModelCreationPreparation(module, actualName, format, selected, plan)
+    }
 
-        val target = runCatching { Path.of(selected.location) }.getOrNull()
+    private fun create(preparation: ModelCreationPreparation): CreatedModel {
+        val target = runCatching { Path.of(preparation.selected.location) }.getOrNull()
         val absentBefore = target?.exists() == false
-        val model = selected.root!!.createModel(modelName, null, dataSourceType(format), factoryType(format))
+        val model = preparation.selected.root!!.createModel(SModelName(preparation.actualName), null,
+            dataSourceType(preparation.format), factoryType(preparation.format))
         try {
             (model as EditableSModel).save()
         } catch (saveFailure: Throwable) {
             val cleanupFailures = mutableListOf<String>()
-            runCatching { (module as SModuleBase).unregisterModel(model as SModelBase) }
+            runCatching { (preparation.module as SModuleBase).unregisterModel(model as SModelBase) }
                 .exceptionOrNull()?.let { cleanupFailures += "could not detach model: ${it.message}" }
             if (absentBefore && target != null && target.exists()) {
                 runCatching { deleteCreatedTarget(target) }.exceptionOrNull()
@@ -56,18 +71,10 @@ class ModelCreator(private val project: Project) {
             }
             val residue = if (target?.exists() == true) "; possible residue at $target" else ""
             val cleanup = cleanupFailures.takeIf { it.isNotEmpty() }?.joinToString("; ", prefix = "; ") ?: ""
-            throw IllegalStateException("initial save failed for $actualName at ${selected.location}: " +
+            throw IllegalStateException("initial save failed for ${preparation.actualName} at ${preparation.selected.location}: " +
                 "${saveFailure.message ?: saveFailure.javaClass.name}$residue$cleanup", saveFailure)
         }
-        return ModelCreationResponse(report = ModelCreationReport(actualName, persistence.asString(model.reference),
-            requireNotNull(module.moduleName), persistence.asString(module.moduleReference), format, selected.location))
-    }
-
-    fun create(module: SModule, modelName: String, filePerRoot: Boolean): SModel {
-        val response = create(CreateModelRequest("", modelName, persistence.asString(module.moduleReference), filePerRoot))
-        val reference = requireNotNull(response.report).modelReference
-        return persistence.createModelReference(reference).resolve(project.repository)
-            ?: error("created model is no longer registered: $reference")
+        return CreatedModel(model, preparation.selected.location!!)
     }
 
     private fun inspect(index: Int, root: org.jetbrains.mps.openapi.persistence.ModelRoot, name: SModelName,
@@ -134,4 +141,14 @@ class ModelCreator(private val project: Project) {
         fun diagnostic() = "root #${index + 1} '$presentation' ($type)" +
             (location?.let { " at $it" } ?: "") + (problem?.let { ": $it" } ?: "")
     }
+
+    private data class CreatedModel(val model: SModel, val location: String)
+
+    private data class ModelCreationPreparation(
+        val module: SModule,
+        val actualName: String,
+        val format: ModelPersistence,
+        val selected: RootObservation,
+        val plan: ModelCreationPlan,
+    )
 }
