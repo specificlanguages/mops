@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Added writable indexed Code Mode accessors: `node.properties[name]`, `node.child[role]`,
+  `node.children[role]`, and `node.references[role]`. The single-child accessor throws if the role has several
+  children; the plural accessor returns a list. Child assignments do not validate declared cardinality.
+  Property reads and writes use `SNodeAccessUtil.getProperty/setProperty` to invoke MPS property getter/setter
+  handlers while retaining serialized string values. Child access uses native MPS containment operations.
+  Reference assignments resolve their target and use `SNodeAccessUtil.setReferenceTarget`, including MPS reference
+  setter hooks. Unresolved targets fail without clearing the existing reference; explicit `null` clears it.
+  See `mops explain code` and `mops code help SNode`.
+
 - **Breaking:** Regularized the CLI around the verb-first `mops <verb> <object>` shape. `model get-node` is now
   `get node`, `model render-node` is `render node`, `model edit` is `edit model`, `model check` is `check model`,
   `make modules` is the singular `make module` (and still accepts multiple module arguments), and `diagnose modules`

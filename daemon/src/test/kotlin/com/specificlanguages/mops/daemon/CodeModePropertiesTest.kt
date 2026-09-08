@@ -6,6 +6,31 @@ import kotlin.test.assertEquals
 
 class CodeModePropertiesTest {
     @Test
+    fun `property indexing invokes MPS computed getter and setter handlers`() {
+        SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
+            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project).execute(
+                CodeRunRequest("", """
+                    project.command {
+                        def model = project.model('com.specificlanguages.json.structure')
+                        def node = model.createNode(project.concept('jetbrains.mps.baseLanguage.ClassConcept'))
+                        def nonStatic = node.concept.properties.find { it.name == 'nonStatic' }
+                        node.properties['isStatic'] = 'false'
+                        assert node.getProperty(nonStatic) == 'true'
+                        assert node.properties['isStatic'] == null
+                        node.properties['isStatic'] = 'true'
+                        assert node.properties['isStatic'] == 'true'
+                        assert node.getProperty(nonStatic) != 'true'
+                        node.setProperty(nonStatic, 'true')
+                        assert node.properties['isStatic'] == null
+                        return 'ok'
+                    }
+                """.trimIndent(), "property-handlers.groovy"),
+            )
+            assertEquals("ok", response.output)
+        }
+    }
+
+    @Test
     fun `Groovy property indexing reads inherited names from native nodes`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
             val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project).execute(

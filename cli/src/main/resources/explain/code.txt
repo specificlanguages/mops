@@ -12,6 +12,33 @@ for mutations. Access blocks cannot nest or start under already-held model acces
 outside access blocks. A successful command saves project changes; commands are non-transactional, so failure may leave
 native partial changes or external side effects.
 
+Native nodes support indexed access by property name or link role, including inherited features:
+
+  node.properties['name']    — property getter value as a string, or null for an unknown property
+  node.child['role']         — one child or null; throws when several children occupy the role
+  node.children['role']      — immutable list of current children in order, possibly empty
+  node.references['role']    — native SReference or null; .targetNode resolves its target
+
+Reads require project.read or project.command. Assignments require project.command:
+
+  node.properties['name'] = 'NewName'  // null requests clearing through the setter
+  node.child['role'] = child          // replaces all children of the role; null clears
+  node.children['role'] = [a, b]       // replaces all children of the role; [] clears
+  node.references['role'] = target    // SNode, SNodeReference, or SReference; null clears
+
+Unknown names or roles return null (an empty list for children) on reads and fail on writes. Child assignments accept
+detached nodes or existing children of that same role. Property reads and writes use SNodeAccessUtil.getProperty
+and setProperty, invoking MPS property getter/setter handlers while keeping serialized string values. Unset property
+values follow MPS getter and data type defaults. Child access
+uses native SNode operations: SNodeAccessUtil has no child APIs. Declared child cardinality and containment constraints
+are not checked. Reference assignments resolve SNodeReference and SReference values to a target node and use
+SNodeAccessUtil.setReferenceTarget, which invokes MPS reference setter hooks. An unresolved target fails without
+clearing the existing reference; only explicit null requests clearing. Assigning an SReference uses its resolved
+target, not its dynamic resolution information.
+
+These Groovy accessors shadow native getProperties(), getChildren(), and getReferences(). Property and link descriptors
+remain available through node.concept; native getChildren(containmentLink) and getReference(referenceLink) still work.
+
 The code is not sandboxed and runs with full access to the filesystem, network, process, reflection, and MPS.
 
 Groovy dependency injection (`@Grab` and related transforms) is disabled to avoid classpath issues. A fresh environment

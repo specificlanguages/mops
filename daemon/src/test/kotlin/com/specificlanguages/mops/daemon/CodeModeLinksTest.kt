@@ -11,6 +11,7 @@ class CodeModeLinksTest {
             val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project).execute(
                 CodeRunRequest("", """
                     import org.jetbrains.mps.openapi.model.SReference
+                    import org.jetbrains.mps.openapi.model.SNodeReference
                     def fails = { Class type, Closure action ->
                         try { action(); assert false: 'Expected ' + type.name }
                         catch (Exception failure) { assert type.isInstance(failure): failure }
@@ -95,6 +96,14 @@ class CodeModeLinksTest {
                         other.references['extends'] = original
                         assert other.references['extends'].sourceNode.is(other)
                         assert other.references['extends'].targetNode.is(target)
+                        def resolved = [getTargetNode: { target }] as SReference
+                        references['extends'] = resolved
+                        assert references['extends'].targetNode.is(target)
+                        def unresolved = [getTargetNode: { null }] as SReference
+                        fails(IllegalArgumentException) { references['extends'] = unresolved }
+                        def unresolvedPointer = [resolve: { repository -> null }] as SNodeReference
+                        fails(IllegalArgumentException) { references['extends'] = unresolvedPointer }
+                        assert references['extends'].targetNode.is(target)
                         fails(IllegalArgumentException) { references['missing'] = target }
                         fails(IllegalArgumentException) { references['extends'] = 'invalid' }
                         assert references['extends'].targetNode.is(target)
