@@ -1,5 +1,5 @@
 # mops
-<img align="left" src="docs/mops-logo.png" width="90" alt="mops logo" />
+<img align="left" src="docs/mops-logo.jpg" width="90" alt="mops logo" />
 
 
 `mops` is a small helper CLI for helping LLMs work with JetBrains MPS models.
