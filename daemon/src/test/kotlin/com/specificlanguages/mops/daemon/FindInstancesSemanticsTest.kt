@@ -370,7 +370,9 @@ class FindInstancesSemanticsTest {
         val message = assertNotNull(exception.message)
         assertContains(message, "\"ConceptDeclaration\" cannot be resolved")
         assertContains(message, "com.specificlanguages.json")
-        assertContains(message, "not built")
+        assertContains(message, "runtime is not loaded")
+        assertContains(message, "classes_gen")
+        assertContains(message, "absent or empty")
     }
 
     @Test

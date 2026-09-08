@@ -10,6 +10,11 @@ import jetbrains.mps.project.DevKit
 import jetbrains.mps.project.Project
 import jetbrains.mps.project.Solution
 import jetbrains.mps.generator.ModelGenerationStatusManager
+import jetbrains.mps.extapi.model.GeneratableSModel
+import jetbrains.mps.persistence.ModelDigestHelper
+import jetbrains.mps.vfs.VFSManager
+import org.jetbrains.mps.openapi.model.EditableSModel
+import org.jetbrains.mps.openapi.model.SModel
 import jetbrains.mps.project.facets.JavaModuleFacet
 import jetbrains.mps.smodel.Generator
 import jetbrains.mps.smodel.Language
@@ -65,39 +70,38 @@ private const val NOT_BUILT = "NOT_BUILT"
 private const val BROKEN_DEPENDENCIES = "BROKEN_DEPENDENCIES"
 private const val RUNTIME_LOAD_FAILED = "RUNTIME_LOAD_FAILED"
 
-/** Why a project language's compiled runtime cannot be trusted for name-based resolution. */
-enum class LanguageUnusableReason { UNBUILT, STALE }
-
-/**
- * A project language whose compiled runtime must not be used for name-based concept resolution: it is either not built
- * ([LanguageUnusableReason.UNBUILT]) or built from older sources than the files on disk
- * ([LanguageUnusableReason.STALE]). Both fail the same way — a name may resolve to a concept whose identity contradicts
- * the sources — so callers treat them alike and only distinguish [reason] in the message they show.
- */
-data class UnusableLanguage(val name: String, val reason: LanguageUnusableReason) {
-    val explanation: String
-        get() = when (reason) {
-            LanguageUnusableReason.UNBUILT -> "not built"
-            LanguageUnusableReason.STALE -> "built from older sources than the files on disk"
-        }
-}
-
 /** [languages] as a bulleted `  - name: reason` list, one per line — the shared body of every unusable-language message. */
-fun unusableLanguageList(languages: List<UnusableLanguage>): String =
-    languages.joinToString("\n") { "  - ${it.name}: ${it.explanation}" }
+fun unusableLanguageList(languages: List<UnusableLanguage>): String = buildString {
+    var remaining = 5
+    for (language in languages) {
+        appendLine("  - ${language.name}: ${language.explanation}")
+        language.loadProblem?.let { appendLine(moduleLoadRootCauseLines(it)) }
+        for (model in language.models.take(remaining)) {
+            appendLine("    Model: ${model.model}")
+            appendLine("      Source: ${model.source}")
+            appendLine("      Reason: ${model.reason}")
+            if (model.currentHashChecked) appendLine("      Current hash: ${model.currentHash ?: "unavailable"}")
+            if (model.recordedHashChecked) appendLine("      Recorded hash: ${model.recordedHash ?: "unavailable"}")
+            appendLine("      Generation record: ${model.generationRecord ?: "location unavailable"}")
+            remaining--
+        }
+    }
+    val omitted = languages.sumOf { it.models.size } - (5 - remaining)
+    if (omitted > 0) appendLine("  $omitted additional models require generation (details omitted).")
+}.trimEnd()
 
 /** The make command that rebuilds the first of [languages], used as the example remedy in refusal messages. */
 fun makeModulesExample(languages: List<UnusableLanguage>): String = "mops make module ${languages.first().name}"
 
 /**
  * Refusal message for an operation blocked because [subject] (a model, a concept name, …) would resolve through
- * [languages] whose runtimes are unbuilt or stale. Lists each with its reason and the make command that fixes it.
+ * [languages] whose runtimes cannot be trusted. Includes the observed conditions and a conditional build remedy.
  */
 fun unusableLanguagesMessage(subject: String, languages: List<UnusableLanguage>): String =
-    "$subject cannot be used while these project languages are not up to date, since name-based resolution through " +
+    "$subject cannot be used while these project language runtimes cannot be trusted, since name-based resolution through " +
         "them may return a concept whose identity contradicts the sources:\n" +
         unusableLanguageList(languages) +
-        "\nrebuild them, for example '${makeModulesExample(languages)}'."
+        "\nResolve the reported conditions; if generation is required, rebuild with '${makeModulesExample(languages)}'."
 
 class ModuleLoadDiagnostics(private val project: Project) {
 
@@ -108,6 +112,10 @@ class ModuleLoadDiagnostics(private val project: Project) {
     // worker obtains it the same way); when absent, staleness cannot be judged and only the unbuilt case is reported.
     private val generationStatus: ModelGenerationStatusManager? =
         project.getComponent(ModelGenerationStatusManager::class.java)
+    private val generationCache = GenerationRecordCache(
+        project.getComponent(VFSManager::class.java).getFileSystem(VFSManager.JAVA_IO_FILE_FS),
+    )
+    private val digestHelper = project.getComponent(ModelDigestHelper::class.java)
 
     fun diagnoseModules(): ModulesDiagnosticsResponse {
         val entries = mutableListOf<ModuleLoadDiagnosticJson>()
@@ -141,10 +149,9 @@ class ModuleLoadDiagnostics(private val project: Project) {
     }
 
     /**
-     * The project's languages, across the whole project, whose runtime is unbuilt or stale (built from older sources
-     * than the files on disk). A caller resolving a bare short concept name uses this to refuse guessing uniqueness:
-     * counting matches is trustworthy only when every project language is up to date, since an unbuilt language could
-     * carry the name unseen and a stale one could carry it under the wrong identity. Sorted by name, one per language.
+     * Languages whose runtime is unavailable or whose models require generation. A caller resolving a bare short
+     * concept name uses this to refuse guessing uniqueness: an unavailable language could carry the name unseen and
+     * a runtime with unverified generation evidence could carry it under the wrong identity. Sorted by name, one per language.
      * Must run inside a read action.
      */
     fun unusableProjectLanguages(): List<UnusableLanguage> =
@@ -156,8 +163,8 @@ class ModuleLoadDiagnostics(private val project: Project) {
             .sortedBy { it.name }
 
     /**
-     * The project languages reachable from [usedLanguages] through the used-language graph whose runtime is unbuilt or
-     * stale. Walks used languages to a fixpoint over project language modules — the same closure `make` builds (see
+     * Project languages reachable from [usedLanguages] whose runtime is unavailable or whose models require generation.
+     * Walks used languages to a fixpoint over project language modules — the same closure `make` builds (see
      * [ProjectMake]) — because MPS treats a used language as an already-built dependency and never surfaces its source
      * module through a plain dependency query, so a language used only transitively (a language a used language itself
      * uses) would otherwise be missed. Non-project (library) languages cannot be rebuilt here and are skipped. Sorted
@@ -181,27 +188,46 @@ class ModuleLoadDiagnostics(private val project: Project) {
     }
 
     /**
-     * Classifies a module as unbuilt, stale, or usable (null). Unbuilt takes precedence — a stale check needs a
-     * runtime. A read-only (packaged, jar-shipped) module is never stale in our sense: its classes come pre-built from
+     * Checks runtime availability before generation evidence. A read-only (packaged, jar-shipped) module is excluded
+     * from generation checks: its classes come pre-built from
      * the classpath and cannot be regenerated here, yet its bundled source models report `generationRequired` (they
      * carry no reachable generation cache), so it must be excluded or every project would look stale through its
      * library languages.
      */
     private fun classifyUsability(module: SModule): UnusableLanguage? = when {
-        !runtimeLoaded(module) -> UnusableLanguage(nameOf(module), LanguageUnusableReason.UNBUILT)
+        !runtimeLoaded(module) -> UnusableLanguage(nameOf(module), LanguageUnusableReason.RUNTIME_UNAVAILABLE,
+            loadProblem = describe(module).problem)
         (module as? AbstractModule)?.isReadOnly == true -> null
-        isStale(module) -> UnusableLanguage(nameOf(module), LanguageUnusableReason.STALE)
-        else -> null
+        else -> module.models.mapNotNull(::generationEvidence).takeIf { it.isNotEmpty() }?.let {
+            UnusableLanguage(nameOf(module), LanguageUnusableReason.GENERATION_REQUIRED, models = it)
+        }
     }
 
     /**
-     * Whether any of [module]'s models needs regeneration — its current content differs from what was recorded when it
-     * was last generated — which means the module's compiled runtime is out of date with its sources. See
-     * `docs/mps/model-generation-status.md`.
+     * Mirrors MPS's generation-required predicate, retaining its decisive observations. The generation record is read
+     * from disk for this operation, since the platform's parsed record and IDEA file contents may both be cached.
+     * See `docs/mps/model-generation-status.md`.
      */
-    private fun isStale(module: SModule): Boolean {
-        val generationStatus = generationStatus ?: return false
-        return module.models.any { generationStatus.generationRequired(it) }
+    private fun generationEvidence(model: SModel): ModelGenerationEvidence? {
+        if (generationStatus == null || model !is GeneratableSModel || !model.isGeneratable) return null
+        val unsaved = model is EditableSModel && model.isChanged
+        val current = if (unsaved) null else digestHelper.getModelHash(model) ?: model.modelHash
+        val recorded = if (unsaved || current == null) null else generationCache.get(model)?.modelHash
+        if (!unsaved && current != null && current == recorded) return null
+        val record = generationCache.getCacheFile(model)
+        val reason = when {
+            unsaved -> "model has unsaved changes"
+            current == null -> "current source hash is unavailable"
+            record == null -> "generation record location is unavailable"
+            !record.exists() -> "generation record is missing"
+            recorded == null -> "generation record has no readable recorded hash"
+            else -> "current source hash differs from the recorded generation hash"
+        }
+        return ModelGenerationEvidence(
+            model = model.name.value, source = model.source.location, reason = reason,
+            currentHash = current, recordedHash = recorded, generationRecord = record?.path,
+            currentHashChecked = !unsaved, recordedHashChecked = !unsaved && current != null,
+        )
     }
 
     private fun projectLanguageModulesByLanguage(): Map<SLanguage, Language> =
@@ -273,7 +299,9 @@ class ModuleLoadDiagnostics(private val project: Project) {
         if (sawCycle) return null
         return Problem(
             nameOf(module), RUNTIME_LOAD_FAILED,
-            "classes and dependencies are present, but the runtime did not register; check the daemon log for " +
+            "the runtime did not register; compiled output directory: " +
+                "${module.getFacet(JavaModuleFacet::class.java)?.classesGen?.path ?: "location unavailable (classpath output)"}; " +
+                "no blocking dependency was identified; check the daemon log for " +
                 "\"Missing language runtime class\" or a LinkageError",
             blocking = true,
         ).also { memo[ref] = it }
@@ -296,7 +324,7 @@ class ModuleLoadDiagnostics(private val project: Project) {
             return Problem(name, CLASSES_DISABLED, "the Java module facet is configured not to load classes into MPS", blocking = true)
         }
         if (!isBuilt(facet)) {
-            return Problem(name, NOT_BUILT, "the module should have classes but they have not been built yet", blocking = true)
+            return Problem(name, NOT_BUILT, "compiled output directory is absent or empty: ${facet.classesGen?.path}", blocking = true)
         }
         return null
     }

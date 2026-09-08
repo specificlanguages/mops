@@ -66,14 +66,14 @@ class ConceptResolverFormatTest {
         val message = ConceptResolver.unusableShortNameMessage(
             "Expression",
             listOf(
-                UnusableLanguage("exprs", LanguageUnusableReason.UNBUILT),
-                UnusableLanguage("other.lang", LanguageUnusableReason.STALE),
+                UnusableLanguage("exprs", LanguageUnusableReason.RUNTIME_UNAVAILABLE),
+                UnusableLanguage("other.lang", LanguageUnusableReason.GENERATION_REQUIRED),
             ),
         )
 
         assertContains(message, "\"Expression\" cannot be resolved")
-        assertContains(message, "  - exprs: not built")
-        assertContains(message, "  - other.lang: built from older sources than the files on disk")
+        assertContains(message, "  - exprs: runtime is not loaded")
+        assertContains(message, "  - other.lang: generated output may not match current sources")
         assertContains(message, "mops make module exprs")
         assertContains(message, "qualified concept name")
     }

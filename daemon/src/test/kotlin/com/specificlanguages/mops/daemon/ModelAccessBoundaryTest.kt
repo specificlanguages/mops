@@ -54,7 +54,11 @@ class ModelAccessBoundaryTest {
             val body = invocation.getArgument<WriteTransaction.WriteScope.() -> Any?>(1)
             recordingEscape({ escapedComputation = it }) { WriteTransaction.WriteScope.body() }
         }
-        val access = boundaryAccess(mock(), writeTransaction)
+        val modelAccess = mock<ModelAccess>()
+        whenever(modelAccess.computeReadAction(any<Supplier<Any?>>())).thenAnswer { invocation ->
+            invocation.getArgument<Supplier<Any?>>(0).get()
+        }
+        val access = boundaryAccess(mock { on { this.modelAccess } doReturn modelAccess }, writeTransaction)
 
         val exception = assertFailsWith<MpsRequestException> {
             access.write { throw requestFailure }
@@ -74,6 +78,7 @@ class ModelAccessBoundaryTest {
             mpsListExporter = mock(),
             jsonNodeExporter = mock(),
             modelNodeResolver = mock(),
+            modelChecker = mock(),
             editBatchExecutor = mock(),
             persistence = mock(),
             writeTransaction = writeTransaction,

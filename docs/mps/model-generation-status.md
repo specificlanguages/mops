@@ -7,9 +7,9 @@ was generated, so name lookup through the compiled runtime can return a concept 
 sources.
 
 **Answer:** `jetbrains.mps.generator.ModelGenerationStatusManager.generationRequired(SModel)` returns `true` exactly
-when a model needs regeneration — its current content differs from what was recorded at its last generation. A module is
-stale iff any of its generatable models reports `generationRequired`. This is the same detection MPS's own command-line
-make uses to skip unmodified models, so it works headless.
+when MPS requires generation. This includes unsaved changes, an unavailable current hash, missing generation evidence,
+and differing hashes. The result does not establish that compiled output is chronologically older than its sources.
+This is the same detection MPS's own command-line make uses to skip unmodified models, so it works headless.
 
 Verified against MPS **2025.1.2** (`com.jetbrains:mps:2025.1.2`), cross-read in the **MPS2025.1** source checkout.
 Source paths below are relative to the [JetBrains/MPS](https://github.com/JetBrains/MPS) repository root.
@@ -50,8 +50,8 @@ public boolean generationRequired(SModel md) {
 }
 ```
 
-So `true` means one of: it has unsaved edits, its current content hash cannot be computed, or **its current content hash
-differs from the hash stored when it was last generated**. The last is the stale-runtime case this note is about.
+So `true` means one of: it has unsaved edits, its current content hash cannot be computed, or its current content hash
+does not equal the recorded generation hash. A missing or unreadable recorded hash also satisfies that last comparison.
 
 ### `currentHash` — the actual current content (reads the file)
 
@@ -65,7 +65,8 @@ differs from the hash stored when it was last generated**. The last is the stale
 `ModelDigestUtil.hash(getSource(), textBased)` — it hashes the model's **`DataSource`** (the `.mps` file's stream)
 directly, with the in-source comment "hash value representing actual model content (i.e. no cached values)". It reads
 the current file bytes, so `currentHash` reflects **on-disk source state** (after a VFS refresh; see
-`headless-vfs-refresh-and-reload.md`), not a cached digest. This is precisely "outdated w.r.t. sources on disk".
+[external file refresh](external-file-runtime-refresh.md)), not a cached digest. The data source can still use IDEA's
+cached file contents until that refresh completes.
 
 ### `getLastKnownHash` — the hash recorded at last generation (reads the `generated` cache file)
 
@@ -78,7 +79,31 @@ cleaned — this file still holds the *pre-revert* (attempt-1) hash, so it diffe
 `generationRequired` returns `true`. After `mops make`, generation rewrites this file with the new hash and the two
 match again.
 
-## From a module to its staleness
+## Reading current generation evidence
+
+`GenerationDependenciesCache` has a public constructor but is not exposed by the project component host in MPS
+2025.1.2. An independently constructed instance uses the same parser and model-cache layout; it does not share the
+generation manager's memoized records.
+
+Its protected `getCacheFile(SModel)` selects among `GenerationTargetFacet.stream(model)` output-cache locations:
+append `generated`, skip directories, prefer the first existing file, otherwise use the first nonexistent candidate.
+No candidate means that the location cannot be determined, not that a known file is missing.
+
+IDEA's `IdeaFile.openInputStream()` delegates to `VirtualFile.getInputStream()`, so even a new parsed-cache instance can
+read cached file bytes. `VFSManager.getFileSystem(VFSManager.JAVA_IO_FILE_FS)` provides uncached local-file access using
+`java.io.File`. A local generation-record reader can use those files while retaining the MPS parser and facet selection
+rules. This applies to editable local source modules; packaged modules do not need local generation evidence.
+
+Verified with a live headless MPS 2025.1.2 environment: after a successful build, changing the recorded hash directly
+on disk was invisible to the generation manager and to a new cache using IDEA-backed files. An operation-local cache
+using Java IO files observed the mismatch and then the restored record without a build or restart.
+
+Relevant sources: `core/kernel/source/jetbrains/mps/generator/cache/BaseModelCache.java`,
+`core/generator/source/jetbrains/mps/generator/impl/dependencies/GenerationDependenciesCache.java`,
+`workbench/mps-platform/source/jetbrains/mps/ide/vfs/IdeaFile.java`, and
+`core/vfs/source/jetbrains/mps/vfs/VFSManager.java`.
+
+## From a module to its generation status
 
 A module is stale iff any of its generatable models needs regeneration. Enumerate with `SModule.getModels()` and filter,
 inside a read action — again mirroring `BaseGeneratorWorker.collectResources`:

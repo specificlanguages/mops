@@ -32,6 +32,10 @@ class JetBrainsMpsAccess(
     private val persistence: PersistenceFacade = PersistenceFacade.getInstance(),
     private val writeTransaction: WriteTransaction = WriteTransaction(),
 ) : MpsAccess {
+    private val externalProjectRefresh = ExternalProjectRefresh(project)
+
+    internal fun refreshExternalChanges() = externalProjectRefresh.refresh()
+
     // An MpsRequestException is an expected client error, not a defect. Capture it inside the model action and rethrow
     // it on the calling thread once the action has returned: if it escaped the action directly, MPS's ActionDispatcher
     // would log it as a SEVERE "Action dispatch failed" before rethrowing, drowning the daemon log in stack traces for

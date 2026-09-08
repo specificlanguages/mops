@@ -10,6 +10,7 @@ import kotlin.io.path.pathString
 class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
     fun handleDomainRequest(request: DaemonRequest): DaemonResponse =
         try {
+            (mpsAccess as? JetBrainsMpsAccess)?.refreshExternalChanges()
             when (request) {
                 is ModelGetNodeRequest ->
                     ModelGetNodeResponse(node = mpsAccess.read { getNode(request.target, request.ancestry) })
