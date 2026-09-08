@@ -49,9 +49,9 @@ internal object CodeResultAdapter {
 
     fun render(value: Any?): String? = when (value) {
         null -> null
-        is SNode -> value.reference?.let(persistence::asString)
-        is SModel -> value.reference?.let(persistence::asString)
-        is SModule -> value.moduleReference?.let(persistence::asString)
+        is SNode -> value.reference.let(persistence::asString)
+        is SModel -> value.reference.let(persistence::asString)
+        is SModule -> value.moduleReference.let(persistence::asString)
         is String -> value
         is Char, is Boolean, is Number, is File, is Path -> value.toString()
         is Map<*, *> -> value.entries.joinToString(",", "{", "}") { json(it.key.toString()) + ":" + renderJson(it.value) }

@@ -24,7 +24,7 @@ class CodeRunCommand(private val environment: CommandEnvironment) : CliCommand()
         require(timeoutSeconds >= 0) { "--timeout must be zero or a positive number of seconds" }
         val sourceName: String
         val source = if (file == null || file == "-") {
-            sourceName = file?.takeUnless { it == "-" } ?: "<stdin>"
+            sourceName = "<stdin>"
             System.`in`.bufferedReader().readText()
         } else {
             val path = environment.workingDirectory.resolve(file!!).normalize()

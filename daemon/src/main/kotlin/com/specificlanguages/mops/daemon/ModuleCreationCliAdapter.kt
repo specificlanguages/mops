@@ -38,7 +38,7 @@ class ModuleCreationCliAdapter(private val creator: ModuleCreator) {
         (module as? Generator)?.moduleDescriptor?.sourceLanguage?.let(persistence::asString),
         (module as? Generator)?.moduleDescriptor?.alias,
         (module as? Generator)?.moduleDescriptor?.let { if (it.isStandaloneModule) GeneratorPersistence.STANDALONE else GeneratorPersistence.EMBEDDED },
-        (module as? AbstractModule)?.moduleDescriptor?.moduleFacetDescriptors?.map { facet ->
+        module.moduleDescriptor?.moduleFacetDescriptors?.map { facet ->
             FacetMementoJson(facet.type, facet.memento.keys.associateWith { requireNotNull(facet.memento.get(it)) }, facet.memento.text, facet.memento.children.map(::mementoJson))
         } ?: emptyList(),
     )

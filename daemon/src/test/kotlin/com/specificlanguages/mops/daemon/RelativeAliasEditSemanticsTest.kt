@@ -106,7 +106,7 @@ class RelativeAliasEditSemanticsTest {
             }
 
             assertEquals(MpsErrorCode.ROLE_NOT_FOUND, exception.code)
-            assertTrue(exception.message!!.contains("operation 1"), "the error must carry the operation index")
+            assertTrue(exception.message.contains("operation 1"), "the error must carry the operation index")
             // The earlier copy is rolled back too: a failed relative-path edit leaves the model exactly as it was.
             assertEquals(before, sandboxModel(projectPath).readText())
         }

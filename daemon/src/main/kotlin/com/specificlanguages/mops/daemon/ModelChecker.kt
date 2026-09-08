@@ -19,8 +19,8 @@ import org.jetbrains.mps.openapi.persistence.PersistenceFacade
  * checking/constraint rules — over one model and maps the reported items to the stable finding shape.
  *
  * Read-only: the checker only reads model data, and nothing here modifies or saves the model. It must run inside a read
- * action; [JetBrainsMpsRead] provides one. Findings come back sorted most severe first and bounded by the request limit,
- * so the errors survive truncation.
+ * action. Findings come back sorted most severe first and bounded by the request limit, so the errors survive
+ * truncation.
  *
  * See `docs/mps/model-check.md` for the verified API contract behind this.
  */

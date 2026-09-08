@@ -122,8 +122,8 @@ class WrapUnwrapEditSemanticsTest {
                 }
             }
             assertEquals(MpsErrorCode.INVALID_REQUEST, exception.code)
-            assertTrue(exception.message!!.contains("descendant"), "the error must name the intent rule: ${exception.message}")
-            assertTrue(exception.message!!.contains("operation 0"), "the error must carry the operation index")
+            assertTrue(exception.message.contains("descendant"), "the error must name the intent rule: ${exception.message}")
+            assertTrue(exception.message.contains("operation 0"), "the error must carry the operation index")
             assertEquals(before, sandboxModel(projectPath).readText(), "a rejected unwrap changes nothing")
         }
     }
