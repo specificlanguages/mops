@@ -14,6 +14,7 @@ class CommandHelpTest {
         val output = runHelp("--help")
 
         assertContains(output, "daemon")
+        assertContains(output, "guess-command-line")
         assertContains(output, "list, ls")
         assertContains(output, "get")
         assertContains(output, "render")
@@ -107,6 +108,7 @@ class CommandHelpTest {
     fun `every leaf command supports --help`() {
         val leafCommands = listOf(
             arrayOf("list"),
+            arrayOf("guess-command-line"),
             arrayOf("find", "instances"),
             arrayOf("find", "usages"),
             arrayOf("find", "root-by-name"),

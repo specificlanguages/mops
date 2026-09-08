@@ -1,0 +1,97 @@
+import groovy.json.JsonOutput
+
+// Keep the init script out of buildSrc and included builds.
+gradle.projectsEvaluated {
+    if (gradle.parent != null || gradle.rootProject.projectDir.canonicalPath != System.getProperty('mops.guess.root')) {
+        return
+    }
+    gradle.rootProject.tasks.register(System.getProperty('mops.guess.task')) {
+        doLast {
+            def candidates = []
+            def hasType
+            hasType = { Class type, String name ->
+                type != null && (type.name == name || type.interfaces.any { hasType(it, name) } ||
+                    hasType(type.superclass, name))
+            }
+            def candidate = { project, source ->
+                [projectDir: project.projectDir.canonicalPath, source: source,
+                 mpsHome: null, javaHome: null, diagnostics: []]
+            }
+            def readPath = { result, key, provider ->
+                try {
+                    def file = provider()
+                    if (file != null) {
+                        result[key] = file.canonicalPath
+                    } else {
+                        result.diagnostics << "${key} is not configured."
+                    }
+                } catch (Exception e) {
+                    def messages = []
+                    def cause = e
+                    while (cause != null && !messages.contains(cause.message ?: cause.class.name)) {
+                        messages << (cause.message ?: cause.class.name)
+                        cause = cause.cause
+                    }
+                    result.diagnostics << "${key}: ${messages.join(' ')}"
+                }
+            }
+            gradle.rootProject.allprojects.sort { it.path }.each { project ->
+                def defaults = project.extensions.findByName('mpsDefaults')
+                if (defaults != null && hasType(defaults.class, 'com.specificlanguages.mps.MpsDefaultsExtension')) {
+                    def result = candidate(project, "${project.path} mpsDefaults (com.specificlanguages.mps 2.x)")
+                    readPath(result, 'mpsHome') { defaults.mpsHome.orNull?.asFile }
+                    readPath(result, 'javaHome') { defaults.javaLauncher.orNull?.metadata?.installationPath?.asFile }
+                    candidates << result
+                }
+                project.tasks.names.sort().each { name ->
+                    def task = project.tasks.getByName(name)
+                    if (!hasType(task.class, 'de.itemis.mps.gradle.RunAntScript')) {
+                        return
+                    }
+                    def result = candidate(project, "${task.path} (mbeddr RunAntScript)")
+                    readPath(result, 'mpsHome') {
+                        def args = new ArrayList(task.scriptArgs)
+                        if (task.includeDefaultArgs) {
+                            args.addAll(project.findProperty('itemis.mps.gradle.ant.defaultScriptArgs') ?: [])
+                        }
+                        def homes = args.findAll {
+                            it.startsWith('-Dmps.home=') || it.startsWith('-Dmps_home=')
+                        }.collect { it.substring(it.indexOf('=') + 1) }.unique()
+                        if (homes.size() > 1) {
+                            throw new GradleException("Conflicting Ant MPS home arguments: ${homes}")
+                        }
+                        if (homes.empty) return null
+                        if (homes[0].empty) throw new GradleException('Ant MPS home argument is empty.')
+                        def home = new File(homes[0])
+                        home.isAbsolute() ? home : new File(project.rootDir, homes[0])
+                    }
+                    readPath(result, 'javaHome') {
+                        def executable = task.executable
+                        if (executable == null) {
+                            executable = project.findProperty('itemis.mps.gradle.ant.defaultJavaExecutable')
+                        }
+                        if (executable == null) {
+                            result.source += '; Gradle default Java'
+                            return new File(System.getProperty('java.home'))
+                        }
+                        if (!(executable instanceof File || executable instanceof CharSequence)) {
+                            throw new GradleException("Unsupported Java executable value: ${executable.class.name}")
+                        }
+                        def file = executable instanceof File ? executable : new File(executable.toString())
+                        if (!file.isAbsolute()) {
+                            throw new GradleException("Java executable must be an absolute path to guess its home: ${file}")
+                        }
+                        file = file.canonicalFile
+                        if (!(file.name in ['java', 'java.exe']) || file.parentFile?.name != 'bin') {
+                            throw new GradleException("Java executable is not under a Java home bin directory: ${file}")
+                        }
+                        file.parentFile.parentFile
+                    }
+                    candidates << result
+                }
+            }
+            new File(System.getProperty('mops.guess.output')).setText(
+                JsonOutput.toJson([version: 1, candidates: candidates]), 'UTF-8')
+        }
+    }
+}

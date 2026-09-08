@@ -81,7 +81,7 @@ class MopsCommand(
         val resolvedJavaHome =
             javaHome?.let(workingDirectory::resolve)
                 ?: MpsDistributionLayout.findBundledJavaHome(resolvedMpsHome)
-                ?: throw IllegalStateException("MPS distribution at $resolvedMpsHome does not bundle Java, specify Java home explicitly")
+                ?: throw IllegalStateException("MPS distribution at $resolvedMpsHome does not bundle Java; pass --java-home <path> or run mops guess-command-line")
 
         val projectPath = resolveProjectPath(projectPathHint)
 

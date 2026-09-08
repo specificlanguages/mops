@@ -30,6 +30,7 @@ dependencies {
     implementation(project(":launcher"))
     implementation(project(":protocol"))
     implementation("info.picocli:picocli:4.7.7")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
 
     integrationTestMps("com.jetbrains:mps:2025.1.2")
     jbr("com.jetbrains.jdk:jbr_jcef:21.0.8-b895.146")
@@ -131,6 +132,19 @@ tasks.register<Test>("integrationTest") {
 
 tasks.check {
     dependsOn("integrationTest")
+    dependsOn("gradleDiscoveryTest")
+}
+
+tasks.test {
+    useJUnitPlatform { excludeTags("gradle-discovery") }
+}
+
+tasks.register<Test>("gradleDiscoveryTest") {
+    description = "Tests runtime discovery using real Gradle plugin fixtures, without an MPS daemon."
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform { includeTags("gradle-discovery") }
+    systemProperty("test.repoRoot", rootDir.absolutePath)
 }
 
 tasks.named<JavaExec>("run") {

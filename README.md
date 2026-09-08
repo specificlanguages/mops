@@ -7,6 +7,7 @@ This checkout is a Gradle-rooted Kotlin prototype with two application subprojec
 
 ```sh
 mops --help
+mops guess-command-line
 mops --mps-home /path/to/mps daemon ping
 mops --mps-home /path/to/mps edit model --file edit-batch.json
 mops daemon status
@@ -14,6 +15,18 @@ mops daemon stop
 ```
 
 The CLI starts or reuses a per-project daemon process for most commands.
+
+If you do not know where MPS and Java are installed, run `mops guess-command-line [PATH]` from the project checkout.
+It uses the nearest Gradle build's wrapper to inspect Specific Languages 2.x `mpsDefaults` or conventional mbeddr
+`RunAntScript` tasks. It prints the selected source, homes, and a quoted invocation such as
+`mops --mps-home='/path/to/MPS' --java-home='/path/to/Java'` to use in a POSIX shell. No MPS home or daemon is required; Java must be available to run Gradle.
+The optional path defaults to `--project-root`, when supplied, or the working directory.
+
+Discovery queries configured providers, which can download and extract distributions. It does not execute preparation
+or language build task actions. It prefers a complete usable pair from the closest enclosing Gradle project, then a
+deterministic first match. Partial discoveries show available arguments and exit with status 1; a complete pair exits
+with status 0. Missing runtime directories require the project's documented preparation steps. Task-action overrides,
+included builds, and custom Ant property loading are outside this heuristic; Specific Languages values are project defaults.
 
 ## Commands
 
