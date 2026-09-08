@@ -8,10 +8,4 @@ data class UnusableLanguage(
     val reason: LanguageUnusableReason,
     val models: List<ModelGenerationEvidence> = emptyList(),
     val loadProblem: ModuleLoadProblemJson? = null,
-) {
-    val explanation: String
-        get() = when (reason) {
-            LanguageUnusableReason.RUNTIME_UNAVAILABLE -> "runtime is not loaded"
-            LanguageUnusableReason.GENERATION_REQUIRED -> "generated output may not match current sources"
-        }
-}
+)

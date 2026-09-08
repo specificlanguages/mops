@@ -13,6 +13,8 @@ import com.specificlanguages.mops.protocol.NodeTarget
  * defaults to a stub that fails if a test reaches make/render without providing one.
  */
 fun mpsAccessOver(operations: MpsWrite, extra: MpsExtra = UnstubbedExtra): MpsAccess = object : MpsAccess {
+    override fun refreshExternalChanges() = Unit
+
     override fun <T> read(block: MpsRead.() -> T): T = operations.block()
 
     override fun <T> write(block: MpsWrite.() -> T): T = operations.block()

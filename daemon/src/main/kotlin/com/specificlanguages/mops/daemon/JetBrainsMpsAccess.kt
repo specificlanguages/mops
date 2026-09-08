@@ -34,7 +34,10 @@ class JetBrainsMpsAccess(
 ) : MpsAccess {
     private val externalProjectRefresh = ExternalProjectRefresh(project)
 
-    internal fun refreshExternalChanges() = externalProjectRefresh.refresh()
+    override fun refreshExternalChanges() {
+        require(!project.modelAccess.canRead()) { "external refresh requires no read/write action" }
+        externalProjectRefresh.refresh()
+    }
 
     // An MpsRequestException is an expected client error, not a defect. Capture it inside the model action and rethrow
     // it on the calling thread once the action has returned: if it escaped the action directly, MPS's ActionDispatcher

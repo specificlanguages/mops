@@ -1,4 +1,7 @@
 package com.specificlanguages.mops.daemon
 
-/** Why a project language runtime cannot be trusted for name-based resolution. */
-enum class LanguageUnusableReason { RUNTIME_UNAVAILABLE, GENERATION_REQUIRED }
+/** Why a project language runtime is unavailable or may not match its sources. */
+enum class LanguageUnusableReason(val explanation: String) {
+    RUNTIME_UNAVAILABLE("runtime is not loaded"),
+    GENERATION_REQUIRED("generated output may not match current sources"),
+}

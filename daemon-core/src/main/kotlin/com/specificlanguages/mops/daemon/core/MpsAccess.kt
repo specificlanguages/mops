@@ -1,6 +1,9 @@
 package com.specificlanguages.mops.daemon.core
 
 interface MpsAccess {
+    /** Refreshes external changes with no read/write action active; retained model objects may become invalid. */
+    fun refreshExternalChanges()
+
     fun <T> read(block: MpsRead.() -> T): T
 
     fun <T> write(block: MpsWrite.() -> T): T

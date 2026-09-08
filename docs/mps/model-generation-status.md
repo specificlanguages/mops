@@ -90,13 +90,19 @@ append `generated`, skip directories, prefer the first existing file, otherwise 
 No candidate means that the location cannot be determined, not that a known file is missing.
 
 IDEA's `IdeaFile.openInputStream()` delegates to `VirtualFile.getInputStream()`, so even a new parsed-cache instance can
-read cached file bytes. `VFSManager.getFileSystem(VFSManager.JAVA_IO_FILE_FS)` provides uncached local-file access using
-`java.io.File`. A local generation-record reader can use those files while retaining the MPS parser and facet selection
-rules. This applies to editable local source modules; packaged modules do not need local generation evidence.
+read cached file bytes before file refresh. Synchronous recursive refresh of the directory containing the generation
+records, followed by `ReloadManager.flush()`, allows a fresh `GenerationDependenciesCache` to read the updated records
+through the normal IDEA-backed files; see [external file refresh](external-file-runtime-refresh.md).
 
 Verified with a live headless MPS 2025.1.2 environment: after a successful build, changing the recorded hash directly
-on disk was invisible to the generation manager and to a new cache using IDEA-backed files. An operation-local cache
-using Java IO files observed the mismatch and then the restored record without a build or restart.
+on disk was invisible to the generation manager and to a new cache using IDEA-backed files without refresh. With refresh
+before each operation, a fresh standard cache observed the mismatching hash, the restored matching record, a missing
+record, and a record without a hash, without a build or restart. Custom Java-IO-backed cache-file selection is not
+needed for these refreshed locations. Locations outside the refreshed directories require their own refresh.
+
+`ModelCacheReloader` in `workbench/mps-platform/jetbrains.mps.ide.platform/source_gen/jetbrains/mps/ide/platform/watching`
+also listens for IDEA file events affecting `generated` files and calls the generation manager's `invalidateData(IFile)`.
+That invalidation depends on file events; it is not an independent disk scan.
 
 Relevant sources: `core/kernel/source/jetbrains/mps/generator/cache/BaseModelCache.java`,
 `core/generator/source/jetbrains/mps/generator/impl/dependencies/GenerationDependenciesCache.java`,

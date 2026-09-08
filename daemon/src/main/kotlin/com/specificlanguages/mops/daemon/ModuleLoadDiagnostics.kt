@@ -12,7 +12,7 @@ import jetbrains.mps.project.Solution
 import jetbrains.mps.generator.ModelGenerationStatusManager
 import jetbrains.mps.extapi.model.GeneratableSModel
 import jetbrains.mps.persistence.ModelDigestHelper
-import jetbrains.mps.vfs.VFSManager
+import jetbrains.mps.generator.impl.dependencies.GenerationDependenciesCache
 import org.jetbrains.mps.openapi.model.EditableSModel
 import org.jetbrains.mps.openapi.model.SModel
 import jetbrains.mps.project.facets.JavaModuleFacet
@@ -74,7 +74,7 @@ private const val RUNTIME_LOAD_FAILED = "RUNTIME_LOAD_FAILED"
 fun unusableLanguageList(languages: List<UnusableLanguage>): String = buildString {
     var remaining = 5
     for (language in languages) {
-        appendLine("  - ${language.name}: ${language.explanation}")
+        appendLine("  - ${language.name}: ${language.reason.explanation}")
         language.loadProblem?.let { appendLine(moduleLoadRootCauseLines(it)) }
         for (model in language.models.take(remaining)) {
             appendLine("    Model: ${model.model}")
@@ -95,10 +95,10 @@ fun makeModulesExample(languages: List<UnusableLanguage>): String = "mops make m
 
 /**
  * Refusal message for an operation blocked because [subject] (a model, a concept name, …) would resolve through
- * [languages] whose runtimes cannot be trusted. Includes the observed conditions and a conditional build remedy.
+ * [languages] whose runtimes are unavailable or may not match their sources. Includes the observed conditions and a conditional build remedy.
  */
 fun unusableLanguagesMessage(subject: String, languages: List<UnusableLanguage>): String =
-    "$subject cannot be used while these project language runtimes cannot be trusted, since name-based resolution through " +
+    "$subject cannot be used while these project language runtimes are unavailable or may not match their sources, since name-based resolution through " +
         "them may return a concept whose identity contradicts the sources:\n" +
         unusableLanguageList(languages) +
         "\nResolve the reported conditions; if generation is required, rebuild with '${makeModulesExample(languages)}'."
@@ -112,9 +112,9 @@ class ModuleLoadDiagnostics(private val project: Project) {
     // worker obtains it the same way); when absent, staleness cannot be judged and only the unbuilt case is reported.
     private val generationStatus: ModelGenerationStatusManager? =
         project.getComponent(ModelGenerationStatusManager::class.java)
-    private val generationCache = GenerationRecordCache(
-        project.getComponent(VFSManager::class.java).getFileSystem(VFSManager.JAVA_IO_FILE_FS),
-    )
+    private val generationCache = object : GenerationDependenciesCache() {
+        public override fun getCacheFile(model: SModel) = super.getCacheFile(model)
+    }
     private val digestHelper = project.getComponent(ModelDigestHelper::class.java)
 
     fun diagnoseModules(): ModulesDiagnosticsResponse {
@@ -205,7 +205,7 @@ class ModuleLoadDiagnostics(private val project: Project) {
 
     /**
      * Mirrors MPS's generation-required predicate, retaining its decisive observations. The generation record is read
-     * from disk for this operation, since the platform's parsed record and IDEA file contents may both be cached.
+     * using an operation-local parsed cache after external files have been refreshed.
      * See `docs/mps/model-generation-status.md`.
      */
     private fun generationEvidence(model: SModel): ModelGenerationEvidence? {
