@@ -18,6 +18,27 @@ import java.util.concurrent.ExecutionException
 
 object CodeModeExtensions {
     private val persistence get() = PersistenceFacade.getInstance()
+
+    /** Returns a live indexed accessor. Reads require model access; writes require command access. */
+    @CodeModeExtension(MpsAccessLevel.NONE)
+    @JvmStatic
+    fun getProperties(node: SNode): NodeProperties = NodeProperties(node)
+
+    /** Returns indexed access to at most one child per role. */
+    @CodeModeExtension(MpsAccessLevel.NONE)
+    @JvmStatic
+    fun getChild(node: SNode): NodeChild = NodeChild(node)
+
+    /** Returns indexed access to child lists by role. */
+    @CodeModeExtension(MpsAccessLevel.NONE)
+    @JvmStatic
+    fun getChildren(node: SNode): NodeChildren = NodeChildren(node)
+
+    /** Returns indexed access to native references by role. */
+    @CodeModeExtension(MpsAccessLevel.NONE)
+    @JvmStatic
+    fun getReferences(node: SNode): NodeReferences = NodeReferences(node)
+
     /** Runs a non-nesting MPS read action and returns the closure value. Access: none. */
     @CodeModeExtension(MpsAccessLevel.NONE)
     @JvmStatic
