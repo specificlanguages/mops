@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.cli.explain
 
 import com.specificlanguages.mops.protocol.EditNotation
+import com.specificlanguages.mops.protocol.levenshteinDistance
 
 /**
  * Resolves `mops explain` topic paths to their embedded page text and builds the topic index.
@@ -79,7 +80,7 @@ object ExplainTopics {
         val aliases = if (parentPrefix in allTopics) topLevelTopics.map { "$parentPrefix.$it" } else emptyList()
         // Nearest sibling by edit distance, but credit a shared prefix so `edit.addNode` suggests `edit.addChild`
         // (which shares the `edit.add` prefix) over an equidistant `edit.moveAsChild`.
-        val suggestion = (siblings + aliases).minByOrNull { levenshtein(path, it) - commonPrefixLength(path, it) }
+        val suggestion = (siblings + aliases).minByOrNull { levenshteinDistance(path, it) - commonPrefixLength(path, it) }
         val didYouMean = suggestion?.let { "did you mean $it? " }.orEmpty()
         return UnknownTopicException("unknown topic \"$path\" — ${didYouMean}valid: ${siblings.joinToString(", ")}")
     }
@@ -91,17 +92,4 @@ object ExplainTopics {
         return i
     }
 
-    private fun levenshtein(a: String, b: String): Int {
-        val prev = IntArray(b.length + 1) { it }
-        val curr = IntArray(b.length + 1)
-        for (i in 1..a.length) {
-            curr[0] = i
-            for (j in 1..b.length) {
-                val cost = if (a[i - 1] == b[j - 1]) 0 else 1
-                curr[j] = minOf(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost)
-            }
-            for (k in prev.indices) prev[k] = curr[k]
-        }
-        return prev[b.length]
-    }
 }

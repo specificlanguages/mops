@@ -118,9 +118,9 @@ internal object BatchNotationDecoder {
     // Nearest supported op by edit distance, crediting a shared prefix so `addNode` prefers `addChild` over an
     // equidistant alternative; omitted when nothing is close enough to be a plausible typo.
     private fun suggestFor(op: String): String? {
-        val best = EditNotation.operationNames.minByOrNull { levenshtein(op, it) - commonPrefixLength(op, it) }
+        val best = EditNotation.operationNames.minByOrNull { levenshteinDistance(op, it) - commonPrefixLength(op, it) }
             ?: return null
-        val score = levenshtein(op, best) - commonPrefixLength(op, best)
+        val score = levenshteinDistance(op, best) - commonPrefixLength(op, best)
         return if (score <= SUGGESTION_CUTOFF) best else null
     }
 
@@ -129,20 +129,6 @@ internal object BatchNotationDecoder {
         var i = 0
         while (i < limit && a[i] == b[i]) i++
         return i
-    }
-
-    private fun levenshtein(a: String, b: String): Int {
-        val prev = IntArray(b.length + 1) { it }
-        val curr = IntArray(b.length + 1)
-        for (i in 1..a.length) {
-            curr[0] = i
-            for (j in 1..b.length) {
-                val cost = if (a[i - 1] == b[j - 1]) 0 else 1
-                curr[j] = minOf(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost)
-            }
-            for (k in prev.indices) prev[k] = curr[k]
-        }
-        return prev[b.length]
     }
 
     private fun failure(
