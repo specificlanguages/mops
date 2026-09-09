@@ -13,8 +13,7 @@ import java.util.concurrent.Callable
     description = [
         "Uses the nearest Gradle wrapper to inspect `mpsDefaults` of plugin `com.specificlanguages.mps` or `RunAntScript` tasks of plugin `de.itemis.mps.gradle.common`, then prints a command line for direct use.",
         "No MPS home or daemon is required; Java must be available to run Gradle.",
-        "Discovery queries configured providers (which may download or extract distributions) but does not execute preparation or language build task actions.",
-        "Prefers a complete usable MPS and Java pair from the nearest project; falls back to deterministic first-match discovery.",
+        "Discovery may or may not cause MPS and the JBR to be downloaded and extracted or any other Gradle tasks to be executed.",
         "Partial discoveries print available arguments and exit with status 1; complete pairs exit with status 0.",
     ],
 )

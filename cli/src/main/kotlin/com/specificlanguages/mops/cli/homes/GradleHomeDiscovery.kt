@@ -8,33 +8,49 @@ import java.util.UUID
 import kotlin.io.path.*
 
 internal class GradleHomeDiscovery {
+    private class FileDiscoverer(start: Path) {
+        private val ancestors = generateSequence(start) { it.parent }
+
+        fun findDirectoryContaining(vararg regularFileNames: String): Path? =
+            ancestors.firstOrNull { dir -> regularFileNames.any { dir.resolve(it).isRegularFile() } }
+    }
+
     fun discover(start: Path, diagnostics: PrintWriter): List<HomeGuess> {
         val directory = start.toRealPath()
         require(directory.isDirectory()) { "Discovery path is not a directory: $directory" }
-        val ancestors = generateSequence(directory) { it.parent }.toList()
-        val root = ancestors.firstOrNull { dir ->
-            listOf("settings.gradle", "settings.gradle.kts").any { dir.resolve(it).isRegularFile() }
-        } ?: ancestors.firstOrNull { dir ->
-            listOf("build.gradle", "build.gradle.kts").any { dir.resolve(it).isRegularFile() }
-        } ?: error("No Gradle build found at or above $directory.")
-        val wrapper = generateSequence(root) { it.parent }
-            .map { it.resolve("gradlew") }.firstOrNull { it.isRegularFile() }
+
+        val discoverer = FileDiscoverer(directory)
+
+        val root = discoverer.findDirectoryContaining("settings.gradle", "settings.gradle.kts")
+            ?: discoverer.findDirectoryContaining("build.gradle", "build.gradle.kts")
+            ?: error("No Gradle build found at or above $directory.")
+        val isWindows = System.getProperty("os.name").lowercase().contains("win")
+
+        val wrapper = FileDiscoverer(root).findDirectoryContaining(if (isWindows) "gradlew.bat" else "gradlew")
             ?: error("No Gradle wrapper found at or above $root. Add a wrapper to the build before running mops guess-command-line.")
 
         val temporary = Files.createTempDirectory("mops-guess-command-line-")
         try {
             val script = temporary.resolve("probe.gradle")
             javaClass.getResourceAsStream("guess-command-line.gradle")!!.use { Files.copy(it, script) }
+
             val report = temporary.resolve("report.json")
             val task = "mopsGuessCommandLine" + UUID.randomUUID().toString().replace("-", "")
             diagnostics.println("Inspecting Gradle build at $root. Runtime providers may download or extract distributions.")
             diagnostics.flush()
-            val process = ProcessBuilder(
-                "sh", wrapper.toString(), "--project-dir", root.toString(),
-                "--init-script", script.toString(), "--no-configuration-cache", "--no-configure-on-demand",
-                "--quiet", "--console=plain", "-Dmops.guess.root=$root", "-Dmops.guess.task=$task",
+            val processArgs = listOf(
+                "--project-dir", root.toString(),
+                "--init-script", script.toString(),
+                "--no-configuration-cache", "--no-configure-on-demand",
+                "--quiet", "--console=plain",
+                "-Dmops.guess.root=$root", "-Dmops.guess.task=$task",
                 "-Dmops.guess.output=$report", ":$task",
-            ).directory(root.toFile()).redirectErrorStream(true).start()
+            )
+            val command = if (isWindows) listOf("cmd", "/c", wrapper.toString()) else listOf("sh", wrapper.toString())
+            val process = ProcessBuilder(command + processArgs)
+                .directory(root.toFile())
+                .redirectErrorStream(true)
+                .start()
             try {
                 process.inputStream.bufferedReader().useLines { lines ->
                     lines.forEach { diagnostics.println(it); diagnostics.flush() }
