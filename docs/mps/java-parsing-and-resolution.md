@@ -103,6 +103,31 @@ Languages are additional-language information, not a guaranteed inventory of eve
 propagate all collected languages back to their parent. Importing the languages actually present in the attached
 tree avoids relying exclusively on this set.
 
+## Model imports and module dependencies
+
+In the inspected 2025.1 source, recording a model import does not establish the corresponding module dependency.
+`ModelImports.addModelImport` delegates to the model's import mutation. `ModelValidator.validate` reports an error
+when an imported model resolves in the repository but is not visible in the importing module's scope.
+
+`ModelDependencyUpdate` separates `updateImportedModels(repository)` from `updateModuleDependencies(repository)`.
+The latter checks imported models against the owning module's scope and adds a non-reexported dependency on an
+imported model's module when necessary. Already visible models need no additional dependency. The public
+`JavaToMpsConverter.tryResolveRefs` path calls `updateUsedLanguages().updateImportedModels(null)`, not
+`updateModuleDependencies`. `YetUnknownResolver.updateWithImportsOfResolved` and `JavaParser.tryResolveDynamicRefs`
+also add imports without establishing module dependencies.
+
+`updateModuleDependencies` examines all model imports, even when the helper was constructed with a subtree list.
+Calling it can therefore repair dependencies for unrelated existing imports. It supports `AbstractModule` owners
+and skips imports whose owning module cannot be determined. Dependency completeness must not be inferred solely
+from the absence of unresolved nodes or references.
+
+Source locations in JetBrains/MPS:
+
+- `core/smodel/source/jetbrains/mps/smodel/ModelImports.java`.
+- `core/kernel/source/jetbrains/mps/smodel/ModelDependencyUpdate.java`.
+- `core/project-check/source/jetbrains/mps/project/validation/ModelValidator.java`.
+- `JavaToMpsConverter.java`, `YetUnknownResolver.java`, and `JavaParser.java` in the parser source directory listed below.
+
 ## What the ambiguous nodes mean
 
 The parser creates concepts implementing `jetbrains.mps.baseLanguage.structure.IYetUnresolved`. Examples include

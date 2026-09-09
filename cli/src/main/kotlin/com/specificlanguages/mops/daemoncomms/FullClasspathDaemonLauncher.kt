@@ -163,6 +163,8 @@ class FullClasspathDaemonLauncher(
         buildList {
             addAll(jarsIn(mpsHome.resolve("lib")))
             addAll(jarsIn(mpsHome.resolve("lib/modules")))
+            add(mpsHome.resolve("plugins/mps-java/lib/java-core.jar").pathString)
+            add(mpsHome.resolve("plugins/java/lib/ecj/eclipse.jar").pathString)
         }.joinToString(File.pathSeparator)
 
     private fun jarsIn(directory: Path): List<String> {

@@ -163,6 +163,14 @@ _Related_: Editable Project Sources, Navigation Target
 
 ### Model Editing
 
+**Java Snippet Parsing**:
+An operation that converts Java source text into **MPS Nodes** in a supplied destination, attempts reference and structural ambiguity resolution, and returns a **Java Parsing Result**. Syntax errors reject the snippet before insertion.
+_Related_: MPS Node, Code Mode, Reference, Java Parsing Result
+
+**Java Parsing Result**:
+The outcome of **Java Snippet Parsing**, containing the final inserted nodes after resolution and the unresolved references and ambiguous constructs detected within them. An absence of unresolved items does not establish that the inserted code passes model checking.
+_Related_: Java Snippet Parsing, MPS Node, Reference
+
 **Edit Operation**:
 A single modification to an **MPS Node** in **Editable Project Sources**: a primitive change (setting a property, setting a **Reference**, adding, deleting, moving, or copying a node) or an **Intent Operation**.
 _Avoid_: mutation, change

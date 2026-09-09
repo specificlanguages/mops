@@ -6,6 +6,10 @@ import com.specificlanguages.mops.protocol.CodeCatalogResponse
 object CodeCatalog {
     private data class Entry(val receiver: String, val name: String, val signature: String, val access: String, val summary: String) { val path get() = "$receiver.$name" }
     private val entries = listOf(
+        Entry("Project", "javaParser", "Project.javaParser: JavaSnippetParser", "none", "Java 8 snippet parser. Its insertion methods require command access and return nodes plus unresolved native nodes; this is not a full model check."),
+        Entry("JavaSnippetParser", "addJavaClassesFromString", "JavaSnippetParser.addJavaClassesFromString(SModel model, String source): JavaParsingResult", "command", "Parse a compilation unit and add its classifier roots."),
+        Entry("JavaSnippetParser", "addJavaMembersFromString", "JavaSnippetParser.addJavaMembersFromString(SNode classifier, String source, SNode beforeMember = null): JavaParsingResult", "command", "Parse fields, constructors, methods, and nested classes into a classifier."),
+        Entry("JavaSnippetParser", "addJavaStatementsFromString", "JavaSnippetParser.addJavaStatementsFromString(SNode statementList, String source, SNode beforeStatement = null): JavaParsingResult", "command", "Parse statements into a statement list."),
         Entry("Project", "read", "Project.read(Closure<T> body): T", "none", "Run a non-nesting MPS read action."),
         Entry("Project", "command", "Project.command(Closure<T> body): T", "none", "Run an MPS command and save after successful completion. Commands are non-transactional."),
         Entry("Project", "module", "Project.module(String target): SModule", "read", "Resolve exactly one repository module."),

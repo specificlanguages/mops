@@ -66,6 +66,13 @@ dependencies {
             // Compile against the Groovy runtime owned by the selected MPS distribution. It remains compile-only and
             // is never copied into the mops daemon distribution.
             include("lib/groovy.jar")
+            // Java snippet parsing is supplied by the MPS Java Integration plugin rather than lib/.
+            include("plugins/mps-java/lib/java-core.jar")
+            include("plugins/java/lib/ecj/eclipse.jar")
+            include("languages/baseLanguage/jetbrains.mps.baseLanguage.jar")
+            include("languages/baseLanguage/jetbrains.mps.baseLanguage.javadoc.jar")
+            include("languages/baseLanguage/jetbrains.mps.baseLanguage.methodReferences.jar")
+            include("languages/baseLanguage/jetbrains.mps.baseLanguage.scopes.jar")
         }
     })
     mpsZip("com.jetbrains:mps:2025.1.2")
@@ -136,6 +143,8 @@ tasks.test {
             fileTree(root) {
                 include("lib/*.jar")
                 include("lib/modules/*.jar")
+                include("plugins/mps-java/lib/java-core.jar")
+                include("plugins/java/lib/ecj/eclipse.jar")
             }
         },
     )

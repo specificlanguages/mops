@@ -22,6 +22,14 @@ class CodeCatalogTest {
     }
 
     @Test
+    fun `Java parser is discoverable with its command requirement`() {
+        val help = CodeCatalog.text("Project.javaParser")
+        assertContains(help, "Project.javaParser")
+        assertContains(help, "Java 8")
+        assertContains(CodeCatalog.text("JavaSnippetParser.addJavaStatementsFromString"), "[command]")
+    }
+
+    @Test
     fun `clean break catalog omits handles and service root`() {
         val help = CodeCatalog.text(null)
         assertFalse("Handle" in help)
