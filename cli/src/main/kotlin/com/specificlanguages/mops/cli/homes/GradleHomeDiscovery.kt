@@ -26,7 +26,8 @@ internal class GradleHomeDiscovery {
             ?: error("No Gradle build found at or above $directory.")
         val isWindows = System.getProperty("os.name").lowercase().contains("win")
 
-        val wrapper = FileDiscoverer(root).findDirectoryContaining(if (isWindows) "gradlew.bat" else "gradlew")
+        val wrapperName = if (isWindows) "gradlew.bat" else "gradlew"
+        val wrapper = FileDiscoverer(root).findDirectoryContaining(wrapperName)?.resolve(wrapperName)
             ?: error("No Gradle wrapper found at or above $root. Add a wrapper to the build before running mops guess-command-line.")
 
         val temporary = Files.createTempDirectory("mops-guess-command-line-")
