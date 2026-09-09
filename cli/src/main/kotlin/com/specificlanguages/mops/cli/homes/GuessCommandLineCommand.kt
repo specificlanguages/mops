@@ -11,15 +11,18 @@ import java.util.concurrent.Callable
     name = "guess-command-line",
     mixinStandardHelpOptions = true,
     description = [
-        "Guess MPS and Java homes from the nearest Gradle build, without starting an MPS daemon.",
-        "Supports Specific Languages 2.x defaults and conventional mbeddr RunAntScript tasks.",
-        "Uses the build's wrapper and evaluates runtime providers, which may download or extract distributions.",
-        "Does not run preparation or language build task actions. Prints a reusable mops command line for POSIX shells.",
+        "Uses the nearest Gradle wrapper to inspect `mpsDefaults` of plugin `com.specificlanguages.mps` or `RunAntScript` tasks of plugin `de.itemis.mps.gradle.common`, then prints a command line for direct use.",
+        "No MPS home or daemon is required; Java must be available to run Gradle.",
+        "Discovery queries configured providers (which may download or extract distributions) but does not execute preparation or language build task actions.",
+        "Prefers a complete usable MPS and Java pair from the nearest project; falls back to deterministic first-match discovery.",
+        "Partial discoveries print available arguments and exit with status 1; complete pairs exit with status 0.",
     ],
 )
 class GuessCommandLineCommand(private val root: MopsCommand) : Callable<Int> {
-    @Parameters(index = "0", arity = "0..1", paramLabel = "PATH",
-        description = ["Directory to inspect (default: --project-root or the working directory)."])
+    @Parameters(
+        index = "0", arity = "0..1", paramLabel = "PATH",
+        description = ["Starting point of discovery; default is --project-root when supplied, otherwise the working directory."]
+    )
     var path: String? = null
 
     @Spec

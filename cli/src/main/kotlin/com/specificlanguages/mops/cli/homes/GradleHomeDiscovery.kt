@@ -32,7 +32,7 @@ internal class GradleHomeDiscovery {
             val process = ProcessBuilder(
                 "sh", wrapper.toString(), "--project-dir", root.toString(),
                 "--init-script", script.toString(), "--no-configuration-cache", "--no-configure-on-demand",
-                "--console=plain", "-Dmops.guess.root=$root", "-Dmops.guess.task=$task",
+                "--quiet", "--console=plain", "-Dmops.guess.root=$root", "-Dmops.guess.task=$task",
                 "-Dmops.guess.output=$report", ":$task",
             ).directory(root.toFile()).redirectErrorStream(true).start()
             try {

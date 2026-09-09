@@ -1,7 +1,7 @@
 # mops
 
-`mops` is a small helper CLI for helping LLMs work with JetBrains MPS models.
-This checkout is a Gradle-rooted Kotlin prototype with two application subprojects: `cli/` and `daemon/`.
+`mops` is a small helper CLI for helping LLMs work with JetBrains MPS models. This checkout is a Gradle-rooted Kotlin
+prototype with two application subprojects: `cli/` and `daemon/`.
 
 ## Usage
 
@@ -17,16 +17,19 @@ mops daemon stop
 The CLI starts or reuses a per-project daemon process for most commands.
 
 If you do not know where MPS and Java are installed, run `mops guess-command-line [PATH]` from the project checkout.
-It uses the nearest Gradle build's wrapper to inspect Specific Languages 2.x `mpsDefaults` or conventional mbeddr
-`RunAntScript` tasks. It prints the selected source, homes, and a quoted invocation such as
-`mops --mps-home='/path/to/MPS' --java-home='/path/to/Java'` to use in a POSIX shell. No MPS home or daemon is required; Java must be available to run Gradle.
-The optional path defaults to `--project-root`, when supplied, or the working directory.
+PATH is the starting point of discovery, defaulting to `--project-root` when supplied, or the working directory.
+`guess-command-line` uses the nearest Gradle wrapper to inspect `mpsDefaults` of the `com.specificlanguages.mps` Gradle
+plugin or `RunAntScript` tasks of the `de.itemis.mps.gradle.common` plugin. It prints the selected source, homes, and a
+quoted invocation such as `mops --mps-home='/path/to/MPS' --java-home='/path/to/Java'` to use in a POSIX shell. No MPS
+home or daemon is required; Java must be available to run Gradle. The optional path defaults to `--project-root`, when
+supplied, or the working directory.
 
-Discovery queries configured providers, which can download and extract distributions. It does not execute preparation
-or language build task actions. It prefers a complete usable pair from the closest enclosing Gradle project, then a
+Discovery queries configured providers, which can download and extract distributions. It does not execute preparation or
+language build task actions. It prefers a complete usable pair from the closest enclosing Gradle project, then a
 deterministic first match. Partial discoveries show available arguments and exit with status 1; a complete pair exits
 with status 0. Missing runtime directories require the project's documented preparation steps. Task-action overrides,
-included builds, and custom Ant property loading are outside this heuristic; Specific Languages values are project defaults.
+included builds, and custom Ant property loading are outside this heuristic; Specific Languages values are project
+defaults.
 
 ## Commands
 
@@ -54,8 +57,8 @@ language, unloaded language, or a "did you mean" among a loaded language's conce
 `best-effort`):
 
 - `advisory` - evaluate constraints and report violations, but apply and save the batch anyway.
-- `best-effort` - a violation blocks the batch (nothing is saved); a concept that cannot be checked because its
-  language did not load is skipped and reported as a warning.
+- `best-effort` - a violation blocks the batch (nothing is saved); a concept that cannot be checked because its language
+  did not load is skipped and reported as a warning.
 - `strict` - like `best-effort` for violations, but a concept that cannot be checked aborts the batch.
 
 ```sh
@@ -83,8 +86,8 @@ them for the project root, or pass `/` for the repository root. `--depth` bounds
 `--limit N` caps how many children each level shows (default 50; `0` is unlimited). A level wider than the cap is
 truncated and gains a final `truncated <shown> <total>` row so the omission is explicit. `--summary` replaces the
 target's children with grouped counts — per **role** (with the dominant concepts) for a node, per concept for a model's
-roots, per model for a module, per kind for the project or repository — and cannot be combined with `--depth`. `--role
-ROLE` lists only the target node's children in one containment role and is valid only for a node target.
+roots, per model for a module, per kind for the project or repository — and cannot be combined with `--depth`.
+`--role ROLE` lists only the target node's children in one containment role and is valid only for a node target.
 
 Text output shows short concept names; `--full-concept` restores the fully qualified names. JSON output keeps qualified
 concept names regardless.
@@ -96,15 +99,15 @@ mops --mps-home <path> render node [--allow-reflective] <model-target> <node-id>
 
 Renders one resolved node as the plain text of its default editor — the way it would appear in the MPS editor — and
 prints it verbatim, preserving the editor's line breaks and indentation. Addressed the same way as `get node`: a
-serialized node reference, or a model target plus node ID. An unresolved target fails with `NODE_NOT_FOUND`. Any node
-is renderable, not only root nodes; the output is a quick overview for reading, not a round-trippable serialization.
+serialized node reference, or a model target plus node ID. An unresolved target fails with `NODE_NOT_FOUND`. Any node is
+renderable, not only root nodes; the output is a quick overview for reading, not a round-trippable serialization.
 
 If any concept in the node's subtree does not resolve — its language is not loaded — the command fails with
 `LANGUAGE_NOT_LOADED`. It diagnoses each unloaded language through the same machinery as `find instances` (naming the
-root cause: not built, absent, or a broken dependency) and points at `mops make module <language>` and `mops diagnose
-module <language>`. Pass `--allow-reflective` to render anyway. A concept whose language *is* loaded but that simply defines
-no editor is not an error: MPS renders it with its generic reflective editor (concept aliases and roles rather than the
-language's own notation), which the command prints as-is.
+root cause: not built, absent, or a broken dependency) and points at `mops make module <language>` and
+`mops diagnose module <language>`. Pass `--allow-reflective` to render anyway. A concept whose language _is_ loaded but
+that simply defines no editor is not an error: MPS renders it with its generic reflective editor (concept aliases and
+roles rather than the language's own notation), which the command prints as-is.
 
 ```sh
 mops --mps-home <path> find instances [--exact] [--limit N] [--full-concept] [--refs-only] [--json] <concept>
@@ -121,12 +124,12 @@ contribute concepts to name lookup); or the language is loaded but has no such c
 similarly named concepts from that language). A dropped `.structure.` infix is forgiven: `<language>.<ConceptName>`
 resolves as if written in full when the language is loaded.
 
-Text output is tab-separated rows of `root` or `node`, the node name (or `<unnamed>`), the node's actual concept,
-and its serialized node reference; a non-root node appends its immediate parent as trailing `parent`, parent name (or
-`<unnamed>`), parent concept, and parent reference columns. Concept columns show short names by default; `--full-concept`
-restores the fully qualified names, while JSON output keeps them regardless. `--refs-only` prints just one serialized
-node reference per line — nothing else — so results pipe straight into `mops get node`; it is mutually exclusive
-with `--json` and reports any truncation on stderr. `--json` prints an object with `limit`, `truncated`, and a
+Text output is tab-separated rows of `root` or `node`, the node name (or `<unnamed>`), the node's actual concept, and
+its serialized node reference; a non-root node appends its immediate parent as trailing `parent`, parent name (or
+`<unnamed>`), parent concept, and parent reference columns. Concept columns show short names by default;
+`--full-concept` restores the fully qualified names, while JSON output keeps them regardless. `--refs-only` prints just
+one serialized node reference per line — nothing else — so results pipe straight into `mops get node`; it is mutually
+exclusive with `--json` and reports any truncation on stderr. `--json` prints an object with `limit`, `truncated`, and a
 `nodes` array whose non-root entries carry a nested `parent` summary.
 
 ```sh
@@ -134,17 +137,16 @@ mops --mps-home <path> find usages [--limit N] [--full-concept] [--refs-only] [-
 mops --mps-home <path> find usages [--limit N] [--full-concept] [--refs-only] [--json] <model-target> <node-id>
 ```
 
-Searches **editable project sources** for references to one resolved target node, addressed the same way as
-`get node`. An unresolved target fails with `NODE_NOT_FOUND`. Text output is tab-separated rows of `usage`, the
-reference role, and the owning node's name (or `<unnamed>`), concept, and reference; the owner is typed `root` or `node`
-by its position in its model. A non-root owner appends its immediate parent as trailing `parent`, parent name (or
-`<unnamed>`), parent concept, and parent reference columns. `--json` prints an object with `limit`, `truncated`, and a
-`usages` array whose entries carry the reference `role` and a nested `owner` node summary, itself carrying a nested
-`parent` summary for a non-root owner. Concept columns follow the same short-name default, `--full-concept`, and
-JSON-keeps-qualified rules as `find instances`; `--refs-only` prints one serialized reference per referencing node.
-Both `find` modes default to `--limit 100`, treat
-`--limit 0` as unlimited, reject negative limits, and append a `truncated` row (in text) or set `truncated` (in JSON)
-only when more matches exist than were returned.
+Searches **editable project sources** for references to one resolved target node, addressed the same way as `get node`.
+An unresolved target fails with `NODE_NOT_FOUND`. Text output is tab-separated rows of `usage`, the reference role, and
+the owning node's name (or `<unnamed>`), concept, and reference; the owner is typed `root` or `node` by its position in
+its model. A non-root owner appends its immediate parent as trailing `parent`, parent name (or `<unnamed>`), parent
+concept, and parent reference columns. `--json` prints an object with `limit`, `truncated`, and a `usages` array whose
+entries carry the reference `role` and a nested `owner` node summary, itself carrying a nested `parent` summary for a
+non-root owner. Concept columns follow the same short-name default, `--full-concept`, and JSON-keeps-qualified rules as
+`find instances`; `--refs-only` prints one serialized reference per referencing node. Both `find` modes default to
+`--limit 100`, treat `--limit 0` as unlimited, reject negative limits, and append a `truncated` row (in text) or set
+`truncated` (in JSON) only when more matches exist than were returned.
 
 ```sh
 mops --mps-home <path> find root-by-name [--limit N] [--full-concept] [--refs-only] [--json] <pattern> [in <scope-segment>...]
@@ -175,8 +177,8 @@ mops --mps-home <path> diagnose module [--json] <module>
 
 Diagnoses one module, addressed by module name or serialized module reference, including modules not shown by
 `diagnose project` (those without a Java facet, or absent from the repository). Text output is a header row (`module`,
-`kind`, `present=<bool>`, `loaded=<bool>`) followed by the module's load-problem tree, indented by depth so a
-dependency chain reads from the module down to its root causes; `--json` prints the structured diagnosis.
+`kind`, `present=<bool>`, `loaded=<bool>`) followed by the module's load-problem tree, indented by depth so a dependency
+chain reads from the module down to its root causes; `--json` prints the structured diagnosis.
 
 Both commands classify an unloaded module with a reason code: `ABSENT` (not in the repository), `NOT_A_MODULE` (resolves
 to something that does not load classes), `NO_JAVA_FACET` (no Java facet — a defect for a language, informational for
@@ -190,8 +192,8 @@ mops --mps-home <path> make module [--json] <module>...
 mops --mps-home <path> make project [--json]
 ```
 
-Runs the MPS make (generation and compilation) through the daemon. `make module` makes the named modules (by module
-name or serialized module reference) and their transitive dependency closure, so an un-made dependency is made too;
+Runs the MPS make (generation and compilation) through the daemon. `make module` makes the named modules (by module name
+or serialized module reference) and their transitive dependency closure, so an un-made dependency is made too;
 `make project` makes every generatable module in the project. Both exit non-zero when the make reports errors; `--json`
 prints the make result as JSON.
 
@@ -200,9 +202,9 @@ mops explain [--schema] [PATH]
 ```
 
 Prints reference pages for the mops notations, the textual formats mops exchanges with agents. It is pure and offline:
-it never starts a daemon, resolves a project root, or requires `--mps-home`. With no argument it lists the topics; a dot-
-path such as `edit` or `edit.copyAsChild` prints that page, and an unknown path exits non-zero with sibling suggestions.
-`--schema` prints the generated JSON Schema for the edit-batch notation (only with the `edit` topic).
+it never starts a daemon, resolves a project root, or requires `--mps-home`. With no argument it lists the topics; a
+dot- path such as `edit` or `edit.copyAsChild` prints that page, and an unknown path exits non-zero with sibling
+suggestions. `--schema` prints the generated JSON Schema for the edit-batch notation (only with the `edit` topic).
 
 ```sh
 mops daemon status [--all]

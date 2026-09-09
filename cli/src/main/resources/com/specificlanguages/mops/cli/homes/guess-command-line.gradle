@@ -74,9 +74,6 @@ gradle.projectsEvaluated {
                             result.source += '; Gradle default Java'
                             return new File(System.getProperty('java.home'))
                         }
-                        if (!(executable instanceof File || executable instanceof CharSequence)) {
-                            throw new GradleException("Unsupported Java executable value: ${executable.class.name}")
-                        }
                         def file = executable instanceof File ? executable : new File(executable.toString())
                         if (!file.isAbsolute()) {
                             throw new GradleException("Java executable must be an absolute path to guess its home: ${file}")
