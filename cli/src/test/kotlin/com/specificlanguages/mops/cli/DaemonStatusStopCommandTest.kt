@@ -5,6 +5,8 @@ import com.specificlanguages.mops.protocol.DaemonRecordStore
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.api.parallel.ResourceLock
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Comparator
@@ -50,9 +52,10 @@ class DaemonStatusStopCommandTest {
         assertContains(stdout, mpsHome.pathString)
     }
 
-    @Test
-    fun `daemon status uses explicit project root when working directory is elsewhere`() {
-        val project = tempDir.mpsProject()
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `daemon status uses explicit project root when working directory is elsewhere`(relative: Boolean) {
+        val project = tempDir.mpsProject(name = "code")
         val daemonHome = tempDir.resolve("daemon-home")
         val mpsHome = tempDir.mpsHome()
         val record = daemonRecord(
@@ -63,13 +66,13 @@ class DaemonStatusStopCommandTest {
         )
         val store = DaemonRecordStore.forDaemonHome(daemonHome)
         store.write(record)
-        val outside = tempDir.resolve("outside").createDirectories()
+        val outside = tempDir.toRealPath()
         var exitCode = Int.MIN_VALUE
 
         val stdout = tapSystemOut {
             exitCode = newCommandLine(workingDirectory = outside).execute(
                 "--daemon-home", daemonHome.pathString,
-                "--project-root", project.pathString,
+                "--project-root", (if (relative) outside.relativize(project) else project).pathString,
                 "daemon", "status",
             )
         }

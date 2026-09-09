@@ -39,7 +39,7 @@ class MopsCommand(
     @Option(
         names = ["--project-root"],
         paramLabel = "PATH",
-        description = ["Explicit MPS project root. Overrides upward inference from the working directory."],
+        description = ["Explicit MPS project root, absolute or relative to the directory where mops was started. Overrides upward inference from the working directory."],
     )
     var projectRoot: String? = null
 

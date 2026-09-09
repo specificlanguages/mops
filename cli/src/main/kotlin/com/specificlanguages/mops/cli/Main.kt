@@ -49,6 +49,7 @@ fun main(args: Array<String>) {
 fun newCommandLine(workingDirectory: Path = Path.of("").absolute()): CommandLine {
     val rootCommand = MopsCommand(workingDirectory)
     val root = CommandLine(rootCommand)
+    root.commandSpec.parser().allowSubcommandsAsOptionParameters(true)
 
     root.addGroup("find", FindOperations()) {
         addLeaf("instances", FindInstancesCommand(rootCommand))
