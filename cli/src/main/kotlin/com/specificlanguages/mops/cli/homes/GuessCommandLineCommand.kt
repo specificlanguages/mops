@@ -11,6 +11,8 @@ import java.util.concurrent.Callable
     name = "guess-command-line",
     mixinStandardHelpOptions = true,
     description = [
+        "Guess --mps-home and --java-home paths for the project.",
+        "",
         "Uses the nearest Gradle wrapper to inspect `mpsDefaults` of plugin `com.specificlanguages.mps` or `RunAntScript` tasks of plugin `de.itemis.mps.gradle.common`, then prints a command line for direct use.",
         "No MPS home or daemon is required; Java must be available to run Gradle.",
         "Discovery may or may not cause MPS and the JBR to be downloaded and extracted or any other Gradle tasks to be executed.",
