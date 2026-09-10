@@ -1,10 +1,14 @@
 package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.protocol.CreateLanguageRequest
+import com.specificlanguages.mops.protocol.CreateSolutionRequest
 import com.specificlanguages.mops.protocol.CreateGeneratorRequest
 import com.specificlanguages.mops.protocol.GeneratorPersistence
+import com.specificlanguages.mops.protocol.ModuleCreationResponse
 import com.specificlanguages.mops.protocol.ModuleKind
 import kotlin.io.path.exists
+import kotlin.io.path.readText
+import kotlin.test.assertIs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -13,9 +17,27 @@ import kotlin.test.assertContains
 
 class ModuleCreationSemanticsTest {
     @Test
+    fun `solution creation persists project membership`() {
+        SharedMpsEnvironment.withOpenProjectCopy { project, projectPath ->
+            assertTrue(com.intellij.openapi.application.ex.ApplicationManagerEx.getApplicationEx().isSaveAllowed)
+            val response = DomainRequestHandler(projectPath, JetBrainsMpsAccess(project, DaemonLogger()))
+                .handleDomainRequest(CreateSolutionRequest("", "example.created"))
+            assertIs<ModuleCreationResponse>(response)
+            assertTrue(projectPath.resolve("solutions/example.created/example.created.msd").exists())
+            project.modelAccess.computeReadAction {
+                assertTrue(project.projectModulesWithGenerators.any { it.moduleName == "example.created" })
+            }
+            assertContains(
+                projectPath.resolve(".mps/modules.xml").readText(),
+                "\$PROJECT_DIR\$/solutions/example.created/example.created.msd",
+            )
+        }
+    }
+
+    @Test
     fun `code mode creates native modules and their companion artifacts`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, projectPath ->
-            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project).execute(
+            val response = DomainRequestHandler(projectPath, JetBrainsMpsAccess(project, DaemonLogger())).handleDomainRequest(
                 com.specificlanguages.mops.protocol.CodeRunRequest(
                     "", """
                         project.command {
@@ -31,6 +53,7 @@ class ModuleCreationSemanticsTest {
                 ),
             )
 
+            assertIs<com.specificlanguages.mops.protocol.CodeResultResponse>(response, response.toString())
             assertContains(requireNotNull(response.output), "\"language\":\"example.code\"")
             assertContains(response.output!!, "\"embedded\":[\"example.code.generator\",\"example.code.generator1\"]")
             assertContains(response.output!!, "\"solution\":\"example.solution\"")
@@ -40,6 +63,11 @@ class ModuleCreationSemanticsTest {
             assertTrue(projectPath.resolve("code/solution/solution.msd").exists())
             assertTrue(projectPath.resolve("code/devkit/devkit.devkit").exists())
             assertTrue(projectPath.resolve("code/generator/secondary.mpst").exists())
+            val modules = projectPath.resolve(".mps/modules.xml").readText()
+            for (descriptor in listOf("code/language/language.mpl", "code/solution/solution.msd",
+                "code/devkit/devkit.devkit", "code/generator/secondary.mpst")) {
+                assertContains(modules, "\$PROJECT_DIR\$/$descriptor")
+            }
         }
     }
 
@@ -70,7 +98,7 @@ class ModuleCreationSemanticsTest {
                 val creator = ModuleCreator(project)
                 ModuleCreationCliAdapter(creator).createGenerator(
                     CreateGeneratorRequest("", language.moduleName!!, "secondary"),
-                ).also { creator.persist() }
+                ).also { project.repository.saveAll() }
             }
 
             assertEquals("com.specificlanguages.json.generator", response.report!!.primary.moduleName)
@@ -83,16 +111,15 @@ class ModuleCreationSemanticsTest {
     @Test
     fun `language creation persists an exact descriptor and project membership`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, projectPath ->
-            val response = project.modelAccess.computeWriteAction {
-                val creator = ModuleCreator(project)
-                ModuleCreationCliAdapter(creator).createLanguage(
-                    CreateLanguageRequest("", "example.created", "custom/modules/created.mpl"),
-                ).also { creator.persist() }
-            }
+            val response = assertIs<ModuleCreationResponse>(
+                DomainRequestHandler(projectPath, JetBrainsMpsAccess(project, DaemonLogger()))
+                    .handleDomainRequest(CreateLanguageRequest("", "example.created", "custom/modules/created.mpl")),
+            )
 
             assertTrue(projectPath.resolve("custom/modules/created.mpl").exists())
             assertTrue(project.projectModulesWithGenerators.any { it.moduleName == "example.created" })
             assertEquals(projectPath.resolve("custom/modules/created.mpl").toString(), response.report!!.primary.descriptorPath)
+            assertContains(projectPath.resolve(".mps/modules.xml").readText(), "\$PROJECT_DIR\$/custom/modules/created.mpl")
         }
     }
 }

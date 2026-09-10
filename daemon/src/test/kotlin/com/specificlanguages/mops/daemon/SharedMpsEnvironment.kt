@@ -12,6 +12,7 @@ import jetbrains.mps.project.MPSProject
 import jetbrains.mps.project.Project
 import jetbrains.mps.smodel.MPSModuleRepository
 import jetbrains.mps.tool.environment.Environment
+import jetbrains.mps.tool.environment.IdeaEnvironment
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -34,13 +35,13 @@ object SharedMpsEnvironment {
 
     private val shutdown = CountDownLatch(1)
 
-    private val environment: Environment by lazy { boot() }
+    private val environment: IdeaEnvironment by lazy { boot() }
 
     val sharedProjectPath: Path by lazy {
         copyFixtureProject(Files.createTempDirectory("mops-shared-project"))
     }
 
-    private var openSharedProject: Project? = null
+    private var openSharedProject: MPSProject? = null
 
     val sharedMpsAccess: MpsAccess
         get() = JetBrainsMpsAccess(ensureSharedProject(), DaemonLogger())
@@ -63,13 +64,13 @@ object SharedMpsEnvironment {
         }
 
     /**
-     * Like [withProjectCopy] but hands [block] the opened [Project] directly, for tests that need project-level state
+     * Like [withProjectCopy] but hands [block] the opened [MPSProject] directly, for tests that need project-level state
      * (such as its **Project Modules**) rather than the [MpsAccess] read/write surface.
      */
     fun <T> withOpenProjectCopy(
         projectName: String = FIXTURE_PROJECT_NAME,
         prepare: (Path) -> Unit = {},
-        block: (Project, Path) -> T,
+        block: (MPSProject, Path) -> T,
     ): T {
         closeSharedProject()
         val projectPath = copyFixtureProject(Files.createTempDirectory("mops-project-copy"), projectName)
@@ -97,7 +98,7 @@ object SharedMpsEnvironment {
         }
     }
 
-    private fun ensureSharedProject(): Project =
+    private fun ensureSharedProject(): MPSProject =
         openSharedProject ?: openProject(sharedProjectPath).also { openSharedProject = it }
 
     private fun closeSharedProject() {
@@ -114,16 +115,14 @@ object SharedMpsEnvironment {
     // scan is scheduled asynchronously, so a freshly opened project can be momentarily "smart" before the scan is
     // even queued, and an index-backed find then sees an empty index. waitUntilIndexesAreReady forces the initial
     // scan to be submitted and blocks until it completes. It must run off any read/write action (it is here).
-    private fun openProject(projectPath: Path): Project {
-        val project = environment.openProject(projectPath.toFile())
+    private fun openProject(projectPath: Path): MPSProject {
+        val project = environment.openProject(projectPath.toFile()) as MPSProject
         environment.flushAllEvents()
-        if (project is MPSProject) {
-            IndexingTestUtil.waitUntilIndexesAreReady(project.project)
-        }
+        IndexingTestUtil.waitUntilIndexesAreReady(project.project)
         return project
     }
 
-    private fun boot(): Environment {
+    private fun boot(): IdeaEnvironment {
         val mpsHome = requiredPathProperty("test.mpsHome")
         applyMpsSystemProperties()
 
@@ -152,7 +151,7 @@ object SharedMpsEnvironment {
         })
 
         return when (val booted = handoff.take()) {
-            is Environment -> booted.also { allowSecondProjectWithoutDialog() }
+            is IdeaEnvironment -> booted.also { allowSecondProjectWithoutDialog() }
             is Throwable -> throw IllegalStateException("MPS environment failed to boot", booted)
             else -> error("unexpected environment handoff: $booted")
         }

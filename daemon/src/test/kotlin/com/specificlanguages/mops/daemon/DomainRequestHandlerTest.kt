@@ -34,6 +34,8 @@ import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.PingRequest
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.inOrder
+import org.mockito.kotlin.spy
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.verifyNoMoreInteractions
@@ -52,7 +54,8 @@ class DomainRequestHandlerTest {
     private val operations = mock<MpsWrite>()
     private val extra = mock<MpsExtra>()
     private val workspacePath = Path.of("/workspace/example")
-    private val handler = DomainRequestHandler(workspacePath, mpsAccessOver(operations, extra))
+    private val access = spy(mpsAccessOver(operations, extra))
+    private val handler = DomainRequestHandler(workspacePath, access)
 
     @Test
     fun `get-node reads and wraps the exported node`() {
@@ -208,7 +211,11 @@ class DomainRequestHandlerTest {
         )
 
         assertEquals(MpsListResponse(root), response)
-        verify(operations).list(listOf("moduleA"), 3)
+        inOrder(access, operations) {
+            verify(extra).refreshExternalChanges()
+            verify(operations).list(listOf("moduleA"), 3)
+            verify(extra).saveProject()
+        }
         verifyNoMoreInteractions(operations)
     }
 

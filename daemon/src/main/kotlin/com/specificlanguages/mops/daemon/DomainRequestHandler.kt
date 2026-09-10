@@ -10,7 +10,7 @@ import kotlin.io.path.pathString
 class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
     fun handleDomainRequest(request: DaemonRequest): DaemonResponse =
         try {
-            mpsAccess.refreshExternalChanges()
+            mpsAccess.extra { refreshExternalChanges() }
             when (request) {
                 is ModelGetNodeRequest ->
                     ModelGetNodeResponse(node = mpsAccess.read { getNode(request.target, request.ancestry) })
@@ -73,14 +73,14 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
 
                 is CodeCatalogRequest -> CodeCatalog.response(request)
 
-                is CreateLanguageRequest -> mpsAccess.write { moduleResponse(request.dryRun) { createLanguage(request) } }
-                is CreateSolutionRequest -> mpsAccess.write { moduleResponse(request.dryRun) { createSolution(request) } }
-                is CreateDevkitRequest -> mpsAccess.write { moduleResponse(request.dryRun) { createDevkit(request) } }
-                is CreateGeneratorRequest -> mpsAccess.write { moduleResponse(request.dryRun) { createGenerator(request) } }
+                is CreateLanguageRequest -> moduleResponse(request.dryRun) { createLanguage(request) }
+                is CreateSolutionRequest -> moduleResponse(request.dryRun) { createSolution(request) }
+                is CreateDevkitRequest -> moduleResponse(request.dryRun) { createDevkit(request) }
+                is CreateGeneratorRequest -> moduleResponse(request.dryRun) { createGenerator(request) }
                 is CreateModelRequest -> mpsAccess.write { ModelCreator((mpsAccess as JetBrainsMpsAccess).project).create(request) }
 
                 else -> errorResponse("UNSUPPORTED_REQUEST", "unsupported request type: ${request::class.simpleName}")
-            }
+            }.also { mpsAccess.extra { saveProject() } }
         } catch (exception: MpsRequestException) {
             errorResponse(exception.code.name, exception.message)
         } catch (throwable: Throwable) {
@@ -91,9 +91,11 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
         DaemonErrorResponse(errorCode = code, message = message, workspacePath = workspacePath.pathString)
 
     private fun moduleResponse(dryRun: Boolean, operation: ModuleCreationCliAdapter.() -> ModuleCreationResponse): ModuleCreationResponse {
-        val creator = ModuleCreator((mpsAccess as JetBrainsMpsAccess).project)
-        return ModuleCreationCliAdapter(creator).operation().also {
-            if (!dryRun) creator.persist()
+        val project = (mpsAccess as JetBrainsMpsAccess).project
+        return mpsAccess.write {
+            ModuleCreationCliAdapter(ModuleCreator(project)).operation().also {
+                if (!dryRun) project.repository.saveAll()
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.daemon
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.psi.codeStyle.NameUtil
 import com.specificlanguages.mops.daemon.core.*
 import com.specificlanguages.mops.protocol.*
@@ -8,7 +9,7 @@ import jetbrains.mps.ide.findusages.model.scopes.ModulesScope
 import jetbrains.mps.progress.EmptyProgressMonitor
 import jetbrains.mps.project.EditableFilteringScope
 import jetbrains.mps.project.GlobalScope
-import jetbrains.mps.project.Project
+import jetbrains.mps.project.MPSProject
 import jetbrains.mps.smodel.SNodeUtil
 import jetbrains.mps.util.CollectConsumer
 import org.jetbrains.mps.openapi.language.SAbstractConcept
@@ -21,7 +22,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 
 class JetBrainsMpsAccess(
-    internal val project: Project,
+    internal val project: MPSProject,
     logger: DaemonLogger,
     private val mpsListExporter: MpsListExporter = MpsListExporter(),
     private val jsonNodeExporter: JsonNodeExporter = JsonNodeExporter(),
@@ -33,11 +34,6 @@ class JetBrainsMpsAccess(
     private val writeTransaction: WriteTransaction = WriteTransaction(),
 ) : MpsAccess {
     private val externalProjectRefresh = ExternalProjectRefresh(project)
-
-    override fun refreshExternalChanges() {
-        require(!project.modelAccess.canRead()) { "external refresh requires no read/write action" }
-        externalProjectRefresh.refresh()
-    }
 
     // An MpsRequestException is an expected client error, not a defect. Capture it inside the model action and rethrow
     // it on the calling thread once the action has returned: if it escaped the action directly, MPS's ActionDispatcher
@@ -375,6 +371,16 @@ class JetBrainsMpsAccess(
 
     private inner class JetBrainsMpsExtra : MpsExtra {
         private val projectMake = ProjectMake(project)
+
+        override fun refreshExternalChanges() {
+            externalProjectRefresh.refresh()
+        }
+
+        override fun saveProject() {
+            ApplicationManager.getApplication().invokeAndWait {
+                project.save()
+            }
+        }
 
         override fun makeModules(modules: List<String>): MakeResponse = projectMake.makeModules(modules)
 

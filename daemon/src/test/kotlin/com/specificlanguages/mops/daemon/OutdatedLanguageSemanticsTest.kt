@@ -83,7 +83,7 @@ class OutdatedLanguageSemanticsTest {
             assertEquals(MakeOutcome.SUCCESS, access.extra { makeModules(listOf(SANDBOX_MODULE)) }.outcome)
             val record = path.resolve("languages/$JSON_LANGUAGE/source_gen.caches/com/specificlanguages/json/structure/generated")
             Files.delete(record)
-            access.refreshExternalChanges()
+            access.extra { refreshExternalChanges() }
             val failure = assertFailsWith<MpsRequestException> {
                 access.read { findInstances(JSON_FILE_CONCEPT, exact = false, limit = 0) }
             }
@@ -107,7 +107,7 @@ class OutdatedLanguageSemanticsTest {
             for (count in listOf(2, 5, 7)) {
                 originals.forEach { (record, text) -> record.writeText(text) }
                 records.take(count).forEach { record -> Files.delete(record) }
-                access.refreshExternalChanges()
+                access.extra { refreshExternalChanges() }
                 val failure = assertFailsWith<MpsRequestException> {
                     access.read { findInstances("UnknownConcept", exact = false, limit = 0) }
                 }
@@ -153,7 +153,7 @@ class OutdatedLanguageSemanticsTest {
             val original = record.readText()
             val expectedCurrentHash = Regex("modelHash=\"([^\"]+)\"").find(original)!!.groupValues[1]
             record.writeText(original.replace(Regex("modelHash=\"[^\"]+\""), "modelHash=\"different-recorded-hash\""))
-            access.refreshExternalChanges()
+            access.extra { refreshExternalChanges() }
             val rejected = assertFailsWith<MpsRequestException> {
                 access.read { findInstances(JSON_FILE_CONCEPT, exact = false, limit = 0) }
             }
@@ -163,12 +163,12 @@ class OutdatedLanguageSemanticsTest {
             assertContains(rejected.message, "Generation record: $record")
             assertContains(rejected.message, path.resolve("languages/$JSON_LANGUAGE/models/$JSON_LANGUAGE.structure.mps").toString())
             record.writeText(original)
-            access.refreshExternalChanges()
+            access.extra { refreshExternalChanges() }
             val recovered = access.read { findInstances(JSON_FILE_CONCEPT, exact = false, limit = 0) }
             assertTrue(recovered.nodes.isNotEmpty(), "the existing json file is found after the record is restored")
 
             record.writeText(original.replace(Regex("modelHash=\"[^\"]+\""), ""))
-            access.refreshExternalChanges()
+            access.extra { refreshExternalChanges() }
             val missingHash = assertFailsWith<MpsRequestException> {
                 access.read { findInstances(JSON_FILE_CONCEPT, exact = false, limit = 0) }
             }

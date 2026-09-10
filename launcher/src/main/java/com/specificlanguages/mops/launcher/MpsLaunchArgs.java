@@ -23,6 +23,7 @@ public final class MpsLaunchArgs {
         List<String> result = new ArrayList<>(MPS_ADD_OPENS);
 
         result.add("-Didea.max.intellisense.filesize=100000");
+        result.add("-Dallow.save.application.headless=true");
 
         if (mpsVersion.isAtLeast(2025, 2)) {
             result.add("-Didea.platform.prefix=MPS");

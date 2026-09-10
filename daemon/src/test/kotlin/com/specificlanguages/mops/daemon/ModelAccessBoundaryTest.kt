@@ -2,6 +2,7 @@ package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
+import jetbrains.mps.project.MPSProject
 import jetbrains.mps.project.Project
 import org.jetbrains.mps.openapi.module.ModelAccess
 import org.mockito.kotlin.any
@@ -69,7 +70,7 @@ class ModelAccessBoundaryTest {
     }
 
     private fun boundaryAccess(
-        project: Project,
+        project: MPSProject,
         writeTransaction: WriteTransaction = mock(),
     ): JetBrainsMpsAccess =
         JetBrainsMpsAccess(

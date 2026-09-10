@@ -26,7 +26,7 @@ import java.nio.file.Path
 import kotlin.io.path.*
 
 class ModuleCreator(private val project: Project) {
-    private val mpsProject = project as? MPSProject ?: error("module creation requires an MPS file-based project")
+    private val mpsProject = project as MPSProject
     private val projectDirectory: Path = mpsProject.projectFile.toPath().let {
         when {
             it.resolve(".mps").isDirectory() -> it
@@ -264,7 +264,6 @@ class ModuleCreator(private val project: Project) {
         SolutionUsagePreset.JAVA_MPS_PLUGIN -> listOf(FacetMementoJson("java", mapOf("compile" to "mps", "classes" to "mps", "ext" to "yes")))
     }
 
-    fun persist() { project.repository.saveAll(); mpsProject.save() }
     private fun prepareDescriptor(descriptor: Path) {
         descriptor.parent.createDirectories()
         Files.createFile(descriptor)

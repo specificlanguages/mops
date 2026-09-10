@@ -4,6 +4,7 @@ import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.protocol.*
 import de.itemis.mps.gradle.project.loader.EnvironmentKind
 import de.itemis.mps.gradle.project.loader.ProjectLoader
+import jetbrains.mps.project.MPSProject
 import jetbrains.mps.project.Project
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
@@ -100,7 +101,7 @@ class DaemonRunner(
                 // A project can pass the filesystem checks yet open with no Project Modules; refuse to serve it so
                 // callers see the startup error instead of every navigation silently returning nothing.
                 projectModulesProblem(project, projectPath)?.let { reportAndThrowStartupError(it) }
-                action(JetBrainsMpsAccess(project, logger))
+                action(JetBrainsMpsAccess(project as MPSProject, logger))
             }
     }
 

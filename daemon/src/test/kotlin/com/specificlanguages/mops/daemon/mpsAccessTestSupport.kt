@@ -13,8 +13,6 @@ import com.specificlanguages.mops.protocol.NodeTarget
  * defaults to a stub that fails if a test reaches make/render without providing one.
  */
 fun mpsAccessOver(operations: MpsWrite, extra: MpsExtra = UnstubbedExtra): MpsAccess = object : MpsAccess {
-    override fun refreshExternalChanges() = Unit
-
     override fun <T> read(block: MpsRead.() -> T): T = operations.block()
 
     override fun <T> write(block: MpsWrite.() -> T): T = operations.block()
@@ -23,6 +21,8 @@ fun mpsAccessOver(operations: MpsWrite, extra: MpsExtra = UnstubbedExtra): MpsAc
 }
 
 private object UnstubbedExtra : MpsExtra {
+    override fun refreshExternalChanges() = error("MpsExtra.refreshExternalChanges not stubbed in this test")
+    override fun saveProject() = error("MpsExtra.saveProject not stubbed in this test")
     override fun makeModules(modules: List<String>) = error("MpsExtra.makeModules not stubbed in this test")
     override fun makeProject() = error("MpsExtra.makeProject not stubbed in this test")
     override fun renderNode(target: NodeTarget, allowReflective: Boolean) =

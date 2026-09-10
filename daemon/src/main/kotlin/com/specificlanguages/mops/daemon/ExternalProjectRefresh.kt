@@ -1,13 +1,16 @@
 package com.specificlanguages.mops.daemon
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.configurationStore.StoreReloadManager
 import jetbrains.mps.classloading.ClassLoaderManager
 import jetbrains.mps.ide.platform.watching.ReloadManager
 import jetbrains.mps.project.AbstractModule
+import jetbrains.mps.project.MPSProject
 import jetbrains.mps.project.Project
 import jetbrains.mps.project.facets.JavaModuleFacet
 import jetbrains.mps.project.dependency.GlobalModuleDependenciesManager
 import jetbrains.mps.vfs.refresh.DefaultCachingContext
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.mps.openapi.module.SModuleReference
 import java.nio.file.Files
 import java.nio.file.FileVisitOption.FOLLOW_LINKS
@@ -20,6 +23,13 @@ internal class ExternalProjectRefresh(private val project: Project) {
     private var outputs = snapshot()
 
     fun refresh() {
+        val mpsProject = project as MPSProject
+        ApplicationManager.getApplication().invokeAndWait {
+            val settings = Path.of(requireNotNull(mpsProject.project.basePath)).resolve(".mps")
+            mpsProject.fileSystem.getFile(settings.toString()).refresh(DefaultCachingContext(true, true))
+        }
+        // The component store reloads project membership separately from MPS's model/module reload sessions.
+        runBlocking { StoreReloadManager.getInstance(mpsProject.project).reloadChangedStorageFiles() }
         ApplicationManager.getApplication().invokeAndWait {
             val roots = project.modelAccess.computeReadAction {
                 project.projectModules.mapNotNull { (it as? AbstractModule)?.descriptorFile?.parent }.distinct()

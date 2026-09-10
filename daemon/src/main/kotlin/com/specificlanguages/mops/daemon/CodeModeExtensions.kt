@@ -3,7 +3,6 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.protocol.*
 import groovy.lang.Closure
 import jetbrains.mps.project.DevKit
-import jetbrains.mps.project.MPSProject
 import jetbrains.mps.project.Project
 import jetbrains.mps.project.Solution
 import jetbrains.mps.smodel.Generator
@@ -55,7 +54,7 @@ object CodeModeExtensions {
         return CodeModeProjectProvider.access().read { body.call() }
     }
 
-    /** Runs an MPS command on the EDT, saves successful changes, and returns the closure value. Access: none. */
+    /** Runs an MPS command on the EDT, saves successful repository changes, and returns the closure value. Access: none. */
     @CodeModeExtension(MpsAccessLevel.NONE)
     @JvmStatic
     fun <T> command(project: Project, body: Closure<T>): T {
@@ -63,7 +62,6 @@ object CodeModeExtensions {
         return CodeModeProjectProvider.access().write {
             body.call().also {
                 project.repository.saveAll()
-                (project as? MPSProject)?.save()
             }
         }
     }

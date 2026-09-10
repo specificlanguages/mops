@@ -34,4 +34,10 @@ interface MpsExtra {
      * defines no editor is not an error: MPS renders it with its generic reflective editor.
      */
     fun renderNode(target: NodeTarget, allowReflective: Boolean = false): String
+
+    /** Refreshes external changes with no read/write action active; retained model objects may become invalid. */
+    fun refreshExternalChanges()
+
+    /** Saves dirty project settings with no read/write action active. */
+    fun saveProject()
 }
