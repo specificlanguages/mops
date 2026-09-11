@@ -1,3 +1,10 @@
+## Project state
+
+This is a prototype:
+
+- Make breaking changes as necessary, do not maintain backward compatibility unless told otherwise.
+- Prefer simple code over defensive over-engineering, unless told otherwise.
+
 ## Agent skills
 
 ### Issue tracker
@@ -6,7 +13,7 @@ Issues are tracked as local Markdown files under `.scratch/`. See `docs/agents/i
 
 ### Triage labels
 
-Triage uses the default canonical labels. See `docs/agents/triage-labels.md`.
+See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 

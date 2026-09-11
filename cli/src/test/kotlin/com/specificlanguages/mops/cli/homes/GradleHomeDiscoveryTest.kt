@@ -21,46 +21,37 @@ class GradleHomeDiscoveryTest {
                 id 'com.specificlanguages.mps' version '2.1.0'
                 id 'java-base'
             }
+            layout.buildDirectory = layout.projectDirectory.dir("output")
             mpsDefaults {
                 mpsHome = layout.projectDirectory.dir("MPS home")
                 javaLauncher = javaToolchains.launcherFor {
                     languageVersion = JavaLanguageVersion.of(17)
                 }
             }
+            mpsBuilds.create('main', com.specificlanguages.mps.MainBuild) {
+                mpsProjectDirectory = layout.projectDirectory.dir("MPS project")
+            }
             tasks.register('buildLanguages') {
                 doLast { throw new GradleException('Build action must not run') }
             }
         """)
         val mps = root.resolve("MPS home").createDirectory()
+        val mpsProject = root.resolve("MPS project").createDirectory()
         val (exit, output) = run(root)
         assertEquals(0, exit, output)
         assertContains(output, "mpsDefaults (com.specificlanguages.mps 2.x)")
-        assertContains(output, "--mps-home='$mps'")
-        assertContains(output, "--java-home='")
+        assertContains(output, "Project root: $mpsProject")
+        assertContains(output, "Launcher: ${root.resolve("output/mops")}")
+        val launcher = root.resolve("output/mops")
+        assertTrue(launcher.isExecutable())
+        assertContains(launcher.readText(), "--mps-home='$mps'")
+        assertContains(launcher.readText(), "--java-home='")
+        assertContains(launcher.readText(), "--project-root='$mpsProject'")
+        assertContains(launcher.readText(), "\"\$@\"")
     }
 
     @Test
-    fun `provider failure preserves MPS discovery`() {
-        val root = fixture("""
-            plugins {
-                id 'com.specificlanguages.mps' version '2.1.0'
-                id 'java-base'
-            }
-            mpsDefaults {
-                mpsHome = layout.projectDirectory.dir("MPS home")
-                javaLauncher = providers.provider { throw new GradleException('Java provider unavailable') }
-            }
-        """)
-        val mps = root.resolve("MPS home").createDirectory()
-        val (exit, output) = run(root)
-        assertEquals(1, exit, output)
-        assertContains(output, "Java provider unavailable")
-        assertContains(output, "--mps-home='$mps'")
-        assertFalse(output.contains("--java-home='"))
-    }
-
-    @Test
-    fun `mbeddr defaults and closest task override keep pairs together and quote paths`() {
+    fun `mbeddr settings come from current project and quote paths`() {
         val root = fixture("""
             buildscript {
                 repositories {
@@ -101,16 +92,13 @@ class GradleHomeDiscoveryTest {
         assertEquals(0, exit, output)
         assertContains(output, "Source: :child:buildLanguages")
         assertContains(output, "MPS home: ${root.resolve("child's MPS")}")
-        val arguments = output.lineSequence().first { it.startsWith("Command line (POSIX shell): ") }
-            .substringAfter("Command line (POSIX shell): ")
-        val shell = ProcessBuilder("sh", "-c", "set -- $arguments; printf '%s\\n' \"\$@\"")
-            .redirectErrorStream(true).start()
+        val launcher = root.resolve("child/build/mops")
+        assertContains(output, "Launcher: $launcher")
         assertEquals(
-            listOf("mops", "--mps-home=${root.resolve("child's MPS")}",
-                "--java-home=${root.resolve("child's Java")}"),
-            shell.inputStream.bufferedReader().readLines(),
+            "#!/bin/sh\nexec mops --mps-home='${root}/child'\"'\"'s MPS' " +
+                "--java-home='${root}/child'\"'\"'s Java' \"\$@\"\n",
+            launcher.readText(),
         )
-        assertEquals(0, shell.waitFor())
     }
 
     @Test
@@ -133,7 +121,7 @@ class GradleHomeDiscoveryTest {
         assertEquals(1, exit, output)
         assertContains(output, "MPS home: ${root.resolve("missing MPS")}")
         assertContains(output, "runtime preparation")
-        assertFalse(output.contains("Command line (POSIX shell):"))
+        assertFalse(root.resolve("build/mops").exists())
     }
 
     private fun fixture(build: String, settings: String = ""): Path {
@@ -168,6 +156,6 @@ class GradleHomeDiscoveryTest {
         val command = newCommandLine(directory)
         command.out = PrintWriter(output, true)
         command.err = PrintWriter(output, true)
-        return command.execute("guess-command-line") to output.toString()
+        return command.execute("create-launcher") to output.toString()
     }
 }

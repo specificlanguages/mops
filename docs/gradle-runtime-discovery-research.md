@@ -2,11 +2,11 @@
 
 ## Recommendation
 
-The CLI implements `mops guess-command-line [PATH]` using a bundled Gradle init script. It reads `mpsDefaults` for
+The CLI implements `mops create-launcher [PATH]` using a bundled Gradle init script. It reads `mpsDefaults` for
 Specific Languages 2.x and conventional `RunAntScript` arguments and executable settings for mbeddr projects.
-It selects a complete usable pair from the closest enclosing Gradle project, then a deterministic first match,
-and preserves partial discoveries when no complete pair is available. It reports the selected source and
-POSIX-shell-quoted arguments without starting a daemon or requiring preconfigured homes.
+It inspects the Gradle project containing the requested path and uses its `mpsDefaults` extension or first conventional
+`RunAntScript` task. It reports that source and writes a launcher containing the discovered arguments without starting a
+daemon or requiring preconfigured homes.
 
 The probe uses the build's wrapper, disables configuration caching and configuration on demand, and queries providers
 in an isolated report task. Provider evaluation may download or extract runtimes; preparation and language build task
@@ -92,8 +92,10 @@ Use the project's Gradle wrapper with an injected Groovy init script and an isol
 
 Register the probe for the selected build, inspect finalized project configuration, and query runtime providers during the report task. Disable configuration caching for the initial probe implementation unless its access pattern is tested for compatibility. Avoid importing plugin classes on the init script classpath: discover the extension by name and recognize known task classes through their runtime class hierarchy or the applied plugin's classloader. Gradle decorates task classes, so exact equality with the concrete task class name is insufficient. Realizing tasks can execute their configuration callbacks even when task actions do not run.
 
-Keep each candidate's MPS and Java together, with its project/task and source. A simple result containing paths and an optional diagnostic is sufficient. Catch provider failures so a broken Java provider does not hide a usable MPS result. Deduplicate identical pairs; choose the closest applicable Gradle project, then a deterministic first conventional match, and show its source so an incorrect guess is easy to recognize. Do not combine MPS from one task with Java from another. Included builds and exotic execution-time customizations can remain outside initial coverage.
+Choose the Gradle project containing the requested path, inspect its `mpsDefaults` extension or first conventional
+`RunAntScript` task, and show the source so the guess is easy to recognize. Included builds and exotic execution-time
+customizations can remain outside initial coverage.
 
-mops startup resolves explicit `mpsHome`; it chooses explicit `javaHome` or searches for bundled Java. `DaemonContext.fromLivePaths` requires existing paths. A discovery command can display configured-but-missing paths without passing them into daemon startup. It can print reusable `--mps-home` and `--java-home` values for resolved pairs. Automatic discovery during every command and writing persistent configuration are separate design decisions. Sources: [MopsCommand](https://github.com/specificlanguages/mops/blob/4d72734ca3c23dc092e867ca01e6ab20bf21efc2/cli/src/main/kotlin/com/specificlanguages/mops/cli/MopsCommand.kt#L79), [DaemonContext](https://github.com/specificlanguages/mops/blob/4d72734ca3c23dc092e867ca01e6ab20bf21efc2/protocol/src/main/kotlin/com/specificlanguages/mops/protocol/DaemonContext.kt).
+mops startup resolves explicit `mpsHome`; it chooses explicit `javaHome` or searches for bundled Java. `DaemonContext.fromLivePaths` requires existing paths. A discovery command can display configured-but-missing paths without passing them into daemon startup. It can write reusable `--mps-home` and `--java-home` values into a launcher for resolved pairs. Automatic discovery during every command is a separate design decision. Sources: [MopsCommand](https://github.com/specificlanguages/mops/blob/4d72734ca3c23dc092e867ca01e6ab20bf21efc2/cli/src/main/kotlin/com/specificlanguages/mops/cli/MopsCommand.kt#L79), [DaemonContext](https://github.com/specificlanguages/mops/blob/4d72734ca3c23dc092e867ca01e6ab20bf21efc2/protocol/src/main/kotlin/com/specificlanguages/mops/protocol/DaemonContext.kt).
 
 Initial implementation tests should cover an ordinary Specific Languages project, an ordinary mbeddr project with project-wide defaults, a task override, and paths containing spaces. Verify the report does not execute build task actions. Provider failure and missing-runtime cases merit one straightforward diagnostic test each. More exotic task combinations can be tested when concrete projects require them.

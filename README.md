@@ -7,7 +7,7 @@ prototype with two application subprojects: `cli/` and `daemon/`.
 
 ```sh
 mops --help
-mops guess-command-line
+mops create-launcher
 mops --mps-home /path/to/mps daemon ping
 mops --mps-home /path/to/mps edit model --file edit-batch.json
 mops daemon status
@@ -19,20 +19,21 @@ The CLI starts or reuses a per-project daemon process for most commands.
 Pass `--project-root PATH` to select an MPS project explicitly. The path can be absolute or relative to the directory
 where `mops` was started, for example `mops --project-root ../my-project daemon status`.
 
-If you do not know where MPS and Java are installed, run `mops guess-command-line [PATH]` from the project checkout.
+If you do not know where MPS and Java are installed, run `mops create-launcher [PATH]` from the project checkout.
 PATH is the starting point of discovery, defaulting to `--project-root` when supplied, or the working directory.
-`guess-command-line` uses the nearest Gradle wrapper to inspect `mpsDefaults` of the `com.specificlanguages.mps` Gradle
-plugin or `RunAntScript` tasks of the `de.itemis.mps.gradle.common` plugin. It prints the selected source, homes, and a
-quoted invocation such as `mops --mps-home='/path/to/MPS' --java-home='/path/to/Java'` to use in a POSIX shell. No MPS
-home or daemon is required; Java must be available to run Gradle. The optional path defaults to `--project-root`, when
-supplied, or the working directory.
+`create-launcher` uses the nearest Gradle wrapper to inspect `mpsDefaults` of the `com.specificlanguages.mps` Gradle
+plugin or `RunAntScript` tasks of the `de.itemis.mps.gradle.common` plugin. It writes an executable `build/mops` shell
+script on macOS and Linux, or `build/mops.cmd` on Windows. The launcher supplies the discovered MPS and Java homes and
+for `com.specificlanguages.mps` also supplies the MPS project directory from the first configured `mpsBuilds` entry.
+Arguments passed to the launcher are forwarded to `mops`. No MPS home or daemon is required to create it; Java must be
+available to run Gradle.
 
 Discovery queries configured providers, which can download and extract distributions. It does not execute preparation or
-language build task actions. It prefers a complete usable pair from the closest enclosing Gradle project, then a
-deterministic first match. Partial discoveries show available arguments and exit with status 1; a complete pair exits
-with status 0. Missing runtime directories require the project's documented preparation steps. Task-action overrides,
-included builds, and custom Ant property loading are outside this heuristic; Specific Languages values are project
-defaults.
+language build task actions. It inspects the Gradle project containing PATH and uses its `mpsDefaults` extension or the
+first conventional `RunAntScript` task. Partial discoveries show available arguments and exit with status 1; a complete
+pair exits with status 0. Missing runtime directories require the project's documented preparation steps. Task-action
+overrides, included builds, and custom Ant property loading are outside this heuristic; Specific Languages values are
+project defaults.
 
 ## Commands
 

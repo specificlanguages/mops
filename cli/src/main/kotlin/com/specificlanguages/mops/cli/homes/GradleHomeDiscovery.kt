@@ -15,7 +15,7 @@ internal class GradleHomeDiscovery {
             ancestors.firstOrNull { dir -> regularFileNames.any { dir.resolve(it).isRegularFile() } }
     }
 
-    fun discover(start: Path, diagnostics: PrintWriter): List<HomeGuess> {
+    fun discover(start: Path, diagnostics: PrintWriter): HomeGuess? {
         val directory = start.toRealPath()
         require(directory.isDirectory()) { "Discovery path is not a directory: $directory" }
 
@@ -28,7 +28,7 @@ internal class GradleHomeDiscovery {
 
         val wrapperName = if (isWindows) "gradlew.bat" else "gradlew"
         val wrapper = FileDiscoverer(root).findDirectoryContaining(wrapperName)?.resolve(wrapperName)
-            ?: error("No Gradle wrapper found at or above $root. Add a wrapper to the build before running mops guess-command-line.")
+            ?: error("No Gradle wrapper found at or above $root. Add a wrapper to the build before running mops create-launcher.")
 
         val temporary = Files.createTempDirectory("mops-guess-command-line-")
         try {
@@ -45,6 +45,7 @@ internal class GradleHomeDiscovery {
                 "--no-configuration-cache", "--no-configure-on-demand",
                 "--quiet", "--console=plain",
                 "-Dmops.guess.root=$root", "-Dmops.guess.task=$task",
+                "-Dmops.guess.start=$directory",
                 "-Dmops.guess.output=$report", ":$task",
             )
             val command = if (isWindows) listOf("cmd", "/c", wrapper.toString()) else listOf("sh", wrapper.toString())
@@ -67,34 +68,18 @@ internal class GradleHomeDiscovery {
         }
     }
 
-    internal fun parseReport(text: String): List<HomeGuess> {
+    internal fun parseReport(text: String): HomeGuess? {
         val report = Json.parseToJsonElement(text).jsonObject
         require(report.getValue("version").jsonPrimitive.int == 1) { "Unsupported runtime discovery report version." }
-        return report.getValue("candidates").jsonArray.map { element ->
-            val candidate = element.jsonObject
-            fun path(key: String): Path? = candidate[key]?.jsonPrimitive?.contentOrNull?.let(Path::of)
-            HomeGuess(
-                projectDir = path("projectDir")!!,
-                source = candidate.getValue("source").jsonPrimitive.content,
-                mpsHome = path("mpsHome"),
-                javaHome = path("javaHome"),
-                diagnostics = candidate.getValue("diagnostics").jsonArray.map { it.jsonPrimitive.content },
-            )
-        }
+        val candidate = report["candidate"]?.takeUnless { it is JsonNull }?.jsonObject ?: return null
+        fun path(key: String): Path? = candidate[key]?.jsonPrimitive?.contentOrNull?.let(Path::of)
+        return HomeGuess(
+            projectDir = path("projectDir")!!,
+            buildDir = path("buildDir")!!,
+            source = candidate.getValue("source").jsonPrimitive.content,
+            mpsHome = path("mpsHome"),
+            javaHome = path("javaHome"),
+            mpsProjectRoot = path("mpsProjectRoot"),
+        )
     }
-
-    internal fun select(candidates: List<HomeGuess>, start: Path): HomeGuess? =
-        candidates.sortedWith(
-            compareBy<HomeGuess> {
-                when {
-                    it.usableMps && it.usableJava -> 0
-                    it.usableMps || it.usableJava -> 1
-                    else -> 2
-                }
-            }.thenBy {
-                if (start.startsWith(it.projectDir)) start.nameCount - it.projectDir.nameCount else Int.MAX_VALUE
-            }.thenBy { it.projectDir.toString() }.thenBy {
-                if (it.source.contains("mpsDefaults")) 0 else 1
-            }.thenBy { it.source }
-        ).distinctBy { it.mpsHome to it.javaHome }.firstOrNull()
 }

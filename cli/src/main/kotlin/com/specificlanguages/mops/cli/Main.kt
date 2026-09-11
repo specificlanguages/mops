@@ -29,7 +29,7 @@ import com.specificlanguages.mops.cli.find.FindUsagesCommand
 import com.specificlanguages.mops.cli.get.GetOperations
 import com.specificlanguages.mops.cli.get.ModelGetNodeCommand
 import com.specificlanguages.mops.cli.help.RecursiveHelpCommand
-import com.specificlanguages.mops.cli.homes.GuessCommandLineCommand
+import com.specificlanguages.mops.cli.homes.CreateLauncherCommand
 import com.specificlanguages.mops.cli.list.MpsListCommand
 import com.specificlanguages.mops.cli.make.MakeModulesCommand
 import com.specificlanguages.mops.cli.make.MakeOperations
@@ -94,7 +94,7 @@ fun newCommandLine(workingDirectory: Path = Path.of("").absolute()): CommandLine
     code.addLeaf("help", CodeHelpCommand(rootCommand))
     root.addSubcommand("code", code)
     root.addLeaf("list", MpsListCommand(rootCommand))
-    root.addLeaf("guess-command-line", GuessCommandLineCommand(rootCommand))
+    root.addLeaf("create-launcher", CreateLauncherCommand(rootCommand))
     root.addLeaf("explain", ExplainCommand())
     root.addLeaf("help", RecursiveHelpCommand())
 
