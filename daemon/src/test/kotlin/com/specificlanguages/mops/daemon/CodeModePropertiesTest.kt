@@ -38,7 +38,7 @@ class CodeModePropertiesTest {
                     project.read {
                         def concept = project.concept('jetbrains.mps.lang.structure.ConceptDeclaration')
                         def count = 0
-                        eachInstanceOf(concept, project.scope) { node ->
+                        mops.search.eachInstanceOf(concept, project.scope) { node ->
                             def descriptor = node.concept.properties.find { it.name == 'name' }
                             assert descriptor != null
                             assert node.properties['name'] == node.getProperty(descriptor)
@@ -67,7 +67,7 @@ class CodeModePropertiesTest {
                 CodeRunRequest("", """
                     def node = project.read {
                         def nodes = []
-                        eachInstanceOf(project.concept('jetbrains.mps.lang.structure.ConceptDeclaration'), project.scope) {
+                        mops.search.eachInstanceOf(project.concept('jetbrains.mps.lang.structure.ConceptDeclaration'), project.scope) {
                             nodes << it
                         }
                         assert !nodes.empty

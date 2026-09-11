@@ -210,14 +210,19 @@ _Avoid_: transaction when the block is read-only
 _Related_: Code Mode, MPS Project, Edit Operation
 
 **Code Mode Reference**:
-The discoverable description of the built-in and plugin-provided **Code Mode Extensions** available to **Code Mode** for an **MPS Project**. It groups extensions by native MPS receiver type, identifies each **Code Mode Extension Bundle**, and includes signatures, access requirements, and usage documentation generated from KDoc at build time without reproducing the native MPS API. It is available through the global `help` function in a program and through `mops code help` at the CLI; lookup accepts no argument, a native MPS class, a native MPS object, or a textual extension path.
+The discoverable description of the built-in and plugin-provided **Code Mode Extensions** available to **Code Mode** for an **MPS Project**. It groups extensions by native MPS receiver type or by paths rooted at the **Code Mode Namespace**, identifies each **Code Mode Extension Bundle**, and includes signatures, access requirements, and usage documentation without reproducing the native MPS API. It is available through the global `help` function in a program and through `mops code help` at the CLI; lookup accepts no argument, a supported receiver class or object, or a textual extension path.
 _Avoid_: command help, service registry
+_Related_: Code Mode, Code Mode Extension, Code Mode Namespace, MPS Project
+
+**Code Mode Namespace**:
+The global `mops` value that groups project-wide **Code Mode Extensions** by purpose. It exposes capability categories such as `parsing` and `search`; `testing` and `editing` are reserved category names that become part of the namespace only when they have executable behavior. It is a stable capability hierarchy for one Code Mode execution, not a mutable service registry.
+_Avoid_: services, service registry, utility namespace
 _Related_: Code Mode, Code Mode Extension, MPS Project
 
 **Code Mode Extension**:
-A mops-supported convenience exposed as a Groovy extension method on a native MPS object in **Code Mode**. Operations prefer this form whenever they have an unambiguous primary MPS object and the resulting call remains natural; an extension that needs the daemon's **MPS Project** may obtain its one process-scoped project. An extension declares one access requirement: `none`, `read`, `command`, or `extra`, where `extra` requires no active model access because the operation coordinates access itself. The extension's contract belongs to mops, while the receiver and its native API retain the contract of the selected MPS version.
+A mops-supported convenience exposed as a Groovy extension method or property on a meaningful native MPS receiver or on a receiver in the **Code Mode Namespace**. Operations prefer a native receiver whenever they have an unambiguous primary MPS object and the resulting call remains natural; project-wide capabilities are grouped by purpose in the namespace. An extension declares one access requirement: `none`, `read`, `command`, or `extra`, where `extra` requires no active model access because the operation coordinates access itself. The extension's contract belongs to mops, while a native receiver and its native interface retain the contract of the selected MPS version.
 _Avoid_: handle, wrapper
-_Related_: Code Mode, Code Mode Extension Bundle, MPS Node, MPS Model, MPS Module
+_Related_: Code Mode, Code Mode Extension Bundle, Code Mode Namespace, MPS Node, MPS Model, MPS Module
 
 **Code Mode Extension Bundle**:
 A self-describing built-in or plugin contribution that declares a stable bundle ID and version and packages Groovy extension classes together with their generated **Code Mode Reference** metadata. Built-in and plugin bundles use the same loading and discovery contract. A bundle is rejected as a whole when its implementation and reference metadata disagree or when its extension signature duplicates one from another bundle.

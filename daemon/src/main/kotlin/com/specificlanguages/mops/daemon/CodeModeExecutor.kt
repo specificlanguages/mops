@@ -6,7 +6,7 @@ import com.specificlanguages.mops.protocol.CodeRunRequest
 import groovy.lang.Binding
 import groovy.lang.GroovyClassLoader
 import groovy.lang.GroovyShell
-import jetbrains.mps.project.Project
+import jetbrains.mps.project.MPSProject
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SNode
@@ -15,12 +15,13 @@ import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import java.io.File
 import java.nio.file.Path
 
-class CodeModeExecutor(private val access: MpsAccess, private val project: Project) {
+class CodeModeExecutor(private val access: MpsAccess, private val project: MPSProject) {
     fun execute(request: CodeRunRequest): CodeResultResponse {
         rejectDependencyInjection(request.source)
         val configuration = CompilerConfiguration().apply { scriptBaseClass = CodeModeScript::class.java.name }
         val loader = GroovyClassLoader(javaClass.classLoader, configuration)
-        CodeModeProjectProvider.initialize(project, access)
+        val mops = Mops(project, access)
+        CodeModeProjectProvider.initialize(mops)
         try {
             val result = GroovyShell(loader, Binding(), configuration).evaluate(request.source, request.sourceName)
             return CodeResultResponse(CodeResultAdapter.render(result))
@@ -31,7 +32,7 @@ class CodeModeExecutor(private val access: MpsAccess, private val project: Proje
             val location = if (line != null && line > 0) "${request.sourceName}:$line" else request.sourceName
             throw IllegalStateException("$location: ${failure.message ?: failure.javaClass.name}", failure)
         } finally {
-            CodeModeProjectProvider.clear(project)
+            CodeModeProjectProvider.clear(mops)
             loader.clearCache()
             loader.close()
         }

@@ -10,7 +10,7 @@ class JavaSnippetParserTest {
         SharedMpsEnvironment.withOpenProjectCopy("base-language-sandbox") { project, _ ->
             val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project).execute(
                 CodeRunRequest("", """
-                    def parser = project.javaParser
+                    def parser = mops.parsing.java
                     def model = project.read {
                         project.model('baselanguage.sandbox')
                     }

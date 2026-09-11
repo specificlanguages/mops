@@ -1,10 +1,10 @@
 # Language parsing uses dedicated objects
 
-> **Status: accepted; not implemented.**
+> **Status: accepted; amended by ADR-0012.**
 
 Language parsing groups its operations on a dedicated parser object whose methods accept native MPS destinations. This is an exception to ADR-0008's preference for extensions on native MPS receivers: adding parsing support for more languages should not continually expand the methods exposed on models and nodes. Java is the first implementation; other contributors can expose their own language-specific parser objects without implementing a shared parsing contract.
 
-Code Mode exposes the Java parser through the `project.javaParser` extension getter. This uses the existing extension mechanism without introducing a registry for plugin-provided global objects.
+Code Mode exposes the Java parser through the `mops.parsing.java` extension getter. This uses the existing extension mechanism without introducing a mutable registry of global objects.
 
 The initial methods are `addJavaClassesFromString(model, source)`, `addJavaMembersFromString(classifier, source[, beforeMember])`, and `addJavaStatementsFromString(statementList, source[, beforeStatement])`. Calls require a command access block. Members include nested classes. Omitted anchors append; supplied anchors must be direct children in the destination containment role. All methods return a Java Parsing Result.
 

@@ -47,7 +47,7 @@ class JavaSnippetParser : GroovyObjectSupport() {
         return call(arguments)
     }
     fun addJavaClassesFromString(model: Any, source: String): JavaParsingResult {
-        requireCommand("JavaSnippetParser.addJavaClassesFromString")
+        requireCommand("mops.parsing.java.addJavaClassesFromString")
         require(model is SModel) { "destination must be an MPS model" }
         val parsed = parse(source, FeatureKind.CLASS, null)
         val packageName = parsed.`package`
@@ -62,7 +62,7 @@ class JavaSnippetParser : GroovyObjectSupport() {
         addJavaMembersFromString(classifier, source, null)
 
     fun addJavaMembersFromString(classifier: Any, source: String, beforeMember: Any?): JavaParsingResult {
-        requireCommand("JavaSnippetParser.addJavaMembersFromString")
+        requireCommand("mops.parsing.java.addJavaMembersFromString")
         require(classifier is SNode) { "destination must be an MPS node" }
         require(beforeMember == null || beforeMember is SNode) { "insertion anchor must be an MPS node" }
         require(classifier.isInstanceOfConcept(classifierConcept)) { "destination must be a BaseLanguage classifier" }
@@ -77,7 +77,7 @@ class JavaSnippetParser : GroovyObjectSupport() {
         addJavaStatementsFromString(statementList, source, null)
 
     fun addJavaStatementsFromString(statementList: Any, source: String, beforeStatement: Any?): JavaParsingResult {
-        requireCommand("JavaSnippetParser.addJavaStatementsFromString")
+        requireCommand("mops.parsing.java.addJavaStatementsFromString")
         require(statementList is SNode) { "destination must be an MPS node" }
         require(beforeStatement == null || beforeStatement is SNode) { "insertion anchor must be an MPS node" }
         require(statementList.isInstanceOfConcept(statementListConcept)) { "destination must be a BaseLanguage statement list" }

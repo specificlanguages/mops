@@ -18,14 +18,6 @@ import java.util.concurrent.ExecutionException
 object CodeModeExtensions {
     private val persistence get() = PersistenceFacade.getInstance()
 
-    /** Returns the Java snippet parser. Its insertion methods require command access and support Java 8 syntax. */
-    @CodeModeExtension(MpsAccessLevel.NONE)
-    @JvmStatic
-    fun getJavaParser(project: Project): JavaSnippetParser {
-        requireOwner(project)
-        return JavaSnippetParser()
-    }
-
     /** Returns a live indexed accessor. Reads require model access; writes require command access. */
     @CodeModeExtension(MpsAccessLevel.NONE)
     @JvmStatic
