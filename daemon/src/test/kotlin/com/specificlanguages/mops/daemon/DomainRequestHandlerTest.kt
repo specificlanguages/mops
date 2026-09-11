@@ -211,7 +211,7 @@ class DomainRequestHandlerTest {
         )
 
         assertEquals(MpsListResponse(root), response)
-        inOrder(access, operations) {
+        inOrder(access, operations, extra) {
             verify(extra).refreshExternalChanges()
             verify(operations).list(listOf("moduleA"), 3)
             verify(extra).saveProject()
