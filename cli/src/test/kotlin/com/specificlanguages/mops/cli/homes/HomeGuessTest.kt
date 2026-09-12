@@ -23,7 +23,7 @@ class HomeGuessTest {
     }
 
     @Test
-    fun `launchers pass configured paths and caller arguments`() {
+    fun `wrappers pass configured paths and caller arguments`() {
         val guess = HomeGuess(
             projectDir = temporary,
             buildDir = temporary.resolve("build dir"),
@@ -35,16 +35,17 @@ class HomeGuessTest {
 
         assertEquals(
             "#!/bin/sh\nexec mops --mps-home='/MPS home'\"'\"'s' --java-home='/Java home' --project-root='/MPS project' \"\$@\"\n",
-            guess.posixLauncher(),
+            guess.posixWrapper(),
         )
         assertEquals(
             "@echo off\r\nmops --mps-home=\"/MPS home's\" --java-home=\"/Java home\" --project-root=\"/MPS project\" %*\r\n",
-            guess.windowsLauncher(),
+            guess.windowsWrapper(),
         )
+        assertEquals(temporary.resolve("build dir/mopsw.cmd"), guess.writeWrapper(windows = true))
     }
 
     @Test
-    fun `POSIX launcher forwards its arguments`() {
+    fun `POSIX wrapper forwards its arguments`() {
         val bin = temporary.resolve("bin").createDirectories()
         val mops = bin.resolve("mops")
         mops.writeText("#!/bin/sh\nprintf '%s\\n' \"\$@\"\n")
@@ -57,8 +58,8 @@ class HomeGuessTest {
             javaHome = Path.of("/Java home"),
             mpsProjectRoot = Path.of("/MPS project"),
         )
-        val launcher = guess.writeLauncher(windows = false)
-        val process = ProcessBuilder(launcher.toString(), "find", "things with spaces")
+        val wrapper = guess.writeWrapper(windows = false)
+        val process = ProcessBuilder(wrapper.toString(), "find", "things with spaces")
             .redirectErrorStream(true)
             .apply { environment()["PATH"] = "$bin:${environment()["PATH"]}" }
             .start()

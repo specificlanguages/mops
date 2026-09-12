@@ -14,7 +14,8 @@ class CommandHelpTest {
         val output = runHelp("--help")
 
         assertContains(output, "daemon")
-        assertContains(output, "create-launcher")
+        assertContains(output, "wrapper")
+        assertFalse(output.contains("create-launcher"))
         assertContains(output, "list, ls")
         assertContains(output, "get")
         assertContains(output, "render")
@@ -108,7 +109,7 @@ class CommandHelpTest {
     fun `every leaf command supports --help`() {
         val leafCommands = listOf(
             arrayOf("list"),
-            arrayOf("create-launcher"),
+            arrayOf("wrapper"),
             arrayOf("find", "instances"),
             arrayOf("find", "usages"),
             arrayOf("find", "root-by-name"),
@@ -132,6 +133,14 @@ class CommandHelpTest {
             assertContains(output, "Usage:", message = "help for '${command.joinToString(" ")}' should print usage")
             assertContains(output, command.last())
         }
+    }
+
+    @Test
+    fun `wrapper help describes the generated wrapper`() {
+        val output = runHelp("wrapper", "--help")
+
+        assertContains(output, "mopsw")
+        assertContains(output, "without writing a wrapper")
     }
 
     private fun runHelp(vararg args: String): String {

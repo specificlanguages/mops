@@ -2,11 +2,11 @@
 
 ## Recommendation
 
-The CLI implements `mops create-launcher [PATH]` using a bundled Gradle init script. It reads `mpsDefaults` for
+The CLI implements `mops wrapper [PATH]` using a bundled Gradle init script. It reads `mpsDefaults` for
 Specific Languages 2.x and conventional `RunAntScript` arguments and executable settings for mbeddr projects.
 It inspects the Gradle project containing the requested path and uses its `mpsDefaults` extension or first conventional
-`RunAntScript` task. It reports that source and writes a launcher containing the discovered arguments without starting a
-daemon or requiring preconfigured homes.
+`RunAntScript` task. It reports that source and writes `build/mopsw` or `build/mopsw.cmd` containing the discovered
+arguments without starting a daemon or requiring preconfigured homes.
 
 The probe uses the build's wrapper, disables configuration caching and configuration on demand, and queries providers
 in an isolated report task. Provider evaluation may download or extract runtimes; preparation and language build task
@@ -96,6 +96,6 @@ Choose the Gradle project containing the requested path, inspect its `mpsDefault
 `RunAntScript` task, and show the source so the guess is easy to recognize. Included builds and exotic execution-time
 customizations can remain outside initial coverage.
 
-mops startup resolves explicit `mpsHome`; it chooses explicit `javaHome` or searches for bundled Java. `DaemonContext.fromLivePaths` requires existing paths. A discovery command can display configured-but-missing paths without passing them into daemon startup. It can write reusable `--mps-home` and `--java-home` values into a launcher for resolved pairs. Automatic discovery during every command is a separate design decision. Sources: [MopsCommand](https://github.com/specificlanguages/mops/blob/4d72734ca3c23dc092e867ca01e6ab20bf21efc2/cli/src/main/kotlin/com/specificlanguages/mops/cli/MopsCommand.kt#L79), [DaemonContext](https://github.com/specificlanguages/mops/blob/4d72734ca3c23dc092e867ca01e6ab20bf21efc2/protocol/src/main/kotlin/com/specificlanguages/mops/protocol/DaemonContext.kt).
+mops startup resolves explicit `mpsHome`; it chooses explicit `javaHome` or searches for bundled Java. `DaemonContext.fromLivePaths` requires existing paths. A discovery command can display configured-but-missing paths without passing them into daemon startup. It can write reusable `--mps-home` and `--java-home` values into a wrapper for resolved pairs. Automatic discovery during every command is a separate design decision. Sources: [MopsCommand](https://github.com/specificlanguages/mops/blob/4d72734ca3c23dc092e867ca01e6ab20bf21efc2/cli/src/main/kotlin/com/specificlanguages/mops/cli/MopsCommand.kt#L79), [DaemonContext](https://github.com/specificlanguages/mops/blob/4d72734ca3c23dc092e867ca01e6ab20bf21efc2/protocol/src/main/kotlin/com/specificlanguages/mops/protocol/DaemonContext.kt).
 
 Initial implementation tests should cover an ordinary Specific Languages project, an ordinary mbeddr project with project-wide defaults, a task override, and paths containing spaces. Verify the report does not execute build task actions. Provider failure and missing-runtime cases merit one straightforward diagnostic test each. More exotic task combinations can be tested when concrete projects require them.

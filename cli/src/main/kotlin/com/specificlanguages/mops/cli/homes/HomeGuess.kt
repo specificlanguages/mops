@@ -21,15 +21,15 @@ internal data class HomeGuess(
         (java.isRegularFile() && java.isExecutable()) || it.resolve("bin/java.exe").isRegularFile()
     } == true
 
-    fun writeLauncher(windows: Boolean): Path {
-        val launcher = buildDir.resolve(if (windows) "mops.cmd" else "mops")
-        launcher.parent.createDirectories()
-        launcher.writeText(if (windows) windowsLauncher() else posixLauncher())
-        if (!windows) check(launcher.toFile().setExecutable(true)) { "Could not make launcher executable: $launcher" }
-        return launcher
+    fun writeWrapper(windows: Boolean): Path {
+        val wrapper = buildDir.resolve(if (windows) "mopsw.cmd" else "mopsw")
+        wrapper.parent.createDirectories()
+        wrapper.writeText(if (windows) windowsWrapper() else posixWrapper())
+        if (!windows) check(wrapper.toFile().setExecutable(true)) { "Could not make wrapper executable: $wrapper" }
+        return wrapper
     }
 
-    internal fun posixLauncher(): String = listOfNotNull(
+    internal fun posixWrapper(): String = listOfNotNull(
         "#!/bin/sh\nexec mops",
         mpsHome?.let { "--mps-home=${quoteForShell(it.toString())}" },
         javaHome?.let { "--java-home=${quoteForShell(it.toString())}" },
@@ -37,7 +37,7 @@ internal data class HomeGuess(
         "\"\$@\"\n",
     ).joinToString(" ")
 
-    internal fun windowsLauncher(): String = listOfNotNull(
+    internal fun windowsWrapper(): String = listOfNotNull(
         "@echo off\r\nmops",
         mpsHome?.let { "--mps-home=${quoteForCmd(it.toString())}" },
         javaHome?.let { "--java-home=${quoteForCmd(it.toString())}" },

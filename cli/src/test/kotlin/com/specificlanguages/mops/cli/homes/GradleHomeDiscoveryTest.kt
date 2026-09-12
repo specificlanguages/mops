@@ -41,13 +41,13 @@ class GradleHomeDiscoveryTest {
         assertEquals(0, exit, output)
         assertContains(output, "mpsDefaults (com.specificlanguages.mps 2.x)")
         assertContains(output, "Project root: $mpsProject")
-        assertContains(output, "Launcher: ${root.resolve("output/mops")}")
-        val launcher = root.resolve("output/mops")
-        assertTrue(launcher.isExecutable())
-        assertContains(launcher.readText(), "--mps-home='$mps'")
-        assertContains(launcher.readText(), "--java-home='")
-        assertContains(launcher.readText(), "--project-root='$mpsProject'")
-        assertContains(launcher.readText(), "\"\$@\"")
+        assertContains(output, "Wrapper: ${root.resolve("output/mopsw")}")
+        val wrapper = root.resolve("output/mopsw")
+        assertTrue(wrapper.isExecutable())
+        assertContains(wrapper.readText(), "--mps-home='$mps'")
+        assertContains(wrapper.readText(), "--java-home='")
+        assertContains(wrapper.readText(), "--project-root='$mpsProject'")
+        assertContains(wrapper.readText(), "\"\$@\"")
     }
 
     @Test
@@ -92,12 +92,12 @@ class GradleHomeDiscoveryTest {
         assertEquals(0, exit, output)
         assertContains(output, "Source: :child:buildLanguages")
         assertContains(output, "MPS home: ${root.resolve("child's MPS")}")
-        val launcher = root.resolve("child/build/mops")
-        assertContains(output, "Launcher: $launcher")
+        val wrapper = root.resolve("child/build/mopsw")
+        assertContains(output, "Wrapper: $wrapper")
         assertEquals(
             "#!/bin/sh\nexec mops --mps-home='${root}/child'\"'\"'s MPS' " +
                 "--java-home='${root}/child'\"'\"'s Java' \"\$@\"\n",
-            launcher.readText(),
+            wrapper.readText(),
         )
     }
 
@@ -121,7 +121,8 @@ class GradleHomeDiscoveryTest {
         assertEquals(1, exit, output)
         assertContains(output, "MPS home: ${root.resolve("missing MPS")}")
         assertContains(output, "runtime preparation")
-        assertFalse(root.resolve("build/mops").exists())
+        assertFalse(root.resolve("build/mopsw").exists())
+        assertContains(output, "no wrapper was written")
     }
 
     private fun fixture(build: String, settings: String = ""): Path {
@@ -156,6 +157,6 @@ class GradleHomeDiscoveryTest {
         val command = newCommandLine(directory)
         command.out = PrintWriter(output, true)
         command.err = PrintWriter(output, true)
-        return command.execute("create-launcher") to output.toString()
+        return command.execute("wrapper") to output.toString()
     }
 }
