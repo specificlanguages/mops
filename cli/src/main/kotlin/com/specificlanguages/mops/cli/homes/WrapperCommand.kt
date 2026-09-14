@@ -19,7 +19,7 @@ import java.util.concurrent.Callable
         "Uses the nearest Gradle wrapper to inspect `mpsDefaults` of plugin `com.specificlanguages.mps` or `RunAntScript` tasks of plugin `de.itemis.mps.gradle.common`, then writes mopsw or mopsw.cmd below that project's build directory.",
         "No CLI-configured MPS home or daemon is required; Java must be available to run Gradle.",
         "Querying configured providers may download and extract MPS or JBR distributions; it does not run preparation or language build task actions.",
-        "Partial discoveries print available values without writing a wrapper and exit with status 1; complete pairs write the wrapper and exit with status 0.",
+        "Partial discoveries print available values without writing a wrapper and exit with status 1; known pairs write the wrapper and exit with status 0, with warnings when their paths are not usable yet.",
     ],
 )
 class WrapperCommand(private val root: MopsCommand) : Callable<Int> {
@@ -53,13 +53,13 @@ class WrapperCommand(private val root: MopsCommand) : Callable<Int> {
         out.println("Java home: ${guess.javaHome ?: "unknown"}")
         out.println("Project root: ${guess.mpsProjectRoot ?: "not guessed"}")
         if (guess.mpsHome != null && !guess.usableMps) {
-            out.println("MPS directory is missing; run the project's documented runtime preparation first.")
+            out.println("Warning: MPS home is missing: ${guess.mpsHome}")
         }
         if (guess.javaHome != null && !guess.usableJava) {
-            out.println("Java home has no usable bin/java; run the project's documented runtime preparation first.")
+            out.println("Warning: Java home is missing or has no usable bin/java: ${guess.javaHome}")
         }
-        if (!guess.usableMps || !guess.usableJava) {
-            out.println("Discovery is partial; no wrapper was written. Prepare the missing runtime and try again.")
+        if (!guess.hasKnownHomes) {
+            out.println("Discovery is partial; no wrapper was written. Configure both runtime paths and try again.")
         } else {
             val windows = System.getProperty("os.name").lowercase().contains("win")
             val wrapper = output
@@ -68,7 +68,7 @@ class WrapperCommand(private val root: MopsCommand) : Callable<Int> {
             out.println("Wrapper: ${guess.writeWrapper(wrapper, windows)}")
         }
         out.flush()
-        return if (guess.usableMps && guess.usableJava) 0 else 1
+        return if (guess.hasKnownHomes) 0 else 1
     }
 
     private fun defaultWrapperPath(guess: HomeGuess, start: Path, windows: Boolean): Path {

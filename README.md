@@ -34,8 +34,9 @@ required in the CLI invocation that writes the wrapper; Java must be available t
 Discovery queries configured providers, which can download and extract distributions. It does not execute preparation or
 language build task actions. It inspects the Gradle project containing PATH and uses its `mpsDefaults` extension or the
 first conventional `RunAntScript` task. Partial discoveries show available paths without writing a wrapper and exit with
-status 1; a complete pair writes the wrapper and exits with status 0. Missing runtime directories require the project's
-documented preparation steps. Task-action
+status 1; when both paths are known, the command writes the wrapper and exits with status 0. Missing or unusable runtime
+directories are reported as warnings, so the wrapper can be created before the project's documented preparation steps.
+Task-action
 overrides, included builds, and custom Ant property loading are outside this heuristic; Specific Languages values are
 project defaults.
 

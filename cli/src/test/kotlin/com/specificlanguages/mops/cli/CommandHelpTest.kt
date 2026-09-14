@@ -141,7 +141,7 @@ class CommandHelpTest {
 
         assertContains(output, "mopsw")
         assertContains(output, "--output")
-        assertContains(output, "without writing a wrapper")
+        assertContains(output, "warnings when their paths are not usable yet")
     }
 
     private fun runHelp(vararg args: String): String {

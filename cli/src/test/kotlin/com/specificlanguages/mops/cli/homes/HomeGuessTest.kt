@@ -13,13 +13,15 @@ class HomeGuessTest {
     @Test
     fun `report preserves a partial result`() {
         val text = """{"version":1,"candidate":{"projectDir":"/project","buildDir":"/project/out","source":":build","mpsHome":"/mps","javaHome":null,"mpsProjectRoot":"/mps-project"}}"""
+        val guess = GradleHomeDiscovery().parseReport(text)
         assertEquals(
             HomeGuess(
                 Path.of("/project"), Path.of("/project/out"), ":build",
                 Path.of("/mps"), null, Path.of("/mps-project")
             ),
-            GradleHomeDiscovery().parseReport(text),
+            guess,
         )
+        assertFalse(guess!!.hasKnownHomes)
     }
 
     @Test
@@ -32,6 +34,7 @@ class HomeGuessTest {
             javaHome = Path.of("/Java home"),
             mpsProjectRoot = Path.of("/MPS project"),
         )
+        assertTrue(guess.hasKnownHomes)
 
         assertEquals(
             "#!/bin/sh\nexec mops --mps-home='/MPS home'\"'\"'s' --java-home='/Java home' --project-root='/MPS project' \"\$@\"\n",

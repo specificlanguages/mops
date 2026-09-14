@@ -138,7 +138,7 @@ class GradleHomeDiscoveryTest {
     }
 
     @Test
-    fun `unprepared mbeddr homes report configured paths without reusable arguments`() {
+    fun `unprepared mbeddr homes produce a wrapper with warnings`() {
         val root = fixture("""
             buildscript {
                 repositories {
@@ -153,12 +153,39 @@ class GradleHomeDiscoveryTest {
                 executable = project.file('missing Java/bin/java')
             }
         """)
-        val (exit, output) = run(root)
-        assertEquals(1, exit, output)
+        val wrapper = root.resolve("custom/mopsw")
+        val (exit, output) = run(root, "--output", wrapper.toString())
+        assertEquals(0, exit, output)
         assertContains(output, "MPS home: ${root.resolve("missing MPS")}")
-        assertContains(output, "runtime preparation")
-        assertFalse(root.resolve("build/mopsw").exists())
-        assertContains(output, "no wrapper was written")
+        assertContains(output, "Warning: MPS home is missing: ${root.resolve("missing MPS")}")
+        assertContains(output, "Warning: Java home is missing or has no usable bin/java: ${root.resolve("missing Java")}")
+        assertContains(output, "Wrapper: $wrapper")
+        assertContains(wrapper.readText(), "--mps-home='${root.resolve("missing MPS")}'")
+        assertContains(wrapper.readText(), "--java-home='${root.resolve("missing Java")}'")
+    }
+
+    @Test
+    fun `unknown home keeps discovery partial`() {
+        val root = fixture("""
+            buildscript {
+                repositories {
+                    mavenCentral()
+                    maven { url = uri('https://artifacts.itemis.cloud/repository/maven-mps') }
+                }
+                dependencies { classpath 'de.itemis.mps:mps-gradle-plugin:1.30.2.1.649c88d' }
+            }
+            tasks.register('buildLanguages', de.itemis.mps.gradle.BuildLanguages) {
+                script = 'does-not-exist.xml'
+            }
+        """)
+        val wrapper = root.resolve("custom/mopsw")
+
+        val (exit, output) = run(root, "--output", wrapper.toString())
+
+        assertEquals(1, exit, output)
+        assertContains(output, "MPS home: unknown")
+        assertContains(output, "Discovery is partial; no wrapper was written.")
+        assertFalse(wrapper.exists())
     }
 
     private fun fixture(build: String, settings: String = ""): Path {

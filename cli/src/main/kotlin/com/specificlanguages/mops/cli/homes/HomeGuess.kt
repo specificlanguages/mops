@@ -15,6 +15,7 @@ internal data class HomeGuess(
     val javaHome: Path?,
     val mpsProjectRoot: Path?,
 ) {
+    val hasKnownHomes: Boolean get() = mpsHome != null && javaHome != null
     val usableMps: Boolean get() = mpsHome?.isDirectory() == true
     val usableJava: Boolean get() = javaHome?.let {
         val java = it.resolve("bin/java")
