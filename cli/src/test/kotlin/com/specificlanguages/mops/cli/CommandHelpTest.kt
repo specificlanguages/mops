@@ -141,6 +141,7 @@ class CommandHelpTest {
 
         assertContains(output, "mopsw")
         assertContains(output, "--output")
+        assertContains(output, "every discovered MPS project")
         assertContains(output, "warnings when their paths are not usable yet")
     }
 

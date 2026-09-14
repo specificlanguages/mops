@@ -22,21 +22,22 @@ where `mops` was started, for example `mops --project-root ../my-project daemon 
 If you do not know where MPS and Java are installed, run `mops wrapper [PATH]` from the project checkout.
 PATH is the starting point of discovery, defaulting to `--project-root` when supplied, or the working directory.
 `wrapper` uses the nearest Gradle wrapper to inspect `mpsDefaults` of the `com.specificlanguages.mps` Gradle plugin or
-`RunAntScript` tasks of the `de.itemis.mps.gradle.common` plugin. By default it writes `mopsw` on macOS and Linux, or
-`mopsw.cmd` on Windows, under `<build-directory>/mops/<MPS-project-name>/`. Pass `--output PATH` to select the exact
-wrapper file instead; a relative path is resolved from the directory where `mops` was started. The POSIX wrapper is
-executable.
-The wrapper supplies the discovered MPS and Java homes and, for `com.specificlanguages.mps`, also supplies the MPS
-project directory from the first configured `mpsBuilds` entry.
+`RunAntScript` tasks of the `de.itemis.mps.gradle.common` plugin. By default it writes a wrapper for every MPS project in
+every Gradle project in the build. Each `mpsw` on macOS and Linux, or `mopsw.cmd` on Windows, is written under
+`<build-directory>/mops/<MPS-project-name>/`. Pass `--project-root PATH` to write only that MPS project's wrapper. When
+one wrapper is selected, `--output PATH` selects its exact file; a relative path is resolved from the directory where
+`mops` was started. The POSIX wrappers are executable.
+Each wrapper supplies the shared discovered MPS and Java homes and its MPS project directory. MPS projects come from
+configured `mpsBuilds` entries and `.mps` project markers in the Gradle build.
 Run the generated wrapper in place of `mops`; arguments passed to it are forwarded to `mops`. No MPS home or daemon is
 required in the CLI invocation that writes the wrapper; Java must be available to run Gradle.
 
 Discovery queries configured providers, which can download and extract distributions. It does not execute preparation or
-language build task actions. It inspects the Gradle project containing PATH and uses its `mpsDefaults` extension or the
-first conventional `RunAntScript` task. Partial discoveries show available paths without writing a wrapper and exit with
-status 1; when both paths are known, the command writes the wrapper and exits with status 0. Missing or unusable runtime
-directories are reported as warnings, so the wrapper can be created before the project's documented preparation steps.
-Task-action
+language build task actions. It inspects all Gradle projects in the build and uses a discovered `mpsDefaults` extension
+or conventional `RunAntScript` task for the shared runtime paths. Partial discoveries show available paths without
+writing a wrapper and exit with status 1; when both paths are known, the command writes the wrappers and exits with status
+0. Missing or unusable runtime directories are reported as warnings, so wrappers can be created before the project's
+documented preparation steps. Task-action
 overrides, included builds, and custom Ant property loading are outside this heuristic; Specific Languages values are
 project defaults.
 

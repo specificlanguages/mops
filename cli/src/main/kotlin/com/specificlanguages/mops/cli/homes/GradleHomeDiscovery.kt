@@ -2,8 +2,11 @@ package com.specificlanguages.mops.cli.homes
 
 import kotlinx.serialization.json.*
 import java.io.PrintWriter
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
 import java.util.UUID
 import kotlin.io.path.*
 
@@ -15,7 +18,7 @@ internal class GradleHomeDiscovery {
             ancestors.firstOrNull { dir -> regularFileNames.any { dir.resolve(it).isRegularFile() } }
     }
 
-    fun discover(start: Path, diagnostics: PrintWriter): HomeGuess? {
+    fun discover(start: Path, diagnostics: PrintWriter): List<HomeGuess> {
         val directory = start.toRealPath()
         require(directory.isDirectory()) { "Discovery path is not a directory: $directory" }
 
@@ -45,7 +48,6 @@ internal class GradleHomeDiscovery {
                 "--no-configuration-cache", "--no-configure-on-demand",
                 "--quiet", "--console=plain",
                 "-Dmops.guess.root=$root", "-Dmops.guess.task=$task",
-                "-Dmops.guess.start=$directory",
                 "-Dmops.guess.output=$report", ":$task",
             )
             val command = if (isWindows) listOf("cmd", "/c", wrapper.toString()) else listOf("sh", wrapper.toString())
@@ -62,24 +64,55 @@ internal class GradleHomeDiscovery {
                 if (process.isAlive) process.destroyForcibly()
             }
             check(report.isRegularFile()) { "Gradle did not produce a runtime discovery report." }
-            return parseReport(report.readText())
+            return addMpsProjectMarkers(root, parseReport(report.readText()))
         } finally {
             temporary.toFile().deleteRecursively()
         }
     }
 
-    internal fun parseReport(text: String): HomeGuess? {
+    internal fun parseReport(text: String): List<HomeGuess> {
         val report = Json.parseToJsonElement(text).jsonObject
-        require(report.getValue("version").jsonPrimitive.int == 1) { "Unsupported runtime discovery report version." }
-        val candidate = report["candidate"]?.takeUnless { it is JsonNull }?.jsonObject ?: return null
-        fun path(key: String): Path? = candidate[key]?.jsonPrimitive?.contentOrNull?.let(Path::of)
-        return HomeGuess(
-            projectDir = path("projectDir")!!,
-            buildDir = path("buildDir")!!,
-            source = candidate.getValue("source").jsonPrimitive.content,
-            mpsHome = path("mpsHome"),
-            javaHome = path("javaHome"),
-            mpsProjectRoot = path("mpsProjectRoot"),
-        )
+        require(report.getValue("version").jsonPrimitive.int == 2) { "Unsupported runtime discovery report version." }
+        return report.getValue("projects").jsonArray.map { element ->
+            val project = element.jsonObject
+            fun path(key: String): Path? = project[key]?.jsonPrimitive?.contentOrNull?.let(Path::of)
+            HomeGuess(
+                projectDir = path("projectDir")!!,
+                buildDir = path("buildDir")!!,
+                source = project["source"]?.jsonPrimitive?.contentOrNull,
+                mpsHome = path("mpsHome"),
+                javaHome = path("javaHome"),
+                mpsProjectRoots = project.getValue("mpsProjectRoots").jsonArray.map {
+                    Path.of(it.jsonPrimitive.content)
+                },
+            )
+        }
+    }
+
+    private fun addMpsProjectMarkers(root: Path, guesses: List<HomeGuess>): List<HomeGuess> {
+        val excludedDirectories = buildSet {
+            add(root.resolve(".git"))
+            add(root.resolve(".gradle"))
+            guesses.mapTo(this) { it.buildDir }
+        }.map { it.normalize() }.toSet()
+        val discovered = mutableListOf<Path>()
+        Files.walkFileTree(root, object : SimpleFileVisitor<Path>() {
+            override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
+                val normalized = dir.normalize()
+                if (normalized != root && normalized in excludedDirectories) return FileVisitResult.SKIP_SUBTREE
+                if (dir.resolve(".mps").isDirectory()) discovered.add(dir.toRealPath())
+                return FileVisitResult.CONTINUE
+            }
+        })
+        return guesses.map { guess ->
+            val roots = discovered.filter { root ->
+                root.startsWith(guess.projectDir) && guesses.none { other ->
+                    other.projectDir != guess.projectDir &&
+                        other.projectDir.startsWith(guess.projectDir) &&
+                        root.startsWith(other.projectDir)
+                }
+            }
+            guess.copy(mpsProjectRoots = (guess.mpsProjectRoots + roots).distinct())
+        }
     }
 }

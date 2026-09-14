@@ -7,59 +7,58 @@ gradle.projectsEvaluated {
     }
     gradle.rootProject.tasks.register(System.getProperty('mops.guess.task')) {
         doLast {
-            def start = new File(System.getProperty('mops.guess.start')).canonicalFile.toPath()
-            def project = gradle.rootProject.allprojects.findAll {
-                start.startsWith(it.projectDir.canonicalFile.toPath())
-            }.max { it.projectDir.absolutePath.length() }
-
-            def result = null
-            def defaults = project.extensions.findByName('mpsDefaults')
-            if (defaults != null) {
-                def mpsBuild = project.extensions.findByName('mpsBuilds')?.find()
-                result = [
+            def projects = gradle.rootProject.allprojects.collect { project ->
+                def source = null
+                def mpsHome = null
+                def javaHome = null
+                def mpsProjectRoots = []
+                def defaults = project.extensions.findByName('mpsDefaults')
+                if (defaults != null) {
+                    source = "${project.path} mpsDefaults (com.specificlanguages.mps 2.x)"
+                    mpsHome = defaults.mpsHome.orNull?.asFile?.canonicalPath
+                    javaHome = defaults.javaLauncher.orNull?.metadata?.installationPath?.asFile?.canonicalPath
+                    mpsProjectRoots = project.extensions.findByName('mpsBuilds')?.collect {
+                        it.mpsProjectDirectory.orNull?.asFile?.canonicalPath
+                    }?.findAll { it != null }?.unique() ?: []
+                } else {
+                    def task = project.tasks.find { task ->
+                        def type = task.class
+                        while (type != null && type.name != 'de.itemis.mps.gradle.RunAntScript') {
+                            type = type.superclass
+                        }
+                        type != null
+                    }
+                    if (task != null) {
+                        def args = task.scriptArgs.toList()
+                        if (task.includeDefaultArgs) {
+                            args.addAll(project.findProperty('itemis.mps.gradle.ant.defaultScriptArgs') ?: [])
+                        }
+                        def mpsArgument = args.find {
+                            it.startsWith('-Dmps.home=') || it.startsWith('-Dmps_home=')
+                        }
+                        def executable = task.executable ?:
+                            project.findProperty('itemis.mps.gradle.ant.defaultJavaExecutable')
+                        source = "${task.path} (mbeddr RunAntScript)"
+                        if (executable == null) {
+                            executable = new File(System.getProperty('java.home'), 'bin/java')
+                            source += '; Gradle default Java'
+                        }
+                        mpsHome = mpsArgument == null ? null :
+                            project.file(mpsArgument.substring(mpsArgument.indexOf('=') + 1)).canonicalPath
+                        javaHome = project.file(executable.toString()).absoluteFile.parentFile.parentFile.canonicalPath
+                    }
+                }
+                [
                     projectDir: project.projectDir.canonicalPath,
                     buildDir: project.layout.buildDirectory.get().asFile.canonicalPath,
-                    source: "${project.path} mpsDefaults (com.specificlanguages.mps 2.x)",
-                    mpsHome: defaults.mpsHome.orNull?.asFile?.canonicalPath,
-                    javaHome: defaults.javaLauncher.orNull?.metadata?.installationPath?.asFile?.canonicalPath,
-                    mpsProjectRoot: mpsBuild?.mpsProjectDirectory?.orNull?.asFile?.canonicalPath,
+                    source: source,
+                    mpsHome: mpsHome,
+                    javaHome: javaHome,
+                    mpsProjectRoots: mpsProjectRoots,
                 ]
-            } else {
-                def task = project.tasks.find { task ->
-                    def type = task.class
-                    while (type != null && type.name != 'de.itemis.mps.gradle.RunAntScript') {
-                        type = type.superclass
-                    }
-                    type != null
-                }
-                if (task != null) {
-                    def args = task.scriptArgs.toList()
-                    if (task.includeDefaultArgs) {
-                        args.addAll(project.findProperty('itemis.mps.gradle.ant.defaultScriptArgs') ?: [])
-                    }
-                    def mpsArgument = args.find {
-                        it.startsWith('-Dmps.home=') || it.startsWith('-Dmps_home=')
-                    }
-                    def executable = task.executable ?:
-                        project.findProperty('itemis.mps.gradle.ant.defaultJavaExecutable')
-                    def source = "${task.path} (mbeddr RunAntScript)"
-                    if (executable == null) {
-                        executable = new File(System.getProperty('java.home'), 'bin/java')
-                        source += '; Gradle default Java'
-                    }
-                    result = [
-                        projectDir: project.projectDir.canonicalPath,
-                        buildDir: project.layout.buildDirectory.get().asFile.canonicalPath,
-                        source: source,
-                        mpsHome: mpsArgument == null ? null :
-                            project.file(mpsArgument.substring(mpsArgument.indexOf('=') + 1)).canonicalPath,
-                        javaHome: project.file(executable.toString()).absoluteFile.parentFile.parentFile.canonicalPath,
-                        mpsProjectRoot: null,
-                    ]
-                }
             }
             new File(System.getProperty('mops.guess.output')).setText(
-                JsonOutput.toJson([version: 1, candidate: result]), 'UTF-8')
+                JsonOutput.toJson([version: 2, projects: projects]), 'UTF-8')
         }
     }
 }

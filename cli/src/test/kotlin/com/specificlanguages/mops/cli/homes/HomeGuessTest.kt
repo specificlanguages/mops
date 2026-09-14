@@ -12,16 +12,18 @@ class HomeGuessTest {
 
     @Test
     fun `report preserves a partial result`() {
-        val text = """{"version":1,"candidate":{"projectDir":"/project","buildDir":"/project/out","source":":build","mpsHome":"/mps","javaHome":null,"mpsProjectRoot":"/mps-project"}}"""
-        val guess = GradleHomeDiscovery().parseReport(text)
+        val text = """{"version":2,"projects":[{"projectDir":"/project","buildDir":"/project/out","source":":build","mpsHome":"/mps","javaHome":null,"mpsProjectRoots":["/mps-project"]}]}"""
+        val guesses = GradleHomeDiscovery().parseReport(text)
         assertEquals(
-            HomeGuess(
-                Path.of("/project"), Path.of("/project/out"), ":build",
-                Path.of("/mps"), null, Path.of("/mps-project")
+            listOf(
+                HomeGuess(
+                    Path.of("/project"), Path.of("/project/out"), ":build",
+                    Path.of("/mps"), null, listOf(Path.of("/mps-project"))
+                )
             ),
-            guess,
+            guesses,
         )
-        assertFalse(guess!!.hasKnownHomes)
+        assertFalse(guesses.single().hasKnownHomes)
     }
 
     @Test
@@ -32,20 +34,20 @@ class HomeGuessTest {
             source = ": mpsDefaults",
             mpsHome = Path.of("/MPS home's"),
             javaHome = Path.of("/Java home"),
-            mpsProjectRoot = Path.of("/MPS project"),
+            mpsProjectRoots = listOf(Path.of("/MPS project")),
         )
         assertTrue(guess.hasKnownHomes)
 
         assertEquals(
             "#!/bin/sh\nexec mops --mps-home='/MPS home'\"'\"'s' --java-home='/Java home' --project-root='/MPS project' \"\$@\"\n",
-            guess.posixWrapper(),
+            guess.posixWrapper(Path.of("/MPS project")),
         )
         assertEquals(
             "@echo off\r\nmops --mps-home=\"/MPS home's\" --java-home=\"/Java home\" --project-root=\"/MPS project\" %*\r\n",
-            guess.windowsWrapper(),
+            guess.windowsWrapper(Path.of("/MPS project")),
         )
         val wrapper = temporary.resolve("custom/wrapper.cmd")
-        assertEquals(wrapper, guess.writeWrapper(wrapper, windows = true))
+        assertEquals(wrapper, guess.writeWrapper(wrapper, Path.of("/MPS project"), windows = true))
     }
 
     @Test
@@ -60,9 +62,13 @@ class HomeGuessTest {
             source = ": mpsDefaults",
             mpsHome = Path.of("/MPS home"),
             javaHome = Path.of("/Java home"),
-            mpsProjectRoot = Path.of("/MPS project"),
+            mpsProjectRoots = listOf(Path.of("/MPS project")),
         )
-        val wrapper = guess.writeWrapper(temporary.resolve("custom/mopsw"), windows = false)
+        val wrapper = guess.writeWrapper(
+            temporary.resolve("custom/mopsw"),
+            Path.of("/MPS project"),
+            windows = false,
+        )
         val process = ProcessBuilder(wrapper.toString(), "find", "things with spaces")
             .redirectErrorStream(true)
             .apply { environment()["PATH"] = "$bin:${environment()["PATH"]}" }

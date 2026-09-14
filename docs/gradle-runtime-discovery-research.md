@@ -4,9 +4,11 @@
 
 The CLI implements `mops wrapper [PATH]` using a bundled Gradle init script. It reads `mpsDefaults` for
 Specific Languages 2.x and conventional `RunAntScript` arguments and executable settings for mbeddr projects.
-It inspects the Gradle project containing the requested path and uses its `mpsDefaults` extension or first conventional
-`RunAntScript` task. It reports that source and writes a project-specific `mopsw` or `mopsw.cmd` below the Gradle build
-directory, or to the path selected by `--output`, without starting a daemon or requiring preconfigured homes.
+It inspects all projects in the Gradle build and uses a discovered `mpsDefaults` extension or conventional
+`RunAntScript` task as the shared runtime source. It writes a project-specific `mopsw` or `mopsw.cmd` for every configured
+`mpsBuilds` project directory and every directory carrying an `.mps` project marker. `--project-root` restricts output to
+one MPS project, which may also use the path selected by `--output`. Discovery does not start a daemon or require
+preconfigured homes.
 
 The probe uses the build's wrapper, disables configuration caching and configuration on demand, and queries providers
 in an isolated report task. Provider evaluation may download or extract runtimes; preparation and language build task
@@ -92,9 +94,9 @@ Use the project's Gradle wrapper with an injected Groovy init script and an isol
 
 Register the probe for the selected build, inspect finalized project configuration, and query runtime providers during the report task. Disable configuration caching for the initial probe implementation unless its access pattern is tested for compatibility. Avoid importing plugin classes on the init script classpath: discover the extension by name and recognize known task classes through their runtime class hierarchy or the applied plugin's classloader. Gradle decorates task classes, so exact equality with the concrete task class name is insufficient. Realizing tasks can execute their configuration callbacks even when task actions do not run.
 
-Choose the Gradle project containing the requested path, inspect its `mpsDefaults` extension or first conventional
-`RunAntScript` task, and show the source so the guess is easy to recognize. Included builds and exotic execution-time
-customizations can remain outside initial coverage.
+Inspect all Gradle projects, prefer a complete runtime configuration, and show the selected source so the guess is easy
+to recognize. Use that shared runtime for all discovered MPS projects. Included builds and exotic execution-time
+customizations remain outside coverage.
 
 mops startup resolves explicit `mpsHome`; it chooses explicit `javaHome` or searches for bundled Java. `DaemonContext.fromLivePaths` requires existing paths. A discovery command can display configured-but-missing paths without passing them into daemon startup. It can write reusable `--mps-home` and `--java-home` values into a wrapper for resolved pairs. Automatic discovery during every command is a separate design decision. Sources: [MopsCommand](https://github.com/specificlanguages/mops/blob/4d72734ca3c23dc092e867ca01e6ab20bf21efc2/cli/src/main/kotlin/com/specificlanguages/mops/cli/MopsCommand.kt#L79), [DaemonContext](https://github.com/specificlanguages/mops/blob/4d72734ca3c23dc092e867ca01e6ab20bf21efc2/protocol/src/main/kotlin/com/specificlanguages/mops/protocol/DaemonContext.kt).
 
