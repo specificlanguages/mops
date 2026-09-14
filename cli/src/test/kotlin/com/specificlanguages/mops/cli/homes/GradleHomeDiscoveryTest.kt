@@ -60,6 +60,17 @@ class GradleHomeDiscoveryTest {
                 }
                 dependencies { classpath 'de.itemis.mps:mps-gradle-plugin:1.30.2.1.649c88d' }
             }
+            class LazyString {
+                private final Closure<String> source
+
+                LazyString(Closure<String> source) {
+                    this.source = source
+                }
+
+                String toString() {
+                    source.call()
+                }
+            }
             allprojects {
                 ext['itemis.mps.gradle.ant.defaultScriptArgs'] =
                     ["-Dmps.home=" + rootProject.file("default MPS")]
@@ -74,7 +85,7 @@ class GradleHomeDiscoveryTest {
                 tasks.named('buildLanguages') {
                     includeDefaultArgs = false
                     scriptArgs = ["-Dmps_home=" + rootProject.file("child's MPS")]
-                    executable = rootProject.file("child's Java/bin/java").absolutePath
+                    executable = new LazyString({ rootProject.file("child's Java/bin/java").absolutePath })
                 }
             }
         """, "include 'child'")

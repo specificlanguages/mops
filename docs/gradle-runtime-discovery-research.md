@@ -10,9 +10,9 @@ arguments without starting a daemon or requiring preconfigured homes.
 
 The probe uses the build's wrapper, disables configuration caching and configuration on demand, and queries providers
 in an isolated report task. Provider evaluation may download or extract runtimes; preparation and language build task
-actions are not executed. Absolute Java executable strings and files are supported for mbeddr; unsupported values
-produce a diagnostic. Selectors, automatic daemon-startup discovery, persistent configuration, and Specific Languages
-1.9 compatibility are outside the implementation scope.
+actions are not executed. Java executable values are resolved through their string form for mbeddr, including lazy
+string wrappers around Gradle providers. Selectors, automatic daemon-startup discovery, persistent configuration, and
+Specific Languages 1.9 compatibility are outside the implementation scope.
 
 Run `./gradlew :cli:test :cli:gradleDiscoveryTest` for CLI unit tests and live wrapper/plugin fixture validation.
 The detailed edge cases below record API research and possible extensions, not additional supported behavior.
@@ -68,7 +68,7 @@ The action copies task `scriptArgs`, then appends project defaults if enabled. T
 
 A conservative adapter should collect `-Dmps.home=...` and `-Dmps_home=...` from the effective argument sequence, splitting on the first `=`. Equal values can be unified; conflicting duplicates or differing spellings should be reported as ambiguous. Their interpretation ultimately depends on the generated Ant script. Do not arbitrarily assume one spelling wins. If absent, report MPS as unknown: it may come from an Ant XML property, property file, or execution-time customization. Do not infer MPS from an arbitrary Ant JAR location.
 
-Normalize supported executable values such as strings and files using Gradle's semantics. Providers and arbitrary `Any` values require explicit compatibility handling; blindly calling `toString()` can report a provider description instead of a path. If no explicit Java is configured, report that source as Gradle's default Java rather than asserting JBR. Bare executable names and relative paths need validation against the actual launch behavior before promotion to a usable Java home.
+Resolve executable values through the string form consumed by `RunAntScript`, including project-specific lazy wrappers around providers. A provider object itself may stringify to a description instead of a path and remains unsupported. If no explicit Java is configured, report that source as Gradle's default Java rather than asserting JBR. Bare executable names and relative paths need validation against the actual launch behavior before promotion to a usable Java home.
 
 Configuration performed in `doFirst` or other task actions is unavailable without executing those actions. Do not execute the build just to discover its runtime. Exotic conflicts and execution-time overrides can remain outside the initial heuristic's scope.
 

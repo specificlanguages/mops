@@ -53,7 +53,7 @@ gradle.projectsEvaluated {
                         source: source,
                         mpsHome: mpsArgument == null ? null :
                             project.file(mpsArgument.substring(mpsArgument.indexOf('=') + 1)).canonicalPath,
-                        javaHome: project.file(executable).absoluteFile.parentFile.parentFile.canonicalPath,
+                        javaHome: project.file(executable.toString()).absoluteFile.parentFile.parentFile.canonicalPath,
                         mpsProjectRoot: null,
                     ]
                 }
