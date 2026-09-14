@@ -140,6 +140,7 @@ class CommandHelpTest {
         val output = runHelp("wrapper", "--help")
 
         assertContains(output, "mopsw")
+        assertContains(output, "--output")
         assertContains(output, "without writing a wrapper")
     }
 

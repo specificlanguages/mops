@@ -1,10 +1,13 @@
 package com.specificlanguages.mops.cli.homes
 
 import com.specificlanguages.mops.cli.MopsCommand
+import com.specificlanguages.mops.cli.ProjectPathNotFoundException
 import picocli.CommandLine.Command
+import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 import picocli.CommandLine.Spec
 import picocli.CommandLine.Model.CommandSpec
+import java.nio.file.Path
 import java.util.concurrent.Callable
 
 @Command(
@@ -13,7 +16,7 @@ import java.util.concurrent.Callable
     description = [
         "Write a project-local mops wrapper using runtime paths discovered from Gradle.",
         "",
-        "Uses the nearest Gradle wrapper to inspect `mpsDefaults` of plugin `com.specificlanguages.mps` or `RunAntScript` tasks of plugin `de.itemis.mps.gradle.common`, then writes mopsw or mopsw.cmd in that project's build directory.",
+        "Uses the nearest Gradle wrapper to inspect `mpsDefaults` of plugin `com.specificlanguages.mps` or `RunAntScript` tasks of plugin `de.itemis.mps.gradle.common`, then writes mopsw or mopsw.cmd below that project's build directory.",
         "No CLI-configured MPS home or daemon is required; Java must be available to run Gradle.",
         "Querying configured providers may download and extract MPS or JBR distributions; it does not run preparation or language build task actions.",
         "Partial discoveries print available values without writing a wrapper and exit with status 1; complete pairs write the wrapper and exit with status 0.",
@@ -25,6 +28,13 @@ class WrapperCommand(private val root: MopsCommand) : Callable<Int> {
         description = ["Starting point of discovery; default is --project-root when supplied, otherwise the working directory."]
     )
     var path: String? = null
+
+    @Option(
+        names = ["--output"],
+        paramLabel = "PATH",
+        description = ["Wrapper file to write, absolute or relative to the directory where mops was started."],
+    )
+    var output: String? = null
 
     @Spec
     private lateinit var spec: CommandSpec
@@ -52,9 +62,23 @@ class WrapperCommand(private val root: MopsCommand) : Callable<Int> {
             out.println("Discovery is partial; no wrapper was written. Prepare the missing runtime and try again.")
         } else {
             val windows = System.getProperty("os.name").lowercase().contains("win")
-            out.println("Wrapper: ${guess.writeWrapper(windows)}")
+            val wrapper = output
+                ?.let { root.workingDirectory.resolve(it).normalize() }
+                ?: defaultWrapperPath(guess, start, windows)
+            out.println("Wrapper: ${guess.writeWrapper(wrapper, windows)}")
         }
         out.flush()
         return if (guess.usableMps && guess.usableJava) 0 else 1
+    }
+
+    private fun defaultWrapperPath(guess: HomeGuess, start: Path, windows: Boolean): Path {
+        val projectRoot = guess.mpsProjectRoot ?: try {
+            root.resolveProjectPath(start)
+        } catch (_: ProjectPathNotFoundException) {
+            null
+        }
+        val projectName = (projectRoot ?: guess.projectDir).fileName.toString()
+        val wrapperName = if (windows) "mopsw.cmd" else "mopsw"
+        return guess.buildDir.resolve("mops").resolve(projectName).resolve(wrapperName)
     }
 }

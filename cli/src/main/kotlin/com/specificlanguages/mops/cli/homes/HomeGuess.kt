@@ -21,8 +21,7 @@ internal data class HomeGuess(
         (java.isRegularFile() && java.isExecutable()) || it.resolve("bin/java.exe").isRegularFile()
     } == true
 
-    fun writeWrapper(windows: Boolean): Path {
-        val wrapper = buildDir.resolve(if (windows) "mopsw.cmd" else "mopsw")
+    fun writeWrapper(wrapper: Path, windows: Boolean): Path {
         wrapper.parent.createDirectories()
         wrapper.writeText(if (windows) windowsWrapper() else posixWrapper())
         if (!windows) check(wrapper.toFile().setExecutable(true)) { "Could not make wrapper executable: $wrapper" }

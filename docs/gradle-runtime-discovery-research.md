@@ -5,8 +5,8 @@
 The CLI implements `mops wrapper [PATH]` using a bundled Gradle init script. It reads `mpsDefaults` for
 Specific Languages 2.x and conventional `RunAntScript` arguments and executable settings for mbeddr projects.
 It inspects the Gradle project containing the requested path and uses its `mpsDefaults` extension or first conventional
-`RunAntScript` task. It reports that source and writes `build/mopsw` or `build/mopsw.cmd` containing the discovered
-arguments without starting a daemon or requiring preconfigured homes.
+`RunAntScript` task. It reports that source and writes a project-specific `mopsw` or `mopsw.cmd` below the Gradle build
+directory, or to the path selected by `--output`, without starting a daemon or requiring preconfigured homes.
 
 The probe uses the build's wrapper, disables configuration caching and configuration on demand, and queries providers
 in an isolated report task. Provider evaluation may download or extract runtimes; preparation and language build task

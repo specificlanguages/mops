@@ -41,8 +41,8 @@ class GradleHomeDiscoveryTest {
         assertEquals(0, exit, output)
         assertContains(output, "mpsDefaults (com.specificlanguages.mps 2.x)")
         assertContains(output, "Project root: $mpsProject")
-        assertContains(output, "Wrapper: ${root.resolve("output/mopsw")}")
-        val wrapper = root.resolve("output/mopsw")
+        assertContains(output, "Wrapper: ${root.resolve("output/mops/MPS project/mopsw")}")
+        val wrapper = root.resolve("output/mops/MPS project/mopsw")
         assertTrue(wrapper.isExecutable())
         assertContains(wrapper.readText(), "--mps-home='$mps'")
         assertContains(wrapper.readText(), "--java-home='")
@@ -98,18 +98,43 @@ class GradleHomeDiscoveryTest {
         assertEquals(0, rootExit, rootOutput)
         assertContains(rootOutput, "Source: :buildLanguages")
         assertContains(rootOutput, "MPS home: ${root.resolve("default MPS")}")
-        val nested = root.resolve("child/nested").createDirectories()
+        val nested = root.resolve("child/MPS project/nested").createDirectories()
+        root.resolve("child/MPS project/.mps").createDirectory()
         val (exit, output) = run(nested)
         assertEquals(0, exit, output)
         assertContains(output, "Source: :child:buildLanguages")
         assertContains(output, "MPS home: ${root.resolve("child's MPS")}")
-        val wrapper = root.resolve("child/build/mopsw")
+        val wrapper = root.resolve("child/build/mops/MPS project/mopsw")
         assertContains(output, "Wrapper: $wrapper")
         assertEquals(
             "#!/bin/sh\nexec mops --mps-home='${root}/child'\"'\"'s MPS' " +
                 "--java-home='${root}/child'\"'\"'s Java' \"\$@\"\n",
             wrapper.readText(),
         )
+    }
+
+    @Test
+    fun `output selects the wrapper file relative to the working directory`() {
+        val root = fixture("""
+            plugins {
+                id 'com.specificlanguages.mps' version '2.1.0'
+                id 'java-base'
+            }
+            mpsDefaults {
+                mpsHome = layout.projectDirectory.dir('MPS')
+                javaLauncher = javaToolchains.launcherFor {
+                    languageVersion = JavaLanguageVersion.of(17)
+                }
+            }
+        """)
+        root.resolve("MPS").createDirectory()
+
+        val (exit, output) = run(root, "--output", "custom/mops-for-project")
+
+        assertEquals(0, exit, output)
+        val wrapper = root.resolve("custom/mops-for-project")
+        assertContains(output, "Wrapper: $wrapper")
+        assertTrue(wrapper.isExecutable())
     }
 
     @Test
@@ -163,11 +188,11 @@ class GradleHomeDiscoveryTest {
         assertTrue(home.resolve("bin/java").toFile().setExecutable(true))
     }
 
-    private fun run(directory: Path): Pair<Int, String> {
+    private fun run(directory: Path, vararg args: String): Pair<Int, String> {
         val output = StringWriter()
         val command = newCommandLine(directory)
         command.out = PrintWriter(output, true)
         command.err = PrintWriter(output, true)
-        return command.execute("wrapper") to output.toString()
+        return command.execute("wrapper", *args) to output.toString()
     }
 }

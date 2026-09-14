@@ -41,7 +41,8 @@ class HomeGuessTest {
             "@echo off\r\nmops --mps-home=\"/MPS home's\" --java-home=\"/Java home\" --project-root=\"/MPS project\" %*\r\n",
             guess.windowsWrapper(),
         )
-        assertEquals(temporary.resolve("build dir/mopsw.cmd"), guess.writeWrapper(windows = true))
+        val wrapper = temporary.resolve("custom/wrapper.cmd")
+        assertEquals(wrapper, guess.writeWrapper(wrapper, windows = true))
     }
 
     @Test
@@ -58,7 +59,7 @@ class HomeGuessTest {
             javaHome = Path.of("/Java home"),
             mpsProjectRoot = Path.of("/MPS project"),
         )
-        val wrapper = guess.writeWrapper(windows = false)
+        val wrapper = guess.writeWrapper(temporary.resolve("custom/mopsw"), windows = false)
         val process = ProcessBuilder(wrapper.toString(), "find", "things with spaces")
             .redirectErrorStream(true)
             .apply { environment()["PATH"] = "$bin:${environment()["PATH"]}" }
