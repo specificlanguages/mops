@@ -7,6 +7,7 @@ import com.specificlanguages.mops.launcher.MpsLaunchArgs
 import de.itemis.mps.gradle.project.loader.EnvironmentKind
 import de.itemis.mps.gradle.project.loader.ProjectLoader
 import jetbrains.mps.classloading.ClassLoaderManager
+import jetbrains.mps.core.platform.Platform
 import jetbrains.mps.progress.EmptyProgressMonitor
 import jetbrains.mps.project.MPSProject
 import jetbrains.mps.project.Project
@@ -45,6 +46,9 @@ object SharedMpsEnvironment {
 
     val sharedMpsAccess: MpsAccess
         get() = JetBrainsMpsAccess(ensureSharedProject(), DaemonLogger())
+
+    val platform: Platform
+        get() = environment.platform
 
     /**
      * Runs [block] against a fresh copy of the fixture project, opened after [prepare] has had a chance to mutate the

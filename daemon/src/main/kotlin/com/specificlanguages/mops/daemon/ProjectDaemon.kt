@@ -11,6 +11,7 @@ import com.specificlanguages.mops.protocol.PingRequest
 import com.specificlanguages.mops.protocol.PongResponse
 import com.specificlanguages.mops.protocol.StopRequest
 import com.specificlanguages.mops.protocol.StoppedResponse
+import jetbrains.mps.core.platform.Platform
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintWriter
@@ -39,7 +40,7 @@ class ProjectDaemon(
      *
      * @param mpsAccess Provides read and write access for operations requiring MPS context.
      */
-    fun serve(mpsAccess: MpsAccess) {
+    fun serve(mpsAccess: MpsAccess, platform: Platform? = null) {
         logger.log("environment ready for project ${projectPath.pathString}")
 
         // Load the lifecycle request classes now, while the classloader is healthy, so a later stop is always
@@ -77,7 +78,7 @@ class ProjectDaemon(
                     }
                     try {
                         socket.use {
-                            connection(socket, mpsAccess)
+                            connection(socket, mpsAccess, platform)
                         }
                     } catch (throwable: Throwable) {
                         // One request must never take the daemon down. In particular a linkage error while lazily
@@ -94,7 +95,7 @@ class ProjectDaemon(
         }
     }
 
-    private fun connection(socket: Socket, mpsAccess: MpsAccess) {
+    private fun connection(socket: Socket, mpsAccess: MpsAccess, platform: Platform?) {
         val requestLine = BufferedReader(InputStreamReader(socket.getInputStream())).readLine()
 
         val response = run {
@@ -128,7 +129,7 @@ class ProjectDaemon(
                 )
 
                 is StopRequest -> StoppedResponse()
-                else -> DomainRequestHandler(workspace.path, mpsAccess).handleDomainRequest(request)
+                else -> DomainRequestHandler(workspace.path, mpsAccess, platform).handleDomainRequest(request)
             }
         }
 

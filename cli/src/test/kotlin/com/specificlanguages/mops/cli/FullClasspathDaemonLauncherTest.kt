@@ -30,6 +30,8 @@ class FullClasspathDaemonLauncherTest {
 
         val project = tempDir.mpsProject()
         val mpsHome = tempDir.mpsHome()
+        val mpsTool = mpsHome.resolve("lib/mpsant").createDirectories().resolve("mps-tool.jar")
+            .also { it.writeText("") }
         val fakeJava = fakeJavaHome("property-java")
 
         val configuredClasspath = listOf(
@@ -54,7 +56,10 @@ class FullClasspathDaemonLauncherTest {
         }
 
         assertContains(exception.message!!, "daemon exited before writing its project record")
-        assertEquals(configuredClasspath, launchedClasspath(fakeJava.argsFile))
+        assertEquals(
+            listOf(configuredClasspath, mpsTool.pathString).joinToString(File.pathSeparator),
+            launchedClasspath(fakeJava.argsFile),
+        )
     }
 
     @Test

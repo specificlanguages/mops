@@ -37,7 +37,11 @@ class ModuleCreationSemanticsTest {
     @Test
     fun `code mode creates native modules and their companion artifacts`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, projectPath ->
-            val response = DomainRequestHandler(projectPath, JetBrainsMpsAccess(project, DaemonLogger())).handleDomainRequest(
+            val response = DomainRequestHandler(
+                projectPath,
+                JetBrainsMpsAccess(project, DaemonLogger()),
+                SharedMpsEnvironment.platform,
+            ).handleDomainRequest(
                 com.specificlanguages.mops.protocol.CodeRunRequest(
                     "", """
                         project.command {

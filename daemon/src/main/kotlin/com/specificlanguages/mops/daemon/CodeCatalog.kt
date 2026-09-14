@@ -6,6 +6,8 @@ import com.specificlanguages.mops.protocol.CodeCatalogResponse
 object CodeCatalog {
     private data class Entry(val receiver: String, val name: String, val signature: String, val access: String, val summary: String) { val path get() = "$receiver.$name" }
     private val entries = listOf(
+        Entry("mops.editing", "build", "mops.editing.build: MopsEditingBuild", "none", "Editing operations for MPS build projects."),
+        Entry("mops.editing.build", "reloadModulesFromDisk", "mops.editing.build.reloadModulesFromDisk(SNode node): BuildModuleReloadResult", "command", "Reload the nearest BuildProject's existing module entries from their descriptor files. Returns ordered warnings and errors; successful partial updates are retained."),
         Entry("mops.parsing", "java", "mops.parsing.java: JavaSnippetParser", "none", "Java 8 snippet parser. Its insertion methods require command access and return nodes plus unresolved native nodes; this is not a full model check."),
         Entry("mops.parsing.java", "addJavaClassesFromString", "mops.parsing.java.addJavaClassesFromString(SModel model, String source): JavaParsingResult", "command", "Parse a compilation unit and add its classifier roots."),
         Entry("mops.parsing.java", "addJavaMembersFromString", "mops.parsing.java.addJavaMembersFromString(SNode classifier, String source, SNode beforeMember = null): JavaParsingResult", "command", "Parse fields, constructors, methods, and nested classes into a classifier."),
@@ -45,6 +47,8 @@ object CodeCatalog {
         val names = when (subject) {
             is String -> listOf(subject)
             is Mops -> listOf("mops")
+            is MopsEditing -> listOf("mops.editing")
+            is MopsEditingBuild -> listOf("mops.editing.build")
             is MopsParsing -> listOf("mops.parsing")
             is MopsSearch -> listOf("mops.search")
             is JavaSnippetParser -> listOf("mops.parsing.java")

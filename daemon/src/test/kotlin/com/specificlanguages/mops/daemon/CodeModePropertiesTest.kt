@@ -8,7 +8,7 @@ class CodeModePropertiesTest {
     @Test
     fun `property indexing invokes MPS computed getter and setter handlers`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project).execute(
+            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
                 CodeRunRequest("", """
                     project.command {
                         def model = project.model('com.specificlanguages.json.structure')
@@ -33,7 +33,7 @@ class CodeModePropertiesTest {
     @Test
     fun `Groovy property indexing reads inherited names from native nodes`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project).execute(
+            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
                 CodeRunRequest("", """
                     project.read {
                         def concept = project.concept('jetbrains.mps.lang.structure.ConceptDeclaration')
@@ -63,7 +63,7 @@ class CodeModePropertiesTest {
     @Test
     fun `indexed accessor stays live and enforces access on every operation`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project).execute(
+            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
                 CodeRunRequest("", """
                     def node = project.read {
                         def nodes = []

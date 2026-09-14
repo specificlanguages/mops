@@ -98,6 +98,10 @@ _Avoid_: root element, top-level node
 A model element in an **MPS Model**. An **MPS Node** may have links to other **MPS Nodes** and zero or more **Children**.
 _Avoid_: AST node when precision matters
 
+**Build Project**:
+An MPS build-language root that describes which MPS modules participate in a build and records extracted information about those modules.
+_Related_: MPS Node
+
 **Node Name**:
 The name value of a named **MPS Node**. A **Node Name** is distinct from a **Node Presentation**.
 _Related_: Node Presentation
@@ -215,12 +219,12 @@ _Avoid_: command help, service registry
 _Related_: Code Mode, Code Mode Extension, Code Mode Namespace, MPS Project
 
 **Code Mode Namespace**:
-The global `mops` value that groups project-wide **Code Mode Extensions** by purpose. It exposes capability categories such as `parsing` and `search`; `testing` and `editing` are reserved category names that become part of the namespace only when they have executable behavior. It is a stable capability hierarchy for one Code Mode execution, not a mutable service registry.
+The global `mops` value that groups project-wide **Code Mode Extensions** and concept-specific operations by purpose. It exposes capability categories such as `parsing` and `search`; `testing` and `editing` are reserved category names that become part of the namespace only when they have executable behavior. Concept-specific operations belong here when their native MPS receiver type is too broad to provide a useful extension surface. It is a stable capability hierarchy for one Code Mode execution, not a mutable service registry.
 _Avoid_: services, service registry, utility namespace
 _Related_: Code Mode, Code Mode Extension, MPS Project
 
 **Code Mode Extension**:
-A mops-supported convenience exposed as a Groovy extension method or property on a meaningful native MPS receiver or on a receiver in the **Code Mode Namespace**. Operations prefer a native receiver whenever they have an unambiguous primary MPS object and the resulting call remains natural; project-wide capabilities are grouped by purpose in the namespace. An extension declares one access requirement: `none`, `read`, `command`, or `extra`, where `extra` requires no active model access because the operation coordinates access itself. The extension's contract belongs to mops, while a native receiver and its native interface retain the contract of the selected MPS version.
+A mops-supported convenience exposed as a Groovy extension method or property on a meaningful native MPS receiver or on a receiver in the **Code Mode Namespace**. Operations prefer a native receiver whenever they have an unambiguous primary MPS object and the receiver type expresses the operation's domain; project-wide capabilities and operations whose native receiver type is too broad are grouped by purpose in the namespace. An extension declares one access requirement: `none`, `read`, `command`, or `extra`, where `extra` requires no active model access because the operation coordinates access itself. The extension's contract belongs to mops, while a native receiver and its native interface retain the contract of the selected MPS version.
 _Avoid_: handle, wrapper
 _Related_: Code Mode, Code Mode Extension Bundle, Code Mode Namespace, MPS Node, MPS Model, MPS Module
 

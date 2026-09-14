@@ -4,10 +4,11 @@ import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.*
+import jetbrains.mps.core.platform.Platform
 import java.nio.file.Path
 import kotlin.io.path.pathString
 
-class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
+class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess, private val platform: Platform? = null) {
     fun handleDomainRequest(request: DaemonRequest): DaemonResponse =
         try {
             mpsAccess.extra { refreshExternalChanges() }
@@ -68,7 +69,8 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
                 is CodeRunRequest -> {
                     val access = mpsAccess as? JetBrainsMpsAccess
                         ?: error("Running code mode requires the JetBrains MPS runtime")
-                    CodeModeExecutor(access, access.project).execute(request)
+                    CodeModeExecutor(access, access.project, requireNotNull(platform) { "Running code mode requires the MPS platform" })
+                        .execute(request)
                 }
 
                 is CodeCatalogRequest -> CodeCatalog.response(request)

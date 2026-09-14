@@ -164,6 +164,7 @@ class FullClasspathDaemonLauncher(
             addAll(jarsIn(mpsHome.resolve("lib")))
             addAll(jarsIn(mpsHome.resolve("lib/modules")))
             listOf(
+                mpsHome.resolve("lib/mpsant/mps-tool.jar"),
                 mpsHome.resolve("plugins/mps-java/lib/java-core.jar"),
                 mpsHome.resolve("plugins/java/lib/ecj/eclipse.jar"),
             ).filter { Files.isRegularFile(it) }.forEach { add(it.pathString) }

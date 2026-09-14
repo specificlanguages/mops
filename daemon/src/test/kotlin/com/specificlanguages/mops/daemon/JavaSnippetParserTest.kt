@@ -8,7 +8,7 @@ class JavaSnippetParserTest {
     @Test
     fun `Code Mode inserts Java members and statements in a command`() {
         SharedMpsEnvironment.withOpenProjectCopy("base-language-sandbox") { project, _ ->
-            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project).execute(
+            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
                 CodeRunRequest("", """
                     def parser = mops.parsing.java
                     def model = project.read {

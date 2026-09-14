@@ -2,6 +2,7 @@ package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.protocol.CodeRunRequest
+import jetbrains.mps.core.platform.Platform
 import jetbrains.mps.project.MPSProject
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -11,7 +12,7 @@ import kotlin.test.assertTrue
 import org.mockito.kotlin.mock
 
 class CodeModeExecutorTest {
-    private val executor = CodeModeExecutor(mock<MpsAccess>(), mock<MPSProject>())
+    private val executor = CodeModeExecutor(mock<MpsAccess>(), mock<MPSProject>(), mock<Platform>())
 
     @Test
     fun `adapts strings structured values primitives and null`() {

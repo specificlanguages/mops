@@ -8,7 +8,7 @@ class CodeModeLinksTest {
     @Test
     fun `indexed children and references read and write native links`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project).execute(
+            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
                 CodeRunRequest("", """
                     import org.jetbrains.mps.openapi.model.SReference
                     import org.jetbrains.mps.openapi.model.SNodeReference

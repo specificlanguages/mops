@@ -56,6 +56,7 @@ dependencies {
             include("lib/mps-persistence.jar")
             include("lib/mps-platform.jar")
             include("lib/mps-openapi.jar")
+            include("lib/mpsant/mps-tool.jar")
             include("lib/mps-references.jar")
             include("lib/mps-constraints-runtime.jar")
             include("lib/util.jar")
@@ -143,6 +144,7 @@ tasks.test {
             fileTree(root) {
                 include("lib/*.jar")
                 include("lib/modules/*.jar")
+                include("lib/mpsant/mps-tool.jar")
                 include("plugins/mps-java/lib/java-core.jar")
                 include("plugins/java/lib/ecj/eclipse.jar")
             }

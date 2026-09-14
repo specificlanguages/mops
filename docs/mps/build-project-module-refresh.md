@@ -1,8 +1,9 @@
 # Refreshing a build project's module imports from disk
 
 Verified signatures against `com.jetbrains:mps:2025.1.2` with `javap`; behavior read from JetBrains/MPS 2025.1
-source at commit `f4d90532bcac5e0339b3161cec38abf49567cffb`. No runtime probe was run for this operation; headless
-execution, threading, and lifecycle requirements remain unverified.
+source at commit `f4d90532bcac5e0339b3161cec38abf49567cffb`. A runtime probe in a headless IDEA environment invoked
+`ModuleClassCode.load` and `ModuleLoader.checkAllModules` from an existing project command on both successful and
+reported-error paths. Unexpected-exception cleanup remains unverified.
 
 ## Direct operation
 
@@ -77,8 +78,39 @@ save/failure policy, including the possibility of partial changes. It is not a r
 repository or classloaders.
 
 The private repository is cleaned up after processing. That cleanup is not enclosed in a `finally` block in this
-version, so unexpected exceptions can bypass it. Runtime integration should exercise both success and failure
-paths. Source inspection alone does not establish that execution is EDT-free or works in a particular headless host.
+version, so unexpected exceptions can bypass it. The unexpected-exception path still needs runtime coverage; source
+inspection alone does not establish its cleanup behavior.
+
+## Loading the generated utility through its MPS module
+
+`ModuleLoader` is generated code owned by the `jetbrains.mps.build.mps` language module. A host whose application
+classloader does not include build-language jars can load it through MPS's module classloader with
+`jetbrains.mps.tool.run.ModuleClassCode`. That helper ships in `lib/mpsant/mps-tool.jar` and has this public surface in
+`com.jetbrains:mps:2025.1.2`:
+
+```java
+public ModuleClassCode(String moduleReference);
+public void load(Platform platform, String classFQN) throws ClassNotFoundException;
+public Optional<Method> instanceMethod(String name, Class<?>... parameterTypes);
+public Optional<Method> staticMethod(String name, Class<?>... parameterTypes);
+public Optional<Constructor<?>> cons(Class<?>... parameterTypes);
+```
+
+The build-language module reference is
+`0cf935df-4699-4e9c-a132-fa109541cba3(jetbrains.mps.build.mps)`. `load` resolves that module in the platform's
+`MPSModuleRepository`, asks `ClassLoaderManager` for its classloader, and loads the requested class from it. Module
+dependencies therefore remain under MPS classloading rather than being copied onto the host application classpath.
+The module must already be registered and classloadable.
+
+`cons` and `instanceMethod` return reflection objects for public concrete members whose parameter types match. They
+accept host-loaded MPS OpenAPI types such as `SNode` and `IMessageHandler` because those APIs are shared with the
+module classloader. `ModuleChecker.CheckType`, however, belongs to the build-language module classloader: obtain that
+class through the loaded `ModuleLoader` classloader and select its `LOAD_IMPORTANT_PART` enum constant before looking
+up `checkAllModules`.
+
+`ModuleClassCode.load` performs module resolution and class loading inside a write action on the platform repository.
+A runtime probe with MPS 2025.1.2 confirmed that it can run from an existing project command in a headless IDEA
+environment and that the subsequent reflective `ModuleLoader` call completes there.
 
 ## Executing through intentions
 
@@ -107,6 +139,7 @@ Paths relative to the JetBrains/MPS repository:
 - `plugins/mps-build/languages/build.mps/source_gen/jetbrains/mps/build/mps/util/ModuleChecker.java`
 - `plugins/mps-build/languages/build/source_gen/jetbrains/mps/build/util/Context.java`
 - `plugins/mps-build/pluginSolutions/build.mps.testManifest.pluginSolution/source_gen/jetbrains/mps/build/mps/testManifest/pluginSolution/plugin/RefreshTestProject_Action.java`
+- `core/tool/builder/source_gen/jetbrains/mps/tool/run/ModuleClassCode.java`
 
 The [MPS documentation](https://www.jetbrains.com/help/mps/removing-bootstrapping-dependency-problems.html) also
 describes running this intention after correcting module dependencies to update the build script's dependency

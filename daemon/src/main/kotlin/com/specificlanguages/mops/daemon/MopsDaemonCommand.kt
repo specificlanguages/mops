@@ -80,7 +80,7 @@ class DaemonRunner(
     val logger: DaemonLogger
 ) {
 
-    fun runWithMpsAccess(action: (MpsAccess) -> Unit) {
+    fun runWithMpsAccess(action: (MpsAccess, jetbrains.mps.core.platform.Platform) -> Unit) {
         logger.log("verifying environment for project $projectPath")
         val environmentProblem = checkEnvironment()
         if (environmentProblem != null) {
@@ -97,11 +97,11 @@ class DaemonRunner(
                 // every language that depends on them fails to load. See docs/mps/language-runtime-loading.md.
                 environmentConfig { addPluginsRecursivelyFrom(mpsHome.resolve("plugins")) }
             }
-            .executeWithProject(projectPath.toFile()) { _, project ->
+            .executeWithProject(projectPath.toFile()) { environment, project ->
                 // A project can pass the filesystem checks yet open with no Project Modules; refuse to serve it so
                 // callers see the startup error instead of every navigation silently returning nothing.
                 projectModulesProblem(project, projectPath)?.let { reportAndThrowStartupError(it) }
-                action(JetBrainsMpsAccess(project as MPSProject, logger))
+                action(JetBrainsMpsAccess(project as MPSProject, logger), environment.platform)
             }
     }
 

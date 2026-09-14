@@ -31,13 +31,15 @@ class CodeCatalogTest {
     }
 
     @Test
-    fun `mops hierarchy exposes parsing and search leaves`() {
+    fun `mops hierarchy exposes editing parsing and search leaves`() {
         val root = CodeCatalog.text("mops")
+        assertContains(root, "mops.editing.build")
         assertContains(root, "mops.parsing.java")
         assertContains(root, "mops.search.eachUsageOf")
         assertContains(root, "mops.search.eachInstanceOf")
         assertContains(CodeCatalog.text("mops.search"), "mops.search.eachUsageOf")
         assertContains(CodeCatalog.text("mops.search.eachInstanceOf"), "[read]")
+        assertContains(CodeCatalog.text("mops.editing.build.reloadModulesFromDisk"), "[command]")
     }
 
     @Test
@@ -45,7 +47,6 @@ class CodeCatalogTest {
         val help = CodeCatalog.text(null)
         assertFalse("Handle" in help)
         assertFalse("mops.read" in help)
-        assertFalse("mops.edit" in help)
         assertFalse("Project.javaParser" in help)
         assertFalse("global.eachUsageOf" in help)
         assertFalse("global.eachInstanceOf" in help)
