@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.cli.list
 
 import com.specificlanguages.mops.cli.output.displayConcept
+import com.specificlanguages.mops.cli.output.renderNodeReference
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import com.specificlanguages.mops.protocol.MpsListSummaryGroupJson
 import com.specificlanguages.mops.protocol.MpsListSummaryJson
@@ -51,6 +52,10 @@ internal class ListRenderer(val fullConcept: Boolean) {
         listOf(typeColumn) + nodeColumnsWithoutType()
 
     private fun MpsListEntryJson.nodeColumnsWithoutType(): List<String> =
-        listOf(name ?: "<unnamed>", concept?.let { displayConcept(it, fullConcept) }.orEmpty(), reference.orEmpty()) +
+        listOf(
+            name ?: "<unnamed>",
+            concept?.let { displayConcept(it, fullConcept) }.orEmpty(),
+            reference?.let(::renderNodeReference).orEmpty(),
+        ) +
                 listOfNotNull(error)
 }

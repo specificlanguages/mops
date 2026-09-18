@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.cli.check
 
 import com.specificlanguages.mops.cli.output.renderJson
+import com.specificlanguages.mops.cli.output.renderNodeReference
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
 import com.specificlanguages.mops.protocol.ModelCheckResponse
 
@@ -17,7 +18,9 @@ internal fun renderCheckResponse(response: ModelCheckResponse, format: String?) 
 
 private fun renderHuman(finding: ModelCheckFindingJson) {
     val columns = mutableListOf(finding.severity.name.lowercase(), finding.message)
-    finding.node?.let { columns += listOf(it.name ?: "<unnamed>", it.concept, it.reference) }
+    finding.node?.let {
+        columns += listOf(it.name ?: "<unnamed>", it.concept, renderNodeReference(it.reference))
+    }
     println(columns.joinToString("\t"))
 }
 
