@@ -5,66 +5,163 @@ gradle.projectsEvaluated {
     if (gradle.parent != null || gradle.rootProject.projectDir.canonicalPath != System.getProperty('mops.guess.root')) {
         return
     }
-    gradle.rootProject.tasks.register(System.getProperty('mops.guess.task')) {
-        doLast {
-            def projects = gradle.rootProject.allprojects.collect { project ->
-                def source = null
-                def mpsHome = null
-                def javaHome = null
-                def mpsProjectRoots = []
-                def defaults = project.extensions.findByName('mpsDefaults')
-                if (defaults != null) {
-                    source = "${project.path} mpsDefaults (com.specificlanguages.mps 2.x)"
-                    mpsHome = defaults.mpsHome.orNull?.asFile?.canonicalPath
-                    javaHome = defaults.javaLauncher.orNull?.metadata?.installationPath?.asFile?.canonicalPath
-                    mpsProjectRoots = project.extensions.findByName('mpsBuilds')?.collect {
-                        it.mpsProjectDirectory.orNull?.asFile?.canonicalPath
-                    }?.findAll { it != null }?.unique() ?: []
-                } else {
-                    def task = project.tasks.find { task ->
-                        def type = task.class
-                        while (type != null && type.name != 'de.itemis.mps.gradle.RunAntScript') {
-                            type = type.superclass
-                        }
-                        type != null
-                    }
-                    if (task != null) {
-                        def args = task.scriptArgs.toList()
-                        if (task.includeDefaultArgs) {
-                            args.addAll(project.findProperty('itemis.mps.gradle.ant.defaultScriptArgs') ?: [])
-                        }
-                        def mpsArgument = args.find {
-                            it.startsWith('-Dmps.home=') || it.startsWith('-Dmps_home=')
-                        }
-                        def resolveMps = project.tasks.findByName('resolveMps')
-                        def executable = task.executable ?:
-                            project.findProperty('itemis.mps.gradle.ant.defaultJavaExecutable')
-                        source = "${task.path} (mbeddr RunAntScript)"
-                        if (executable == null) {
-                            executable = new File(System.getProperty('java.home'), 'bin/java')
-                            source += '; Gradle default Java'
-                        }
-                        if (mpsArgument != null) {
-                            mpsHome = project.file(
-                                mpsArgument.substring(mpsArgument.indexOf('=') + 1)).canonicalPath
-                        } else if (resolveMps instanceof org.gradle.api.tasks.AbstractCopyTask) {
-                            mpsHome = resolveMps.destinationDir.canonicalPath
-                            source += "; ${resolveMps.path} destination"
-                        }
-                        javaHome = project.file(executable.toString()).absoluteFile.parentFile.parentFile.canonicalPath
-                    }
+    def taskName = System.getProperty('mops.guess.task')
+    def outputDir = new File(System.getProperty('mops.guess.output'))
+    gradle.rootProject.allprojects.toList().eachWithIndex { project, index ->
+        // Provider-backed runtime locations have to be resolved by a task belonging to the same project. Gradle
+        // rejects resolving a project-scoped configuration from another project's task action.
+        project.tasks.register(taskName) {
+            doLast {
+                def mpsHome = findMpsHome(project)
+                def javaHome = findJavaHome(project)
+                def sources = []
+                if (mpsHome != null) {
+                    sources << "MPS home from ${mpsHome.source}".toString()
                 }
-                [
+                if (javaHome != null) {
+                    sources << "Java home from ${javaHome.source}".toString()
+                }
+                def fragment = [
                     projectDir: project.projectDir.canonicalPath,
                     buildDir: project.layout.buildDirectory.get().asFile.canonicalPath,
-                    source: source,
-                    mpsHome: mpsHome,
-                    javaHome: javaHome,
-                    mpsProjectRoots: mpsProjectRoots,
+                    source: sources.isEmpty() ? null : "${project.path} " + sources.join('; '),
+                    mpsHome: mpsHome?.path,
+                    javaHome: javaHome?.path,
+                    mpsProjectRoots: findMpsProjectRoots(project),
                 ]
+                new File(outputDir, "project-${index}.json").setText(
+                    JsonOutput.toJson([version: 2, project: fragment]), 'UTF-8')
             }
-            new File(System.getProperty('mops.guess.output')).setText(
-                JsonOutput.toJson([version: 2, projects: projects]), 'UTF-8')
         }
     }
+}
+
+def findMpsHome(project) {
+    def defaults = project.extensions.findByName('mpsDefaults')
+    def path = directoryPropertyPath(defaults, 'mpsHome')
+    if (path != null) {
+        return [source: 'mpsDefaults extension (com.specificlanguages.mps 2.x)', path: path]
+    }
+
+    def antTask = findRunAntScript(project)
+    if (antTask != null) {
+        def args = antTask.scriptArgs.toList()
+        if (antTask.includeDefaultArgs) {
+            args.addAll(project.findProperty('itemis.mps.gradle.ant.defaultScriptArgs') ?: [])
+        }
+        def argument = args.find { it.startsWith('-Dmps.home=') || it.startsWith('-Dmps_home=') }
+        if (argument != null) {
+            return [
+                source: "${antTask.path} arguments (mbeddr RunAntScript)",
+                path: project.file(argument.substring(argument.indexOf('=') + 1)).canonicalPath,
+            ]
+        }
+    }
+
+    def resolveMps = project.tasks.findByName('resolveMps')
+    if (resolveMps instanceof org.gradle.api.tasks.AbstractCopyTask) {
+        return [source: "${resolveMps.path} destination", path: resolveMps.destinationDir.canonicalPath]
+    }
+
+    return findMpsHomeExtension(project)
+}
+
+def findJavaHome(project) {
+    def jbrToolchain = project.extensions.findByName('jbrToolchain')
+    def path = javaLauncherHome(jbrToolchain)
+    if (path != null) {
+        return [source: 'jbrToolchain extension (com.specificlanguages.jbr-toolchain)', path: path]
+    }
+
+    def downloadJbr = project.tasks.findByName('downloadJbr')
+    def executable = propertyOrNull(downloadJbr, 'javaExecutable')
+    path = javaHomeFromExecutable(project, executable)
+    if (path != null) {
+        return [source: "${downloadJbr.path} task", path: path]
+    }
+
+    def defaults = project.extensions.findByName('mpsDefaults')
+    path = javaLauncherHome(defaults)
+    if (path != null) {
+        return [source: 'mpsDefaults extension (com.specificlanguages.mps 2.x)', path: path]
+    }
+
+    def antTask = findRunAntScript(project)
+    if (antTask == null) {
+        return null
+    }
+    executable = antTask.executable ?: project.findProperty('itemis.mps.gradle.ant.defaultJavaExecutable')
+    if (executable != null) {
+        return [
+            source: "${antTask.path} executable (mbeddr RunAntScript)",
+            path: javaHomeFromExecutable(project, executable),
+        ]
+    }
+    return [source: 'Gradle default Java', path: new File(System.getProperty('java.home')).canonicalPath]
+}
+
+def findRunAntScript(project) {
+    return project.tasks.find { task ->
+        def type = task.class
+        while (type != null && type.name != 'de.itemis.mps.gradle.RunAntScript') {
+            type = type.superclass
+        }
+        type != null
+    }
+}
+
+def findMpsProjectRoots(project) {
+    return project.extensions.findByName('mpsBuilds')?.collect {
+        it.mpsProjectDirectory.orNull?.asFile?.canonicalPath
+    }?.findAll { it != null }?.unique() ?: []
+}
+
+def findMpsHomeExtension(project) {
+    for (schema in project.extensions.extensionsSchema) {
+        if (schema.name == 'ext' || schema.name == 'mpsDefaults') {
+            continue
+        }
+        def path = directoryPropertyPath(project.extensions.findByName(schema.name), 'mpsHome')
+        if (path != null) {
+            return [source: "${schema.name} extension", path: path]
+        }
+    }
+    return null
+}
+
+def directoryPropertyPath(candidate, propertyName) {
+    def directory = propertyOrNull(candidate, propertyName)
+    try {
+        return directory?.asFile?.canonicalPath
+    } catch (ignored) {
+        return null
+    }
+}
+
+def javaLauncherHome(candidate) {
+    def launcher = propertyOrNull(candidate, 'javaLauncher')
+    try {
+        return launcher?.metadata?.installationPath?.asFile?.canonicalPath
+    } catch (ignored) {
+        return null
+    }
+}
+
+def propertyOrNull(candidate, propertyName) {
+    if (candidate == null) {
+        return null
+    }
+    try {
+        def value = candidate."${propertyName}"
+        return value?.hasProperty('orNull') ? value.orNull : value
+    } catch (ignored) {
+        return null
+    }
+}
+
+def javaHomeFromExecutable(project, executable) {
+    if (executable == null) {
+        return null
+    }
+    return project.file(executable.toString()).absoluteFile.parentFile.parentFile.canonicalPath
 }
