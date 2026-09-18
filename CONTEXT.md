@@ -165,6 +165,14 @@ The portion of the **MPS Repository** that a search considers. The default **Sea
 _Avoid_: search space, context
 _Related_: Editable Project Sources, Navigation Target
 
+**Repository Lookup**:
+Resolution of a supplied name, reference, or **Navigation Target** to zero or one object. A missing object is an ordinary miss; ambiguity is an error rather than permission to choose a candidate.
+_Related_: Repository Search, Concept Name, Node Reference, Model Reference, Module Reference
+
+**Repository Search**:
+Discovery of zero or more objects satisfying criteria within a **Search Scope**. Criteria may describe names, concept instances, or usages; name matching may be exact, pattern-based, or fuzzy.
+_Related_: Repository Lookup, Search Scope, Concept Instance, Node Usage
+
 ### Model Editing
 
 **Java Snippet Parsing**:
@@ -219,7 +227,7 @@ _Avoid_: command help, service registry
 _Related_: Code Mode, Code Mode Extension, Code Mode Namespace, MPS Project
 
 **Code Mode Namespace**:
-The global `mops` value that groups project-wide **Code Mode Extensions** and concept-specific operations by purpose. It exposes capability categories such as `parsing` and `search`; `testing` and `editing` are reserved category names that become part of the namespace only when they have executable behavior. Concept-specific operations belong here when their native MPS receiver type is too broad to provide a useful extension surface. It is a stable capability hierarchy for one Code Mode execution, not a mutable service registry.
+The global `mops` value that groups project-wide **Code Mode Extensions** and concept-specific operations by purpose. It exposes capability categories such as `parsing`, `lookup`, and `search`; `testing` and `editing` are reserved category names that become part of the namespace only when they have executable behavior. Concept-specific operations belong here when their native MPS receiver type is too broad to provide a useful extension surface. It is a stable capability hierarchy for one Code Mode execution, not a mutable service registry.
 _Avoid_: services, service registry, utility namespace
 _Related_: Code Mode, Code Mode Extension, MPS Project
 

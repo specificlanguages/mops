@@ -14,10 +14,6 @@ object CodeCatalog {
         Entry("mops.parsing.java", "addJavaStatementsFromString", "mops.parsing.java.addJavaStatementsFromString(SNode statementList, String source, SNode beforeStatement = null): JavaParsingResult", "command", "Parse statements into a statement list."),
         Entry("Project", "read", "Project.read(Closure<T> body): T", "none", "Run a non-nesting MPS read action."),
         Entry("Project", "command", "Project.command(Closure<T> body): T", "none", "Run an MPS command and save after successful completion. Commands are non-transactional."),
-        Entry("Project", "module", "Project.module(String target): SModule", "read", "Resolve exactly one repository module."),
-        Entry("Project", "model", "Project.model(String target): SModel", "read", "Resolve exactly one model."),
-        Entry("Project", "node", "Project.node(String reference): SNode", "read", "Resolve exactly one node reference."),
-        Entry("Project", "concept", "Project.concept(String name): SAbstractConcept", "read", "Resolve exactly one concept."),
         Entry("Project", "make", "Project.make(): MakeResponse", "extra", "Make every generatable project module."),
         Entry("Project", "createLanguage", "Project.createLanguage(String name, Map options = [:]): Language", "command", "Create a language."),
         Entry("Project", "createSolution", "Project.createSolution(String name, Map options = [:]): Solution", "command", "Create a solution."),
@@ -29,8 +25,16 @@ object CodeCatalog {
         Entry("SNode", "children", "SNode.children: NodeChildren", "none", "Live indexed accessor. children[role] returns an immutable list of current children in order, empty for a missing role. Assign a list to replace the role, or [] to clear. New children must be detached; existing children in the role may be retained or reordered. Reads require model access; writes require command access. Unknown writes fail. Child access uses native SNode operations; SNodeAccessUtil has no child APIs. Declared cardinality and containment constraints are not checked. Shadows native getChildren(); use getChildren(containmentLink) for native iteration."),
         Entry("SNode", "references", "SNode.references: NodeReferences", "none", "Live indexed accessor. references[role] returns SReference or null; use targetNode to resolve it. Assign an SNode, SNodeReference, or SReference; null clears it. Reads require model access; writes require command access. Unknown writes fail. Assignments resolve the target and use SNodeAccessUtil.setReferenceTarget with MPS reference setter hooks. Unresolved targets fail without changing the reference; SReference assignments use the resolved target, not dynamic resolution information. Shadows native getReferences(); use getReference(referenceLink) for native access."),
         Entry("SNode", "properties", "SNode.properties: NodeProperties", "none", "Live indexed accessor: properties[name] reads with model access; properties[name] = value writes with command access. Includes inherited properties. Unknown property reads return null; unset values follow MPS getter and data type defaults. Unknown writes fail. Assign null to request clearing through the setter. Reads and writes use SNodeAccessUtil.getProperty/setProperty to invoke MPS property getter/setter handlers while retaining serialized string values. In Groovy this shadows native getProperties(); descriptors are available through node.concept.properties."),
+        Entry("mops.lookup", "conceptByName", "mops.lookup.conceptByName(String name): SAbstractConcept?", "read", "Resolve a concept name; return null on a miss. Ambiguity, malformed names, and untrusted language runtimes remain errors."),
+        Entry("mops.lookup", "requireConceptByName", "mops.lookup.requireConceptByName(String name): SAbstractConcept", "read", "Resolve exactly one concept; throw on a miss."),
         Entry("mops.search", "eachUsageOf", "mops.search.eachUsageOf(SNode node, SearchScope scope, Closure body): void", "read", "Stream native SReference values."),
         Entry("mops.search", "eachInstanceOf", "mops.search.eachInstanceOf(SAbstractConcept concept, SearchScope scope, boolean exact = false, Closure body): void", "read", "Stream native SNode values; subconcepts are included by default."),
+        Entry("mops.lookup", "model", "mops.lookup.model(String target): SModel?", "read", "Resolve a model name or serialized reference; return null on a miss and reject ambiguity."),
+        Entry("mops.lookup", "requireModel", "mops.lookup.requireModel(String target): SModel", "read", "Resolve exactly one model; throw on a miss."),
+        Entry("mops.lookup", "module", "mops.lookup.module(String target): SModule?", "read", "Resolve a module name or serialized reference; return null on a miss and reject ambiguity."),
+        Entry("mops.lookup", "requireModule", "mops.lookup.requireModule(String target): SModule", "read", "Resolve exactly one module; throw on a miss."),
+        Entry("mops.lookup", "node", "mops.lookup.node(String reference): SNode?", "read", "Resolve a node reference; return null on a miss and reject malformed references."),
+        Entry("mops.lookup", "requireNode", "mops.lookup.requireNode(String reference): SNode", "read", "Resolve exactly one node; throw on a miss."),
         Entry("global", "help", "help(Object subject = null): String", "none", "Show this Code Mode Reference."),
     ).sortedBy { it.path }
 
@@ -51,6 +55,7 @@ object CodeCatalog {
             is MopsEditingBuild -> listOf("mops.editing.build")
             is MopsParsing -> listOf("mops.parsing")
             is MopsSearch -> listOf("mops.search")
+            is MopsLookup -> listOf("mops.lookup")
             is JavaSnippetParser -> listOf("mops.parsing.java")
             is Class<*> -> typeNames(subject)
             else -> typeNames(subject.javaClass)

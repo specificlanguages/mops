@@ -2,8 +2,6 @@ package com.specificlanguages.mops.daemon
 
 import kotlin.test.Test
 import kotlin.test.assertContains
-import kotlin.test.assertFalse
-import kotlin.test.assertFailsWith
 
 class CodeCatalogTest {
     @Test
@@ -14,12 +12,10 @@ class CodeCatalogTest {
     }
 
     @Test
-    fun `access blocks and resolvers are discoverable on project`() {
+    fun `access blocks are discoverable on project`() {
         val help = CodeCatalog.text("Project")
         assertContains(help, "Project.read")
         assertContains(help, "Project.command")
-        assertContains(help, "Project.module")
-        assertContains(help, "[read]")
     }
 
     @Test
@@ -31,28 +27,23 @@ class CodeCatalogTest {
     }
 
     @Test
-    fun `mops hierarchy exposes editing parsing and search leaves`() {
+    fun `mops hierarchy exposes editing parsing lookup and search leaves`() {
         val root = CodeCatalog.text("mops")
         assertContains(root, "mops.editing.build")
         assertContains(root, "mops.parsing.java")
+        assertContains(root, "mops.lookup.requireConceptByName")
+        assertContains(root, "mops.lookup.requireModule")
+        assertContains(root, "mops.lookup.requireModel")
+        assertContains(root, "mops.lookup.requireNode")
+        assertContains(CodeCatalog.text("mops.lookup.module"), "SModule?")
+        assertContains(CodeCatalog.text("mops.lookup.model"), "SModel?")
+        assertContains(CodeCatalog.text("mops.lookup.node"), "SNode?")
+        assertContains(CodeCatalog.text("mops.lookup.conceptByName"), "SAbstractConcept?")
         assertContains(root, "mops.search.eachUsageOf")
         assertContains(root, "mops.search.eachInstanceOf")
         assertContains(CodeCatalog.text("mops.search"), "mops.search.eachUsageOf")
         assertContains(CodeCatalog.text("mops.search.eachInstanceOf"), "[read]")
+        assertContains(CodeCatalog.text("mops.lookup.requireConceptByName"), "[read]")
         assertContains(CodeCatalog.text("mops.editing.build.reloadModulesFromDisk"), "[command]")
-    }
-
-    @Test
-    fun `clean break catalog omits handles and service root`() {
-        val help = CodeCatalog.text(null)
-        assertFalse("Handle" in help)
-        assertFalse("mops.read" in help)
-        assertFalse("Project.javaParser" in help)
-        assertFalse("global.eachUsageOf" in help)
-        assertFalse("global.eachInstanceOf" in help)
-        assertFailsWith<IllegalArgumentException> { CodeCatalog.text("Project.javaParser") }
-        assertFailsWith<IllegalArgumentException> { CodeCatalog.text("JavaSnippetParser.addJavaClassesFromString") }
-        assertFailsWith<IllegalArgumentException> { CodeCatalog.text("global.eachUsageOf") }
-        assertFailsWith<IllegalArgumentException> { CodeCatalog.text("global.eachInstanceOf") }
     }
 }

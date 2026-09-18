@@ -11,5 +11,6 @@ class Mops(
 ) {
     val editing = MopsEditing(this)
     val parsing = MopsParsing(this)
+    val lookup = MopsLookup(this)
     val search = MopsSearch(this)
 }

@@ -7,17 +7,13 @@ import jetbrains.mps.project.Project
 import jetbrains.mps.project.Solution
 import jetbrains.mps.smodel.Generator
 import jetbrains.mps.smodel.Language
-import org.jetbrains.mps.openapi.language.SAbstractConcept
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SNode
 import org.jetbrains.mps.openapi.module.SModule
-import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 
 object CodeModeExtensions {
-    private val persistence get() = PersistenceFacade.getInstance()
-
     /** Returns a live indexed accessor. Reads require model access; writes require command access. */
     @CodeModeExtension(MpsAccessLevel.NONE)
     @JvmStatic
@@ -56,44 +52,6 @@ object CodeModeExtensions {
                 project.repository.saveAll()
             }
         }
-    }
-
-    /** Resolves exactly one repository module by name or serialized module reference. Access: read. */
-    @CodeModeExtension(MpsAccessLevel.READ)
-    @JvmStatic
-    fun module(project: Project, target: String): SModule {
-        requireOwner(project); requireRead("Project.module")
-        val matches = project.repository.modules.filter {
-            it.moduleName == target || persistence.asString(it.moduleReference) == target
-        }
-        return unique("module", target, matches) { persistence.asString(it.moduleReference) }
-    }
-
-    /** Resolves exactly one model by established model target spelling. Access: read. */
-    @CodeModeExtension(MpsAccessLevel.READ)
-    @JvmStatic
-    fun model(project: Project, target: String): SModel {
-        requireOwner(project); requireRead("Project.model")
-        return ModelNodeResolver(DaemonLogger()).findModelUnique(project, target)
-            ?: throw IllegalArgumentException("model not found: $target")
-    }
-
-    /** Resolves exactly one node reference. Access: read. */
-    @CodeModeExtension(MpsAccessLevel.READ)
-    @JvmStatic
-    fun node(project: Project, target: String): SNode {
-        requireOwner(project); requireRead("Project.node")
-        val reference = runCatching { persistence.createNodeReference(target) }.getOrNull()
-            ?: throw IllegalArgumentException("invalid node reference: $target")
-        return reference.resolve(project.repository) ?: throw IllegalArgumentException("node not found: $target")
-    }
-
-    /** Resolves exactly one MPS concept using the established concept-name grammar. Access: read. */
-    @CodeModeExtension(MpsAccessLevel.READ)
-    @JvmStatic
-    fun concept(project: Project, name: String): SAbstractConcept {
-        requireOwner(project); requireRead("Project.concept")
-        return ConceptResolver(project).resolve(name)
     }
 
     /** Makes every generatable project module. Access: extra. */
@@ -198,17 +156,4 @@ object CodeModeExtensions {
         val unknown = keys - names.toSet()
         require(unknown.isEmpty()) { "unknown named option(s): ${unknown.sorted().joinToString()}" }
     }
-
-    private fun <T> unique(kind: String, target: String, values: List<T>, reference: (T) -> String): T =
-        when (values.size) {
-            0 -> throw IllegalArgumentException("$kind not found: $target")
-            1 -> values.single()
-            else -> throw IllegalArgumentException(
-                "ambiguous $kind: $target; candidates: ${
-                    values.joinToString(
-                        transform = reference
-                    )
-                }"
-            )
-        }
 }

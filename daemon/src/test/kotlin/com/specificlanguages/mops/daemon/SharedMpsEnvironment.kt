@@ -94,7 +94,7 @@ object SharedMpsEnvironment {
     // that makes a language pollutes every subsequent test in the JVM. `closeProject` does not drive the module through
     // the class-loading unload path and neither time nor GC reconciles it; only an explicit reload does. reloadAll
     // reconciles the class-loading registry against the (now smaller) repository and evicts those orphaned runtimes, so
-    // each copy starts from a clean slate. See docs/mps/module-runtime-unloading.md.
+    // each copy starts from a clean slate. See the mps-api-research module-runtime-unloading note.
     private fun unloadOrphanedLanguageRuntimes() {
         val repository = MPSModuleRepository.getInstance()
         repository.modelAccess.runWriteAction {

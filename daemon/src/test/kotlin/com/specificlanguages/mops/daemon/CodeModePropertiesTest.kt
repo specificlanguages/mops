@@ -11,8 +11,8 @@ class CodeModePropertiesTest {
             val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
                 CodeRunRequest("", """
                     project.command {
-                        def model = project.model('com.specificlanguages.json.structure')
-                        def node = model.createNode(project.concept('jetbrains.mps.baseLanguage.ClassConcept'))
+                        def model = mops.lookup.requireModel('com.specificlanguages.json.structure')
+                        def node = model.createNode(mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.ClassConcept'))
                         def nonStatic = node.concept.properties.find { it.name == 'nonStatic' }
                         node.properties['isStatic'] = 'false'
                         assert node.getProperty(nonStatic) == 'true'
@@ -36,7 +36,7 @@ class CodeModePropertiesTest {
             val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
                 CodeRunRequest("", """
                     project.read {
-                        def concept = project.concept('jetbrains.mps.lang.structure.ConceptDeclaration')
+                        def concept = mops.lookup.requireConceptByName('jetbrains.mps.lang.structure.ConceptDeclaration')
                         def count = 0
                         mops.search.eachInstanceOf(concept, project.scope) { node ->
                             def descriptor = node.concept.properties.find { it.name == 'name' }
@@ -67,7 +67,7 @@ class CodeModePropertiesTest {
                 CodeRunRequest("", """
                     def node = project.read {
                         def nodes = []
-                        mops.search.eachInstanceOf(project.concept('jetbrains.mps.lang.structure.ConceptDeclaration'), project.scope) {
+                        mops.search.eachInstanceOf(mops.lookup.requireConceptByName('jetbrains.mps.lang.structure.ConceptDeclaration'), project.scope) {
                             nodes << it
                         }
                         assert !nodes.empty

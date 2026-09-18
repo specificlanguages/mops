@@ -10,7 +10,7 @@ class ModelCreationSemanticsTest {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
             val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(CodeRunRequest(
                 "", """
-                    def owner = project.read { project.module('com.specificlanguages.json') }
+                    def owner = project.read { mops.lookup.requireModule('com.specificlanguages.json') }
                     project.command {
                       def model = owner.createModel('.fromCode')
                       [name: model.name.value, owner: model.module.moduleName, model: model]

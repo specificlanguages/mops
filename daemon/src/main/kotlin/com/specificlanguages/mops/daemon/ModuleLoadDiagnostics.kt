@@ -28,7 +28,8 @@ import java.util.stream.Stream
 
 /**
  * Explains why the project's languages and Java-bearing modules did or did not load, by reading MPS's live module
- * runtimes and module repository. See `docs/mps/language-runtime-loading.md` for the API contracts this relies on.
+ * runtimes and module repository. See
+ * https://github.com/specificlanguages/mps-api-research/blob/main/language-runtime-loading.md for the API contracts.
  *
  * A module is "loaded" when it has a registered runtime ([LanguageRegistry.withModuleRuntime]); only loaded languages
  * contribute concepts to name-based lookup, which is why an unloaded language is what makes `find instances` report a
@@ -206,7 +207,7 @@ class ModuleLoadDiagnostics(private val project: Project) {
     /**
      * Mirrors MPS's generation-required predicate, retaining its decisive observations. The generation record is read
      * using an operation-local parsed cache after external files have been refreshed.
-     * See `docs/mps/model-generation-status.md`.
+     * See https://github.com/specificlanguages/mps-api-research/blob/main/model-generation-status.md.
      */
     private fun generationEvidence(model: SModel): ModelGenerationEvidence? {
         if (generationStatus == null || model !is GeneratableSModel || !model.isGeneratable) return null

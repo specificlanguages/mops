@@ -19,7 +19,8 @@ See `docs/agents/triage-labels.md`.
 
 This repo uses a single-context domain documentation layout. See `docs/agents/domain.md`.
 
-MPS API documentation is being written as needed under `docs/mps`.
+Verified MPS API documentation lives in
+[`specificlanguages/mps-api-research`](https://github.com/specificlanguages/mps-api-research).
 
 ### Coding conventions and guidelines
 

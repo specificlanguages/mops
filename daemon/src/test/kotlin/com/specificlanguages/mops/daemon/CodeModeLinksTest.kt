@@ -17,7 +17,7 @@ class CodeModeLinksTest {
                         catch (Exception failure) { assert type.isInstance(failure): failure }
                     }
                     def node = project.read {
-                        project.model('com.specificlanguages.json.structure').rootNodes.find {
+                        mops.lookup.requireModel('com.specificlanguages.json.structure').rootNodes.find {
                             it.properties['name'] == 'JsonFile'
                         }
                     }
@@ -45,7 +45,7 @@ class CodeModeLinksTest {
                     project.command {
                         def role = 'propertyDeclaration'
                         def link = node.concept.containmentLinks.find { it.name == role }
-                        def concept = project.concept('jetbrains.mps.lang.structure.PropertyDeclaration')
+                        def concept = mops.lookup.requireConceptByName('jetbrains.mps.lang.structure.PropertyDeclaration')
                         def a = node.model.createNode(concept)
                         def b = node.model.createNode(concept)
                         assert children[role] == []
@@ -71,7 +71,7 @@ class CodeModeLinksTest {
                         children[role] = [a, b]
                         children[role] = []
                         assert child[role] == null
-                        def statement = node.model.createNode(project.concept('jetbrains.mps.baseLanguage.IfStatement'))
+                        def statement = node.model.createNode(mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.IfStatement'))
                         def singleLink = statement.concept.containmentLinks.find { !it.multiple }
                         assert singleLink != null
                         statement.children[singleLink.name] = [a, b]

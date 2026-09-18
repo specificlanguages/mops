@@ -13,6 +13,7 @@ class CodeModeNamespaceTest {
                     assert mops.is(mops)
                     assert mops.parsing.is(mops.parsing)
                     assert mops.search.is(mops.search)
+                    assert mops.lookup.is(mops.lookup)
                     assert mops.editing.is(mops.editing)
                     assert mops.editing.build.class.name == 'com.specificlanguages.mops.daemon.MopsEditingBuild'
                     assert mops.project.is(project)
@@ -20,7 +21,7 @@ class CodeModeNamespaceTest {
                     assert mops.parsing.java.class.name == 'com.specificlanguages.mops.daemon.JavaSnippetParser'
                     return project.read {
                         def count = 0
-                        def concept = project.concept('jetbrains.mps.lang.structure.ConceptDeclaration')
+                        def concept = mops.lookup.requireConceptByName('jetbrains.mps.lang.structure.ConceptDeclaration')
                         mops.search.eachInstanceOf(concept, project.scope) { count++ }
                         assert count > 0
                         'ok'

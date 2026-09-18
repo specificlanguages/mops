@@ -10,7 +10,8 @@ import org.jetbrains.mps.openapi.model.SNode
  *
  * [HeadlessEditorComponent] builds the node's editor cell tree without any UI; `renderText()` then serializes that tree
  * with the editor's own whitespace and indentation, driven by cell styles rather than geometry. The node need not be a
- * Root Node, but must be registered in a model of the project's repository. See docs/mps/editor-cell-rendering.md.
+ * Root Node, but must be registered in a model of the project's repository. See
+ * https://github.com/specificlanguages/mps-api-research/blob/main/editor-cell-rendering.md.
  *
  * Threading: this runs synchronously on the calling thread and requires the EDT, with read access, already in effect —
  * `EditorComponent.dispose()` asserts the EDT (via `NodeHighlightManager.dispose`) and the cell build needs a read. The

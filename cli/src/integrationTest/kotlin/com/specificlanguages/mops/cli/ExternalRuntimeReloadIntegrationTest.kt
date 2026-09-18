@@ -57,7 +57,7 @@ class ExternalRuntimeReloadIntegrationTest {
             assertContains(superseded.output, "which is loaded")
 
             val program = tempDir.resolve("alias.groovy").also {
-                it.writeText("project.read { project.concept('com.specificlanguages.json.structure.ReloadedJsonFile').conceptAlias }")
+                it.writeText("project.read { mops.lookup.requireConceptByName('com.specificlanguages.json.structure.ReloadedJsonFile').conceptAlias }")
             }
             assertContains(succeed(target, "code", "run", program.pathString).stdout, "OldAlias")
             val stamps = Files.walk(target.resolve("languages")).use { paths ->

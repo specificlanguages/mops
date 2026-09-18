@@ -25,7 +25,8 @@ other language would use.
 - **Invoke MPS-registered paste post-processors via `DataTransferManager`** — rejected: the API is `void` and opaque
   (no way to learn what fired, so no honest **Hints**), dispatch is exact-concept (a cache quirk, not a semantic),
   its threading and language-loading requirements are unverified runtime contracts, and it imports unaudited
-  IDE-oriented behavior from every loaded language. Evidence in `docs/mps/node-creation-factories-and-paste.md`.
+  IDE-oriented behavior from every loaded language. Evidence in the
+  [node creation research](https://github.com/specificlanguages/mps-api-research/blob/main/node-creation-factories-and-paste.md).
 - **Node factories (`NodeFactoryManager.setupNode`) to fix up copies** — rejected: factories assume a blank node and
   clobber real data; the structure language's own factory unconditionally resets a concept's `extends`.
 - **Hardcode `conceptId` handling in the write-executor** — rejected: solves one built-in language and leaves every

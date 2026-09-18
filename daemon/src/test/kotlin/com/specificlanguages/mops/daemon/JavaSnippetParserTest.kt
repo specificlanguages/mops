@@ -12,7 +12,7 @@ class JavaSnippetParserTest {
                 CodeRunRequest("", """
                     def parser = mops.parsing.java
                     def model = project.read {
-                        project.model('baselanguage.sandbox')
+                        mops.lookup.requireModel('baselanguage.sandbox')
                     }
                     def result = project.command {
                         assert parser.class.name == 'com.specificlanguages.mops.daemon.JavaSnippetParser'

@@ -94,7 +94,7 @@ class DaemonRunner(
                 environmentKind = EnvironmentKind.IDEA
                 // Load the distribution's bundled plugins (mps-tooltips, mps-console, mps-execution, ...). Without them
                 // many stock languages leave their runtime unregistered, so their concepts vanish from name lookup and
-                // every language that depends on them fails to load. See docs/mps/language-runtime-loading.md.
+                // every language that depends on them fails to load. See the mps-api-research notes.
                 environmentConfig { addPluginsRecursivelyFrom(mpsHome.resolve("plugins")) }
             }
             .executeWithProject(projectPath.toFile()) { environment, project ->

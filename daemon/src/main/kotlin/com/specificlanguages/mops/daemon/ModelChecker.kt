@@ -22,7 +22,7 @@ import org.jetbrains.mps.openapi.persistence.PersistenceFacade
  * action. Findings come back sorted most severe first and bounded by the request limit, so the errors survive
  * truncation.
  *
- * See `docs/mps/model-check.md` for the verified API contract behind this.
+ * See https://github.com/specificlanguages/mps-api-research/blob/main/model-check.md for the verified API contract.
  */
 class ModelChecker(private val persistence: PersistenceFacade = PersistenceFacade.getInstance()) {
 

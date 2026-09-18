@@ -38,7 +38,7 @@ import org.jetbrains.mps.openapi.persistence.PersistenceFacade
  * Model collection runs inside short read actions; the make call runs outside any model action, on the calling thread,
  * because the make framework acquires its own model locks.
  *
- * See `docs/mps/make-generation.md` for the verified API contract behind this.
+ * See https://github.com/specificlanguages/mps-api-research/blob/main/make-generation.md for the verified API contract.
  */
 class ProjectMake(private val project: Project) {
     private val persistence: PersistenceFacade = PersistenceFacade.getInstance()
@@ -63,7 +63,7 @@ class ProjectMake(private val project: Project) {
         // *source* models inside `-src.jar` files, and those models report themselves generatable, so they survive
         // ModelsToResources — yet writing their generation output into the jar fails ("Write for jar files is not
         // supported"). We only ever intend to make project sources, so drop models of read-only (packaged) modules
-        // first. See docs/mps/make-generation.md.
+        // first. See https://github.com/specificlanguages/mps-api-research/blob/main/make-generation.md.
         val resources: List<IResource> = project.modelAccess.computeReadAction<List<IResource>> {
             ModelsToResources(models.filter { it.isInWritableModule() }).resources().toList()
         }
@@ -76,7 +76,7 @@ class ProjectMake(private val project: Project) {
         val session = MakeSession(project, handler, /* cleanMake = */ false)
         // Reimplements BuildMakeService.doMake using classes from mps-core: BuildMakeService itself ships only in
         // lib/mpsant/mps-tool.jar, which is not on the daemon classpath. A null script lets MPS build the correct
-        // per-cluster script; a null-controller default is IScriptController.Stub2. See docs/mps/make-generation.md.
+        // per-cluster script; a null-controller default is IScriptController.Stub2. See the mps-api-research notes.
         val controller: IScriptController = IScriptController.Stub2(session)
         val task = CoreMakeTask(MakeSequence(resources, null, session), controller, handler)
         task.run(EmptyProgressMonitor())

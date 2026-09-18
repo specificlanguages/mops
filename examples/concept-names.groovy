@@ -1,7 +1,7 @@
 def conceptName = 'jetbrains.mps.baseLanguage.ClassConcept'
 
 return project.read {
-    def concept = project.concept(conceptName)
+    def concept = mops.lookup.requireConceptByName(conceptName)
     def names = []
     mops.search.eachInstanceOf(concept, project.scope) { node ->
         names << node.properties['name']

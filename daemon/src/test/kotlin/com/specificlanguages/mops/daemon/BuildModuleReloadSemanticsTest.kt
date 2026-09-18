@@ -16,7 +16,7 @@ class BuildModuleReloadSemanticsTest {
             val response = executor(project).execute(
                 CodeRunRequest("", """
                     def buildProject = project.read {
-                        project.model('com.specificlanguages.json.build').rootNodes.first()
+                        mops.lookup.requireModel('com.specificlanguages.json.build').rootNodes.first()
                     }
                     def importedLanguage = project.read {
                         def pending = [buildProject]
@@ -53,7 +53,7 @@ class BuildModuleReloadSemanticsTest {
                 executor(project).execute(
                     CodeRunRequest("", """
                         def buildProject = project.read {
-                            project.model('com.specificlanguages.json.build').rootNodes.first()
+                            mops.lookup.requireModel('com.specificlanguages.json.build').rootNodes.first()
                         }
                         mops.editing.build.reloadModulesFromDisk(buildProject)
                     """.trimIndent(), "reload-outside-command.groovy"),
@@ -65,7 +65,7 @@ class BuildModuleReloadSemanticsTest {
                 executor(project).execute(
                     CodeRunRequest("", """
                         def concept = project.read {
-                            project.model('com.specificlanguages.json.structure').rootNodes.first()
+                            mops.lookup.requireModel('com.specificlanguages.json.structure').rootNodes.first()
                         }
                         project.command { mops.editing.build.reloadModulesFromDisk(concept) }
                     """.trimIndent(), "reload-wrong-concept.groovy"),
@@ -81,7 +81,7 @@ class BuildModuleReloadSemanticsTest {
             val response = executor(project).execute(
                 CodeRunRequest("", """
                     def buildProject = project.read {
-                        project.model('com.specificlanguages.json.build').rootNodes.first()
+                        mops.lookup.requireModel('com.specificlanguages.json.build').rootNodes.first()
                     }
                     project.command { mops.editing.build.reloadModulesFromDisk(buildProject) }
                 """.trimIndent(), "reload-missing-module.groovy"),
