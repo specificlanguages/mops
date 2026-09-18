@@ -206,6 +206,52 @@ class GradleHomeDiscoveryTest {
         assertFalse(wrapper.exists())
     }
 
+    @Test
+    fun `custom convention plugins splitting mpsHome and javaHome across extensions are combined`() {
+        val root = fixture("""
+            plugins {
+                id 'java-base'
+            }
+            project.extensions.add('mpsSettings',
+                [mpsHome: providers.provider { layout.projectDirectory.dir('split MPS') }])
+            project.extensions.add('jbrToolchain',
+                [javaLauncher: javaToolchains.launcherFor {
+                    languageVersion = JavaLanguageVersion.of(17)
+                }])
+        """)
+        val mps = root.resolve("split MPS").createDirectory()
+        root.resolve(".mps").createDirectory()
+        val (exit, output) = run(root)
+        assertEquals(0, exit, output)
+        assertContains(output, "mpsHome from mpsSettings extension")
+        assertContains(output, "javaHome from jbrToolchain extension (com.specificlanguages.jbr-toolchain)")
+        assertContains(output, "Project root: $root")
+        val wrapper = root.resolve("build/mops/${root.fileName}/mopsw")
+        assertContains(output, "Wrapper: $wrapper")
+        assertTrue(wrapper.isExecutable())
+        assertContains(wrapper.readText(), "--mps-home='$mps'")
+        assertContains(wrapper.readText(), "--java-home='")
+        assertContains(wrapper.readText(), "--project-root='$root'")
+    }
+
+    @Test
+    fun `split extensions report a partial result when only one home is discovered`() {
+        val root = fixture("""
+            plugins {
+                id 'java-base'
+            }
+            project.extensions.add('mpsSettings',
+                [mpsHome: providers.provider { layout.projectDirectory.dir('missing MPS') }])
+        """)
+        val (exit, output) = run(root)
+        assertEquals(1, exit, output)
+        assertContains(output, "mpsHome from mpsSettings extension")
+        assertContains(output, "MPS home: ${root.resolve("missing MPS")}")
+        assertContains(output, "Java home: unknown")
+        assertContains(output, "no wrapper was written")
+        assertFalse(root.resolve("build/mopsw").exists())
+    }
+
     private fun fixture(build: String, settings: String = ""): Path {
         val root = temporary.resolve("project with spaces").createDirectory().toRealPath()
         root.resolve("settings.gradle").writeText("""

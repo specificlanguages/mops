@@ -5,60 +5,173 @@ gradle.projectsEvaluated {
     if (gradle.parent != null || gradle.rootProject.projectDir.canonicalPath != System.getProperty('mops.guess.root')) {
         return
     }
-    gradle.rootProject.tasks.register(System.getProperty('mops.guess.task')) {
-        doLast {
-            def projects = gradle.rootProject.allprojects.collect { project ->
-                def source = null
-                def mpsHome = null
-                def javaHome = null
-                def mpsProjectRoots = []
-                def defaults = project.extensions.findByName('mpsDefaults')
-                if (defaults != null) {
-                    source = "${project.path} mpsDefaults (com.specificlanguages.mps 2.x)"
-                    mpsHome = defaults.mpsHome.orNull?.asFile?.canonicalPath
-                    javaHome = defaults.javaLauncher.orNull?.metadata?.installationPath?.asFile?.canonicalPath
-                    mpsProjectRoots = project.extensions.findByName('mpsBuilds')?.collect {
-                        it.mpsProjectDirectory.orNull?.asFile?.canonicalPath
-                    }?.findAll { it != null }?.unique() ?: []
-                } else {
-                    def task = project.tasks.find { task ->
-                        def type = task.class
-                        while (type != null && type.name != 'de.itemis.mps.gradle.RunAntScript') {
-                            type = type.superclass
-                        }
-                        type != null
-                    }
-                    if (task != null) {
-                        def args = task.scriptArgs.toList()
-                        if (task.includeDefaultArgs) {
-                            args.addAll(project.findProperty('itemis.mps.gradle.ant.defaultScriptArgs') ?: [])
-                        }
-                        def mpsArgument = args.find {
-                            it.startsWith('-Dmps.home=') || it.startsWith('-Dmps_home=')
-                        }
-                        def executable = task.executable ?:
-                            project.findProperty('itemis.mps.gradle.ant.defaultJavaExecutable')
-                        source = "${task.path} (mbeddr RunAntScript)"
-                        if (executable == null) {
-                            executable = new File(System.getProperty('java.home'), 'bin/java')
-                            source += '; Gradle default Java'
-                        }
-                        mpsHome = mpsArgument == null ? null :
-                            project.file(mpsArgument.substring(mpsArgument.indexOf('=') + 1)).canonicalPath
-                        javaHome = project.file(executable.toString()).absoluteFile.parentFile.parentFile.canonicalPath
-                    }
-                }
-                [
+    def taskName = System.getProperty('mops.guess.task')
+    def outputDir = new File(System.getProperty('mops.guess.output'))
+    def allProjects = gradle.rootProject.allprojects.toList()
+    allProjects.eachWithIndex { project, index ->
+        // Each project gets its own task instance, rather than one task iterating over every project. Some
+        // properties (e.g. a resolved MPS or JBR distribution) can only be read safely from a task that belongs to
+        // the same project: Gradle rejects resolving a project-scoped dependency configuration from a different
+        // project's task action ("attempted without an exclusive lock"). Writing each project's result to its own
+        // file also avoids needing to synchronize concurrent writes to a shared report.
+        project.tasks.register(taskName) {
+            doLast {
+                def found = findMpsDefaults(project) ?: findRunAntScript(project) ?: findSplitExtensions(project)
+                def fragment = [
                     projectDir: project.projectDir.canonicalPath,
                     buildDir: project.layout.buildDirectory.get().asFile.canonicalPath,
-                    source: source,
-                    mpsHome: mpsHome,
-                    javaHome: javaHome,
-                    mpsProjectRoots: mpsProjectRoots,
+                    source: found?.source,
+                    mpsHome: found?.mpsHome,
+                    javaHome: found?.javaHome,
+                    mpsProjectRoots: found?.mpsProjectRoots ?: [],
                 ]
+                new File(outputDir, "project-${index}.json").setText(
+                    JsonOutput.toJson([version: 2, project: fragment]), 'UTF-8')
             }
-            new File(System.getProperty('mops.guess.output')).setText(
-                JsonOutput.toJson([version: 2, projects: projects]), 'UTF-8')
         }
     }
+}
+
+// com.specificlanguages.mps 2.x: a single 'mpsDefaults' extension carries both mpsHome and javaLauncher.
+def findMpsDefaults(project) {
+    def defaults = project.extensions.findByName('mpsDefaults')
+    if (defaults == null) {
+        return null
+    }
+    def mpsProjectRoots = project.extensions.findByName('mpsBuilds')?.collect {
+        it.mpsProjectDirectory.orNull?.asFile?.canonicalPath
+    }?.findAll { it != null }?.unique() ?: []
+    return [
+        source: "${project.path} mpsDefaults (com.specificlanguages.mps 2.x)",
+        mpsHome: defaults.mpsHome.orNull?.asFile?.canonicalPath,
+        javaHome: defaults.javaLauncher.orNull?.metadata?.installationPath?.asFile?.canonicalPath,
+        mpsProjectRoots: mpsProjectRoots,
+    ]
+}
+
+// mbeddr: mpsHome/javaHome are read from the arguments of a de.itemis.mps.gradle.RunAntScript task.
+def findRunAntScript(project) {
+    def task = project.tasks.find { task ->
+        def type = task.class
+        while (type != null && type.name != 'de.itemis.mps.gradle.RunAntScript') {
+            type = type.superclass
+        }
+        type != null
+    }
+    if (task == null) {
+        return null
+    }
+    def args = task.scriptArgs.toList()
+    if (task.includeDefaultArgs) {
+        args.addAll(project.findProperty('itemis.mps.gradle.ant.defaultScriptArgs') ?: [])
+    }
+    def mpsArgument = args.find {
+        it.startsWith('-Dmps.home=') || it.startsWith('-Dmps_home=')
+    }
+    def executable = task.executable ?:
+        project.findProperty('itemis.mps.gradle.ant.defaultJavaExecutable')
+    def source = "${task.path} (mbeddr RunAntScript)"
+    if (executable == null) {
+        executable = new File(System.getProperty('java.home'), 'bin/java')
+        source += '; Gradle default Java'
+    }
+    return [
+        source: source,
+        mpsHome: mpsArgument == null ? null :
+            project.file(mpsArgument.substring(mpsArgument.indexOf('=') + 1)).canonicalPath,
+        javaHome: project.file(executable.toString()).absoluteFile.parentFile.parentFile.canonicalPath,
+        mpsProjectRoots: [],
+    ]
+}
+
+// Custom convention plugins may split MPS home and Java home across two unrelated extensions instead of
+// exposing both from one object, and may not use the 'mpsDefaults' name at all. Discover each half independently
+// and combine them, so a project only needs to define one of the two homes in a recognizable way for us to
+// report a partial (or, if both are found, complete) candidate. Any '.mps' project directories under this
+// project are found later by the general filesystem scan, so mpsProjectRoots is left empty here.
+def findSplitExtensions(project) {
+    def mpsHomeInfo = findMpsHomeExtension(project)
+    def javaHomeInfo = findJavaHomeExtension(project)
+    if (mpsHomeInfo == null && javaHomeInfo == null) {
+        return null
+    }
+
+    def sources = []
+    if (mpsHomeInfo != null) {
+        sources << "mpsHome from ${mpsHomeInfo.source}".toString()
+    }
+    if (javaHomeInfo != null) {
+        sources << "javaHome from ${javaHomeInfo.source}".toString()
+    }
+
+    return [
+        source: "${project.path} " + sources.join('; '),
+        mpsHome: mpsHomeInfo?.path,
+        javaHome: javaHomeInfo?.path,
+        mpsProjectRoots: [],
+    ]
+}
+
+// Recognizes the 'jbrToolchain' extension published by com.specificlanguages.jbr-toolchain, which exposes a
+// 'javaLauncher' Provider<JavaLauncher> property. Falls back to duck-typing any other extension with a
+// 'javaLauncher' provider property, for projects using a differently-named toolchain wrapper.
+def findJavaHomeExtension(project) {
+    def named = project.extensions.findByName('jbrToolchain')
+    if (named != null) {
+        def home = javaHomeFromLauncherExtension(named)
+        if (home != null) {
+            return [source: 'jbrToolchain extension (com.specificlanguages.jbr-toolchain)', path: home]
+        }
+    }
+    for (schema in project.extensions.extensionsSchema) {
+        def name = schema.name
+        if (name == 'ext' || name == 'jbrToolchain') {
+            continue
+        }
+        def candidate = project.extensions.findByName(name)
+        if (candidate == null) {
+            continue
+        }
+        def home = javaHomeFromLauncherExtension(candidate)
+        if (home != null) {
+            return [source: "${name} extension", path: home]
+        }
+    }
+    return null
+}
+
+def javaHomeFromLauncherExtension(candidate) {
+    def launcher
+    try {
+        launcher = candidate.javaLauncher?.orNull
+    } catch (ignored) {
+        return null
+    }
+    return launcher?.metadata?.installationPath?.asFile?.canonicalPath
+}
+
+// Scans all extensions for one exposing a Provider<Directory>-shaped 'mpsHome' property (e.g. a project-specific
+// 'mpsSettings' extension), to support arbitrary project-specific convention plugins without hardcoding their
+// names.
+def findMpsHomeExtension(project) {
+    for (schema in project.extensions.extensionsSchema) {
+        def name = schema.name
+        if (name == 'ext') {
+            continue
+        }
+        def candidate = project.extensions.findByName(name)
+        if (candidate == null) {
+            continue
+        }
+        def dir
+        try {
+            dir = candidate.mpsHome?.orNull
+        } catch (ignored) {
+            continue
+        }
+        if (dir != null) {
+            return [source: "${name} extension", path: dir.asFile.canonicalPath]
+        }
+    }
+    return null
 }

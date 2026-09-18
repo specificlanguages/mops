@@ -38,7 +38,15 @@ internal class GradleHomeDiscovery {
             val script = temporary.resolve("probe.gradle")
             javaClass.getResourceAsStream("guess-command-line.gradle")!!.use { Files.copy(it, script) }
 
-            val report = temporary.resolve("report.json")
+            // Each project writes its own fragment file, from a task registered on that project (see the init
+            // script). Some project properties (e.g. a Java toolchain or MPS home resolved from a project-scoped
+            // dependency configuration) can only be read safely from a task that belongs to the same project;
+            // Gradle rejects resolving a configuration from a different project's task action. Using a bare task
+            // selector below runs the same-named task on every project, keeping each project's reads properly
+            // scoped, and having every project write to its own file avoids any need to synchronize concurrent
+            // writes to a shared report.
+            val reportDir = temporary.resolve("reports")
+            Files.createDirectories(reportDir)
             val task = "mopsGuessCommandLine" + UUID.randomUUID().toString().replace("-", "")
             diagnostics.println("Inspecting Gradle build at $root. Runtime providers may download or extract distributions.")
             diagnostics.flush()
@@ -48,7 +56,8 @@ internal class GradleHomeDiscovery {
                 "--no-configuration-cache", "--no-configure-on-demand",
                 "--quiet", "--console=plain",
                 "-Dmops.guess.root=$root", "-Dmops.guess.task=$task",
-                "-Dmops.guess.output=$report", ":$task",
+                "-Dmops.guess.output=$reportDir",
+                task,
             )
             val command = if (isWindows) listOf("cmd", "/c", wrapper.toString()) else listOf("sh", wrapper.toString())
             val process = ProcessBuilder(command + processArgs)
@@ -63,30 +72,29 @@ internal class GradleHomeDiscovery {
             } finally {
                 if (process.isAlive) process.destroyForcibly()
             }
-            check(report.isRegularFile()) { "Gradle did not produce a runtime discovery report." }
-            return addMpsProjectMarkers(root, parseReport(report.readText()))
+            val fragments = reportDir.listDirectoryEntries("*.json")
+            check(fragments.isNotEmpty()) { "Gradle did not produce any runtime discovery reports." }
+            return addMpsProjectMarkers(root, fragments.map { parseReport(it.readText()) })
         } finally {
             temporary.toFile().deleteRecursively()
         }
     }
 
-    internal fun parseReport(text: String): List<HomeGuess> {
+    internal fun parseReport(text: String): HomeGuess {
         val report = Json.parseToJsonElement(text).jsonObject
         require(report.getValue("version").jsonPrimitive.int == 2) { "Unsupported runtime discovery report version." }
-        return report.getValue("projects").jsonArray.map { element ->
-            val project = element.jsonObject
-            fun path(key: String): Path? = project[key]?.jsonPrimitive?.contentOrNull?.let(Path::of)
-            HomeGuess(
-                projectDir = path("projectDir")!!,
-                buildDir = path("buildDir")!!,
-                source = project["source"]?.jsonPrimitive?.contentOrNull,
-                mpsHome = path("mpsHome"),
-                javaHome = path("javaHome"),
-                mpsProjectRoots = project.getValue("mpsProjectRoots").jsonArray.map {
-                    Path.of(it.jsonPrimitive.content)
-                },
-            )
-        }
+        val project = report.getValue("project").jsonObject
+        fun path(key: String): Path? = project[key]?.jsonPrimitive?.contentOrNull?.let(Path::of)
+        return HomeGuess(
+            projectDir = path("projectDir")!!,
+            buildDir = path("buildDir")!!,
+            source = project["source"]?.jsonPrimitive?.contentOrNull,
+            mpsHome = path("mpsHome"),
+            javaHome = path("javaHome"),
+            mpsProjectRoots = project.getValue("mpsProjectRoots").jsonArray.map {
+                Path.of(it.jsonPrimitive.content)
+            },
+        )
     }
 
     private fun addMpsProjectMarkers(root: Path, guesses: List<HomeGuess>): List<HomeGuess> {
