@@ -40,7 +40,7 @@ internal class GradleHomeDiscovery {
 
             val report = temporary.resolve("report.json")
             val task = "mopsGuessCommandLine" + UUID.randomUUID().toString().replace("-", "")
-            diagnostics.println("Inspecting Gradle build at $root. Runtime providers may download or extract distributions.")
+            diagnostics.println("Inspecting Gradle build at $root. This may cause Gradle to download or extract files.")
             diagnostics.flush()
             val processArgs = listOf(
                 "--project-dir", root.toString(),
