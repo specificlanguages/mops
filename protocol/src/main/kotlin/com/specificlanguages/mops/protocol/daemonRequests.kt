@@ -63,6 +63,21 @@ data class ModelCheckRequest(
     val limit: Int,
 ) : DaemonRequest
 
+@Serializable
+@SerialName("project-check")
+data class ProjectCheckRequest(
+    override val token: String,
+    val limit: Int,
+) : DaemonRequest
+
+@Serializable
+@SerialName("module-check")
+data class ModuleCheckRequest(
+    override val token: String,
+    val modules: List<String>,
+    val limit: Int,
+) : DaemonRequest
+
 /**
  * Request to find references to one resolved MPS node. Searches editable project sources by default; an explicit
  * [scope] (the raw navigation-target segments of an `in` clause) is searched exhaustively, including read-only library

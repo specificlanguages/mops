@@ -22,6 +22,10 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess, pr
 
                 is ModelCheckRequest -> mpsAccess.read { checkModel(request.target, request.limit) }
 
+                is ProjectCheckRequest -> mpsAccess.read { checkProject(request.limit) }
+
+                is ModuleCheckRequest -> mpsAccess.read { checkModules(request.modules, request.limit) }
+
                 is FindUsagesRequest -> mpsAccess.read {
                     findUsages(request.target, resolveScope(request.scope), request.limit)
                 }

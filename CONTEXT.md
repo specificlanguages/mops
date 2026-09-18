@@ -265,9 +265,9 @@ A **Constraint** that a proposed **Edit Operation** would break.
 _Related_: Constraint
 
 **Model Check**:
-The full validation of an **MPS Model**, including typesystem and checking rules. It is distinct from the cheaper **Constraint** evaluation and is performed as its own operation because it may be costly.
+The full validation of one or more **MPS Models** and their owning **MPS Modules**, including typesystem, model, module, and checking rules. A Model Check can target one MPS Model, selected Project Modules, or the whole MPS Project. It is distinct from the cheaper **Constraint** evaluation and is performed as its own operation because it may be costly.
 _Avoid_: validation, type check
-_Related_: Constraint
+_Related_: Constraint, MPS Model, Project Module
 
 ### CLI Help
 

@@ -2,6 +2,8 @@ package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.cli.check.CheckOperations
 import com.specificlanguages.mops.cli.check.ModelCheckCommand
+import com.specificlanguages.mops.cli.check.ModuleCheckCommand
+import com.specificlanguages.mops.cli.check.ProjectCheckCommand
 import com.specificlanguages.mops.cli.code.CodeHelpCommand
 import com.specificlanguages.mops.cli.code.CodeOperations
 import com.specificlanguages.mops.cli.code.CodeRunCommand
@@ -68,6 +70,8 @@ fun newCommandLine(workingDirectory: Path = Path.of("").absolute()): CommandLine
     }
     root.addGroup("check", CheckOperations()) {
         addLeaf("model", ModelCheckCommand(rootCommand))
+        addLeaf("module", ModuleCheckCommand(rootCommand))
+        addLeaf("project", ProjectCheckCommand(rootCommand))
     }
     root.addGroup("make", MakeOperations()) {
         addLeaf("module", MakeModulesCommand(rootCommand))

@@ -48,6 +48,8 @@ class CommandHelpTest {
         val checkHelp = runHelp("check", "--help")
         assertContains(checkHelp, "Run MPS checks.")
         assertContains(checkHelp, "model")
+        assertContains(checkHelp, "module")
+        assertContains(checkHelp, "project")
     }
 
     @Test

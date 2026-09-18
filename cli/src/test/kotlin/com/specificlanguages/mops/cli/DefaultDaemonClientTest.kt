@@ -215,6 +215,41 @@ class DefaultDaemonClientTest {
     }
 
     @Test
+    fun `check project sends the global limit request`() {
+        val response = emptyCheckResponse()
+        val daemon = startPrerecordedDaemon(response)
+
+        val actual = DefaultDaemonClient(daemon.port, "secret").checkProject(limit = 7)
+
+        daemon.join(5_000)
+        assertEquals(response, actual)
+        assertContains(daemon.requestsReceived.single(), "\"type\":\"project-check\"")
+        assertContains(daemon.requestsReceived.single(), "\"limit\":7")
+    }
+
+    @Test
+    fun `check modules sends every module and the global limit request`() {
+        val response = emptyCheckResponse()
+        val daemon = startPrerecordedDaemon(response)
+
+        val actual = DefaultDaemonClient(daemon.port, "secret")
+            .checkModules(listOf("FOO", "BAR", "BAZ"), limit = 9)
+
+        daemon.join(5_000)
+        assertEquals(response, actual)
+        assertContains(daemon.requestsReceived.single(), "\"type\":\"module-check\"")
+        assertContains(daemon.requestsReceived.single(), "\"modules\":[\"FOO\",\"BAR\",\"BAZ\"]")
+        assertContains(daemon.requestsReceived.single(), "\"limit\":9")
+    }
+
+    private fun emptyCheckResponse() = ModelCheckResponse(
+        limit = 20,
+        truncated = false,
+        totals = ModelCheckFindingCounts(errors = 0, warnings = 0, infos = 0),
+        findings = emptyList(),
+    )
+
+    @Test
     fun `model edit sends batch request`() {
         val response = ModelEditResponse(created = emptyMap(), violations = emptyList())
         val daemon = startPrerecordedDaemon(response)

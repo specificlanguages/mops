@@ -3,10 +3,7 @@ package com.specificlanguages.mops.cli.check
 import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
-import com.specificlanguages.mops.cli.output.renderJson
 import com.specificlanguages.mops.daemoncomms.DaemonClient
-import com.specificlanguages.mops.protocol.ModelCheckFindingJson
-import com.specificlanguages.mops.protocol.ModelCheckResponse
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
@@ -48,61 +45,8 @@ class ModelCheckCommand(private val environment: CommandEnvironment) : CliComman
 
     override fun run() {
         require(limit >= 0) { "limit must not be negative" }
-        val outputFormat = resolveFormat()
-
         val client = environment.daemon()
         val response = client.checkModel(target, limit)
-
-        when (outputFormat) {
-            OutputFormat.HUMAN -> {
-                response.findings.forEach(::renderHuman)
-                println(summaryLine(response))
-            }
-
-            OutputFormat.JSONL -> response.findings.forEach { println(renderJson(it)) }
-        }
-    }
-
-    private fun renderHuman(finding: ModelCheckFindingJson) {
-        val columns = mutableListOf(finding.severity.name.lowercase(), finding.message)
-        finding.node?.let { columns += listOf(it.name ?: "<unnamed>", it.concept, it.reference) }
-        println(columns.joinToString("\t"))
-    }
-
-    // Closes human output with total counts by severity over the full (pre-truncation) finding set, so zero errors is
-    // legible without re-running unbounded. When findings were dropped the truncation notice folds in as "(showing N)".
-    private fun summaryLine(response: ModelCheckResponse): String {
-        val totals = response.totals
-        if (totals.total == 0) return "no findings"
-        val counts = listOf(
-            count(totals.errors, "error"),
-            count(totals.warnings, "warning"),
-            count(totals.infos, "info", "infos"),
-        ).joinToString(", ")
-        return if (response.truncated) "$counts (showing ${response.findings.size})" else counts
-    }
-
-    private fun count(n: Int, singular: String, plural: String = "${singular}s"): String =
-        "$n ${if (n == 1) singular else plural}"
-
-    private fun resolveFormat(): OutputFormat {
-        val requested = format ?: return OutputFormat.HUMAN
-        return OutputFormat.fromWireName(requested)
-            ?: throw IllegalArgumentException("unknown --format value '$requested'; expected human or jsonl")
-    }
-
-    private enum class OutputFormat {
-        HUMAN,
-        JSONL,
-        ;
-
-        companion object {
-            fun fromWireName(value: String): OutputFormat? =
-                when (value) {
-                    "human" -> HUMAN
-                    "jsonl" -> JSONL
-                    else -> null
-                }
-        }
+        renderCheckResponse(response, format)
     }
 }

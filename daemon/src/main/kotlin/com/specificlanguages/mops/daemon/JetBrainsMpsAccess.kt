@@ -123,6 +123,24 @@ class JetBrainsMpsAccess(
             return modelChecker.check(project, model, limit)
         }
 
+        override fun checkProject(limit: Int): ModelCheckResponse =
+            modelChecker.check(project, project.projectModulesWithGenerators.toList(), limit)
+
+        override fun checkModules(modules: List<String>, limit: Int): ModelCheckResponse =
+            modelChecker.check(project, modules.map(::resolveCheckModule).distinct(), limit)
+
+        private fun resolveCheckModule(target: String): SModule {
+            val matches = matchingProjectModules(target)
+            return when (matches.size) {
+                0 -> throw MpsRequestException(MpsErrorCode.TARGET_NOT_FOUND, "module not found in project: $target")
+                1 -> matches.single()
+                else -> throw MpsRequestException(
+                    MpsErrorCode.AMBIGUOUS_TARGET,
+                    "ambiguous module: $target matches ${matches.size} project modules",
+                )
+            }
+        }
+
         // Resolves the node to render and, unless [allowReflective], refuses a subtree whose concepts did not resolve.
         // The editor render itself is deliberately not done here: it must run on the EDT and would deadlock if driven
         // from inside this read action (see [MpsAccess.renderNode]). So this returns the node for the caller to render

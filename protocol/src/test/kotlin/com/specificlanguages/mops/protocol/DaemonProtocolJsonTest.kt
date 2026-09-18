@@ -682,6 +682,27 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `project-check request JSON carries the global limit`() {
+        val request = ProjectCheckRequest(token = "secret", limit = 20)
+        val serialized = ProtocolJson.encodeRequest(request)
+
+        assertContains(serialized, "\"type\":\"project-check\"")
+        assertContains(serialized, "\"limit\":20")
+        assertEquals(request, ProtocolJson.decodeRequest(serialized))
+    }
+
+    @Test
+    fun `module-check request JSON carries every module and the global limit`() {
+        val request = ModuleCheckRequest(token = "secret", modules = listOf("FOO", "BAR", "BAZ"), limit = 20)
+        val serialized = ProtocolJson.encodeRequest(request)
+
+        assertContains(serialized, "\"type\":\"module-check\"")
+        assertContains(serialized, "\"modules\":[\"FOO\",\"BAR\",\"BAZ\"]")
+        assertContains(serialized, "\"limit\":20")
+        assertEquals(request, ProtocolJson.decodeRequest(serialized))
+    }
+
+    @Test
     fun `model-check response JSON carries findings with severity, node reference, name, and concept`() {
         val model = "r:9363093b-3fa9-4e39-87cb-26240d0efa37(baselanguage.sandbox)"
         val response = ModelCheckResponse(

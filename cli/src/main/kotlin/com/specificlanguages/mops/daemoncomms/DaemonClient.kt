@@ -37,6 +37,12 @@ interface DaemonClient {
      * (`0` or less returns every finding).
      */
     fun checkModel(target: String, limit: Int): ModelCheckResponse
+
+    /** Runs one combined check over every Project Module, with [limit] applied globally. */
+    fun checkProject(limit: Int): ModelCheckResponse
+
+    /** Runs one combined check over the named Project Modules, with [limit] applied globally. */
+    fun checkModules(modules: List<String>, limit: Int): ModelCheckResponse
     fun findUsages(target: NodeTarget, scope: List<String>? = null, limit: Int): FindUsagesResponse
     fun findInstances(
         concept: String,

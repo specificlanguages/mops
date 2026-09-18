@@ -42,6 +42,10 @@ interface MpsRead {
      */
     fun checkModel(target: String, limit: Int): ModelCheckResponse
 
+    fun checkProject(limit: Int): ModelCheckResponse
+
+    fun checkModules(modules: List<String>, limit: Int): ModelCheckResponse
+
     /**
      * Resolves the optional `in`-clause [segments] of a find into a validated [ResolvedScope], reusing the navigation
      * grammar of [list]. A null or empty segment list yields the default editable-project-sources scope; `["/"]` yields

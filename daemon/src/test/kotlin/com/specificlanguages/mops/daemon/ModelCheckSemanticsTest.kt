@@ -64,6 +64,41 @@ class ModelCheckSemanticsTest {
         assertEquals(MpsErrorCode.MODEL_NOT_FOUND, failure.code)
     }
 
+    @Test
+    fun `project check checks models in every Project Module`() {
+        val response = SharedMpsEnvironment.withProjectCopy(
+            projectName = SANDBOX,
+            prepare = ::breakReferenceToParameterA,
+        ) { access, _ ->
+            access.read { checkProject(limit = 0) }
+        }
+
+        assertTrue(response.findings.any { it.severity == FindingSeverity.ERROR })
+    }
+
+    @Test
+    fun `module check checks models in the named Project Module`() {
+        val response = SharedMpsEnvironment.withProjectCopy(
+            projectName = SANDBOX,
+            prepare = ::breakReferenceToParameterA,
+        ) { access, _ ->
+            access.read { checkModules(listOf(MODULE_NAME), limit = 0) }
+        }
+
+        assertTrue(response.findings.any { it.severity == FindingSeverity.ERROR })
+    }
+
+    @Test
+    fun `module check rejects a dependency module outside the project`() {
+        val failure = assertFailsWith<MpsRequestException> {
+            SharedMpsEnvironment.withProjectCopy(projectName = SANDBOX) { access, _ ->
+                access.read { checkModules(listOf("JDK"), limit = 0) }
+            }
+        }
+
+        assertEquals(MpsErrorCode.TARGET_NOT_FOUND, failure.code)
+    }
+
     // Repoints the `add` body's reference to parameter `a` at a node ID that no longer exists, leaving the
     // VariableReference dangling. Only the ref site uses node="4LxqAFFLH2G"; the parameter itself uses id="...", so it
     // stays intact and the model still loads.
@@ -78,6 +113,7 @@ class ModelCheckSemanticsTest {
     private companion object {
         const val SANDBOX = "base-language-sandbox"
         const val MODEL_NAME = "baselanguage.sandbox"
+        const val MODULE_NAME = "baselanguage.sandbox"
         const val MODEL_REFERENCE = "r:9363093b-3fa9-4e39-87cb-26240d0efa37(baselanguage.sandbox)"
     }
 }
