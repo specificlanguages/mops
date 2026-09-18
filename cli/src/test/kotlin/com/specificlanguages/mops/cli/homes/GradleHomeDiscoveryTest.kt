@@ -182,6 +182,40 @@ class GradleHomeDiscoveryTest {
     }
 
     @Test
+    fun `mbeddr resolveMps copy destination supplies the MPS home fallback`() {
+        val root = fixture("""
+            buildscript {
+                repositories {
+                    mavenCentral()
+                    maven { url = uri('https://artifacts.itemis.cloud/repository/maven-mps') }
+                }
+                dependencies { classpath 'de.itemis.mps:mps-gradle-plugin:1.30.2.1.649c88d' }
+            }
+            def resolveMps = tasks.register('resolveMps', Sync) {
+                into(layout.buildDirectory.dir('mps'))
+                doFirst { throw new GradleException('Copy action must not run') }
+            }
+            tasks.register('buildLanguages', de.itemis.mps.gradle.BuildLanguages) {
+                dependsOn(resolveMps)
+                script = 'does-not-exist.xml'
+                doFirst { throw new GradleException('Build action must not run') }
+            }
+        """)
+        root.resolve("MPS project/.mps").createDirectories()
+        val wrapper = root.resolve("custom/mopsw")
+
+        val (exit, output) = run(root, "--output", wrapper.toString())
+
+        assertEquals(0, exit, output)
+        assertContains(
+            output,
+            "Source: :buildLanguages (mbeddr RunAntScript); Gradle default Java; :resolveMps destination",
+        )
+        assertContains(output, "MPS home: ${root.resolve("build/mps")}")
+        assertContains(wrapper.readText(), "--mps-home='${root.resolve("build/mps")}'")
+    }
+
+    @Test
     fun `unknown home keeps discovery partial`() {
         val root = fixture("""
             buildscript {

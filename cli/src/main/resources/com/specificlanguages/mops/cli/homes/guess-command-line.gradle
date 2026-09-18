@@ -36,6 +36,7 @@ gradle.projectsEvaluated {
                         def mpsArgument = args.find {
                             it.startsWith('-Dmps.home=') || it.startsWith('-Dmps_home=')
                         }
+                        def resolveMps = project.tasks.findByName('resolveMps')
                         def executable = task.executable ?:
                             project.findProperty('itemis.mps.gradle.ant.defaultJavaExecutable')
                         source = "${task.path} (mbeddr RunAntScript)"
@@ -43,8 +44,13 @@ gradle.projectsEvaluated {
                             executable = new File(System.getProperty('java.home'), 'bin/java')
                             source += '; Gradle default Java'
                         }
-                        mpsHome = mpsArgument == null ? null :
-                            project.file(mpsArgument.substring(mpsArgument.indexOf('=') + 1)).canonicalPath
+                        if (mpsArgument != null) {
+                            mpsHome = project.file(
+                                mpsArgument.substring(mpsArgument.indexOf('=') + 1)).canonicalPath
+                        } else if (resolveMps instanceof org.gradle.api.tasks.AbstractCopyTask) {
+                            mpsHome = resolveMps.destinationDir.canonicalPath
+                            source += "; ${resolveMps.path} destination"
+                        }
                         javaHome = project.file(executable.toString()).absoluteFile.parentFile.parentFile.canonicalPath
                     }
                 }
