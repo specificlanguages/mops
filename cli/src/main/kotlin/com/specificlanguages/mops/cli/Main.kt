@@ -17,6 +17,7 @@ import com.specificlanguages.mops.cli.daemon.DaemonOperations
 import com.specificlanguages.mops.cli.daemon.DaemonPingCommand
 import com.specificlanguages.mops.cli.daemon.DaemonStatusCommand
 import com.specificlanguages.mops.cli.daemon.DaemonStopCommand
+import com.specificlanguages.mops.cli.diagnose.DiagnoseInstancesCommand
 import com.specificlanguages.mops.cli.diagnose.DiagnoseModuleCommand
 import com.specificlanguages.mops.cli.diagnose.DiagnoseModulesCommand
 import com.specificlanguages.mops.cli.diagnose.DiagnoseOperations
@@ -85,6 +86,7 @@ fun newCommandLine(workingDirectory: Path = Path.of("").absolute()): CommandLine
         addLeaf("model", CreateModelCommand(rootCommand))
     }
     root.addGroup("diagnose", DiagnoseOperations()) {
+        addLeaf("instances", DiagnoseInstancesCommand(rootCommand))
         addLeaf("module", DiagnoseModuleCommand(rootCommand))
         addLeaf("project", DiagnoseModulesCommand(rootCommand))
     }

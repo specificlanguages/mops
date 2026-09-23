@@ -278,3 +278,16 @@ data class CreateModelRequest(
     val filePerRoot: Boolean = false,
     val dryRun: Boolean = false,
 ) : DaemonRequest
+
+/** Compare instance-search layers without changing models or invalidating caches. */
+@Serializable
+@SerialName("diagnose-instances")
+data class DiagnoseInstancesRequest(
+    override val token: String,
+    val concept: String,
+    val exact: Boolean = false,
+    val scope: List<String>? = null,
+    val filters: List<NodeFilter> = emptyList(),
+    val limit: Int = 100,
+    val expect: String? = null,
+) : DaemonRequest

@@ -62,6 +62,13 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess, pr
                     },
                 )
 
+                is DiagnoseInstancesRequest -> mpsAccess.read {
+                    diagnoseInstances(
+                        request.concept, request.exact, resolveScope(request.scope), request.filters,
+                        request.limit, request.expect,
+                    ).copy(scope = request.scope)
+                }
+
                 is DiagnoseModulesRequest -> mpsAccess.read { diagnoseModules() }
 
                 is DiagnoseModuleRequest -> mpsAccess.read { diagnoseModule(request.module) }
@@ -86,7 +93,9 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess, pr
                 is CreateModelRequest -> mpsAccess.write { ModelCreator((mpsAccess as JetBrainsMpsAccess).project).create(request) }
 
                 else -> errorResponse("UNSUPPORTED_REQUEST", "unsupported request type: ${request::class.simpleName}")
-            }.also { mpsAccess.extra { saveProject() } }
+            }.also {
+                if (request !is DiagnoseInstancesRequest) mpsAccess.extra { saveProject() }
+            }
         } catch (exception: MpsRequestException) {
             errorResponse(exception.code.name, exception.message)
         } catch (throwable: Throwable) {

@@ -302,6 +302,29 @@ class JetBrainsMpsAccess(
             )
         }
 
+        override fun diagnoseInstances(
+            concept: String, exact: Boolean, scope: ResolvedScope, filters: List<NodeFilter>, limit: Int, expect: String?,
+        ): InstancesDiagnosticResponse {
+            require(limit >= 0) { "limit must not be negative" }
+            val resolved = ConceptResolver(project).resolve(concept)
+            val domain = searchDomainFor(scope)
+            val subtree = (domain as? SearchDomain.Subtree)?.root
+            val searchScope = when (domain) {
+                is SearchDomain.MpsScope -> domain.searchScope
+                is SearchDomain.Subtree -> ModelsScope(listOf(requireNotNull(domain.root.model)))
+            }
+            return InstanceSearchDiagnostics().diagnose(
+                searchScope, subtree, resolved, exact, filters, filters.map(::compileFilter), limit,
+                expect, expect?.let { reference -> { persistence.createNodeReference(reference).resolve(project.repository) } },
+            ).copy(scope = when (scope) {
+                ResolvedScope.EditableProjectSources -> null
+                ResolvedScope.Repository -> listOf("/")
+                is ResolvedScope.Module -> listOf(scope.moduleReference)
+                is ResolvedScope.Model -> listOf(scope.modelReference)
+                is ResolvedScope.Subtree -> listOf(scope.nodeReference)
+            })
+        }
+
         override fun diagnoseModules(): ModulesDiagnosticsResponse =
             ModuleLoadDiagnostics(project).diagnoseModules()
 

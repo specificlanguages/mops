@@ -1,5 +1,7 @@
 package com.specificlanguages.mops.daemoncomms
 
+import com.specificlanguages.mops.protocol.DiagnoseInstancesRequest
+import com.specificlanguages.mops.protocol.InstancesDiagnosticResponse
 import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.DaemonRequest
 import com.specificlanguages.mops.protocol.DaemonRecord
@@ -161,6 +163,13 @@ class DefaultDaemonClient(
             MpsListRequest(token = token, target = target, depth = depth, limit = limit, summary = summary, role = role),
             MpsListResponse::class.java
         )
+
+    override fun diagnoseInstances(
+        concept: String, exact: Boolean, scope: List<String>?, filters: List<NodeFilter>, limit: Int, expect: String?,
+    ): InstancesDiagnosticResponse = exchange(
+        DiagnoseInstancesRequest(token, concept, exact, scope, filters, limit, expect),
+        InstancesDiagnosticResponse::class.java,
+    )
 
     override fun diagnoseModules(): ModulesDiagnosticsResponse =
         exchange(

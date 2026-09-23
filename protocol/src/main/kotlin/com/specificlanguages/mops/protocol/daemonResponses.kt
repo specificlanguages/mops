@@ -198,3 +198,23 @@ data class ModelCreationResponse(
 @Serializable
 @SerialName("ready")
 data class ReadyMessage(val port: Int) : DaemonResponse
+
+@Serializable
+@SerialName("diagnose-instances")
+data class InstancesDiagnosticResponse(
+    val concept: InstanceConceptJson,
+    val exact: Boolean,
+    val scope: List<String>?,
+    val searchPath: String,
+    val mpsVersion: String,
+    val participants: List<String>,
+    val models: List<InstanceModelDiagnosticJson>,
+    val normalCount: Int?,
+    val filteredCount: Int?,
+    val returnedCount: Int?,
+    val limit: Int,
+    val expected: ExpectedInstanceJson?,
+    val errors: List<String>,
+    val complete: Boolean,
+    val filters: List<NodeFilter> = emptyList(),
+) : DaemonResponse

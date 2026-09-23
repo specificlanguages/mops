@@ -8,6 +8,6 @@ import picocli.CommandLine.Command
  */
 @Command(
     name = "diagnose",
-    description = ["Diagnose how the daemon loaded the MPS project."],
+    description = ["Diagnose module loading and instance searches in the daemon."],
 )
 class DiagnoseOperations : CommandGroup()

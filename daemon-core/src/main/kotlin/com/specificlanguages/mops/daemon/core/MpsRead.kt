@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.daemon.core
 
+import com.specificlanguages.mops.protocol.InstancesDiagnosticResponse
 import com.specificlanguages.mops.protocol.FindByNameResponse
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindNodeByIdResponse
@@ -94,6 +95,16 @@ interface MpsRead {
         scope: ResolvedScope = ResolvedScope.EditableProjectSources,
         limit: Int,
     ): FindNodeByIdResponse
+
+    /** Compares instance-search layers; [limit] bounds simulated search output, not diagnostic traversal. */
+    fun diagnoseInstances(
+        concept: String,
+        exact: Boolean = false,
+        scope: ResolvedScope = ResolvedScope.EditableProjectSources,
+        filters: List<NodeFilter> = emptyList(),
+        limit: Int = 100,
+        expect: String? = null,
+    ): InstancesDiagnosticResponse
 
     /**
      * Diagnoses the load state of the project's languages and Java-bearing modules, reporting for each unloaded one why
