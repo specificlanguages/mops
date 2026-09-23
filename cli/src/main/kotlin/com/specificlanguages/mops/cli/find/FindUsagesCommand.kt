@@ -4,6 +4,7 @@ import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
 import com.specificlanguages.mops.cli.output.renderJson
+import com.specificlanguages.mops.cli.output.renderNodeReference
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.DaemonResponse
 import com.specificlanguages.mops.protocol.NodeTarget
@@ -66,11 +67,13 @@ class FindUsagesCommand(private val environment: CommandEnvironment) : CliComman
         when {
             json -> println(renderJson(response))
             refsOnly -> {
-                response.usages.forEach { println(it.owner.reference) }
+                response.usages.forEach {
+                    println(renderNodeReference(it.owner.reference, environment.nodeReferenceFormat, hyperlinks = false))
+                }
                 if (response.truncated) reportTruncationOnStderr(response.usages.size)
             }
             else -> {
-                response.usages.forEach { println(renderText(it, fullConcept)) }
+                response.usages.forEach { println(renderText(it, fullConcept, environment.nodeReferenceFormat)) }
                 if (response.truncated) {
                     println(listOf("truncated", response.usages.size, "more results not shown").joinToString("\t"))
                 }

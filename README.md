@@ -19,6 +19,9 @@ The CLI starts or reuses a per-project daemon process for most commands.
 Pass `--project-root PATH` to select an MPS project explicitly. The path can be absolute or relative to the directory
 where `mops` was started, for example `mops --project-root ../my-project daemon status`.
 
+Pass `--refs-as-urls` before the command to render node references in text output as MPS URLs, for example
+`mops --refs-as-urls find instances <concept>`. JSON output is unchanged.
+
 If you do not know where MPS and Java are installed, run `mops wrapper [PATH]` from the project checkout.
 PATH is the starting point of discovery, defaulting to `--project-root` when supplied, or the working directory.
 `wrapper` uses the nearest Gradle wrapper to inspect `mpsDefaults` of the `com.specificlanguages.mps` Gradle plugin or

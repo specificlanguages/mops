@@ -15,8 +15,13 @@ import picocli.CommandLine.Parameters
 class ModuleCheckCommand(private val environment: CommandEnvironment) : CliCommand() {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
 
-    @Option(names = ["--format"], paramLabel = "FORMAT", description = ["Output format: human or jsonl."])
-    var format: String? = null
+    @Option(
+        names = ["--format"],
+        paramLabel = "FORMAT",
+        converter = [CheckOutputFormat.Converter::class],
+        description = ["Output format: human or jsonl."],
+    )
+    var format: CheckOutputFormat = CheckOutputFormat.HUMAN
 
     @Option(names = ["--limit"], paramLabel = "N", description = ["Maximum findings to report; 0 means unlimited."])
     var limit: Int = 20
@@ -26,6 +31,10 @@ class ModuleCheckCommand(private val environment: CommandEnvironment) : CliComma
 
     override fun run() {
         require(limit >= 0) { "limit must not be negative" }
-        renderCheckResponse(environment.daemon().checkModules(modules, limit), format)
+        renderCheckResponse(
+            environment.daemon().checkModules(modules, limit),
+            format,
+            environment.nodeReferenceFormat,
+        )
     }
 }

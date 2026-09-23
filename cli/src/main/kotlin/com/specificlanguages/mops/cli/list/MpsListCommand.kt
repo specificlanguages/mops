@@ -85,7 +85,7 @@ class MpsListCommand(private val environment: CommandEnvironment) : CliCommand()
         if (json) {
             println(renderJson(response.root))
         } else {
-            ListRenderer(fullConcept).renderText(response.root, indent = 0)
+            ListRenderer(fullConcept, environment.nodeReferenceFormat).renderText(response.root, indent = 0)
         }
     }
 

@@ -2,13 +2,18 @@ package com.specificlanguages.mops.cli.check
 
 import com.specificlanguages.mops.cli.output.renderJson
 import com.specificlanguages.mops.cli.output.renderNodeReference
+import com.specificlanguages.mops.cli.output.NodeReferenceFormat
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
 import com.specificlanguages.mops.protocol.ModelCheckResponse
 
-internal fun renderCheckResponse(response: ModelCheckResponse, format: String?) {
-    when (resolveCheckOutputFormat(format)) {
+internal fun renderCheckResponse(
+    response: ModelCheckResponse,
+    outputFormat: CheckOutputFormat,
+    nodeReferenceFormat: NodeReferenceFormat,
+) {
+    when (outputFormat) {
         CheckOutputFormat.HUMAN -> {
-            response.findings.forEach(::renderHuman)
+            response.findings.forEach { renderHuman(it, nodeReferenceFormat) }
             println(summaryLine(response))
         }
 
@@ -16,10 +21,10 @@ internal fun renderCheckResponse(response: ModelCheckResponse, format: String?) 
     }
 }
 
-private fun renderHuman(finding: ModelCheckFindingJson) {
+private fun renderHuman(finding: ModelCheckFindingJson, nodeReferenceFormat: NodeReferenceFormat) {
     val columns = mutableListOf(finding.severity.name.lowercase(), finding.message)
     finding.node?.let {
-        columns += listOf(it.name ?: "<unnamed>", it.concept, renderNodeReference(it.reference))
+        columns += listOf(it.name ?: "<unnamed>", it.concept, renderNodeReference(it.reference, nodeReferenceFormat))
     }
     println(columns.joinToString("\t"))
 }
@@ -37,15 +42,3 @@ private fun summaryLine(response: ModelCheckResponse): String {
 
 private fun count(n: Int, singular: String, plural: String = "${singular}s"): String =
     "$n ${if (n == 1) singular else plural}"
-
-private fun resolveCheckOutputFormat(requested: String?): CheckOutputFormat =
-    when (requested ?: "human") {
-        "human" -> CheckOutputFormat.HUMAN
-        "jsonl" -> CheckOutputFormat.JSONL
-        else -> throw IllegalArgumentException("unknown --format value '$requested'; expected human or jsonl")
-    }
-
-private enum class CheckOutputFormat {
-    HUMAN,
-    JSONL,
-}

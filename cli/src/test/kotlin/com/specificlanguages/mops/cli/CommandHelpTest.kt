@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.cli
 
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
+import com.specificlanguages.mops.cli.output.NodeReferenceFormat
 import org.junit.jupiter.api.parallel.ResourceLock
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -9,6 +10,18 @@ import kotlin.test.assertFalse
 
 @ResourceLock("system-streams")
 class CommandHelpTest {
+    @Test
+    fun `refs as URLs is a global option`() {
+        val commandLine = newCommandLine()
+
+        commandLine.parseArgs("--refs-as-urls", "find", "instances", "example.language.structure.Example")
+
+        assertEquals(
+            NodeReferenceFormat.URL,
+            (commandLine.commandSpec.userObject() as MopsCommand).nodeReferenceFormat,
+        )
+    }
+
     @Test
     fun `root help lists top-level commands`() {
         val output = runHelp("--help")
@@ -22,6 +35,7 @@ class CommandHelpTest {
         assertContains(output, "edit")
         assertContains(output, "check")
         assertContains(output, "--project-root")
+        assertContains(output, "--refs-as-urls")
     }
 
     @Test

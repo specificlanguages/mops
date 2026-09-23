@@ -18,12 +18,13 @@ class ModelCheckCommand(private val environment: CommandEnvironment) : CliComman
     @Option(
         names = ["--format"],
         paramLabel = "FORMAT",
+        converter = [CheckOutputFormat.Converter::class],
         description = [
             "How to print findings: human (a readable list sorted by severity; default) or jsonl (one finding " +
                 "object per line).",
         ],
     )
-    var format: String? = null
+    var format: CheckOutputFormat = CheckOutputFormat.HUMAN
 
     @Option(
         names = ["--limit"],
@@ -47,6 +48,6 @@ class ModelCheckCommand(private val environment: CommandEnvironment) : CliComman
         require(limit >= 0) { "limit must not be negative" }
         val client = environment.daemon()
         val response = client.checkModel(target, limit)
-        renderCheckResponse(response, format)
+        renderCheckResponse(response, format, environment.nodeReferenceFormat)
     }
 }

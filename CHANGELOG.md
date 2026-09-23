@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added the global `--refs-as-urls` option to render node references in text output as MPS URLs. JSON output remains
+  unchanged.
+
 - Added writable indexed Code Mode accessors: `node.properties[name]`, `node.child[role]`,
   `node.children[role]`, and `node.references[role]`. The single-child accessor throws if the role has several
   children; the plural accessor returns a list. Child assignments do not validate declared cardinality.

@@ -1,12 +1,16 @@
 package com.specificlanguages.mops.cli.list
 
 import com.specificlanguages.mops.cli.output.displayConcept
+import com.specificlanguages.mops.cli.output.NodeReferenceFormat
 import com.specificlanguages.mops.cli.output.renderNodeReference
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import com.specificlanguages.mops.protocol.MpsListSummaryGroupJson
 import com.specificlanguages.mops.protocol.MpsListSummaryJson
 
-internal class ListRenderer(val fullConcept: Boolean) {
+internal class ListRenderer(
+    val fullConcept: Boolean,
+    val nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED,
+) {
     internal fun renderText(entry: MpsListEntryJson, indent: Int) {
         println("${"  ".repeat(indent)}${entry.columns().joinToString("\t")}")
 
@@ -55,7 +59,7 @@ internal class ListRenderer(val fullConcept: Boolean) {
         listOf(
             name ?: "<unnamed>",
             concept?.let { displayConcept(it, fullConcept) }.orEmpty(),
-            reference?.let(::renderNodeReference).orEmpty(),
+            reference?.let { renderNodeReference(it, nodeReferenceFormat) }.orEmpty(),
         ) +
                 listOfNotNull(error)
 }

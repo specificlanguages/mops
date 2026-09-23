@@ -141,7 +141,7 @@ class ModelCheckCommandTest {
         val stdout = tapSystemOut {
             exitCode = CommandLine(ModelCheckCommand(client))
                 .setExecutionExceptionHandler(PrintErrorAndExit)
-                .execute("--format", "jsonl", MODEL)
+                .execute("--format", "JsOnL", MODEL)
         }
 
         assertEquals(0, exitCode)
@@ -198,7 +198,7 @@ class ModelCheckCommandTest {
                 .execute("--format", "xml", MODEL)
         }
 
-        assertEquals(1, exitCode)
+        assertEquals(2, exitCode)
         assertContains(stderr, "unknown --format value 'xml'")
     }
 

@@ -3,6 +3,7 @@ package com.specificlanguages.mops.cli
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.cli.find.FindInstancesCommand
+import com.specificlanguages.mops.cli.output.NodeReferenceFormat
 import com.specificlanguages.mops.cli.get.ModelGetNodeCommand
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.FindInstancesResponse
@@ -389,6 +390,28 @@ class FindInstancesCommandTest {
         assertEquals(
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
                 System.lineSeparator(),
+            stdout,
+        )
+    }
+
+    @Test
+    fun `find instances renders node references as URLs when configured globally`() {
+        val client = mock<DaemonClient>()
+        whenever(client.findInstances(CONCEPT, false, limit = 100)).thenReturn(sampleInstancesResponse())
+        var exitCode = Int.MIN_VALUE
+
+        val stdout = tapSystemOut {
+            exitCode = CommandLine(FindInstancesCommand(client, NodeReferenceFormat.URL))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(CONCEPT)
+        }
+
+        assertEquals(0, exitCode)
+        assertEquals(
+            "root\tJsonObject\tConceptDeclaration\t" +
+                "http://127.0.0.1:63320/node?ref=" +
+                "r%3Afd752404-89d3-4ffe-bc3a-7fb7a27c63b6%28com.specificlanguages.json.structure%29%2F" +
+                "2110045694544566905" + System.lineSeparator(),
             stdout,
         )
     }

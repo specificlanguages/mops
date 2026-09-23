@@ -4,6 +4,8 @@ import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
 import com.specificlanguages.mops.cli.output.renderJson
+import com.specificlanguages.mops.cli.output.renderNodeReference
+import com.specificlanguages.mops.cli.output.NodeReferenceFormat
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.DaemonResponse
 import com.specificlanguages.mops.protocol.NodeFilter
@@ -21,7 +23,10 @@ import picocli.CommandLine.Parameters
     ],
 )
 class FindInstancesCommand(private val environment: CommandEnvironment) : CliCommand() {
-    constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
+    constructor(
+        daemonClient: DaemonClient,
+        nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED,
+    ) : this(DaemonClientCommandEnvironment(daemonClient, nodeReferenceFormat))
 
     @Option(
         names = ["--json"],
@@ -110,11 +115,13 @@ class FindInstancesCommand(private val environment: CommandEnvironment) : CliCom
         when {
             json -> println(renderJson(response))
             refsOnly -> {
-                response.nodes.forEach { println(it.reference) }
+                response.nodes.forEach {
+                    println(renderNodeReference(it.reference, environment.nodeReferenceFormat, hyperlinks = false))
+                }
                 if (response.truncated) reportTruncationOnStderr(response.nodes.size)
             }
             else -> {
-                response.nodes.forEach { println(renderText(it, fullConcept)) }
+                response.nodes.forEach { println(renderText(it, fullConcept, environment.nodeReferenceFormat)) }
                 if (response.truncated) {
                     println(listOf("truncated", response.nodes.size, "more results not shown").joinToString("\t"))
                 }

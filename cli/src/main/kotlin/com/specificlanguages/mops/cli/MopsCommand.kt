@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.cli.common.CommandEnvironment
+import com.specificlanguages.mops.cli.output.NodeReferenceFormat
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.daemoncomms.DaemonPool
 import com.specificlanguages.mops.daemoncomms.DefaultDaemonPool
@@ -56,6 +57,13 @@ class MopsCommand(
         description = ["Java home used to start daemon-backed commands."],
     )
     var javaHome: String? = null
+
+    override var nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED
+
+    @Option(names = ["--refs-as-urls"], description = ["Render node references as MPS URLs in text output."])
+    fun setRefsAsUrls(enabled: Boolean) {
+        nodeReferenceFormat = if (enabled) NodeReferenceFormat.URL else NodeReferenceFormat.SERIALIZED
+    }
 
     override fun run() {
         CommandLine(this).usage(System.out)

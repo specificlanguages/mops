@@ -1,11 +1,13 @@
 package com.specificlanguages.mops.cli.common
 
+import com.specificlanguages.mops.cli.output.NodeReferenceFormat
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.daemoncomms.DaemonPool
 import java.nio.file.Path
 
 internal class DaemonClientCommandEnvironment(
     private val daemonClient: DaemonClient,
+    override val nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED,
 ) : CommandEnvironment {
     override val workingDirectory: Path = Path.of("").toAbsolutePath()
 
