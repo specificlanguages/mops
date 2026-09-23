@@ -21,12 +21,12 @@ import kotlin.io.path.readText
  */
 class FullClasspathDaemonLauncher(
     private val records: DaemonRecordStore,
-    private val timeout: Duration = Duration.ofMinutes(2),
+    private val startupTimeout: Duration = startupTimeoutFromEnvironment(System.getenv(STARTUP_TIMEOUT_ENV)),
     private val applicationHome: Path? = discoverApplicationHome(),
 ) : DaemonLauncher {
 
     override fun connectToExistingDaemon(record: DaemonRecord): DefaultDaemonClient {
-        return DefaultDaemonClient(port = record.port, token = record.token, timeout = timeout)
+        return DefaultDaemonClient(port = record.port, token = record.token, timeout = REQUEST_TIMEOUT)
     }
 
     override fun startDaemon(context: DaemonContext): DefaultDaemonClient {
@@ -74,7 +74,7 @@ class FullClasspathDaemonLauncher(
         var startupSucceeded = false
         try {
             val record = waitForDaemonRecord(process, context, token, logFile, workspace)
-            val client = DefaultDaemonClient(port = record.port, token = record.token, timeout = timeout)
+            val client = DefaultDaemonClient(port = record.port, token = record.token, timeout = REQUEST_TIMEOUT)
 
             client.ping() // throws on error
 
@@ -94,7 +94,7 @@ class FullClasspathDaemonLauncher(
         logPath: Path,
         workspace: DaemonWorkspace,
     ): DaemonRecord {
-        val timeoutMillis = timeout.toMillis()
+        val timeoutMillis = startupTimeout.toMillis()
         val startTime = System.currentTimeMillis()
         while (System.currentTimeMillis() - startTime < timeoutMillis) {
             val record = records.read(context.realProjectPath)?.record
@@ -111,7 +111,11 @@ class FullClasspathDaemonLauncher(
             }
             Thread.sleep(25)
         }
-        throw daemonStartupException("timed out waiting for daemon project record", logPath)
+        throw daemonStartupException(
+            "timed out waiting for daemon project record after ${startupTimeout.seconds} seconds; " +
+                "increase $STARTUP_TIMEOUT_ENV to allow more startup time",
+            logPath,
+        )
     }
 
     /**
@@ -185,6 +189,17 @@ class FullClasspathDaemonLauncher(
 
     companion object {
         private const val DAEMON_CLASSPATH_FILE = "mops-daemon.classpath"
+        private const val STARTUP_TIMEOUT_ENV = "MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS"
+        private val REQUEST_TIMEOUT = Duration.ofMinutes(2)
+
+        internal fun startupTimeoutFromEnvironment(value: String?): Duration {
+            if (value == null) return Duration.ofMinutes(5)
+            val seconds = value.toLongOrNull()
+            require(seconds != null && seconds in 1..Long.MAX_VALUE / 1000) {
+                "$STARTUP_TIMEOUT_ENV must be a positive whole number of seconds no greater than ${Long.MAX_VALUE / 1000}"
+            }
+            return Duration.ofSeconds(seconds)
+        }
 
         /**
          * Builds a diagnostic when the IntelliJ workspace lock in [configDir] is held by a live process other than

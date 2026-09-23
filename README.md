@@ -229,6 +229,16 @@ working directory. With `--all`, it reads every known daemon record.
 
 ## Daemon State
 
+The CLI allows 300 seconds (5 minutes) for initial daemon startup, including opening the MPS project. For larger projects, set
+`MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS` to a positive whole number of seconds, for example:
+
+```sh
+export MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS=600
+```
+
+This setting controls the wait for the daemon's readiness record. It does not change command execution timeouts.
+If startup times out, the CLI terminates the daemon and reports the timeout and daemon log path.
+
 Daemon records, logs, working files, and isolated IDEA config and system directories live outside the MPS project. By
 default the CLI stores them under `$XDG_CACHE_HOME/mops/daemon`, falling back to `~/.cache/mops/daemon` when
 `XDG_CACHE_HOME` is unset; pass `--daemon-home <path>` to use another directory. Each project gets a stable hashed

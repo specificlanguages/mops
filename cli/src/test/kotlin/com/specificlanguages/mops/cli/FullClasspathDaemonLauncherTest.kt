@@ -24,6 +24,59 @@ class FullClasspathDaemonLauncherTest {
     lateinit var tempDir: Path
 
     @Test
+    fun `startup timeout defaults to 300 seconds and accepts larger values`() {
+        assertEquals(Duration.ofSeconds(300), FullClasspathDaemonLauncher.startupTimeoutFromEnvironment(null))
+        assertEquals(Duration.ofSeconds(600), FullClasspathDaemonLauncher.startupTimeoutFromEnvironment("600"))
+    }
+
+    @Test
+    fun `startup timeout rejects invalid values including millisecond overflow`() {
+        for (value in listOf("", "0", "-1", "1.5", "abc", Long.MAX_VALUE.toString(), "99999999999999999999")) {
+            val exception = assertFailsWith<IllegalArgumentException>(value) {
+                FullClasspathDaemonLauncher.startupTimeoutFromEnvironment(value)
+            }
+            assertContains(exception.message!!, "MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS")
+            assertContains(exception.message!!, "positive whole number of seconds")
+        }
+    }
+
+    @Test
+    @ResourceLock("system-properties")
+    fun `startup timeout reports configured duration and terminates the child`() {
+        assumeFalse(System.getProperty("os.name").startsWith("Windows"), "fake Java script is POSIX-only")
+        val project = tempDir.mpsProject()
+        val mpsHome = tempDir.mpsHome()
+        val fakeJava = fakeJavaHome("slow-java")
+        val pidFile = tempDir.resolve("daemon.pid")
+        fakeJava.home.resolve("bin/java").writeText(
+            """
+            #!/bin/sh
+            echo $$ > ${shellQuote(pidFile)}
+            exec sleep 60
+            """.trimIndent(),
+        )
+
+        val exception = assertFailsWith<IllegalStateException> {
+            SystemLambda.restoreSystemProperties {
+                System.setProperty("mops.daemon.classpath", "unused.jar")
+                FullClasspathDaemonLauncher(
+                    records = DaemonRecordStore.forDaemonHome(tempDir.resolve("daemon-home")),
+                    startupTimeout = FullClasspathDaemonLauncher.startupTimeoutFromEnvironment("1"),
+                ).startDaemon(DaemonContext.fromLivePaths(project, mpsHome, fakeJava.home))
+            }
+        }
+
+        assertContains(exception.message!!, "timed out waiting for daemon project record after 1 seconds")
+        assertContains(exception.message!!, "MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS")
+        assertContains(exception.message!!, "Daemon log:")
+        val child = ProcessHandle.of(pidFile.readText().trim().toLong())
+        if (child.isPresent) {
+            child.get().onExit().get(5, java.util.concurrent.TimeUnit.SECONDS)
+            assertTrue(!child.get().isAlive, "timed-out daemon should be terminated")
+        }
+    }
+
+    @Test
     @ResourceLock("system-properties")
     fun `startDaemon honors configured daemon classpath property`() {
         assumeFalse(System.getProperty("os.name").startsWith("Windows"), "fake Java script is POSIX-only")
@@ -44,7 +97,7 @@ class FullClasspathDaemonLauncherTest {
                 System.setProperty("mops.daemon.classpath", configuredClasspath)
                 FullClasspathDaemonLauncher(
                     records = DaemonRecordStore.forDaemonHome(tempDir.resolve("daemon-home")),
-                    timeout = Duration.ofMillis(500),
+                    startupTimeout = Duration.ofMillis(500),
                 ).startDaemon(
                     context = DaemonContext.fromLivePaths(
                         projectPath = project,
@@ -89,7 +142,7 @@ class FullClasspathDaemonLauncherTest {
                 System.clearProperty("mops.daemon.classpath")
                 FullClasspathDaemonLauncher(
                     records = DaemonRecordStore.forDaemonHome(tempDir.resolve("daemon-home")),
-                    timeout = Duration.ofMillis(500),
+                    startupTimeout = Duration.ofMillis(500),
                     applicationHome = applicationHome,
                 ).startDaemon(
                     context = DaemonContext.fromLivePaths(
