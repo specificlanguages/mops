@@ -1,7 +1,6 @@
 package com.specificlanguages.mops.daemoncomms
 
 import com.specificlanguages.mops.protocol.ConstraintEnforcement
-import com.specificlanguages.mops.protocol.InstancesDiagnosticResponse
 import com.specificlanguages.mops.protocol.FindByNameResponse
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindNodeByIdResponse
@@ -62,15 +61,6 @@ interface DaemonClient {
         summary: Boolean = false,
         role: String? = null,
     ): MpsListResponse
-    fun diagnoseInstances(
-        concept: String,
-        exact: Boolean = false,
-        scope: List<String>? = null,
-        filters: List<NodeFilter> = emptyList(),
-        limit: Int = 100,
-        expect: String? = null,
-    ): InstancesDiagnosticResponse
-
     fun diagnoseModules(): ModulesDiagnosticsResponse
     fun diagnoseModule(module: String): ModuleDiagnosticResponse
 

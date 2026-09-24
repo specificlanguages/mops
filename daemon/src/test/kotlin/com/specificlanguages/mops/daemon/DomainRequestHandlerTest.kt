@@ -5,8 +5,6 @@ import com.specificlanguages.mops.daemon.core.MpsExtra
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.daemon.core.MpsWrite
 import com.specificlanguages.mops.daemon.core.ResolvedScope
-import com.specificlanguages.mops.protocol.*
-import org.mockito.kotlin.never
 import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.MakeMessageJson
@@ -58,27 +56,6 @@ class DomainRequestHandlerTest {
     private val workspacePath = Path.of("/workspace/example")
     private val access = spy(mpsAccessOver(operations, extra))
     private val handler = DomainRequestHandler(workspacePath, access)
-
-    @Test
-    fun `instance diagnosis resolves scope preserves query and skips automatic save`() {
-        val operations = mock<MpsWrite>()
-        val extra = mock<MpsExtra>()
-        val segments = listOf("some.model")
-        val scope = ResolvedScope.Model("model-ref")
-        val filters = listOf(NodeFilter.Role("members"))
-        val response = InstancesDiagnosticResponse(
-            InstanceConceptJson("Concept", "id", true), false, null, "facade", "2025.1.2", emptyList(),
-            emptyList(), 0, 0, 0, 7, null, emptyList(), true,
-        )
-        whenever(operations.resolveScope(segments)).thenReturn(scope)
-        whenever(operations.diagnoseInstances("Concept", false, scope, filters, 7, "node-ref")).thenReturn(response)
-        val handler = DomainRequestHandler(Path.of("/workspace"), mpsAccessOver(operations, extra))
-        assertEquals(response.copy(scope = segments), handler.handleDomainRequest(
-            DiagnoseInstancesRequest(TOKEN, "Concept", false, segments, filters, 7, "node-ref"),
-        ))
-        verify(extra).refreshExternalChanges()
-        verify(extra, never()).saveProject()
-    }
 
     @Test
     fun `get-node reads and wraps the exported node`() {

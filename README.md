@@ -172,33 +172,6 @@ search a module, model, or the whole repository (`in /`), where only root-bearin
 output is tab-separated rows in the same shape as `find instances`, including the short-concept default with
 `--full-concept` and the `--refs-only` piping mode; `--json` prints the structured response.
 
-```text
-mops --mps-home <path> diagnose instances <concept> [--exact] [--named PATTERN] [--role ROLE] \
-  [--limit N] [--expect NODE_REF] [--json] [in <scope-segments>]
-```
-
-`diagnose instances` investigates missing search results. It uses the same concept resolution, scope, filters, and
-result limit as `find instances`. It compares the full MPS search with per-model lookup and two independent tree
-walk predicates: membership in MPS's expanded concept set, and direct concept/subconcept matching. Per-model differences
-identify participant selection, model lookup, or concept expansion as the layer to investigate. Both missing and unexpected
-node references are reported, with counts and up to 20 examples per direction. Equal counts do not imply equal results.
-
-`--expect` accepts a serialized node reference and explains whether it is unresolved, outside scope, a concept mismatch,
-filtered, omitted by search, beyond the result limit, or returned. Text and JSON include concept identities, registered
-participants, model state, persistence streams, stage counts, and incomplete-probe errors. `complete` means all probes
-finished without reported errors; it does not mean their results agree. An empty scope is reported with no model rows.
-
-The command loads and scans every model in scope. `--limit` simulates the normal search's output limit; it does not limit
-this diagnostic scan. Prefer a model scope for a focused investigation. For subtree scopes, normal search uses traversal;
-additional facade and model-lookup probes search its containing model and restrict results to the subtree. The facade
-baseline precedes model lookup and diagnostic traversal, although normal subtree search itself must traverse nodes first.
-Expected-node resolution runs after those probes. Model loading and cache initialization can affect later observations.
-
-Diagnosis refreshes external changes through the normal request lifecycle but does not save the project, change models,
-or invalidate caches. Cancellation fails the request; other probe failures produce an incomplete report with unavailable
-counts represented as `null`. Participant differences do not prove that a file was unindexed: this command does not replay
-individual participants or inspect file-index coverage. Concept-resolution failures retain the normal module-load diagnosis.
-
 ```sh
 mops --mps-home <path> diagnose project [--all] [--json]
 ```
