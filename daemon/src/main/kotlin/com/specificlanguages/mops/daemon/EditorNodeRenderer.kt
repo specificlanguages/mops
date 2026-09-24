@@ -9,7 +9,7 @@ import org.jetbrains.mps.openapi.model.SNode
  * Renders a node's default editor as plain text, headlessly.
  *
  * [HeadlessEditorComponent] builds the node's editor cell tree without any UI; `renderText()` then serializes that tree
- * with the editor's own whitespace and indentation, driven by cell styles rather than geometry. The node need not be a
+ * with the editor's own line breaks and indentation, driven by cell styles rather than geometry. The node need not be a
  * Root Node, but must be registered in a model of the project's repository. See
  * https://github.com/specificlanguages/mps-api-research/blob/main/editor-cell-rendering.md.
  *
@@ -28,7 +28,7 @@ class EditorNodeRenderer {
         val editor = HeadlessEditorComponent(project.repository)
         return try {
             editor.editNode(node)
-            editor.rootCell.renderText().text
+            editor.rootCell.renderText().text.split('\n').joinToString("\n") { it.trimEnd() }
         } finally {
             editor.dispose()
         }

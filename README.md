@@ -111,9 +111,10 @@ mops --mps-home <path> render node [--allow-reflective] <model-target> <node-id>
 ```
 
 Renders one resolved node as the plain text of its default editor — the way it would appear in the MPS editor — and
-prints it verbatim, preserving the editor's line breaks and indentation. Addressed the same way as `get node`: a
-serialized node reference, or a model target plus node ID. An unresolved target fails with `NODE_NOT_FOUND`. Any node is
-renderable, not only root nodes; the output is a quick overview for reading, not a round-trippable serialization.
+prints it with the editor's line breaks and indentation, trimming trailing whitespace from each line. Addressed the same
+way as `get node`: a serialized node reference, or a model target plus node ID. An unresolved target fails with
+`NODE_NOT_FOUND`. Any node is renderable, not only root nodes; the output is a quick overview for reading, not a
+round-trippable serialization.
 
 If any concept in the node's subtree does not resolve — its language is not loaded — the command fails with
 `LANGUAGE_NOT_LOADED`. It diagnoses each unloaded language through the same machinery as `find instances` (naming the

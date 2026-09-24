@@ -21,6 +21,7 @@ class RenderNodeSemanticsTest {
         assertContains(text, "concept JsonFile")
         assertContains(text, "extends")
         assertTrue(text.contains('\n'), "expected the rendering to span multiple lines, got: $text")
+        assertTrue(text.lineSequence().all { it == it.trimEnd() }, "rendered lines have trailing whitespace: $text")
     }
 
     @Test
