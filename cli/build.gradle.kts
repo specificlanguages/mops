@@ -2,8 +2,8 @@ plugins {
     id("mops.kotlin-jvm-conventions")
     application
 
-    id("com.specificlanguages.mps-platform-cache") version "1.0.0"
-    id("com.specificlanguages.jbr-toolchain") version "1.0.2"
+    id("com.specificlanguages.mps-platform-cache") version "1.0.2"
+    id("com.specificlanguages.jbr-toolchain") version "1.2.0"
 }
 
 val integrationTestMps by configurations.registering {
@@ -30,17 +30,17 @@ dependencies {
     implementation(project(":launcher"))
     implementation(project(":protocol"))
     implementation("info.picocli:picocli:4.7.7")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 
     integrationTestMps("com.jetbrains:mps:2025.1.2")
-    jbr("com.jetbrains.jdk:jbr_jcef:21.0.8-b895.146")
+    jbr("com.jetbrains.mps:mps-jbr:2025.1.2")
 
     testImplementation(kotlin("test"))
-    testImplementation("org.junit.jupiter:junit-jupiter:6.1.0")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:6.3.0")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:6.4.0")
     testImplementation("com.github.stefanbirkner:system-lambda:1.2.1")
     // Test-only guard that the generated schema matches what the serializer accepts. Never shipped in the CLI runtime.
-    testImplementation("com.networknt:json-schema-validator:1.5.5")
+    testImplementation("com.networknt:json-schema-validator:3.0.7")
 
     editSchemaGeneratorClasspath(project(":protocol"))
     daemonRuntimeClasspath(project(":daemon"))

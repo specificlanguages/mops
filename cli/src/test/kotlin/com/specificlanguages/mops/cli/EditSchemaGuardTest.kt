@@ -1,9 +1,9 @@
 package com.specificlanguages.mops.cli
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.networknt.schema.JsonSchema
-import com.networknt.schema.JsonSchemaFactory
-import com.networknt.schema.SpecVersion
+import com.networknt.schema.InputFormat
+import com.networknt.schema.Schema
+import com.networknt.schema.SchemaRegistry
+import com.networknt.schema.SpecificationVersion
 import com.specificlanguages.mops.cli.explain.ExplainTopics
 import com.specificlanguages.mops.protocol.EditNotation
 import com.specificlanguages.mops.protocol.ProtocolJson
@@ -23,9 +23,8 @@ class EditSchemaGuardTest {
         setOf("FIELDS", "SEMANTICS", "EXAMPLE", "SEE ALSO", "SHAPE", "OPERATIONS", "CHOOSING AN OPERATION", "NOTES",
             "DRILL DOWN", "FORMS")
 
-    private val schema: JsonSchema =
-        JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012).getSchema(ExplainTopics.editSchema())
-    private val mapper = ObjectMapper()
+    private val schema: Schema =
+        SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12).getSchema(ExplainTopics.editSchema())
 
     @Test
     fun `every example parses via the serializer and validates against the generated schema`() {
@@ -34,7 +33,7 @@ class EditSchemaGuardTest {
 
             ProtocolJson.decodeBatch(json)
 
-            val errors = schema.validate(mapper.readTree(json))
+            val errors = schema.validate(json, InputFormat.JSON)
             assertTrue(errors.isEmpty(), "$topic example fails schema validation: $errors")
         }
     }
