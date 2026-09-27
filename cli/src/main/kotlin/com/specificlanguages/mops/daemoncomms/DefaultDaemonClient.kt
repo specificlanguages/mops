@@ -56,6 +56,7 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.InetAddress
+import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.SocketTimeoutException
 import java.time.Duration
@@ -238,8 +239,10 @@ class DefaultDaemonClient(
 
     private fun exchangeLine(request: DaemonRequest, timeout: Duration): String {
         try {
-            return Socket(InetAddress.getLoopbackAddress(), port).use { socket ->
-                socket.soTimeout = timeout.toMillis().coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+            return Socket().use { socket ->
+                val timeoutMillis = timeout.toMillis().coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                socket.connect(InetSocketAddress(InetAddress.getLoopbackAddress(), port), timeoutMillis)
+                socket.soTimeout = timeoutMillis
                 PrintWriter(socket.getOutputStream(), true).use { writer ->
                     BufferedReader(InputStreamReader(socket.getInputStream())).use { reader ->
                         writer.println(ProtocolJson.encodeRequest(request))

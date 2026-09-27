@@ -10,8 +10,10 @@ import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.api.parallel.ResourceLock
 import java.nio.file.Path
+import java.util.concurrent.TimeUnit
 import kotlin.io.path.createDirectories
 import kotlin.io.path.pathString
+import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -24,6 +26,61 @@ class DaemonControlIntegrationTest {
 
     @TempDir(cleanup = CleanupMode.ON_SUCCESS)
     lateinit var tempDir: Path
+
+    @Test
+    fun `daemon detaches and status detects a killed daemon`() {
+        val windows = System.getProperty("os.name").startsWith("Windows")
+        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+        val store = DaemonRecordStore.forDaemonHome(daemonHome)
+        try {
+            val ping = runCommandLine(project, *javaAndMpsHomeArgs(),
+                "--daemon-home", daemonHome.pathString, "daemon", "ping")
+            assertEquals(0, ping.exitCode, ping.output)
+            val record = requireNotNull(store.read(project)).record
+            val program = tempDir.resolve("process-group.groovy").also {
+                it.writeText(if (windows) """
+                    def kernel = com.sun.jna.NativeLibrary.getInstance('kernel32')
+                    def getConsoleCP = kernel.getFunction('GetConsoleCP', com.sun.jna.Function.ALT_CONVENTION)
+                    assert getConsoleCP.invokeInt(new Object[0]) == 0
+                    assert kernel.getFunction('AllocConsole', com.sun.jna.Function.ALT_CONVENTION)
+                        .invokeInt(new Object[0]) != 0
+                    assert getConsoleCP.invokeInt(new Object[0]) != 0
+                    com.specificlanguages.mops.daemon.DaemonProcess.INSTANCE.detach()
+                    assert getConsoleCP.invokeInt(new Object[0]) == 0
+                    com.specificlanguages.mops.daemon.DaemonProcess.INSTANCE.detach()
+                    return [consoleCodePage: getConsoleCP.invokeInt(new Object[0])]
+                """.trimIndent() else """
+                    def libc = com.sun.jna.NativeLibrary.getInstance('c')
+                    return [processGroup: libc.getFunction('getpgrp').invokeInt(new Object[0]),
+                            session: libc.getFunction('getsid').invokeInt([0] as Object[])]
+                """.trimIndent())
+            }
+            val group = runCommandLine(project, *javaAndMpsHomeArgs(),
+                "--daemon-home", daemonHome.pathString, "code", "run", program.pathString)
+            assertEquals(0, group.exitCode, group.output)
+            if (windows) {
+                assertContains(group.stdout, "\"consoleCodePage\":0")
+            } else {
+                assertContains(group.stdout, "\"processGroup\":${record.pid}")
+                assertContains(group.stdout, "\"session\":${record.pid}")
+            }
+
+            val running = runCommandLine(project, "--daemon-home", daemonHome.pathString, "daemon", "status")
+            assertEquals(0, running.exitCode, running.output)
+            assertContains(running.stdout, "running ")
+
+            val handle = ProcessHandle.of(record.pid).orElseThrow()
+            handle.destroyForcibly()
+            handle.onExit().get(10, TimeUnit.SECONDS)
+            val stopped = runCommandLine(project, "--daemon-home", daemonHome.pathString, "daemon", "status")
+            assertEquals(0, stopped.exitCode, stopped.output)
+            assertContains(stopped.stdout, "unreachable ")
+            assertEquals(record, store.read(project)?.record)
+        } finally {
+            stopDaemons(project, daemonHome)
+        }
+    }
 
     @Test
     fun `daemon stop removes the current project record`() {

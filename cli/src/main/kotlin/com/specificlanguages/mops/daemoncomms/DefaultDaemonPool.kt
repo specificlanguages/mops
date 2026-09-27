@@ -19,6 +19,8 @@ interface DaemonPool {
 
     fun findRecords(spec: Spec): List<StoredDaemonRecord>
 
+    fun isReachable(record: DaemonRecord): Boolean
+
     fun stop(record: StoredDaemonRecord): StopOutcome
 
     enum class StopOutcome {
@@ -79,6 +81,13 @@ class DefaultDaemonPool(
     override fun findRecords(spec: DaemonPool.Spec): List<StoredDaemonRecord> = when (spec) {
         is DaemonPool.Spec.All -> records.readAll()
         is DaemonPool.Spec.ForProject -> listOfNotNull(records.read(spec.projectPath))
+    }
+
+    override fun isReachable(record: DaemonRecord): Boolean = try {
+        DefaultDaemonClient(record.port, record.token, timeout = Duration.ofSeconds(2)).ping()
+        true
+    } catch (_: Exception) {
+        false
     }
 
     override fun stop(record: StoredDaemonRecord): DaemonPool.StopOutcome {

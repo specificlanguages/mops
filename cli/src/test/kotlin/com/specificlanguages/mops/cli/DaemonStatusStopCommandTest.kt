@@ -2,6 +2,11 @@ package com.specificlanguages.mops.cli
 
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.protocol.DaemonRecordStore
+import com.specificlanguages.mops.protocol.PongResponse
+import com.specificlanguages.mops.protocol.DaemonErrorResponse
+import java.net.ServerSocket
+import java.net.InetAddress
+import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.api.parallel.ResourceLock
@@ -17,6 +22,7 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @ResourceLock("system-streams")
 class DaemonStatusStopCommandTest {
@@ -24,12 +30,13 @@ class DaemonStatusStopCommandTest {
     lateinit var tempDir: Path
 
     @Test
-    fun `daemon status reads the current project daemon record without mps home`() {
+    fun `daemon status pings the current project daemon without mps home`() {
         val project = tempDir.mpsProject()
         val daemonHome = tempDir.resolve("daemon-home")
         val mpsHome = tempDir.mpsHome()
+        val daemon = startPrerecordedDaemon(PongResponse(project.pathString, mpsHome.pathString, "workspace"))
         val record = daemonRecord(
-            port = 4321,
+            port = daemon.port,
             project = project,
             mpsHome = mpsHome,
             workspace = daemonHome.resolve("projects/example"),
@@ -46,10 +53,50 @@ class DaemonStatusStopCommandTest {
         }
 
         assertEquals(0, exitCode)
-        assertContains(stdout, "running")
+        assertTrue(stdout.lineSequence().any { it.startsWith("running ") })
         assertContains(stdout, project.pathString)
-        assertContains(stdout, "4321")
+        assertContains(stdout, daemon.port.toString())
+        daemon.join(5_000)
+        assertEquals(1, daemon.requestsReceived.size)
+        assertContains(daemon.requestsReceived.single(), "\"type\":\"ping\"")
         assertContains(stdout, mpsHome.pathString)
+    }
+
+    @Test
+    fun `daemon status rejects a failed authenticated ping without removing the record`() {
+        val project = tempDir.mpsProject()
+        val daemonHome = tempDir.resolve("daemon-home")
+        val daemon = startPrerecordedDaemon(DaemonErrorResponse("UNAUTHORIZED", "Invalid token", null))
+        val record = daemonRecord(project, daemonHome.resolve("projects/example"), daemon.port,
+            mpsHome = tempDir.mpsHome())
+        val store = DaemonRecordStore.forDaemonHome(daemonHome)
+        store.write(record)
+        val stdout = tapSystemOut {
+            assertEquals(0, newCommandLine(workingDirectory = project).execute(
+                "--daemon-home", daemonHome.pathString, "daemon", "status"))
+        }
+        daemon.join(5_000)
+        assertTrue(stdout.lineSequence().any { it.startsWith("unreachable ") }, stdout)
+        assertEquals(record, store.read(project)?.record)
+    }
+
+    @Test
+    @Timeout(10)
+    fun `daemon status times out when a listening process does not answer`() {
+        val project = tempDir.mpsProject()
+        val daemonHome = tempDir.resolve("daemon-home")
+        ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { server ->
+            val record = daemonRecord(project, daemonHome.resolve("projects/example"), server.localPort,
+                mpsHome = tempDir.mpsHome())
+            val store = DaemonRecordStore.forDaemonHome(daemonHome)
+            store.write(record)
+            val stdout = tapSystemOut {
+                assertEquals(0, newCommandLine(workingDirectory = project).execute(
+                    "--daemon-home", daemonHome.pathString, "daemon", "status"))
+            }
+            assertTrue(stdout.startsWith("unreachable "), stdout)
+            assertEquals(record, store.read(project)?.record)
+        }
     }
 
     @ParameterizedTest
@@ -78,7 +125,8 @@ class DaemonStatusStopCommandTest {
         }
 
         assertEquals(0, exitCode)
-        assertContains(stdout, "running")
+        assertTrue(stdout.startsWith("unreachable "), stdout)
+        assertEquals(record, store.read(project)?.record)
         assertContains(stdout, project.pathString)
         assertContains(stdout, "4322")
     }
@@ -156,6 +204,8 @@ class DaemonStatusStopCommandTest {
         assertContains(stdout, staleRecord.mpsHome.pathString)
         assertContains(stdout, staleRecord.javaHome.pathString)
         assertContains(stdout, "3333")
+        assertTrue(stdout.startsWith("unreachable "), stdout)
+        assertTrue(staleRecord.recordPath.exists())
     }
 
     @Test
