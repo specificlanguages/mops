@@ -27,5 +27,13 @@ jobs:
       - name: Test daemon lifecycle
         shell: bash
         run: >-
-          ./gradlew :cli:test --tests '*DaemonStatusStopCommandTest' --tests '*FullClasspathDaemonLauncherTest'
+          ./gradlew --continue :cli:test --tests '*DaemonStatusStopCommandTest' --tests '*FullClasspathDaemonLauncherTest'
           :cli:integrationTest --tests '*DaemonControlIntegrationTest' --tests '*DaemonStartupIntegrationTest'
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: daemon-test-reports-${{ matrix.os }}
+          path: |
+            cli/build/test-results/
+            cli/build/reports/tests/

@@ -136,8 +136,7 @@ class DaemonStatusStopCommandTest {
         val daemonHome = tempDir.resolve("daemon-home")
 
         // Project directories must exist for daemon records
-        val dir1 = tempDir.resolve("one")
-        dir1.createDirectories()
+        val dir1 = tempDir.resolve("one").createDirectories().toRealPath()
         val mps1 = tempDir.mpsHome(name = "mps-one")
 
         val store = DaemonRecordStore.forDaemonHome(daemonHome)
@@ -152,8 +151,7 @@ class DaemonStatusStopCommandTest {
             ),
         )
 
-        val dir2 = tempDir.resolve("two")
-        dir2.createDirectories()
+        val dir2 = tempDir.resolve("two").createDirectories().toRealPath()
         val mps2 = tempDir.mpsHome(name = "mps-two")
 
         store.write(
