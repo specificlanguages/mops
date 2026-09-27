@@ -76,7 +76,7 @@ dependencies {
             include("languages/baseLanguage/jetbrains.mps.baseLanguage.scopes.jar")
         }
     })
-    mpsZip("com.jetbrains:mps:2025.1.2")
+    mpsZip("com.jetbrains:mps:2025.3")
 }
 
 application {

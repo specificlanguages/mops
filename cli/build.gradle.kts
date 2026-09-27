@@ -32,7 +32,7 @@ dependencies {
     implementation("info.picocli:picocli:4.7.7")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 
-    integrationTestMps("com.jetbrains:mps:2025.1.2")
+    integrationTestMps("com.jetbrains:mps:2025.3")
     jbr("com.jetbrains.mps:mps-jbr:2025.1.2")
 
     testImplementation(kotlin("test"))
