@@ -225,9 +225,14 @@ mops daemon stop [--all]
 ```
 
 Inspect or stop known per-project daemon processes. Without `--all`, the command infers the current project from the
-working directory. With `--all`, it reads every known daemon record.
+working directory. With `--all`, it reads every known daemon record. Status sends an authenticated ping with a two-second
+connection/read timeout and reports `running` or `unreachable`. It does not start daemons or remove unreachable records.
+A daemon can be unreachable because it is stopped, busy, or unable to authenticate the request.
 
 ## Daemon State
+
+Daemons detach from the launching command's session on Unix and from its console on Windows. Their stdout and stderr
+are written to the daemon log, and stdin is closed. Filesystem and network sandbox restrictions still apply.
 
 The CLI allows 300 seconds (5 minutes) for initial daemon startup, including opening the MPS project. For larger projects, set
 `MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS` to a positive whole number of seconds, for example:

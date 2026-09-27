@@ -44,6 +44,7 @@ class MopsDaemonCommand : Runnable {
     var idleTimeoutMillis: Long = Duration.ofMinutes(30).toMillis()
 
     override fun run() {
+        DaemonProcess.detach()
         val logger = DaemonLogger()
         val projectPath = Path.of(projectPath)
         val mpsHome = Path.of(mpsHome)

@@ -8,9 +8,7 @@ import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 
 /**
- * Reads persisted daemon records and reports which project daemons are known locally.
- *
- * Status is intentionally record-based: it does not start a daemon or require an MPS home.
+ * Probes known daemons without starting them or requiring an MPS home. Unreachable records are retained.
  */
 @Command(name = "status", description = ["Print daemon status."])
 class DaemonStatusCommand(private val environment: CommandEnvironment) : CliCommand() {
@@ -33,8 +31,9 @@ class DaemonStatusCommand(private val environment: CommandEnvironment) : CliComm
 
         selected.forEach { storedRecord: StoredDaemonRecord ->
             val record = storedRecord.record
+            val state = if (pool.isReachable(record)) "running" else "unreachable"
             println(
-                "running workspace=${record.workspace} context=${record.context} port=${record.port} pid=${record.pid}",
+                "$state workspace=${record.workspace} context=${record.context} port=${record.port} pid=${record.pid}",
             )
         }
     }

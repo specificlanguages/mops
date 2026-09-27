@@ -73,6 +73,7 @@ class FullClasspathDaemonLauncher(
 
         var startupSucceeded = false
         try {
+            process.outputStream.close()
             val record = waitForDaemonRecord(process, context, token, logFile, workspace)
             val client = DefaultDaemonClient(port = record.port, token = record.token, timeout = REQUEST_TIMEOUT)
 

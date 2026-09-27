@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Daemons detach from the launching session on Unix and console on Windows to survive process-group and console cleanup.
+- `daemon status` probes recorded daemons and reports `unreachable` when an authenticated ping fails, retaining the record.
+
 - Added the global `--refs-as-urls` option to render node references in text output as MPS URLs. JSON output remains
   unchanged.
 
