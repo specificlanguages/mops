@@ -33,7 +33,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 
     integrationTestMps("com.jetbrains:mps:2025.1.2")
-    jbr("com.jetbrains.mps:mps-jbr:2025.1.2")
+    jbr("com.jetbrains.mps:mps-jbr:2025.3")
 
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")

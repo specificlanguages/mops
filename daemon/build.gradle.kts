@@ -34,7 +34,7 @@ dependencies {
     implementation("info.picocli:picocli:4.7.7")
     implementation("de.itemis.mps.build-backends:project-loader:6.0.0.222.e62f91c")
 
-    jbr("com.jetbrains.mps:mps-jbr:2025.1.2")
+    jbr("com.jetbrains.mps:mps-jbr:2025.3")
 
     testImplementation("com.github.stefanbirkner:system-lambda:1.2.1")
     testImplementation("org.mockito.kotlin:mockito-kotlin:6.4.0")
