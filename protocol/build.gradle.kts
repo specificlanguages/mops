@@ -1,8 +1,8 @@
 plugins {
     id("mops.kotlin-jvm-conventions")
     `java-library`
-    kotlin("plugin.serialization") version "2.4.20"
-    id("com.gradleup.shadow") version "9.6.1"
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.shadow)
 }
 
 // kotlinx.serialization is shaded and relocated into the protocol jar so it can never shadow MPS's own copy on the
@@ -15,7 +15,9 @@ configurations {
 }
 
 dependencies {
-    relocatedSerialization("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    relocatedSerialization(libs.kotlinx.serialization.json)
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 val relocatedPackage = "com.specificlanguages.mops.shaded.kotlinx.serialization"

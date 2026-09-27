@@ -1,0 +1,38 @@
+[versions]
+kotlin = "2.4.20"
+mps-platform-cache = "1.0.2"
+jbr-toolchain = "1.2.0"
+shadow = "9.6.1"
+asm = "9.10.1"
+picocli = "4.7.7"
+project-loader = "6.0.0.222.e62f91c"
+mps = "2025.1.2"
+system-lambda = "1.2.1"
+mockito-kotlin = "6.4.0"
+kotlinx-serialization = "1.11.0"
+jspecify = "1.0.1"
+junit = "6.1.3"
+json-schema-validator = "3.0.7"
+
+[libraries]
+asm = { module = "org.ow2.asm:asm", version.ref = "asm" }
+asm-commons = { module = "org.ow2.asm:asm-commons", version.ref = "asm" }
+picocli = { module = "info.picocli:picocli", version.ref = "picocli" }
+project-loader = { module = "de.itemis.mps.build-backends:project-loader", version.ref = "project-loader" }
+mps-distribution = { module = "com.jetbrains:mps", version.ref = "mps" }
+mps-jbr = { module = "com.jetbrains.mps:mps-jbr", version.ref = "mps" }
+system-lambda = { module = "com.github.stefanbirkner:system-lambda", version.ref = "system-lambda" }
+mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockito-kotlin" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit" }
+json-schema-validator = { module = "com.networknt:json-schema-validator", version.ref = "json-schema-validator" }
+kotlin-gradle-plugin-marker = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin", version.ref = "kotlin" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+mps-platform-cache = { id = "com.specificlanguages.mps-platform-cache", version.ref = "mps-platform-cache" }
+jbr-toolchain = { id = "com.specificlanguages.jbr-toolchain", version.ref = "jbr-toolchain" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }

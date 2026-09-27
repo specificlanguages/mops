@@ -3,5 +3,5 @@ plugins {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin:2.4.20")
+    implementation(libs.kotlin.gradle.plugin.marker)
 }

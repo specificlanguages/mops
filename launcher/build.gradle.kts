@@ -4,5 +4,7 @@ plugins {
 }
 
 dependencies {
-    api("org.jspecify:jspecify:1.0.1")
+    api(libs.jspecify)
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }

@@ -6,7 +6,7 @@ import kotlin.io.path.isSymbolicLink
 
 plugins {
     base
-    kotlin("jvm") version "2.4.20" apply false
+    alias(libs.plugins.kotlin.jvm) apply false
 }
 
 group = "com.specificlanguages.mops"

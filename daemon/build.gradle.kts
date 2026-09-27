@@ -6,8 +6,8 @@ buildscript {
     }
     dependencies {
         // Used by checkDaemonRelocation to walk live class references without tripping over dead constant-pool strings.
-        classpath("org.ow2.asm:asm:9.10.1")
-        classpath("org.ow2.asm:asm-commons:9.10.1")
+        classpath(libs.asm)
+        classpath(libs.asm.commons)
     }
 }
 
@@ -15,8 +15,8 @@ plugins {
     id("mops.kotlin-jvm-conventions")
     application
 
-    id("com.specificlanguages.mps-platform-cache") version "1.0.2"
-    id("com.specificlanguages.jbr-toolchain") version "1.2.0"
+    alias(libs.plugins.mps.platform.cache)
+    alias(libs.plugins.jbr.toolchain)
 }
 
 val mpsZip = configurations.register("mpsZip") { isCanBeConsumed = false }
@@ -31,13 +31,15 @@ dependencies {
     implementation(project(":daemon-core"))
     implementation(project(":protocol"))
     implementation(project(":launcher"))
-    implementation("info.picocli:picocli:4.7.7")
-    implementation("de.itemis.mps.build-backends:project-loader:6.0.0.222.e62f91c")
+    implementation(libs.picocli)
+    implementation(libs.project.loader)
 
-    jbr("com.jetbrains.mps:mps-jbr:2025.1.2")
+    jbr(libs.mps.jbr)
 
-    testImplementation("com.github.stefanbirkner:system-lambda:1.2.1")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:6.4.0")
+    testImplementation(libs.system.lambda)
+    testImplementation(libs.mockito.kotlin)
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
 
     mpsRuntime(mpsZip.map {
         zipTree(it.singleFile).matching {
@@ -76,7 +78,7 @@ dependencies {
             include("languages/baseLanguage/jetbrains.mps.baseLanguage.scopes.jar")
         }
     })
-    mpsZip("com.jetbrains:mps:2025.1.2")
+    mpsZip(libs.mps.distribution)
 }
 
 application {
