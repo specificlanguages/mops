@@ -74,13 +74,13 @@ class ExternalDependencyReloadIntegrationTest {
             <solution name="$name" uuid="$id" moduleVersion="0">
               <facets><facet type="java" compile="ext" classes="mps" ext="yes">
                 <classes generated="true" path="${'$'}{module}/classes_gen" />
+                $libraries
               </facet></facets>
               $dependencies
-              $libraries
             </solution>
         """.trimIndent()
         dependency.resolve("reload.dependency.msd").writeText(descriptor("reload.dependency", dependencyId,
-            libraries = if (library) "<stubModelEntries><stubModelEntry path=\"$libraryPath\" /></stubModelEntries>" else ""))
+            libraries = if (library) "<library location=\"$libraryPath\" />" else ""))
         consumer.resolve("reload.consumer.msd").writeText(descriptor("reload.consumer", UUID.randomUUID().toString(),
             "<dependencies><dependency reexport=\"false\">$dependencyId(reload.dependency)</dependency></dependencies>"))
         val modules = project.resolve(".mps/modules.xml")

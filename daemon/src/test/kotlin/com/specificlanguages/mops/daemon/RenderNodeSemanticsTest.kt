@@ -42,23 +42,23 @@ class RenderNodeSemanticsTest {
     @Test
     fun `renders the reflective editor of a root node when reflective is allowed`() {
         // The same unresolved subtree renders under --allow-reflective: the guard is bypassed and MPS falls back to its
-        // reflective editor, showing the concept alias and each string role with its value.
+        // reflective editor, showing concept names and roles with placeholder property values.
         val text = render(NodeTarget.InModel(SANDBOX_MODEL_REFERENCE, SANDBOX_FILE_NODE_ID), allowReflective = true)
 
-        assertContains(text, "json object")
-        assertContains(text, "value : foo")
-        assertContains(text, "value : x")
+        assertContains(text, "JsonObject")
+        assertContains(text, "KeyValuePair string")
+        assertContains(text, "value : <no value>")
     }
 
     @Test
     fun `renders a non-root node scoped to its own subtree`() {
         val text = render(NodeTarget.InModel(SANDBOX_MODEL_REFERENCE, ARRAY_NODE_ID), allowReflective = true)
 
-        assertContains(text, "json array")
-        assertContains(text, "value : 1")
-        assertContains(text, "value : x")
-        // The array subtree renders alone: the sibling object's "value" string is not part of it.
-        assertFalse(text.contains("value : value"), "expected only the array subtree, got: $text")
+        assertTrue(text.startsWith("JsonArray"), "expected the array subtree, got: $text")
+        assertContains(text, "JsonNumber")
+        assertContains(text, "JsonString")
+        assertFalse(text.contains("JsonObject"), "expected only the array subtree, got: $text")
+        assertFalse(text.contains("KeyValuePair"), "expected only the array subtree, got: $text")
     }
 
     @Test

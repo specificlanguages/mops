@@ -66,6 +66,13 @@ dependencies {
             include("lib/util_rt.jar")
             include("lib/testFramework.jar")
             include("lib/app.jar")
+            include("lib/intellij.platform.core.jar")
+            include("lib/intellij.platform.core.impl.jar")
+            include("lib/intellij.platform.core.ui.jar")
+            include("lib/intellij.platform.ide.core.jar")
+            include("lib/intellij.platform.ide.impl.jar")
+            include("lib/intellij.platform.projectModel.jar")
+            include("lib/intellij.libraries.kotlinx.coroutines.core.jar")
             // Compile against the Groovy runtime owned by the selected MPS distribution. It remains compile-only and
             // is never copied into the mops daemon distribution.
             include("lib/groovy.jar")
@@ -138,7 +145,7 @@ tasks.test {
     javaLauncher = jbrToolchain.javaLauncher
     // A full MPS environment with the distribution's bundled plugins needs more than Gradle's default 512m test heap.
     // The production daemon runs on the JVM's (much larger) default heap, so this ceiling only bounds the test JVM.
-    maxHeapSize = "2g"
+    maxHeapSize = "4g"
     // The MPS runtime jars come from the unpacked distribution, like the production daemon's classpath, so the
     // IntelliJ platform detects the MPS home from the jar locations and loads bundled plugins and languages from it.
     classpath += files(
