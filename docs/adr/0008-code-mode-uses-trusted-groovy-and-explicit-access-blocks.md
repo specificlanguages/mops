@@ -2,16 +2,48 @@
 
 > **Status: accepted.** Supersedes ADR-0006.
 
-**Code Mode** is a trusted Groovy environment for composing operations against the one open **MPS Project** owned by a project daemon. Programs use native MPS objects directly; mops does not introduce node, model, or module handles or a parallel public service object model. Mops-provided conveniences are **Code Mode Extensions** on the natural native receiver, plus a deliberately small global script surface. This lets an author familiar with MPS write useful programs while learning fewer mops-specific concepts. Native MPS APIs remain coupled to the selected MPS version; mops guarantees only its own extensions.
+**Code Mode** is a trusted Groovy environment for composing operations against the one open **MPS Project** owned by a
+project daemon. Programs use native MPS objects directly; mops does not introduce node, model, or module handles or a
+parallel public service object model. Mops-provided conveniences are **Code Mode Extensions** on the natural native
+receiver, plus a deliberately small global script surface. This lets an author familiar with MPS write useful programs
+while learning fewer mops-specific concepts. Native MPS APIs remain coupled to the selected MPS version; mops guarantees
+only its own extensions.
 
-The project is available both as the global `project` value and through a process-scoped provider used by extensions that need the daemon's project but receive another native object. This is valid because a daemon owns exactly one project for its lifetime. `project.read` and `project.command` establish explicit, non-nesting **Access Blocks**. A command uses MPS command/write semantics and saves project changes after successful completion; it is not a transaction and a failed command carries native MPS partial-change behavior. Operations classified as `extra` require no active model access because they coordinate their own locks or event-dispatch work. A future checked `project.edit` based on the declarative **Edit Operation** batch is separate from unrestricted native commands and is not part of this decision's implementation scope.
+The project is available both as the global `project` value and through a process-scoped provider used by extensions
+that need the daemon's project but receive another native object. This is valid because a daemon owns exactly one
+project for its lifetime. `project.read` and `project.command` establish explicit, non-nesting **Access Blocks**. A
+command uses MPS command/write semantics and saves project changes after successful completion; it is not a transaction
+and a failed command carries native MPS partial-change behavior. Operations classified as `extra` require no active
+model access because they coordinate their own locks or event-dispatch work. A future checked `project.edit` based on
+the declarative **Edit Operation** batch is separate from unrestricted native commands and is not part of this
+decision's implementation scope.
 
-The first extension surface includes project access, strict project resolvers for modules, models, nodes, and concepts, project and module creation conveniences, make and rendering conveniences, and streaming `eachUsageOf` and `eachInstanceOf` helpers over an explicit native MPS Search Scope. Search callbacks expose native `SReference` and `SNode` values under existing read access. Code Mode interfaces are designed for native-object callers rather than mirroring CLI commands; when behavior is shared, CLI and Code Mode adapters call an implementation expressed in native objects or neutral result types rather than calling one another.
+The first extension surface includes project access, strict project resolvers for modules, models, nodes, and concepts,
+project and module creation conveniences, make and rendering conveniences, and streaming `eachUsageOf` and
+`eachInstanceOf` helpers over an explicit native MPS Search Scope. Search callbacks expose native `SReference` and
+`SNode` values under existing read access. Code Mode interfaces are designed for native-object callers rather than
+mirroring CLI commands; when behavior is shared, CLI and Code Mode adapters call an implementation expressed in native
+objects or neutral result types rather than calling one another.
 
-Every extension declares an access requirement (`none`, `read`, `command`, or `extra`) and carries KDoc. The build generates a packaged **Code Mode Reference** from that documentation. Global `help` and daemon-backed `mops code help` query the same reference; they document mops extensions, not the native MPS API. Extension dispatch uses Groovy's standard extension-module mechanism. Built-in and plugin bundles use the same descriptor/catalog contract, duplicate signatures are rejected, and bundle changes require a manual daemon restart for now.
+Every extension declares an access requirement (`none`, `read`, `command`, or `extra`) and carries KDoc. The build
+generates a packaged **Code Mode Reference** from that documentation. Global `help` and daemon-backed `mops code help`
+query the same reference; they document mops extensions, not the native MPS API. Extension dispatch uses Groovy's
+standard extension-module mechanism. Built-in and plugin bundles use the same descriptor/catalog contract, duplicate
+signatures are rejected, and bundle changes require a manual daemon restart for now.
 
-Programs may retain native MPS objects between Access Blocks, with exactly their native lifetime and validity behavior. Result adaptation recursively replaces nodes, models, and modules with their serialized MPS references, or `null` when no reference exists; it does not summarize their contents. Other existing scalar and collection result behavior remains. There is no requirement that every CLI operation have a Code Mode extension.
+Programs may retain native MPS objects between Access Blocks, with exactly their native lifetime and validity behavior.
+Result adaptation recursively replaces nodes, models, and modules with their serialized MPS references, or `null` when
+no reference exists; it does not summarize their contents. Other existing scalar and collection result behavior remains.
+There is no requirement that every CLI operation have a Code Mode extension.
 
 ## Consequences
 
-Code Mode remains trusted code rather than a sandbox. It executes with the daemon JVM's authority and the Groovy runtime bundled with the selected MPS distribution; mops ships no second Groovy runtime, and dependency injection such as `@Grab` stays disabled. The default hard timeout still terminates the daemon, may be configured or disabled, and a later invocation starts a fresh daemon. Removing handles and public Code Services is a clean pre-release break: the implementation and documentation migrate together, with no compatibility bridge.
+Code Mode remains trusted code rather than a sandbox. It executes with the daemon JVM's authority. When the selected MPS
+distribution supplies Groovy, the daemon uses that runtime and excludes the mops Groovy core JAR from its classpath. MPS
+can bundle additional Groovy modules compiled against its core, so replacing only that core would mix runtime versions.
+For MPS distributions without Groovy, mops ships a pinned Groovy core dependency in its distribution and uses it as the
+fallback. Selection checks for the compiler class in the MPS runtime JARs; it does not depend on a particular JAR
+filename. Programs and mops extensions share the selected Groovy class identity. Dependency injection such as `@Grab`
+stays disabled. The default hard timeout still terminates the daemon, may be configured or disabled, and a later
+invocation starts a fresh daemon. Removing handles and public Code Services is a clean pre-release break: the
+implementation and documentation migrate together, with no compatibility bridge.

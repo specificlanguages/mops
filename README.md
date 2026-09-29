@@ -22,27 +22,25 @@ where `mops` was started, for example `mops --project-root ../my-project daemon 
 Pass `--refs-as-urls` before the command to render node references in text output as MPS URLs, for example
 `mops --refs-as-urls find instances <concept>`. JSON output is unchanged.
 
-If you do not know where MPS and Java are installed, run `mops wrapper [PATH]` from the project checkout.
-PATH is the starting point of discovery, defaulting to `--project-root` when supplied, or the working directory.
-`wrapper` uses the nearest Gradle wrapper to inspect `mpsDefaults` of the `com.specificlanguages.mps` Gradle plugin or
-`RunAntScript` tasks of the `de.itemis.mps.gradle.common` plugin. By default it writes a wrapper for every MPS project in
-every Gradle project in the build. Each `mpsw` on macOS and Linux, or `mopsw.cmd` on Windows, is written under
+If you do not know where MPS and Java are installed, run `mops wrapper [PATH]` from the project checkout. PATH is the
+starting point of discovery, defaulting to `--project-root` when supplied, or the working directory. `wrapper` uses the
+nearest Gradle wrapper to inspect `mpsDefaults` of the `com.specificlanguages.mps` Gradle plugin or `RunAntScript` tasks
+of the `de.itemis.mps.gradle.common` plugin. By default it writes a wrapper for every MPS project in every Gradle
+project in the build. Each `mpsw` on macOS and Linux, or `mopsw.cmd` on Windows, is written under
 `<build-directory>/mops/<MPS-project-name>/`. Pass `--project-root PATH` to write only that MPS project's wrapper. When
 one wrapper is selected, `--output PATH` selects its exact file; a relative path is resolved from the directory where
-`mops` was started. The POSIX wrappers are executable.
-Each wrapper supplies the shared discovered MPS and Java homes and its MPS project directory. MPS projects come from
-configured `mpsBuilds` entries and `.mps` project markers in the Gradle build.
-Run the generated wrapper in place of `mops`; arguments passed to it are forwarded to `mops`. No MPS home or daemon is
-required in the CLI invocation that writes the wrapper; Java must be available to run Gradle.
+`mops` was started. The POSIX wrappers are executable. Each wrapper supplies the shared discovered MPS and Java homes
+and its MPS project directory. MPS projects come from configured `mpsBuilds` entries and `.mps` project markers in the
+Gradle build. Run the generated wrapper in place of `mops`; arguments passed to it are forwarded to `mops`. No MPS home
+or daemon is required in the CLI invocation that writes the wrapper; Java must be available to run Gradle.
 
 Discovery queries configured providers, which can download and extract distributions. It does not execute preparation or
 language build task actions. It inspects all Gradle projects in the build and uses a discovered `mpsDefaults` extension
 or conventional `RunAntScript` task for the shared runtime paths. Partial discoveries show available paths without
-writing a wrapper and exit with status 1; when both paths are known, the command writes the wrappers and exits with status
-0. Missing or unusable runtime directories are reported as warnings, so wrappers can be created before the project's
-documented preparation steps. Task-action
-overrides, included builds, and custom Ant property loading are outside this heuristic; Specific Languages values are
-project defaults.
+writing a wrapper and exit with status 1; when both paths are known, the command writes the wrappers and exits with
+status 0. Missing or unusable runtime directories are reported as warnings, so wrappers can be created before the
+project's documented preparation steps. Task-action overrides, included builds, and custom Ant property loading are
+outside this heuristic; Specific Languages values are project defaults.
 
 ## Commands
 
@@ -226,24 +224,24 @@ mops daemon stop [--all]
 ```
 
 Inspect or stop known per-project daemon processes. Without `--all`, the command infers the current project from the
-working directory. With `--all`, it reads every known daemon record. Status sends an authenticated ping with a two-second
-connection/read timeout and reports `running` or `unreachable`. It does not start daemons or remove unreachable records.
-A daemon can be unreachable because it is stopped, busy, or unable to authenticate the request.
+working directory. With `--all`, it reads every known daemon record. Status sends an authenticated ping with a
+two-second connection/read timeout and reports `running` or `unreachable`. It does not start daemons or remove
+unreachable records. A daemon can be unreachable because it is stopped, busy, or unable to authenticate the request.
 
 ## Daemon State
 
-Daemons detach from the launching command's session on Unix and from its console on Windows. Their stdout and stderr
-are written to the daemon log, and stdin is closed. Filesystem and network sandbox restrictions still apply.
+Daemons detach from the launching command's session on Unix and from its console on Windows. Their stdout and stderr are
+written to the daemon log, and stdin is closed. Filesystem and network sandbox restrictions still apply.
 
-The CLI allows 300 seconds (5 minutes) for initial daemon startup, including opening the MPS project. For larger projects, set
-`MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS` to a positive whole number of seconds, for example:
+The CLI allows 300 seconds (5 minutes) for initial daemon startup, including opening the MPS project. For larger
+projects, set `MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS` to a positive whole number of seconds, for example:
 
 ```sh
 export MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS=600
 ```
 
-This setting controls the wait for the daemon's readiness record. It does not change command execution timeouts.
-If startup times out, the CLI terminates the daemon and reports the timeout and daemon log path.
+This setting controls the wait for the daemon's readiness record. It does not change command execution timeouts. If
+startup times out, the CLI terminates the daemon and reports the timeout and daemon log path.
 
 Daemon records, logs, working files, and isolated IDEA config and system directories live outside the MPS project. By
 default the CLI stores them under `$XDG_CACHE_HOME/mops/daemon`, falling back to `~/.cache/mops/daemon` when
@@ -258,17 +256,9 @@ subdirectory under `projects/`, including:
 Daemon commands use loopback socket IPC with a per-daemon token. Requests are serialized by the daemon. Stale daemon
 records are removed when the recorded process or socket is no longer reachable.
 
-## Build And Test
+## Development
 
-```sh
-./gradlew check
-./gradlew installMops
-./gradlew :cli:run --args="--mps-home /path/to/mps daemon ping"
-./gradlew :cli:run --args=--help
-./gradlew :daemon:run --args=--help
-```
-
-The repository is a Gradle-rooted Kotlin prototype with two application subprojects: `cli/` and `daemon/`.
+See the [developer documentation](docs/development.md) for building, running, and testing mops.
 
 ## Release
 
@@ -282,3 +272,8 @@ Releases are published from explicit release commits on `main`:
 The workflow verifies the version, runs all checks, smoke-tests the ZIP distribution, generates its SHA-256 checksum,
 and publishes both files in a GitHub Release. It creates the `v<version>` tag at the tested release commit; release tags
 must not be created manually.
+
+## Code-mode runtime
+
+The distribution includes a pinned Groovy core runtime. The daemon uses MPS's Groovy runtime when present and the
+bundled core otherwise; no additional JAR or classpath override is required. Stop existing daemons after updating mops.
