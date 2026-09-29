@@ -5,6 +5,7 @@ import com.intellij.testFramework.IndexingTestUtil
 import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.launcher.MpsLaunchArgs
 import de.itemis.mps.gradle.project.loader.EnvironmentKind
+import de.itemis.mps.gradle.project.loader.Plugin
 import de.itemis.mps.gradle.project.loader.ProjectLoader
 import jetbrains.mps.classloading.ClassLoaderManager
 import jetbrains.mps.core.platform.Platform
@@ -128,6 +129,7 @@ object SharedMpsEnvironment {
 
     private fun boot(): IdeaEnvironment {
         val mpsHome = requiredPathProperty("test.mpsHome")
+        val mpsPlugin = requiredPathProperty("test.mpsPlugin")
         applyMpsSystemProperties()
 
         val handoff = SynchronousQueue<Any>()
@@ -136,7 +138,10 @@ object SharedMpsEnvironment {
                 ProjectLoader
                     .build {
                         environmentKind = EnvironmentKind.IDEA
-                        environmentConfig { addPluginsRecursivelyFrom(mpsHome.resolve("plugins")) }
+                        environmentConfig {
+                            addPluginsRecursivelyFrom(mpsHome.resolve("plugins"))
+                            plugins += Plugin(JavaSnippetParser.PLUGIN_ID, mpsPlugin.toAbsolutePath().normalize().toString())
+                        }
                     }
                     .execute { environment ->
                         handoff.put(environment)

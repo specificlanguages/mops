@@ -17,6 +17,12 @@ val daemonRuntimeClasspath by configurations.registering {
     isCanBeResolved = true
 }
 
+val daemonMpsPlugin by configurations.registering {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+    isTransitive = false
+}
+
 // Resolves the shaded protocol jar and its runtime so the schema generator can run the descriptor walker.
 val editSchemaGeneratorClasspath by configurations.registering {
     isCanBeConsumed = false
@@ -39,6 +45,7 @@ dependencies {
 
     editSchemaGeneratorClasspath(project(":protocol"))
     daemonRuntimeClasspath(project(":daemon"))
+    daemonMpsPlugin(project(":daemon-mps-plugin"))
 }
 
 configurations.named(integrationTest.implementationConfigurationName) {
@@ -97,6 +104,10 @@ distributions {
             }
             into("lib") {
                 from(writeDaemonClasspath)
+            }
+            into("mps-plugins") {
+                from(daemonMpsPlugin)
+                rename { "mops-daemon-plugin.jar" }
             }
         }
     }
@@ -202,8 +213,9 @@ tasks.register<Test>("gradleDiscoveryTest") {
 }
 
 tasks.named<JavaExec>("run") {
-    dependsOn(daemonRuntimeClasspath)
+    dependsOn(daemonRuntimeClasspath, daemonMpsPlugin)
     doFirst {
         systemProperty("mops.daemon.classpath", daemonRuntimeClasspath.get().asPath)
+        systemProperty("mops.daemon.mps.plugin", daemonMpsPlugin.get().singleFile.absolutePath)
     }
 }

@@ -21,6 +21,10 @@ plugins {
 
 val mpsZip = configurations.register("mpsZip") { isCanBeConsumed = false }
 val mpsRuntime = configurations.register("mpsRuntime") { isCanBeConsumed = false }
+val mpsPlugin = configurations.register("mpsPlugin") {
+    isCanBeConsumed = false
+    isTransitive = false
+}
 
 configurations {
     compileOnly { extendsFrom(mpsRuntime) }
@@ -34,6 +38,8 @@ dependencies {
     implementation(libs.picocli)
     implementation(libs.groovy)
     implementation(libs.project.loader)
+
+    mpsPlugin(project(":daemon-mps-plugin"))
 
     jbr(libs.mps.jbr)
 
@@ -74,9 +80,6 @@ dependencies {
             include("lib/intellij.platform.ide.impl.jar")
             include("lib/intellij.platform.projectModel.jar")
             include("lib/intellij.libraries.kotlinx.coroutines.core.jar")
-            // Java snippet parsing is supplied by the MPS Java Integration plugin rather than lib/.
-            include("plugins/mps-java/lib/java-core.jar")
-            include("plugins/java/lib/ecj/eclipse.jar")
             include("languages/baseLanguage/jetbrains.mps.baseLanguage.jar")
             include("languages/baseLanguage/jetbrains.mps.baseLanguage.javadoc.jar")
             include("languages/baseLanguage/jetbrains.mps.baseLanguage.methodReferences.jar")
@@ -154,11 +157,10 @@ tasks.test {
                 exclude("lib/groovy.jar")
                 include("lib/modules/*.jar")
                 include("lib/mpsant/mps-tool.jar")
-                include("plugins/mps-java/lib/java-core.jar")
-                include("plugins/java/lib/ecj/eclipse.jar")
             }
         },
     )
+    inputs.files(mpsPlugin).withPropertyName("mpsPlugin")
     jvmArgs(mpsAddOpens)
     val mpsTestWorkDir = layout.buildDirectory.dir("mps-test")
     jvmArgumentProviders.add {
@@ -174,6 +176,7 @@ tasks.test {
         listOf(
             "-Dtest.mpsHome=${testMpsRoot.get()}",
             "-Dtest.projectsDir=${rootDir.resolve("test-projects")}",
+            "-Dtest.mpsPlugin=${mpsPlugin.get().singleFile}",
             "-Djava.awt.headless=true",
             "-Didea.home.path=${testMpsRoot.get()}",
             "-Didea.config.path=$configDir",

@@ -3,6 +3,7 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.protocol.*
 import de.itemis.mps.gradle.project.loader.EnvironmentKind
+import de.itemis.mps.gradle.project.loader.Plugin
 import de.itemis.mps.gradle.project.loader.ProjectLoader
 import jetbrains.mps.project.MPSProject
 import jetbrains.mps.project.Project
@@ -37,6 +38,9 @@ class MopsDaemonCommand : Runnable {
     @Option(names = ["--workspace-path"], required = true)
     lateinit var workspacePath: String
 
+    @Option(names = ["--mps-plugin"], required = true)
+    lateinit var mpsPlugin: String
+
     @Option(names = ["--token"], required = true)
     lateinit var token: String
 
@@ -51,6 +55,7 @@ class MopsDaemonCommand : Runnable {
         val idleTimeout = Duration.ofMillis(idleTimeoutMillis)
 
         val workspacePath = Path.of(workspacePath)
+        val mpsPlugin = Path.of(mpsPlugin)
 
         val projectDaemon = ProjectDaemon(
             logger = logger,
@@ -64,6 +69,7 @@ class MopsDaemonCommand : Runnable {
         DaemonRunner(
             projectPath = projectPath,
             mpsHome = mpsHome,
+            mpsPlugin = mpsPlugin,
             logger = logger,
         ).runWithMpsAccess(projectDaemon::serve)
     }
@@ -78,6 +84,7 @@ class DaemonLogger() {
 class DaemonRunner(
     val projectPath: Path,
     val mpsHome: Path,
+    val mpsPlugin: Path,
     val logger: DaemonLogger
 ) {
 
@@ -96,7 +103,10 @@ class DaemonRunner(
                 // Load the distribution's bundled plugins (mps-tooltips, mps-console, mps-execution, ...). Without them
                 // many stock languages leave their runtime unregistered, so their concepts vanish from name lookup and
                 // every language that depends on them fails to load. See the mps-api-research notes.
-                environmentConfig { addPluginsRecursivelyFrom(mpsHome.resolve("plugins")) }
+                environmentConfig {
+                    addPluginsRecursivelyFrom(mpsHome.resolve("plugins"))
+                    plugins += Plugin(JavaSnippetParser.PLUGIN_ID, mpsPlugin.toAbsolutePath().normalize().toString())
+                }
             }
             .executeWithProject(projectPath.toFile()) { environment, project ->
                 // A project can pass the filesystem checks yet open with no Project Modules; refuse to serve it so
@@ -120,6 +130,9 @@ class DaemonRunner(
             }
             ?: environmentCheck(mpsHome.resolve("build.properties").isRegularFile(), "INVALID_MPS_HOME") {
                 "MPS home should contain a build.properties file: $mpsHome"
+            }
+            ?: environmentCheck(mpsPlugin.isRegularFile(), "INVALID_MPS_PLUGIN") {
+                "MOPS daemon plugin should be a JAR file: $mpsPlugin"
             }
 
     private fun environmentCheck(condition: Boolean, code: String, message: () -> String): EnvironmentProblem? =

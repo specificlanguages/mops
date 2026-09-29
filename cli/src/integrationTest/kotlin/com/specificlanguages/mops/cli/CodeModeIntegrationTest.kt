@@ -51,6 +51,57 @@ class CodeModeIntegrationTest {
         checkCodeMode(target)
     }
 
+    @Test
+    fun `installed CLI parses Java through the MPS plugin bridge`() {
+        val project = copyTestProject("base-language-sandbox", tempDir.resolve("base-language-sandbox"))
+        val daemonHome = tempDir.resolve("java-parser-daemon-home").createDirectories()
+        val program = tempDir.resolve("java-parser.groovy").also {
+            it.writeText("""
+                def model = project.read { mops.lookup.requireModel('baselanguage.sandbox') }
+                return project.command {
+                    def result = mops.parsing.java.addJavaClassesFromString(model, 'class Added {}')
+                    [name: result.nodes[0].name, unresolved: result.unresolved.size()]
+                }
+            """.trimIndent())
+        }
+        val install = Path.of(System.getProperty("test.cliInstall"))
+        val java = Path.of(
+            System.getProperty("java.home"),
+            "bin",
+            if (System.getProperty("os.name").startsWith("Windows")) "java.exe" else "java",
+        )
+        val output = tempDir.resolve("java-parser-output.txt")
+
+        fun cli(vararg args: String): CliResult {
+            val process = ProcessBuilder(
+                java.pathString, "-cp", install.resolve("lib/*").pathString,
+                "com.specificlanguages.mops.cli.MainKt",
+                "--project-root", project.pathString,
+                "--daemon-home", daemonHome.pathString,
+                "--java-home", System.getProperty("test.jbrHome"),
+                "--mps-home", System.getProperty("test.mpsHome"),
+                *args,
+            ).redirectErrorStream(true).redirectOutput(output.toFile()).start()
+            try {
+                assertTrue(process.waitFor(3, TimeUnit.MINUTES), "CLI timed out: ${output.readText()}")
+                return CliResult(process.exitValue(), output.readText(), "")
+            } finally {
+                if (process.isAlive) process.destroyForcibly()
+            }
+        }
+
+        try {
+            val result = cli("code", "run", program.pathString)
+            assertEquals(0, result.exitCode, result.output)
+            assertEquals(
+                mapOf("name" to "Added", "unresolved" to "0"),
+                Json.parseToJsonElement(result.stdout.trim()).jsonObject.mapValues { it.value.jsonPrimitive.content },
+            )
+        } finally {
+            cli("daemon", "stop")
+        }
+    }
+
     private fun checkCodeMode(mpsHome: Path) {
         val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
         val daemonHome = tempDir.resolve("daemon-home").createDirectories()

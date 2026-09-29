@@ -60,6 +60,10 @@ class FullClasspathDaemonLauncherTest {
         val exception = assertFailsWith<IllegalStateException> {
             SystemLambda.restoreSystemProperties {
                 System.setProperty("mops.daemon.classpath", "unused.jar")
+                System.setProperty(
+                    FullClasspathDaemonLauncher.DAEMON_MPS_PLUGIN_PROPERTY,
+                    emptyJar("timeout-plugin.jar").pathString,
+                )
                 FullClasspathDaemonLauncher(
                     records = DaemonRecordStore.forDaemonHome(tempDir.resolve("daemon-home")),
                     startupTimeout = FullClasspathDaemonLauncher.startupTimeoutFromEnvironment("1"),
@@ -96,6 +100,10 @@ class FullClasspathDaemonLauncherTest {
         val exception = assertFailsWith<IllegalStateException> {
             SystemLambda.restoreSystemProperties {
                 System.setProperty("mops.daemon.classpath", configuredClasspath)
+                System.setProperty(
+                    FullClasspathDaemonLauncher.DAEMON_MPS_PLUGIN_PROPERTY,
+                    emptyJar("property-plugin.jar").pathString,
+                )
                 FullClasspathDaemonLauncher(
                     records = DaemonRecordStore.forDaemonHome(tempDir.resolve("daemon-home")),
                     startupTimeout = Duration.ofMillis(500),
@@ -133,6 +141,7 @@ class FullClasspathDaemonLauncherTest {
             lib/project-loader.jar
             """.trimIndent(),
         )
+        emptyJar(applicationHome.resolve("mps-plugins/mops-daemon-plugin.jar"))
         val expectedClasspath = listOf(
             applicationHome.resolve("lib/daemon.jar"),
             applicationHome.resolve("lib/project-loader.jar"),
@@ -141,6 +150,7 @@ class FullClasspathDaemonLauncherTest {
         val exception = assertFailsWith<IllegalStateException> {
             SystemLambda.restoreSystemProperties {
                 System.clearProperty("mops.daemon.classpath")
+                System.clearProperty(FullClasspathDaemonLauncher.DAEMON_MPS_PLUGIN_PROPERTY)
                 FullClasspathDaemonLauncher(
                     records = DaemonRecordStore.forDaemonHome(tempDir.resolve("daemon-home")),
                     startupTimeout = Duration.ofMillis(500),
@@ -196,6 +206,14 @@ class FullClasspathDaemonLauncherTest {
         val classpathArgs = argsFile.readLines()
         assertEquals("-cp", classpathArgs[0])
         return classpathArgs[1].removeSurrounding("\"")
+    }
+
+    private fun emptyJar(name: String): Path = emptyJar(tempDir.resolve(name))
+
+    private fun emptyJar(path: Path): Path {
+        path.parent.createDirectories()
+        JarOutputStream(Files.newOutputStream(path)).use { }
+        return path
     }
 
     private fun fakeJavaHome(name: String): FakeJavaHome {

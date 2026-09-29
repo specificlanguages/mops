@@ -1,18 +1,9 @@
 package com.specificlanguages.mops.daemon
 
 import groovy.lang.GroovyObjectSupport
-import jetbrains.mps.java.core.newparser.FeatureKind
-import jetbrains.mps.java.core.newparser.JavaParser
-import jetbrains.mps.java.core.newparser.JavaToMpsConverter
-import jetbrains.mps.java.core.newparser.YetUnknownResolver
-import jetbrains.mps.progress.EmptyProgressMonitor
-import jetbrains.mps.project.AbstractModule
-import jetbrains.mps.smodel.ModelDependencyUpdate
-import jetbrains.mps.smodel.ModelImports
-import jetbrains.mps.smodel.adapter.structure.MetaAdapterFactory
-import org.jetbrains.mps.openapi.language.SContainmentLink
-import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SNode
+import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.Method
 
 /** The attached output of one Java snippet parsing operation. */
 class JavaParsingResult(
@@ -46,16 +37,10 @@ class JavaSnippetParser : GroovyObjectSupport() {
         require(arguments.size in counts) { "$name expects ${counts.joinToString(" or ")} arguments" }
         return call(arguments)
     }
+
     fun addJavaClassesFromString(model: Any, source: String): JavaParsingResult {
         requireCommand("mops.parsing.java.addJavaClassesFromString")
-        require(model is SModel) { "destination must be an MPS model" }
-        val parsed = parse(source, FeatureKind.CLASS, null)
-        val packageName = parsed.`package`
-        require(packageName == null || packageName == model.name.longName) {
-            "source package $packageName does not match destination model package ${model.name.longName}"
-        }
-        parsed.nodes.forEach(model::addRootNode)
-        return resolve(model, parsed.nodes, FeatureKind.CLASS)
+        return invokeBridge("classes", model, source, null)
     }
 
     fun addJavaMembersFromString(classifier: Any, source: String): JavaParsingResult =
@@ -63,14 +48,7 @@ class JavaSnippetParser : GroovyObjectSupport() {
 
     fun addJavaMembersFromString(classifier: Any, source: String, beforeMember: Any?): JavaParsingResult {
         requireCommand("mops.parsing.java.addJavaMembersFromString")
-        require(classifier is SNode) { "destination must be an MPS node" }
-        require(beforeMember == null || beforeMember is SNode) { "insertion anchor must be an MPS node" }
-        require(classifier.isInstanceOfConcept(classifierConcept)) { "destination must be a BaseLanguage classifier" }
-        val role = memberLink
-        requireAnchor(classifier, role, beforeMember)
-        val parsed = parse(source, FeatureKind.CLASS_CONTENT, classifier)
-        insert(classifier, role, parsed.nodes, beforeMember)
-        return resolve(requireNotNull(classifier.model), parsed.nodes, FeatureKind.CLASS_CONTENT)
+        return invokeBridge("members", classifier, source, beforeMember)
     }
 
     fun addJavaStatementsFromString(statementList: Any, source: String): JavaParsingResult =
@@ -78,74 +56,23 @@ class JavaSnippetParser : GroovyObjectSupport() {
 
     fun addJavaStatementsFromString(statementList: Any, source: String, beforeStatement: Any?): JavaParsingResult {
         requireCommand("mops.parsing.java.addJavaStatementsFromString")
-        require(statementList is SNode) { "destination must be an MPS node" }
-        require(beforeStatement == null || beforeStatement is SNode) { "insertion anchor must be an MPS node" }
-        require(statementList.isInstanceOfConcept(statementListConcept)) { "destination must be a BaseLanguage statement list" }
-        val role = statementLink
-        requireAnchor(statementList, role, beforeStatement)
-        val parsed = parse(source, FeatureKind.STATEMENTS, statementList)
-        insert(statementList, role, parsed.nodes, beforeStatement)
-        return resolve(requireNotNull(statementList.model), parsed.nodes, FeatureKind.STATEMENTS)
+        return invokeBridge("statements", statementList, source, beforeStatement)
     }
 
-    private fun parse(source: String, kind: FeatureKind, context: SNode?): JavaParser.JavaParseResult = try {
-        JavaParser().parse(source, kind, context, false).also { result ->
-            require(result.errorMsg == null) { "Java syntax error: ${result.errorMsg}" }
+    private fun invokeBridge(operation: String, destination: Any, source: String, anchor: Any?): JavaParsingResult {
+        val result = try {
+            bridgeMethod.invoke(null, operation, destination, source, anchor) as Array<*>
+        } catch (failure: InvocationTargetException) {
+            throw failure.targetException
         }
-    } catch (failure: Exception) {
-        throw IllegalArgumentException("Java syntax error: ${failure.message ?: failure.javaClass.simpleName}", failure)
+        @Suppress("UNCHECKED_CAST")
+        return JavaParsingResult(result[0] as List<SNode>, result[1] as List<SNode>)
     }
 
-    private fun insert(parent: SNode, role: SContainmentLink, nodes: List<SNode>, before: SNode?) {
-        nodes.forEach { node ->
-            if (before == null) parent.addChild(role, node) else parent.insertChildBefore(role, node, before)
-        }
-    }
+    companion object {
+        internal const val PLUGIN_ID = "com.specificlanguages.mops.daemon.plugin"
+        internal const val BRIDGE_CLASS = "com.specificlanguages.mops.daemon.plugin.JavaParserBridge"
 
-    private fun requireAnchor(parent: SNode, role: SContainmentLink, anchor: SNode?) {
-        if (anchor != null) require(anchor.parent === parent && anchor.containmentLink == role) {
-            "insertion anchor must be a direct child in the destination role"
-        }
-    }
-
-    private fun resolve(model: SModel, inserted: List<SNode>, kind: FeatureKind): JavaParsingResult {
-        val importsBefore = ModelImports(model).importedModels.toSet()
-        val monitor = EmptyProgressMonitor()
-        JavaToMpsConverter(model, requireNotNull(model.repository), jetbrains.mps.messages.IMessageHandler.NULL_HANDLER)
-            .tryResolveRefs(inserted, kind, monitor)
-        YetUnknownResolver(model, inserted).tryResolveUnknowns(monitor)
-        JavaToMpsConverter(model, requireNotNull(model.repository), jetbrains.mps.messages.IMessageHandler.NULL_HANDLER)
-            .tryResolveRefs(inserted, kind, monitor)
-        ModelDependencyUpdate(model, inserted).updateUsedLanguages().updateImportedModels(null)
-        addDependenciesForNewImports(model, importsBefore)
-        val attached = inserted.filter { it.model === model }
-        return JavaParsingResult(attached, unresolved(attached))
-    }
-
-    private fun addDependenciesForNewImports(model: SModel, importsBefore: Set<org.jetbrains.mps.openapi.model.SModelReference>) {
-        val module = model.module as? AbstractModule ?: return
-        ModelImports(model).importedModels.asSequence().filter { it !in importsBefore }.forEach { reference ->
-            if (module.scope.resolve(reference) == null) {
-                val target = reference.resolve(requireNotNull(model.repository)) ?: return@forEach
-                target.module?.moduleReference?.let { module.addDependency(it, false) }
-            }
-        }
-    }
-
-    private fun unresolved(roots: List<SNode>): List<SNode> = roots.asSequence()
-        .flatMap { root -> sequenceOf(root) + root.descendants() }
-        .filter { node -> node.isInstanceOfConcept(yetUnresolvedConcept) || node.references.any { it.targetNode == null } }
-        .toList()
-
-    private fun SNode.descendants(): Sequence<SNode> = sequence {
-        children.forEach { child -> yield(child); yieldAll(child.descendants()) }
-    }
-
-    private companion object {
-        val classifierConcept = MetaAdapterFactory.getConcept(0xf3061a5392264cc5UL.toLong(), 0xa443f952ceaf5816UL.toLong(), 0x101d9d3ca30L, "jetbrains.mps.baseLanguage.structure.Classifier")
-        val statementListConcept = MetaAdapterFactory.getConcept(0xf3061a5392264cc5UL.toLong(), 0xa443f952ceaf5816UL.toLong(), 0xf8cc56b200L, "jetbrains.mps.baseLanguage.structure.StatementList")
-        val yetUnresolvedConcept = MetaAdapterFactory.getInterfaceConcept(0xf3061a5392264cc5UL.toLong(), 0xa443f952ceaf5816UL.toLong(), 0x70ea1dc4c5721865L, "jetbrains.mps.baseLanguage.structure.IYetUnresolved")
-        val memberLink = MetaAdapterFactory.getContainmentLink(0xf3061a5392264cc5UL.toLong(), 0xa443f952ceaf5816UL.toLong(), 0x101d9d3ca30L, 0x4a9a46de59132803L, "member")
-        val statementLink = MetaAdapterFactory.getContainmentLink(0xf3061a5392264cc5UL.toLong(), 0xa443f952ceaf5816UL.toLong(), 0xf8cc56b200L, 0xf8cc6bf961L, "statement")
+        private val bridgeMethod: Method by lazy(JavaParserPluginLoader::loadBridgeMethod)
     }
 }

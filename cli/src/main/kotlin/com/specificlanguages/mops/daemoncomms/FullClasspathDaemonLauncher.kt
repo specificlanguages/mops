@@ -42,6 +42,7 @@ class FullClasspathDaemonLauncher(
 
         val mpsClasspath = mpsRuntimeClasspath(context.realMpsHome)
         val daemonClasspath = daemonClasspath().split(File.pathSeparator).filter { it.isNotBlank() }
+        val mpsPlugin = daemonMpsPlugin()
         // MPS can bundle a complete Groovy distribution, including extension modules compiled against its core.
         // Use that runtime as a unit; the mops core dependency is a fallback for MPS distributions without Groovy.
         val selectedDaemonClasspath = if (mpsClasspath.any(::providesGroovyCompiler)) {
@@ -73,6 +74,8 @@ class FullClasspathDaemonLauncher(
                     add(workspace.path.pathString)
                     add("--mps-home")
                     add(context.realMpsHome.pathString)
+                    add("--mps-plugin")
+                    add(mpsPlugin.pathString)
                     add("--token")
                     add(token)
                 })
@@ -162,6 +165,16 @@ class FullClasspathDaemonLauncher(
 
     private fun daemonClasspath(): String = System.getProperty("mops.daemon.classpath") ?: distributionDaemonClasspath()
 
+    private fun daemonMpsPlugin(): Path {
+        val configured = System.getProperty(DAEMON_MPS_PLUGIN_PROPERTY)?.let(Path::of)
+        val plugin = configured ?: applicationHome?.resolve("mps-plugins")?.resolve(DAEMON_MPS_PLUGIN_FILE)
+            ?: throw IllegalStateException(
+                "Could not determine application home, set $DAEMON_MPS_PLUGIN_PROPERTY JVM property explicitly",
+            )
+        require(plugin.isRegularFile()) { "MOPS daemon plugin is missing: ${plugin.toAbsolutePath().normalize()}" }
+        return plugin.toAbsolutePath().normalize()
+    }
+
     private fun distributionDaemonClasspath(): String {
         val home = applicationHome
             ?: throw IllegalStateException("Could not determine application home, set mops.daemon.classpath JVM property explicitly")
@@ -184,8 +197,6 @@ class FullClasspathDaemonLauncher(
             addAll(jarsIn(mpsHome.resolve("lib/modules")))
             listOf(
                 mpsHome.resolve("lib/mpsant/mps-tool.jar"),
-                mpsHome.resolve("plugins/mps-java/lib/java-core.jar"),
-                mpsHome.resolve("plugins/java/lib/ecj/eclipse.jar"),
             ).filter { Files.isRegularFile(it) }.forEach { add(it.pathString) }
         }
 
@@ -211,6 +222,8 @@ class FullClasspathDaemonLauncher(
 
     companion object {
         private const val DAEMON_CLASSPATH_FILE = "mops-daemon.classpath"
+        private const val DAEMON_MPS_PLUGIN_FILE = "mops-daemon-plugin.jar"
+        internal const val DAEMON_MPS_PLUGIN_PROPERTY = "mops.daemon.mps.plugin"
         private const val STARTUP_TIMEOUT_ENV = "MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS"
         private val REQUEST_TIMEOUT = Duration.ofMinutes(2)
 
