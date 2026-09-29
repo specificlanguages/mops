@@ -18,11 +18,136 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class FullClasspathDaemonLauncherTest {
     @TempDir
     lateinit var tempDir: Path
+
+    @Test
+    fun `product descriptor defines classpath membership and order`() {
+        val mpsHome = tempDir.resolve("mps").createDirectories()
+        val zJar = emptyJar(mpsHome.resolve("lib/z.jar"))
+        val aJar = emptyJar(mpsHome.resolve("lib/a.jar"))
+        emptyJar(mpsHome.resolve("lib/undeclared.jar"))
+        emptyJar(mpsHome.resolve("lib/modules/module.jar"))
+        val mpsTool = emptyJar(mpsHome.resolve("lib/mpsant/mps-tool.jar"))
+        productInfo(
+            mpsHome.resolve("product-info.json"),
+            launch("Linux", "amd64", "z.jar", "missing.jar", "a.jar", "mpsant/mps-tool.jar"),
+        )
+
+        val classpath = FullClasspathDaemonLauncher.mpsRuntimeClasspath(mpsHome, "Linux", "x86_64")
+
+        assertEquals(listOf(zJar.pathString, aJar.pathString, mpsTool.pathString), classpath)
+        assertEquals(1, classpath.count { it == mpsTool.pathString })
+        assertFalse(classpath.any { it.endsWith("undeclared.jar") || it.endsWith("module.jar") })
+    }
+
+    @Test
+    fun `exact host launch entry is preferred`() {
+        val mpsHome = tempDir.resolve("mps").createDirectories()
+        val linuxJar = emptyJar(mpsHome.resolve("lib/linux.jar"))
+        emptyJar(mpsHome.resolve("lib/mac.jar"))
+        productInfo(
+            mpsHome.resolve("product-info.json"),
+            launch("macOS", "aarch64", "mac.jar"),
+            launch("Linux", "amd64", "linux.jar"),
+        )
+
+        assertEquals(
+            listOf(linuxJar.pathString),
+            FullClasspathDaemonLauncher.mpsRuntimeClasspath(mpsHome, "Linux", "amd64"),
+        )
+    }
+
+    @Test
+    fun `sole nonmatching launch entry is accepted for generic distributions`() {
+        val mpsHome = tempDir.resolve("mps").createDirectories()
+        val bootJar = emptyJar(mpsHome.resolve("lib/boot.jar"))
+        productInfo(mpsHome.resolve("product-info.json"), launch("Linux", "amd64", "boot.jar"))
+
+        assertEquals(
+            listOf(bootJar.pathString),
+            FullClasspathDaemonLauncher.mpsRuntimeClasspath(mpsHome, "Mac OS X", "aarch64"),
+        )
+    }
+
+    @Test
+    fun `common boot classpath is accepted when no launch entry matches`() {
+        val mpsHome = tempDir.resolve("mps").createDirectories()
+        val bootJar = emptyJar(mpsHome.resolve("lib/boot.jar"))
+        productInfo(
+            mpsHome.resolve("product-info.json"),
+            launch("Linux", "amd64", "boot.jar"),
+            launch("Windows", "amd64", "boot.jar"),
+        )
+
+        assertEquals(
+            listOf(bootJar.pathString),
+            FullClasspathDaemonLauncher.mpsRuntimeClasspath(mpsHome, "Mac OS X", "arm64"),
+        )
+    }
+
+    @Test
+    fun `ambiguous nonmatching launch entries fail with descriptor path`() {
+        val mpsHome = tempDir.resolve("mps").createDirectories()
+        val descriptor = mpsHome.resolve("product-info.json")
+        productInfo(
+            descriptor,
+            launch("Linux", "amd64", "linux.jar"),
+            launch("Windows", "amd64", "windows.jar"),
+        )
+
+        val exception = assertFailsWith<IllegalStateException> {
+            FullClasspathDaemonLauncher.mpsRuntimeClasspath(mpsHome, "Mac OS X", "aarch64")
+        }
+
+        assertContains(exception.message!!, "Ambiguous launch entries")
+        assertContains(exception.message!!, descriptor.pathString)
+    }
+
+    @Test
+    fun `product descriptor is found below Resources`() {
+        val mpsHome = tempDir.resolve("MPS.app/Contents").createDirectories()
+        val bootJar = emptyJar(mpsHome.resolve("lib/boot.jar"))
+        productInfo(mpsHome.resolve("Resources/product-info.json"), launch("macOS", "aarch64", "boot.jar"))
+
+        assertEquals(
+            listOf(bootJar.pathString),
+            FullClasspathDaemonLauncher.mpsRuntimeClasspath(mpsHome, "Mac OS X", "arm64"),
+        )
+    }
+
+    @Test
+    fun `missing product descriptor uses legacy classpath`() {
+        val mpsHome = tempDir.resolve("mps").createDirectories()
+        val aJar = emptyJar(mpsHome.resolve("lib/a.jar"))
+        val zJar = emptyJar(mpsHome.resolve("lib/z.jar"))
+        val moduleJar = emptyJar(mpsHome.resolve("lib/modules/module.jar"))
+        val mpsTool = emptyJar(mpsHome.resolve("lib/mpsant/mps-tool.jar"))
+
+        assertEquals(
+            listOf(aJar.pathString, zJar.pathString, moduleJar.pathString, mpsTool.pathString),
+            FullClasspathDaemonLauncher.mpsRuntimeClasspath(mpsHome, "Linux", "amd64"),
+        )
+    }
+
+    @Test
+    fun `malformed product descriptor does not use legacy classpath`() {
+        val mpsHome = tempDir.resolve("mps").createDirectories()
+        val descriptor = mpsHome.resolve("product-info.json")
+        descriptor.writeText("""{"launch":[{"os":1,"arch":"amd64","bootClassPathJarNames":[]}]}""")
+        emptyJar(mpsHome.resolve("lib/fallback.jar"))
+
+        val exception = assertFailsWith<IllegalStateException> {
+            FullClasspathDaemonLauncher.mpsRuntimeClasspath(mpsHome, "Linux", "amd64")
+        }
+
+        assertContains(exception.message!!, "Invalid MPS product descriptor")
+        assertContains(exception.message!!, descriptor.pathString)
+    }
 
     @Test
     fun `startup timeout defaults to 300 seconds and accepts larger values`() {
@@ -118,6 +243,7 @@ class FullClasspathDaemonLauncherTest {
         }
 
         assertContains(exception.message!!, "daemon exited before writing its project record")
+        assertContains(fakeJava.commandArgsFile.readText(), "-Didea.force.use.core.classloader=false")
         assertEquals(
             listOf(configuredClasspath, mpsTool.pathString).joinToString(File.pathSeparator),
             launchedClasspath(fakeJava.argsFile),
@@ -216,13 +342,23 @@ class FullClasspathDaemonLauncherTest {
         return path
     }
 
+    private fun productInfo(path: Path, vararg launches: String) {
+        path.parent.createDirectories()
+        path.writeText("""{"launch":[${launches.joinToString()}]}""")
+    }
+
+    private fun launch(os: String, arch: String, vararg jars: String): String =
+        """{"os":"$os","arch":"$arch","bootClassPathJarNames":[${jars.joinToString { "\"$it\"" }}]}"""
+
     private fun fakeJavaHome(name: String): FakeJavaHome {
         val javaHome = tempDir.resolve(name).createDirectories()
         val argsFile = tempDir.resolve("$name-args.txt")
+        val commandArgsFile = tempDir.resolve("$name-command-args.txt")
         val fakeJava = javaHome.resolve("bin").createDirectories().resolve("java")
         fakeJava.writeText(
             """
             #!/bin/sh
+            printf '%s\n' "$@" > ${shellQuote(commandArgsFile)}
             for argument in "$@"; do
                 case "${'$'}argument" in
                     @*) cat "${'$'}{argument#@}" > ${shellQuote(argsFile)} ;;
@@ -232,11 +368,11 @@ class FullClasspathDaemonLauncherTest {
             """.trimIndent(),
         )
         Files.setPosixFilePermissions(fakeJava, setOf(OWNER_READ, OWNER_WRITE, OWNER_EXECUTE))
-        return FakeJavaHome(javaHome, argsFile)
+        return FakeJavaHome(javaHome, argsFile, commandArgsFile)
     }
 
     private fun shellQuote(path: Path): String =
         "'${path.pathString.replace("'", "'\\''")}'"
 
-    private data class FakeJavaHome(val home: Path, val argsFile: Path)
+    private data class FakeJavaHome(val home: Path, val argsFile: Path, val commandArgsFile: Path)
 }

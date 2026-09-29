@@ -2,6 +2,11 @@ package com.specificlanguages.mops.daemoncomms
 
 import com.specificlanguages.mops.launcher.MpsLaunchArgs.getJvmArgsFor
 import com.specificlanguages.mops.protocol.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.nio.charset.Charset
 import java.nio.file.Files
@@ -64,6 +69,8 @@ class FullClasspathDaemonLauncher(
                 buildList {
                     add(javaExecutableFromJavaHome(context.realJavaHome).pathString)
                     addAll(launchJvmArgs)
+                    // IdeaEnvironment otherwise forces plugin modules onto the application classpath.
+                    add("-Didea.force.use.core.classloader=false")
                     add("-Didea.config.path=${workspace.ideaConfigDir()}")
                     add("-Didea.system.path=${workspace.ideaSystemDir()}")
                     add("@${classpathArgFile.pathString}")
@@ -191,32 +198,10 @@ class FullClasspathDaemonLauncher(
             .joinToString(File.pathSeparator) { it.normalize().pathString }
     }
 
-    private fun mpsRuntimeClasspath(mpsHome: Path): List<String> =
-        buildList {
-            addAll(jarsIn(mpsHome.resolve("lib")))
-            addAll(jarsIn(mpsHome.resolve("lib/modules")))
-            listOf(
-                mpsHome.resolve("lib/mpsant/mps-tool.jar"),
-            ).filter { Files.isRegularFile(it) }.forEach { add(it.pathString) }
-        }
-
     private fun providesGroovyCompiler(entry: String): Boolean {
         val file = File(entry)
         return file.isFile && file.extension == "jar" && JarFile(file).use {
             it.getJarEntry("org/codehaus/groovy/control/CompilerConfiguration.class") != null
-        }
-    }
-
-    private fun jarsIn(directory: Path): List<String> {
-        if (!Files.isDirectory(directory)) {
-            return emptyList()
-        }
-        return Files.list(directory).use { entries ->
-            entries
-                .filter { Files.isRegularFile(it) && it.extension == "jar" }
-                .map { it.pathString }
-                .sorted()
-                .toList()
         }
     }
 
@@ -226,6 +211,140 @@ class FullClasspathDaemonLauncher(
         internal const val DAEMON_MPS_PLUGIN_PROPERTY = "mops.daemon.mps.plugin"
         private const val STARTUP_TIMEOUT_ENV = "MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS"
         private val REQUEST_TIMEOUT = Duration.ofMinutes(2)
+
+        internal fun mpsRuntimeClasspath(
+            mpsHome: Path,
+            osName: String = System.getProperty("os.name"),
+            osArch: String = System.getProperty("os.arch"),
+        ): List<String> {
+            val descriptor = listOf(
+                mpsHome.resolve("product-info.json"),
+                mpsHome.resolve("Resources/product-info.json"),
+            ).firstOrNull(Files::isRegularFile)
+
+            val runtimeJars = if (descriptor == null) {
+                legacyMpsRuntimeClasspath(mpsHome)
+            } else {
+                val launches = readMpsLaunches(descriptor)
+                val platform = hostPlatform(osName, osArch, descriptor)
+                selectMpsLaunch(launches, platform, descriptor).bootClassPathJarNames
+                    .map { mpsHome.resolve("lib").resolve(it) }
+                    .filter(Files::isRegularFile)
+                    .map(Path::pathString)
+            }
+
+            val mpsTool = mpsHome.resolve("lib/mpsant/mps-tool.jar")
+            return if (mpsTool.isRegularFile() && mpsTool.pathString !in runtimeJars) {
+                runtimeJars + mpsTool.pathString
+            } else {
+                runtimeJars
+            }
+        }
+
+        private fun readMpsLaunches(descriptor: Path): List<MpsLaunch> =
+            try {
+                val launches = Json.parseToJsonElement(descriptor.readText()).jsonObject["launch"]?.jsonArray
+                    ?: error("missing launch array")
+                require(launches.isNotEmpty()) { "launch array is empty" }
+                launches.mapIndexed { index, element ->
+                    val launch = element.jsonObject
+                    val os = launch["os"]?.jsonPrimitive
+                        ?.also { require(it.isString) { "launch[$index].os is not a string" } }
+                        ?.contentOrNull
+                        ?: error("launch[$index] is missing os")
+                    val arch = launch["arch"]?.jsonPrimitive?.let {
+                        require(it.isString) { "launch[$index].arch is not a string" }
+                        it.content
+                    }
+                    val bootClassPath = launch["bootClassPathJarNames"]?.jsonArray
+                        ?: error("launch[$index] is missing bootClassPathJarNames")
+                    MpsLaunch(
+                        os = os,
+                        arch = arch,
+                        bootClassPathJarNames = bootClassPath.mapIndexed { jarIndex, jar ->
+                            val jarName = jar.jsonPrimitive
+                            require(jarName.isString) {
+                                "launch[$index].bootClassPathJarNames[$jarIndex] is not a string"
+                            }
+                            jarName.content
+                        },
+                    )
+                }
+            } catch (exception: Exception) {
+                throw IllegalStateException(
+                    "Invalid MPS product descriptor $descriptor: ${exception.message ?: exception.javaClass.simpleName}",
+                    exception,
+                )
+            }
+
+        private fun selectMpsLaunch(
+            launches: List<MpsLaunch>,
+            platform: HostPlatform,
+            descriptor: Path,
+        ): MpsLaunch {
+            val exactMatches = launches.filter { it.os == platform.os && it.arch == platform.arch }
+            if (exactMatches.size == 1) {
+                return exactMatches.single()
+            }
+            if (launches.size == 1) {
+                return launches.single()
+            }
+
+            val commonBootClasspath = launches.map(MpsLaunch::bootClassPathJarNames).distinct()
+            if (commonBootClasspath.size == 1) {
+                return launches.first()
+            }
+
+            throw IllegalStateException(
+                "Ambiguous launch entries in MPS product descriptor $descriptor for ${platform.os}/${platform.arch}",
+            )
+        }
+
+        private fun hostPlatform(osName: String, osArch: String, descriptor: Path): HostPlatform {
+            val os = when {
+                osName.startsWith("Mac", ignoreCase = true) -> "macOS"
+                osName.startsWith("Linux", ignoreCase = true) -> "Linux"
+                osName.startsWith("Windows", ignoreCase = true) -> "Windows"
+                else -> throw IllegalStateException(
+                    "Cannot select a launch entry from MPS product descriptor $descriptor: unsupported host OS $osName",
+                )
+            }
+            val arch = when (osArch.lowercase()) {
+                "amd64", "x86_64" -> "amd64"
+                "aarch64", "arm64" -> "aarch64"
+                else -> throw IllegalStateException(
+                    "Cannot select a launch entry from MPS product descriptor $descriptor: unsupported host architecture $osArch",
+                )
+            }
+            return HostPlatform(os, arch)
+        }
+
+        private fun legacyMpsRuntimeClasspath(mpsHome: Path): List<String> =
+            buildList {
+                addAll(jarsIn(mpsHome.resolve("lib")))
+                addAll(jarsIn(mpsHome.resolve("lib/modules")))
+            }
+
+        private fun jarsIn(directory: Path): List<String> {
+            if (!Files.isDirectory(directory)) {
+                return emptyList()
+            }
+            return Files.list(directory).use { entries ->
+                entries
+                    .filter { Files.isRegularFile(it) && it.extension == "jar" }
+                    .map { it.pathString }
+                    .sorted()
+                    .toList()
+            }
+        }
+
+        private data class HostPlatform(val os: String, val arch: String)
+
+        private data class MpsLaunch(
+            val os: String,
+            val arch: String?,
+            val bootClassPathJarNames: List<String>,
+        )
 
         internal fun startupTimeoutFromEnvironment(value: String?): Duration {
             if (value == null) return Duration.ofMinutes(5)
