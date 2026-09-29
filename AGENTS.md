@@ -1,3 +1,5 @@
+# Agent instructions
+
 ## Project state
 
 This is a prototype:
@@ -26,3 +28,10 @@ Verified MPS API documentation lives in
 
 - [Kotlin](docs/agents/kotlin-coding-guidelines.md)
 - [Gradle](docs/agents/gradle-conventions.md)
+
+### MPS agent workflows
+
+Reusable MPS agent guidance lives in the sibling [mps-agent-guidance](../mps-agent-guidance/README.md) repository. When
+reproducing bugs in MPS projects, follow its [reproducer guidance](../mps-agent-guidance/docs/bug-reproduction.md),
+including version selection before preparing a checkout or runtime. Its
+[review skill](../mps-agent-guidance/skills/mops-review/SKILL.md) covers MPS model review.
