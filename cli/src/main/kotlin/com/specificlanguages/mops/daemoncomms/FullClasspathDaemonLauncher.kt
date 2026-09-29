@@ -3,6 +3,7 @@ package com.specificlanguages.mops.daemoncomms
 import com.specificlanguages.mops.launcher.MpsLaunchArgs.getJvmArgsFor
 import com.specificlanguages.mops.protocol.*
 import java.io.File
+import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
@@ -45,46 +46,54 @@ class FullClasspathDaemonLauncher(
             .filter { it.isNotBlank() }
             .joinToString(File.pathSeparator)
 
-        val processBuilder = ProcessBuilder(
-            buildList {
-                add(javaExecutableFromJavaHome(context.realJavaHome).pathString)
-                addAll(launchJvmArgs)
-                add("-Didea.config.path=${workspace.ideaConfigDir()}")
-                add("-Didea.system.path=${workspace.ideaSystemDir()}")
-                add("-cp")
-                add(runtimeClasspath)
-                add("com.specificlanguages.mops.daemon.MainKt")
-                add("--project-path")
-                add(context.realProjectPath.pathString)
-                add("--workspace-path")
-                add(workspace.path.pathString)
-                add("--mps-home")
-                add(context.realMpsHome.pathString)
-                add("--token")
-                add(token)
-            })
-            .directory(workDir.toFile())
-            .redirectOutput(ProcessBuilder.Redirect.appendTo(logFile.toFile()))
-            .redirectError(ProcessBuilder.Redirect.appendTo(logFile.toFile()))
-
         workspace.createDirectories()
-
-        val process = processBuilder.start()
-
-        var startupSucceeded = false
+        val classpathArgFile = Files.createTempFile(workDir, "daemon-classpath-", ".args")
         try {
-            process.outputStream.close()
-            val record = waitForDaemonRecord(process, context, token, logFile, workspace)
-            val client = DefaultDaemonClient(port = record.port, token = record.token, timeout = REQUEST_TIMEOUT)
+            Files.writeString(
+                classpathArgFile,
+                "-cp\n\"${runtimeClasspath.replace("\\", "\\\\").replace("\"", "\\\"")}\"\n",
+                Charset.defaultCharset(),
+            )
+            val processBuilder = ProcessBuilder(
+                buildList {
+                    add(javaExecutableFromJavaHome(context.realJavaHome).pathString)
+                    addAll(launchJvmArgs)
+                    add("-Didea.config.path=${workspace.ideaConfigDir()}")
+                    add("-Didea.system.path=${workspace.ideaSystemDir()}")
+                    add("@${classpathArgFile.pathString}")
+                    add("com.specificlanguages.mops.daemon.MainKt")
+                    add("--project-path")
+                    add(context.realProjectPath.pathString)
+                    add("--workspace-path")
+                    add(workspace.path.pathString)
+                    add("--mps-home")
+                    add(context.realMpsHome.pathString)
+                    add("--token")
+                    add(token)
+                })
+                .directory(workDir.toFile())
+                .redirectOutput(ProcessBuilder.Redirect.appendTo(logFile.toFile()))
+                .redirectError(ProcessBuilder.Redirect.appendTo(logFile.toFile()))
 
-            client.ping() // throws on error
+            val process = processBuilder.start()
 
-            startupSucceeded = true
-            return client
-        } finally {
-            if (!startupSucceeded && process.isAlive) {
-                process.destroyForcibly()
+            var startupSucceeded = false
+            try {
+                process.outputStream.close()
+                val record = waitForDaemonRecord(process, context, token, logFile, workspace)
+                val client = DefaultDaemonClient(port = record.port, token = record.token, timeout = REQUEST_TIMEOUT)
+
+                client.ping() // throws on error
+
+                startupSucceeded = true
+                return client
+            } finally {
+                if (!startupSucceeded && process.isAlive) {
+                    process.destroyForcibly()
+                }
             }
+        } finally {
+            Files.deleteIfExists(classpathArgFile)
         }
     }
 

@@ -192,10 +192,9 @@ class FullClasspathDaemonLauncherTest {
 
     private fun launchedClasspath(argsFile: Path): String {
         assertTrue(argsFile.exists(), "daemon classpath should let launcher invoke the selected Java executable")
-        val args = argsFile.readLines()
-        val classpathFlag = args.indexOf("-cp")
-        assertTrue(classpathFlag >= 0, "daemon process should receive a classpath argument: $args")
-        return args[classpathFlag + 1]
+        val classpathArgs = argsFile.readLines()
+        assertEquals("-cp", classpathArgs[0])
+        return classpathArgs[1].removeSurrounding("\"")
     }
 
     private fun fakeJavaHome(name: String): FakeJavaHome {
@@ -205,7 +204,11 @@ class FullClasspathDaemonLauncherTest {
         fakeJava.writeText(
             """
             #!/bin/sh
-            printf '%s\n' "$@" > ${shellQuote(argsFile)}
+            for argument in "$@"; do
+                case "${'$'}argument" in
+                    @*) cat "${'$'}{argument#@}" > ${shellQuote(argsFile)} ;;
+                esac
+            done
             exit 42
             """.trimIndent(),
         )
