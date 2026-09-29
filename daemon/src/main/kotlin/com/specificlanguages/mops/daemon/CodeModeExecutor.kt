@@ -3,6 +3,8 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.protocol.CodeResultResponse
 import com.specificlanguages.mops.protocol.CodeRunRequest
+import com.specificlanguages.mops.protocol.TestRunReport
+import com.specificlanguages.mops.protocol.ProtocolJson
 import groovy.lang.Binding
 import groovy.lang.GroovyClassLoader
 import groovy.lang.GroovyShell
@@ -16,12 +18,17 @@ import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import java.io.File
 import java.nio.file.Path
 
-class CodeModeExecutor(private val access: MpsAccess, private val project: MPSProject, private val platform: Platform) {
+class CodeModeExecutor(
+    private val access: MpsAccess,
+    private val project: MPSProject,
+    private val platform: Platform,
+    private val testingRunner: ProjectTesting? = null,
+) {
     fun execute(request: CodeRunRequest): CodeResultResponse {
         rejectDependencyInjection(request.source)
         val configuration = CompilerConfiguration().apply { scriptBaseClass = CodeModeScript::class.java.name }
         val loader = GroovyClassLoader(javaClass.classLoader, configuration)
-        val mops = Mops(project, access, platform)
+        val mops = Mops(project, access, platform, testingRunner)
         CodeModeProjectProvider.initialize(mops)
         try {
             val result = GroovyShell(loader, Binding(), configuration).evaluate(request.source, request.sourceName)
@@ -54,6 +61,7 @@ internal object CodeResultAdapter {
         is SNode -> value.reference.let(persistence::asString)
         is SModel -> value.reference.let(persistence::asString)
         is SModule -> value.moduleReference.let(persistence::asString)
+        is TestRunReport -> ProtocolJson.encodeTestReport(value)
         is String -> value
         is Char, is Boolean, is Number, is File, is Path -> value.toString()
         is Map<*, *> -> value.entries.joinToString(",", "{", "}") { json(it.key.toString()) + ":" + renderJson(it.value) }
@@ -71,6 +79,7 @@ internal object CodeResultAdapter {
         is SNode, is SModel, is SModule -> render(value)?.let(::json) ?: "null"
         is String, is Char, is File, is Path -> json(value.toString())
         is Boolean, is Number -> value.toString()
+        is TestRunReport -> render(value)!!
         is Map<*, *>, is Iterable<*>, is Array<*>, is BooleanArray, is IntArray, is LongArray, is DoubleArray -> render(value)!!
         else -> error("unsupported code mode result ${value.javaClass.name}; return a supported representation")
     }

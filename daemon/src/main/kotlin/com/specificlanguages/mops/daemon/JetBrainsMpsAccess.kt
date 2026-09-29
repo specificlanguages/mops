@@ -424,6 +424,20 @@ class JetBrainsMpsAccess(
         }
     }
 
+    internal fun resolveTestSelection(target: List<String>): Any {
+        if (target.isEmpty()) return project
+        return when (val resolution = resolveListTarget(target)) {
+            is ListTargetResolution.Found -> when (val selected = resolution.target) {
+                is ListTarget.Module -> selected.module
+                is ListTarget.Model -> selected.model
+                is ListTarget.RootNode -> selected.node
+                is ListTarget.Node -> selected.node
+            }
+            is ListTargetResolution.Ambiguous -> throw IllegalArgumentException(resolution.message)
+            ListTargetResolution.Missing -> throw IllegalArgumentException("test selection not found: ${target.joinToString(" ")}")
+        }
+    }
+
     private fun resolveListTarget(target: List<String>): ListTargetResolution {
         if (target.isEmpty()) {
             return ListTargetResolution.Missing

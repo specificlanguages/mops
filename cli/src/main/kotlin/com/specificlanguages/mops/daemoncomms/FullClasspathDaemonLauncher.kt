@@ -28,7 +28,7 @@ class FullClasspathDaemonLauncher(
 ) : DaemonLauncher {
 
     override fun connectToExistingDaemon(record: DaemonRecord): DefaultDaemonClient {
-        return DefaultDaemonClient(port = record.port, token = record.token, timeout = REQUEST_TIMEOUT)
+        return DefaultDaemonClient(port = record.port, token = record.token, timeout = REQUEST_TIMEOUT, daemonPid = record.pid)
     }
 
     override fun startDaemon(context: DaemonContext): DefaultDaemonClient {
@@ -86,7 +86,7 @@ class FullClasspathDaemonLauncher(
             try {
                 process.outputStream.close()
                 val record = waitForDaemonRecord(process, context, token, logFile, workspace)
-                val client = DefaultDaemonClient(port = record.port, token = record.token, timeout = REQUEST_TIMEOUT)
+                val client = DefaultDaemonClient(port = record.port, token = record.token, timeout = REQUEST_TIMEOUT, daemonPid = record.pid)
 
                 client.ping() // throws on error
 

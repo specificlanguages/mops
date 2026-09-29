@@ -1,295 +1,284 @@
 # mops
 
-mops helps users and agents inspect and work with JetBrains MPS projects from a CLI. This glossary keeps MPS project vocabulary precise when discussing navigation, lookup, and model operations.
+mops helps users and agents inspect and work with JetBrains MPS projects from a CLI. This glossary keeps MPS project
+vocabulary precise when discussing navigation, lookup, and model operations.
 
-Domain concepts use title case in this glossary and other internal domain documents so their use as defined terms is visible. User-facing messages and documentation use ordinary lowercase prose for these terms.
+Domain concepts use title case in this glossary and other internal domain documents so their use as defined terms is
+visible. User-facing messages and documentation use ordinary lowercase prose for these terms.
 
 ## Language
 
-**MPS Project**:
-The JetBrains MPS project the user is working in. An **MPS Project** owns zero or more **Project Modules**.
-_Avoid_: current project when precision matters
-_Related_: MPS Repository, source repository, checkout
+**MPS Project**: The JetBrains MPS project the user is working in. An **MPS Project** owns zero or more **Project
+Modules**. _Avoid_: current project when precision matters _Related_: MPS Repository, source repository, checkout
 
-**Project Name**:
-The canonical name of an **MPS Project**.
-_Related_: project directory name
+**Project Name**: The canonical name of an **MPS Project**. _Related_: project directory name
 
-**MPS Module**:
-A top-level MPS unit visible to an MPS project session, such as a language, solution, or generator.
+**MPS Module**: A top-level MPS unit visible to an MPS project session, such as a language, solution, or generator.
 _Avoid_: module when the owning scope is unclear
 
-**Module Name**:
-The canonical name of an **MPS Module**.
-_Related_: Module Reference
+**Module Name**: The canonical name of an **MPS Module**. _Related_: Module Reference
 
-**Project Module**:
-An **MPS Module** that belongs to an **MPS Project**, including its generators when they are part of that project. Dependency and platform modules available alongside the project are not **Project Modules**.
-_Related_: dependency module, platform module
+**Project Module**: An **MPS Module** that belongs to an **MPS Project**, including its generators when they are part of
+that project. Dependency and platform modules available alongside the project are not **Project Modules**. _Related_:
+dependency module, platform module
 
-**Module Creation Operation**:
-One of four project-level operations that creates a language, solution, devkit, or generator as a **Project Module**. Each operation is available as a direct mops command; in **Code Mode**, language, solution, and devkit creation extend the **MPS Project**, while generator creation extends its source language.
-_Avoid_: generic create-module operation
-_Related_: Project Module, Code Mode Extension, Module Creation Report
+**Module Creation Operation**: One of four project-level operations that creates a language, solution, devkit, or
+generator as a **Project Module**. Each operation is available as a direct mops command; in **Code Mode**, language,
+solution, and devkit creation extend the **MPS Project**, while generator creation extends its source language. _Avoid_:
+generic create-module operation _Related_: Project Module, Code Mode Extension, Module Creation Report
 
-**Model Creation Operation**:
-An operation that creates an **MPS Model** in a selected **Project Module**. It is available both as a direct mops command and as a **Code Mode Extension** on the owning MPS module object.
-_Related_: MPS Model, Project Module, Code Mode Extension
+**Model Creation Operation**: An operation that creates an **MPS Model** in a selected **Project Module**. It is
+available both as a direct mops command and as a **Code Mode Extension** on the owning MPS module object. _Related_: MPS
+Model, Project Module, Code Mode Extension
 
-**Module Creation Report**:
-The structured CLI result of a **Module Creation Operation**, identifying the primary module and every companion artifact created with it.
-_Related_: Module Creation Operation, Project Module
+**Module Creation Report**: The structured CLI result of a **Module Creation Operation**, identifying the primary module
+and every companion artifact created with it. _Related_: Module Creation Operation, Project Module
 
-**Solution Usage Preset**:
-A named facet configuration applied when creating a solution according to its intended use. The supported presets are `not-generated` (the default, with no generation-target facets), `text`, `java`, `java-tests`, and `java-mps-plugin`; they do not add dependencies, languages, devkits, or model contents.
-_Avoid_: solution kind, raw facet options
-_Related_: Module Creation Operation, Project Module
+**Solution Usage Preset**: A named facet configuration applied when creating a solution according to its intended use.
+The supported presets are `not-generated` (the default, with no generation-target facets), `text`, `java`, `java-tests`,
+and `java-mps-plugin`; they do not add dependencies, languages, devkits, or model contents. _Avoid_: solution kind, raw
+facet options _Related_: Module Creation Operation, Project Module
 
-**Embedded Generator**:
-A generator whose descriptor is stored inside its source language's `.mpl` descriptor. It is tied to that language from creation.
-_Avoid_: Language-owned Generator
-_Related_: Standalone Generator, Project Module
+**Embedded Generator**: A generator whose descriptor is stored inside its source language's `.mpl` descriptor. It is
+tied to that language from creation. _Avoid_: Language-owned Generator _Related_: Standalone Generator, Project Module
 
-**Standalone Generator**:
-A generator persisted and registered through its own `.mpst` descriptor while remaining tied to a source language. "Standalone" describes descriptor persistence, not the absence of a language relationship.
+**Standalone Generator**: A generator persisted and registered through its own `.mpst` descriptor while remaining tied
+to a source language. "Standalone" describes descriptor persistence, not the absence of a language relationship.
 _Related_: Embedded Generator, Project Module
 
-**MPS Repository**:
-The complete MPS repository visible to an MPS project session, including **Project Modules** and dependency or platform modules.
-_Related_: Git repository, source repository
+**MPS Repository**: The complete MPS repository visible to an MPS project session, including **Project Modules** and
+dependency or platform modules. _Related_: Git repository, source repository
 
-**Project and Libraries**:
-The **MPS Project** together with the library modules visible to that project.
-_Related_: MPS Repository
+**Project and Libraries**: The **MPS Project** together with the library modules visible to that project. _Related_: MPS
+Repository
 
-**Editable Project Sources**:
-The editable **MPS Models** in an **MPS Project** that users and agents may modify. Non-editable stub models and packaged library models are not **Editable Project Sources**.
-_Related_: Project and Libraries
+**Editable Project Sources**: The editable **MPS Models** in an **MPS Project** that users and agents may modify.
+Non-editable stub models and packaged library models are not **Editable Project Sources**. _Related_: Project and
+Libraries
 
-**MPS Model**:
-A named model contained in an **MPS Module**. An **MPS Model** owns zero or more **Root Nodes**.
+**MPS Model**: A named model contained in an **MPS Module**. An **MPS Model** owns zero or more **Root Nodes**.
 _Related_: model file
 
-**MPS Concept**:
-A language concept that classifies an **MPS Node**.
-_Related_: Subconcept
+**MPS Concept**: A language concept that classifies an **MPS Node**. _Related_: Subconcept
 
-**Subconcept**:
-An **MPS Concept** that directly or transitively specializes another **MPS Concept**.
-_Related_: MPS Concept
+**Subconcept**: An **MPS Concept** that directly or transitively specializes another **MPS Concept**. _Related_: MPS
+Concept
 
-**Concept Instance**:
-An **MPS Node** classified by an **MPS Concept**. When an **MPS Concept** is considered through its specialization hierarchy, instances of its **Subconcepts** are also **Concept Instances** of that concept.
+**Concept Instance**: An **MPS Node** classified by an **MPS Concept**. When an **MPS Concept** is considered through
+its specialization hierarchy, instances of its **Subconcepts** are also **Concept Instances** of that concept.
 _Related_: MPS Concept, Subconcept
 
-**Model Name**:
-The full model name value, including stereotype when present. mops treats this value as the model's name and does not use the long name without stereotype for lookup.
-_Related_: long name, model path
+**Model Name**: The full model name value, including stereotype when present. mops treats this value as the model's name
+and does not use the long name without stereotype for lookup. _Related_: long name, model path
 
-**Model Reference**:
-A globally usable reference to an **MPS Model**.
-_Related_: model id, model path
+**Model Reference**: A globally usable reference to an **MPS Model**. _Related_: model id, model path
 
-**Root Node**:
-An **MPS Node** owned directly by an **MPS Model** rather than by another node.
-_Avoid_: root element, top-level node
+**Root Node**: An **MPS Node** owned directly by an **MPS Model** rather than by another node. _Avoid_: root element,
+top-level node
 
-**MPS Node**:
-A model element in an **MPS Model**. An **MPS Node** may have links to other **MPS Nodes** and zero or more **Children**.
-_Avoid_: AST node when precision matters
+**MPS Node**: A model element in an **MPS Model**. An **MPS Node** may have links to other **MPS Nodes** and zero or
+more **Children**. _Avoid_: AST node when precision matters
 
-**Build Project**:
-An MPS build-language root that describes which MPS modules participate in a build and records extracted information about those modules.
-_Related_: MPS Node
+**Build Project**: An MPS build-language root that describes which MPS modules participate in a build and records
+extracted information about those modules. _Related_: MPS Node
 
-**Node Name**:
-The name value of a named **MPS Node**. A **Node Name** is distinct from a **Node Presentation**.
+**Node Name**: The name value of a named **MPS Node**. A **Node Name** is distinct from a **Node Presentation**.
 _Related_: Node Presentation
 
-**Node Presentation**:
-The user-facing presentation of an **MPS Node**, which may differ from its **Node Name**.
+**Node Presentation**: The user-facing presentation of an **MPS Node**, which may differ from its **Node Name**.
 _Related_: Node Name
 
-**MPS Link**:
-A named relationship from one **MPS Node** to another **MPS Node**. An **MPS Link** is either a **Containment Link** or a **Reference Link**.
-_Avoid_: edge, pointer
+**MPS Link**: A named relationship from one **MPS Node** to another **MPS Node**. An **MPS Link** is either a
+**Containment Link** or a **Reference Link**. _Avoid_: edge, pointer
 
-**Role**:
-The name of an **MPS Link**.
-_Related_: property
+**Role**: The name of an **MPS Link**. _Related_: property
 
-**Child**:
-An **MPS Node** owned by another **MPS Node** through a **Containment Link**.
-_Related_: reference target, property
+**Child**: An **MPS Node** owned by another **MPS Node** through a **Containment Link**. _Related_: reference target,
+property
 
-**Containment Link**:
-An **MPS Link** that owns another **MPS Node** as a **Child**. Also called a child link or aggregation link.
-_Related_: Reference Link
+**Containment Link**: An **MPS Link** that owns another **MPS Node** as a **Child**. Also called a child link or
+aggregation link. _Related_: Reference Link
 
-**Reference Link**:
-An **MPS Link** that allows a source **MPS Node** to point to a target **MPS Node** without owning it.
-_Related_: Containment Link
+**Reference Link**: An **MPS Link** that allows a source **MPS Node** to point to a target **MPS Node** without owning
+it. _Related_: Containment Link
 
-**Reference**:
-A non-owning relationship instance from a source **MPS Node** to a target **MPS Node** through a **Reference Link**. A **Reference** records the identity of the target node.
-_Related_: Reference Link
+**Reference**: A non-owning relationship instance from a source **MPS Node** to a target **MPS Node** through a
+**Reference Link**. A **Reference** records the identity of the target node. _Related_: Reference Link
 
-**Node Usage**:
-A **Reference** whose target is the **MPS Node** being searched for. A **Node Usage** has an owning source **MPS Node**, a **Role** identifying the **Reference Link**, and the searched target **MPS Node**.
-_Avoid_: node reference when describing usage
-_Related_: Node Reference, Reference
+**Node Usage**: A **Reference** whose target is the **MPS Node** being searched for. A **Node Usage** has an owning
+source **MPS Node**, a **Role** identifying the **Reference Link**, and the searched target **MPS Node**. _Avoid_: node
+reference when describing usage _Related_: Node Reference, Reference
 
-**Node ID**:
-An identifier for an **MPS Node** that is unique only within its **MPS Model**. A **Node ID** has two accepted spellings — the decimal form mops prints and the encoded form persisted in model files. Both name the same identifier and resolve wherever a **Node ID** appears.
-_Related_: Node Reference
+**Node ID**: An identifier for an **MPS Node** that is unique only within its **MPS Model**. A **Node ID** has two
+accepted spellings — the decimal form mops prints and the encoded form persisted in model files. Both name the same
+identifier and resolve wherever a **Node ID** appears. _Related_: Node Reference
 
-**Node Reference**:
-A globally usable reference to an **MPS Node** that combines a **Model Reference** with a **Node ID**. A serialized **Node Reference** is half-opaque: users and agents read its parts to orient themselves but copy it whole from mops output rather than constructing it from pieces.
-_Related_: Node ID, path
+**Node Reference**: A globally usable reference to an **MPS Node** that combines a **Model Reference** with a **Node
+ID**. A serialized **Node Reference** is half-opaque: users and agents read its parts to orient themselves but copy it
+whole from mops output rather than constructing it from pieces. _Related_: Node ID, path
 
-**Module Reference**:
-A globally usable reference to an **MPS Module**. mops does not assume a separate short module identifier.
-_Related_: module id
+**Module Reference**: A globally usable reference to an **MPS Module**. mops does not assume a separate short module
+identifier. _Related_: module id
 
-**Concept Name**:
-A user-supplied name for an **MPS Concept**: its qualified name, the persisted spelling with a `.structure.` infix, or its bare short name. All spellings name the same concept; resolution counts matches across loaded languages rather than judging shape, and an ambiguous short name is reported with the qualified candidates.
+**Concept Name**: A user-supplied name for an **MPS Concept**: its qualified name, the persisted spelling with a
+`.structure.` infix, or its bare short name. All spellings name the same concept; resolution counts matches across
+loaded languages rather than judging shape, and an ambiguous short name is reported with the qualified candidates.
 _Related_: MPS Concept, Navigation Target
 
-**Navigation Target**:
-A user-supplied path of segments that resolves to the **MPS Repository**, an **MPS Module**, an **MPS Model**, a **Root Node**, or an **MPS Node**. A segment may be a name or a serialized reference. Resolution counts actual matches rather than judging a segment's shape; an ambiguous segment is reported with each candidate's serialized reference, never guessed.
-_Avoid_: path, target when precision matters
-_Related_: Node Reference, Model Reference, Module Reference, Search Scope
+**Navigation Target**: A user-supplied path of segments that resolves to the **MPS Repository**, an **MPS Module**, an
+**MPS Model**, a **Root Node**, or an **MPS Node**. A segment may be a name or a serialized reference. Resolution counts
+actual matches rather than judging a segment's shape; an ambiguous segment is reported with each candidate's serialized
+reference, never guessed. _Avoid_: path, target when precision matters _Related_: Node Reference, Model Reference,
+Module Reference, Search Scope
 
-**Search Scope**:
-The portion of the **MPS Repository** that a search considers. The default **Search Scope** is **Editable Project Sources**. An explicit **Search Scope** is named by a **Navigation Target** and is searched exhaustively, including non-editable content within it.
-_Avoid_: search space, context
-_Related_: Editable Project Sources, Navigation Target
+**Search Scope**: The portion of the **MPS Repository** that a search considers. The default **Search Scope** is
+**Editable Project Sources**. An explicit **Search Scope** is named by a **Navigation Target** and is searched
+exhaustively, including non-editable content within it. _Avoid_: search space, context _Related_: Editable Project
+Sources, Navigation Target
 
-**Repository Lookup**:
-Resolution of a supplied name, reference, or **Navigation Target** to zero or one object. A missing object is an ordinary miss; ambiguity is an error rather than permission to choose a candidate.
-_Related_: Repository Search, Concept Name, Node Reference, Model Reference, Module Reference
+**Repository Lookup**: Resolution of a supplied name, reference, or **Navigation Target** to zero or one object. A
+missing object is an ordinary miss; ambiguity is an error rather than permission to choose a candidate. _Related_:
+Repository Search, Concept Name, Node Reference, Model Reference, Module Reference
 
-**Repository Search**:
-Discovery of zero or more objects satisfying criteria within a **Search Scope**. Criteria may describe names, concept instances, or usages; name matching may be exact, pattern-based, or fuzzy.
-_Related_: Repository Lookup, Search Scope, Concept Instance, Node Usage
+**Repository Search**: Discovery of zero or more objects satisfying criteria within a **Search Scope**. Criteria may
+describe names, concept instances, or usages; name matching may be exact, pattern-based, or fuzzy. _Related_: Repository
+Lookup, Search Scope, Concept Instance, Node Usage
+
+### Test Execution
+
+**Test Selection**: The individual test, test case, **MPS Model**, **MPS Module**, or **MPS Project** chosen for test
+execution. _Related_: Navigation Target, Test Run
+
+**Test Run**: An execution of the tests identified by a **Test Selection**, including results for completed tests when
+execution is interrupted. _Related_: Test Selection, Test Run Report
+
+**Test Run Report**: The recorded outcome of a **Test Run**, containing individual test results, failure details, and
+source identities. A report for an interrupted run retains completed results and identifies the run as incomplete.
+_Related_: Test Run, Node Reference
 
 ### Model Editing
 
-**Java Snippet Parsing**:
-An operation that converts Java source text into **MPS Nodes** in a supplied destination, attempts reference and structural ambiguity resolution, and returns a **Java Parsing Result**. Syntax errors reject the snippet before insertion.
-_Related_: MPS Node, Code Mode, Reference, Java Parsing Result
+**Java Snippet Parsing**: An operation that converts Java source text into **MPS Nodes** in a supplied destination,
+attempts reference and structural ambiguity resolution, and returns a **Java Parsing Result**. Syntax errors reject the
+snippet before insertion. _Related_: MPS Node, Code Mode, Reference, Java Parsing Result
 
-**Java Parsing Result**:
-The outcome of **Java Snippet Parsing**, containing the final inserted nodes after resolution and the unresolved references and ambiguous constructs detected within them. An absence of unresolved items does not establish that the inserted code passes model checking.
-_Related_: Java Snippet Parsing, MPS Node, Reference
+**Java Parsing Result**: The outcome of **Java Snippet Parsing**, containing the final inserted nodes after resolution
+and the unresolved references and ambiguous constructs detected within them. An absence of unresolved items does not
+establish that the inserted code passes model checking. _Related_: Java Snippet Parsing, MPS Node, Reference
 
-**Edit Operation**:
-A single modification to an **MPS Node** in **Editable Project Sources**: a primitive change (setting a property, setting a **Reference**, adding, deleting, moving, or copying a node) or an **Intent Operation**.
-_Avoid_: mutation, change
-_Related_: Editable Project Sources, Node Subtree, Constraint, Intent Operation
+**Edit Operation**: A single modification to an **MPS Node** in **Editable Project Sources**: a primitive change
+(setting a property, setting a **Reference**, adding, deleting, moving, or copying a node) or an **Intent Operation**.
+_Avoid_: mutation, change _Related_: Editable Project Sources, Node Subtree, Constraint, Intent Operation
 
-**Intent Operation**:
-An **Edit Operation** that names a rearrangement — replacing a node, wrapping it, or unwrapping a survivor from it. Its guarantees: the result takes the replaced node's exact place, every **Move Leaf** and kept node is detached before anything is deleted, and a target **Root Node** yields a **Root Node** of the same model.
-_Avoid_: macro, compound edit
-_Related_: Edit Operation, Move Leaf, Inline Subtree
+**Intent Operation**: An **Edit Operation** that names a rearrangement — replacing a node, wrapping it, or unwrapping a
+survivor from it. Its guarantees: the result takes the replaced node's exact place, every **Move Leaf** and kept node is
+detached before anything is deleted, and a target **Root Node** yields a **Root Node** of the same model. _Avoid_:
+macro, compound edit _Related_: Edit Operation, Move Leaf, Inline Subtree
 
-**Inline Subtree**:
-The node-tree specification an **Edit Operation** accepts for building new structure, shaped like the tree `get-node` emits. A position in an **Inline Subtree** holds either a fresh-node spec, a **Move Leaf**, or a **Copy Leaf**.
-_Avoid_: nested children, template
-_Related_: Edit Operation, Move Leaf, Copy Leaf
+**Inline Subtree**: The node-tree specification an **Edit Operation** accepts for building new structure, shaped like
+the tree `get-node` emits. A position in an **Inline Subtree** holds either a fresh-node spec, a **Move Leaf**, or a
+**Copy Leaf**. _Avoid_: nested children, template _Related_: Edit Operation, Move Leaf, Copy Leaf
 
-**Move Leaf**:
-A leaf in an **Inline Subtree** that adopts an existing **MPS Node** together with its **Node Subtree** into the new structure. The adopted node keeps its identity, so inbound **References** keep resolving. Every **Move Leaf** is detached from its old home before any node deletion in the same **Edit Operation**.
-_Related_: Inline Subtree, Copy Leaf, Node Subtree
+**Move Leaf**: A leaf in an **Inline Subtree** that adopts an existing **MPS Node** together with its **Node Subtree**
+into the new structure. The adopted node keeps its identity, so inbound **References** keep resolving. Every **Move
+Leaf** is detached from its old home before any node deletion in the same **Edit Operation**. _Related_: Inline Subtree,
+Copy Leaf, Node Subtree
 
-**Copy Leaf**:
-A leaf in an **Inline Subtree** that deep-copies an existing **MPS Node**'s **Node Subtree** into the new structure with fresh identities, rewiring intra-subtree **References** to the copy.
-_Related_: Inline Subtree, Move Leaf
+**Copy Leaf**: A leaf in an **Inline Subtree** that deep-copies an existing **MPS Node**'s **Node Subtree** into the new
+structure with fresh identities, rewiring intra-subtree **References** to the copy. _Related_: Inline Subtree, Move Leaf
 
-**Node Subtree**:
-An **MPS Node** together with all nodes reachable from it through **Containment Links**. Copying a node "with descendants" copies its **Node Subtree**.
-_Avoid_: node tree, branch
-_Related_: Containment Link, Child
+**Node Subtree**: An **MPS Node** together with all nodes reachable from it through **Containment Links**. Copying a
+node "with descendants" copies its **Node Subtree**. _Avoid_: node tree, branch _Related_: Containment Link, Child
 
-**Code Mode**:
-An environment in which users and agents compose operations against an open **MPS Project** using native MPS objects and **Code Mode Extensions** within one program. Retained MPS objects keep their native MPS lifetime and validity semantics; mops neither prolongs their validity nor reacquires invalidated objects. When an MPS node, model, or module crosses the program-result boundary, Code Mode recursively replaces it with its serialized reference, or `null` when it has none, without otherwise summarizing its contents. **Code Mode** complements individual mops commands, which remain the interface for direct operations.
-_Avoid_: Edit Script, eval mode
-_Related_: MPS Project, Access Block, Edit Operation, Code Mode Extension
+**Code Mode**: An environment in which users and agents compose operations against an open **MPS Project** using native
+MPS objects and **Code Mode Extensions** within one program. Retained MPS objects keep their native MPS lifetime and
+validity semantics; mops neither prolongs their validity nor reacquires invalidated objects. When an MPS node, model, or
+module crosses the program-result boundary, Code Mode recursively replaces it with its serialized reference, or `null`
+when it has none, without otherwise summarizing its contents. **Code Mode** complements individual mops commands, which
+remain the interface for direct operations. _Avoid_: Edit Script, eval mode _Related_: MPS Project, Access Block, Edit
+Operation, Code Mode Extension
 
-**Access Block**:
-An independent, non-nesting section of a **Code Mode** program entered through `read` or `command` on an **MPS Project**. Starting a block while MPS model access is already held is rejected. A command block runs as an MPS command on the event-dispatch thread with write access and undo semantics. A successful command saves all project changes; a failed command retains MPS's native partial-change behavior rather than promising rollback. Code outside an **Access Block** may use operations that must run without MPS model access.
-_Avoid_: transaction when the block is read-only
-_Related_: Code Mode, MPS Project, Edit Operation
+**Access Block**: An independent, non-nesting section of a **Code Mode** program entered through `read` or `command` on
+an **MPS Project**. Starting a block while MPS model access is already held is rejected. A command block runs as an MPS
+command on the event-dispatch thread with write access and undo semantics. A successful command saves all project
+changes; a failed command retains MPS's native partial-change behavior rather than promising rollback. Code outside an
+**Access Block** may use operations that must run without MPS model access. _Avoid_: transaction when the block is
+read-only _Related_: Code Mode, MPS Project, Edit Operation
 
-**Code Mode Reference**:
-The discoverable description of the built-in and plugin-provided **Code Mode Extensions** available to **Code Mode** for an **MPS Project**. It groups extensions by native MPS receiver type or by paths rooted at the **Code Mode Namespace**, identifies each **Code Mode Extension Bundle**, and includes signatures, access requirements, and usage documentation without reproducing the native MPS API. It is available through the global `help` function in a program and through `mops code help` at the CLI; lookup accepts no argument, a supported receiver class or object, or a textual extension path.
-_Avoid_: command help, service registry
-_Related_: Code Mode, Code Mode Extension, Code Mode Namespace, MPS Project
+**Code Mode Reference**: The discoverable description of the built-in and plugin-provided **Code Mode Extensions**
+available to **Code Mode** for an **MPS Project**. It groups extensions by native MPS receiver type or by paths rooted
+at the **Code Mode Namespace**, identifies each **Code Mode Extension Bundle**, and includes signatures, access
+requirements, and usage documentation without reproducing the native MPS API. It is available through the global `help`
+function in a program and through `mops code help` at the CLI; lookup accepts no argument, a supported receiver class or
+object, or a textual extension path. _Avoid_: command help, service registry _Related_: Code Mode, Code Mode Extension,
+Code Mode Namespace, MPS Project
 
-**Code Mode Namespace**:
-The global `mops` value that groups project-wide **Code Mode Extensions** and concept-specific operations by purpose. It exposes capability categories such as `parsing`, `lookup`, and `search`; `testing` and `editing` are reserved category names that become part of the namespace only when they have executable behavior. Concept-specific operations belong here when their native MPS receiver type is too broad to provide a useful extension surface. It is a stable capability hierarchy for one Code Mode execution, not a mutable service registry.
-_Avoid_: services, service registry, utility namespace
-_Related_: Code Mode, Code Mode Extension, MPS Project
+**Code Mode Namespace**: The global `mops` value that groups project-wide **Code Mode Extensions** and concept-specific
+operations by purpose. It exposes capability categories such as `parsing`, `lookup`, and `search`; `testing` and
+`editing` are reserved category names that become part of the namespace only when they have executable behavior.
+Concept-specific operations belong here when their native MPS receiver type is too broad to provide a useful extension
+surface. It is a stable capability hierarchy for one Code Mode execution, not a mutable service registry. _Avoid_:
+services, service registry, utility namespace _Related_: Code Mode, Code Mode Extension, MPS Project
 
-**Code Mode Extension**:
-A mops-supported convenience exposed as a Groovy extension method or property on a meaningful native MPS receiver or on a receiver in the **Code Mode Namespace**. Operations prefer a native receiver whenever they have an unambiguous primary MPS object and the receiver type expresses the operation's domain; project-wide capabilities and operations whose native receiver type is too broad are grouped by purpose in the namespace. An extension declares one access requirement: `none`, `read`, `command`, or `extra`, where `extra` requires no active model access because the operation coordinates access itself. The extension's contract belongs to mops, while a native receiver and its native interface retain the contract of the selected MPS version.
-_Avoid_: handle, wrapper
-_Related_: Code Mode, Code Mode Extension Bundle, Code Mode Namespace, MPS Node, MPS Model, MPS Module
+**Code Mode Extension**: A mops-supported convenience exposed as a Groovy extension method or property on a meaningful
+native MPS receiver or on a receiver in the **Code Mode Namespace**. Operations prefer a native receiver whenever they
+have an unambiguous primary MPS object and the receiver type expresses the operation's domain; project-wide capabilities
+and operations whose native receiver type is too broad are grouped by purpose in the namespace. An extension declares
+one access requirement: `none`, `read`, `command`, or `extra`, where `extra` requires no active model access because the
+operation coordinates access itself. The extension's contract belongs to mops, while a native receiver and its native
+interface retain the contract of the selected MPS version. _Avoid_: handle, wrapper _Related_: Code Mode, Code Mode
+Extension Bundle, Code Mode Namespace, MPS Node, MPS Model, MPS Module
 
-**Code Mode Extension Bundle**:
-A self-describing built-in or plugin contribution that declares a stable bundle ID and version and packages Groovy extension classes together with their generated **Code Mode Reference** metadata. Built-in and plugin bundles use the same loading and discovery contract. A bundle is rejected as a whole when its implementation and reference metadata disagree or when its extension signature duplicates one from another bundle.
-_Avoid_: service provider
-_Related_: Code Mode, Code Mode Extension, Code Mode Reference
+**Code Mode Extension Bundle**: A self-describing built-in or plugin contribution that declares a stable bundle ID and
+version and packages Groovy extension classes together with their generated **Code Mode Reference** metadata. Built-in
+and plugin bundles use the same loading and discovery contract. A bundle is rejected as a whole when its implementation
+and reference metadata disagree or when its extension signature duplicates one from another bundle. _Avoid_: service
+provider _Related_: Code Mode, Code Mode Extension, Code Mode Reference
 
-**Materialize**:
-An **Edit Operation** materializes an **MPS Node** when it brings the node into its model fresh or as a copy. A **Move Leaf** does not materialize the node it adopts — that node already existed and keeps its identity.
+**Materialize**: An **Edit Operation** materializes an **MPS Node** when it brings the node into its model fresh or as a
+copy. A **Move Leaf** does not materialize the node it adopts — that node already existed and keeps its identity.
 _Related_: Edit Operation, Copy Leaf, Move Leaf, Edit Plugin
 
-**Edit Plugin**:
-Language-aware behavior that runs automatically when an **Edit Operation** materializes a **Concept Instance** of a concept the plugin declares, adjusting model state according to its language's rules and disclosing what it did through **Hints**. mops dispatches to **Edit Plugins** itself; it does not invoke behaviors that languages register with MPS for IDE editing, such as paste post-processors.
-_Avoid_: plugin without qualification (MPS languages have a plugin aspect), hook
-_Related_: Materialize, Hint, Concept Instance
+**Edit Plugin**: Language-aware behavior that runs automatically when an **Edit Operation** materializes a **Concept
+Instance** of a concept the plugin declares, adjusting model state according to its language's rules and disclosing what
+it did through **Hints**. mops dispatches to **Edit Plugins** itself; it does not invoke behaviors that languages
+register with MPS for IDE editing, such as paste post-processors. _Avoid_: plugin without qualification (MPS languages
+have a plugin aspect), hook _Related_: Materialize, Hint, Concept Instance
 
-**Hint**:
-A free-text disclosure in an edit response describing something done automatically on the user's behalf, such as an **Edit Plugin**'s adjustment. A **Hint** reports work done, not a problem — it is distinct from a warning.
-_Avoid_: warning, notice
-_Related_: Edit Plugin
+**Hint**: A free-text disclosure in an edit response describing something done automatically on the user's behalf, such
+as an **Edit Plugin**'s adjustment. A **Hint** reports work done, not a problem — it is distinct from a warning.
+_Avoid_: warning, notice _Related_: Edit Plugin
 
-**Constraint**:
-A language-defined rule that restricts whether an edit is well-formed, such as which **MPS Concepts** may fill an **MPS Link**, a link's cardinality, or whether a node may be a **Child** of another node.
-_Avoid_: rule, validation
-_Related_: Constraint Violation, Model Check
+**Constraint**: A language-defined rule that restricts whether an edit is well-formed, such as which **MPS Concepts**
+may fill an **MPS Link**, a link's cardinality, or whether a node may be a **Child** of another node. _Avoid_: rule,
+validation _Related_: Constraint Violation, Model Check
 
-**Constraint Violation**:
-A **Constraint** that a proposed **Edit Operation** would break.
-_Related_: Constraint
+**Constraint Violation**: A **Constraint** that a proposed **Edit Operation** would break. _Related_: Constraint
 
-**Model Check**:
-The full validation of one or more **MPS Models** and their owning **MPS Modules**, including typesystem, model, module, and checking rules. A Model Check can target one MPS Model, selected Project Modules, or the whole MPS Project. It is distinct from the cheaper **Constraint** evaluation and is performed as its own operation because it may be costly.
-_Avoid_: validation, type check
-_Related_: Constraint, MPS Model, Project Module
+**Model Check**: The full validation of one or more **MPS Models** and their owning **MPS Modules**, including
+typesystem, model, module, and checking rules. A Model Check can target one MPS Model, selected Project Modules, or the
+whole MPS Project. It is distinct from the cheaper **Constraint** evaluation and is performed as its own operation
+because it may be costly. _Avoid_: validation, type check _Related_: Constraint, MPS Model, Project Module
 
 ### CLI Help
 
-**Command Help**:
-Usage text for a CLI command: its options, arguments, and subcommands. Requesting **Command Help** always succeeds and never requires a daemon or project.
-_Related_: Explain Topic
+**Command Help**: Usage text for a CLI command: its options, arguments, and subcommands. Requesting **Command Help**
+always succeeds and never requires a daemon or project. _Related_: Explain Topic
 
-**Notation**:
-A textual format that mops exchanges with users and agents, such as the edit batch JSON or the serialized **Node Reference** syntax. Notations are what `mops explain` documents; CLI options belong to **Command Help** instead.
-_Avoid_: format, syntax when precision matters
-_Related_: Explain Topic
+**Notation**: A textual format that mops exchanges with users and agents, such as the edit batch JSON or the serialized
+**Node Reference** syntax. Notations are what `mops explain` documents; CLI options belong to **Command Help** instead.
+_Avoid_: format, syntax when precision matters _Related_: Explain Topic
 
-**Explain Topic**:
-A named reference page about a **Notation** or a part of one, addressable by a dot path such as `edit` or `edit.copyAsChild`. An **Explain Topic** is small, self-contained, and names the related topics a reader may drill into.
-_Avoid_: help topic, doc page
-_Related_: Notation, Command Help
+**Explain Topic**: A named reference page about a **Notation** or a part of one, addressable by a dot path such as
+`edit` or `edit.copyAsChild`. An **Explain Topic** is small, self-contained, and names the related topics a reader may
+drill into. _Avoid_: help topic, doc page _Related_: Notation, Command Help
 
 ## Example Dialogue
 
 Dev: Should project contents include MPS.Core?
 
-Domain expert: MPS.Core may be visible in the **MPS Repository**, but it is not a **Project Module** owned by the **MPS Project**. When discussing both the project and its project-visible libraries, say **Project and Libraries**.
+Domain expert: MPS.Core may be visible in the **MPS Repository**, but it is not a **Project Module** owned by the **MPS
+Project**. When discussing both the project and its project-visible libraries, say **Project and Libraries**.
 
 Dev: What should a project-level listing show?
 
@@ -297,11 +286,13 @@ Domain expert: It should show the **Project Modules** owned by the **MPS Project
 
 Dev: Should a command for finding code to modify search project-visible libraries and stub models?
 
-Domain expert: No. It should search **Editable Project Sources** so only editable models that users and agents may modify are returned.
+Domain expert: No. It should search **Editable Project Sources** so only editable models that users and agents may
+modify are returned.
 
 Dev: When searching for instances of an MPS concept, do subconcepts count?
 
-Domain expert: Yes. An instance of a **Subconcept** may be treated as a **Concept Instance** of the ancestor **MPS Concept**.
+Domain expert: Yes. An instance of a **Subconcept** may be treated as a **Concept Instance** of the ancestor **MPS
+Concept**.
 
 Dev: Can I identify a node with just its ID?
 
@@ -317,27 +308,34 @@ Domain expert: No. A model stereotype is part of the **Model Name**.
 
 Dev: Does listing a node include its references?
 
-Domain expert: No. Listing a node follows **Containment Links** only, so it shows **Children** and the **Roles** of those links.
+Domain expert: No. Listing a node follows **Containment Links** only, so it shows **Children** and the **Roles** of
+those links.
 
 Dev: Is a node reference the same thing as a usage?
 
-Domain expert: No. A **Node Reference** is a serialized identity for an **MPS Node**. A **Node Usage** is a **Reference** owned by a source node and pointing to the target node being searched for.
+Domain expert: No. A **Node Reference** is a serialized identity for an **MPS Node**. A **Node Usage** is a
+**Reference** owned by a source node and pointing to the target node being searched for.
 
 Dev: If a search is scoped to a read-only library model, do we skip it because it is not editable?
 
-Domain expert: No. An explicit **Search Scope** is searched exhaustively. The **Editable Project Sources** restriction applies only to the default scope.
+Domain expert: No. An explicit **Search Scope** is searched exhaustively. The **Editable Project Sources** restriction
+applies only to the default scope.
 
 Dev: If foo.bar.baz names both a module and a model, do we resolve to the module because it looks like a module name?
 
-Domain expert: No. **Navigation Target** resolution never decides by shape. It reports the ambiguity with each candidate's serialized reference so the user can retry unambiguously.
+Domain expert: No. **Navigation Target** resolution never decides by shape. It reports the ambiguity with each
+candidate's serialized reference so the user can retry unambiguously.
 
 Dev: An agent pasted a node id copied from a model file and we answered "node not found". Is that right?
 
-Domain expert: No. Both spellings of a **Node ID** name the same identifier and must resolve. And since a bare **Node ID** is unique only within its **MPS Model**, a lookup by bare id reports every matching node with its full **Node Reference** rather than guessing one.
+Domain expert: No. Both spellings of a **Node ID** name the same identifier and must resolve. And since a bare **Node
+ID** is unique only within its **MPS Model**, a lookup by bare id reports every matching node with its full **Node
+Reference** rather than guessing one.
 
 Dev: When we edit a model, do we run a full model check?
 
-Domain expert: No. An **Edit Operation** evaluates **Constraints**, which is cheap. A full **Model Check**, including the typesystem, is a separate operation because it may be costly.
+Domain expert: No. An **Edit Operation** evaluates **Constraints**, which is cheap. A full **Model Check**, including
+the typesystem, is a separate operation because it may be costly.
 
 Dev: If an edit is forced through despite breaking a rule, do we stay quiet about it?
 
@@ -345,28 +343,39 @@ Domain expert: No. mops reports **Constraint Violations** whether or not they bl
 
 Dev: Is deleting a node a different act from detaching it?
 
-Domain expert: No. Deleting an **MPS Node** means detaching it so it is no longer reachable through its **MPS Model** — there is no separate destruction step. That is why a node adopted out of deleted structure by a **Move Leaf** simply survives, identity intact.
+Domain expert: No. Deleting an **MPS Node** means detaching it so it is no longer reachable through its **MPS Model** —
+there is no separate destruction step. That is why a node adopted out of deleted structure by a **Move Leaf** simply
+survives, identity intact.
 
 Dev: When a replace deletes a node that something else references, do we hunt down the dangling references?
 
-Domain expert: No. Dangling references are a reference-resolution concern, which belongs to **Model Check**, not to **Constraint** evaluation — the same split we made for edits generally. A **Move Leaf** preserves node identity, so reusing a node instead of rebuilding it is how a caller keeps inbound references alive.
+Domain expert: No. Dangling references are a reference-resolution concern, which belongs to **Model Check**, not to
+**Constraint** evaluation — the same split we made for edits generally. A **Move Leaf** preserves node identity, so
+reusing a node instead of rebuilding it is how a caller keeps inbound references alive.
 
 Dev: When we wrap a node that carries an annotation, does the annotation end up on the wrapper?
 
-Domain expert: No. An annotation is a **Child** of the annotated node, so it travels with the wrapped node's **Node Subtree**. Moving it onto the wrapper is a separate, explicit edit.
+Domain expert: No. An annotation is a **Child** of the annotated node, so it travels with the wrapped node's **Node
+Subtree**. Moving it onto the wrapper is a separate, explicit edit.
 
 Dev: An edit plugin rewrote a property during a copy — do we emit a warning about it?
 
-Domain expert: No. An **Edit Plugin** doing its declared job is not a problem, so it is disclosed as a **Hint**, never a warning. Warnings keep their signal value for things that may be wrong.
+Domain expert: No. An **Edit Plugin** doing its declared job is not a problem, so it is disclosed as a **Hint**, never a
+warning. Warnings keep their signal value for things that may be wrong.
 
 Dev: A move rearranged a node whose concept an edit plugin declares. Does the plugin run on it?
 
-Domain expert: No. A **Move Leaf** does not **Materialize** its node — the node already existed and keeps its identity. **Edit Plugins** run only on materialized nodes: fresh ones and copies.
+Domain expert: No. A **Move Leaf** does not **Materialize** its node — the node already existed and keeps its identity.
+**Edit Plugins** run only on materialized nodes: fresh ones and copies.
 
 Dev: A copied subtree mixes nodes from several languages. Does a match near the root stop dispatch below it?
 
-Domain expert: No. Each **Edit Plugin** is offered every materialized **Concept Instance** of its declared concepts, wherever it sits in the subtree. One plugin's match never hides a node from another plugin.
+Domain expert: No. Each **Edit Plugin** is offered every materialized **Concept Instance** of its declared concepts,
+wherever it sits in the subtree. One plugin's match never hides a node from another plugin.
 
 Dev: Does copying a node bring its references along?
 
-Domain expert: Copying a node copies its **Node Subtree**, which follows **Containment Links** only. A **Reference** whose target lies inside the copied subtree is rewired to point at the corresponding copied node, so the copy is self-contained. A **Reference** to a node outside the subtree keeps pointing at that original target, since it is not itself copied.
+Domain expert: Copying a node copies its **Node Subtree**, which follows **Containment Links** only. A **Reference**
+whose target lies inside the copied subtree is rewired to point at the corresponding copied node, so the copy is
+self-contained. A **Reference** to a node outside the subtree keeps pointing at that original target, since it is not
+itself copied.

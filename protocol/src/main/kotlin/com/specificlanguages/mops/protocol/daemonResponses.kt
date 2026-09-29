@@ -198,3 +198,7 @@ data class ModelCreationResponse(
 @Serializable
 @SerialName("ready")
 data class ReadyMessage(val port: Int) : DaemonResponse
+
+@Serializable
+@SerialName("testRun")
+data class TestRunResponse(val report: TestRunReport) : DaemonResponse

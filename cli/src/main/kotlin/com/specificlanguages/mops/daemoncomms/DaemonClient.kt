@@ -19,6 +19,7 @@ import com.specificlanguages.mops.protocol.MpsListResponse
 import com.specificlanguages.mops.protocol.PongResponse
 import com.specificlanguages.mops.protocol.CodeCatalogResponse
 import com.specificlanguages.mops.protocol.CodeResultResponse
+import com.specificlanguages.mops.protocol.TestRunResponse
 import java.time.Duration
 import com.specificlanguages.mops.protocol.ModuleCreationResponse
 import com.specificlanguages.mops.protocol.SolutionUsagePreset
@@ -28,6 +29,9 @@ import com.specificlanguages.mops.protocol.ModelCreationResponse
  * The client talking to a remote daemon process.
  */
 interface DaemonClient {
+    fun runTests(
+        target: List<String>, build: Boolean, deadlineMillis: Long, cancellationPath: String?,
+    ): TestRunResponse
     fun ping(): PongResponse
     fun getNode(target: NodeTarget, ancestry: Boolean = false): ModelGetNodeResponse
     fun renderNode(target: NodeTarget, allowReflective: Boolean = false): ModelRenderNodeResponse

@@ -278,3 +278,13 @@ data class CreateModelRequest(
     val filePerRoot: Boolean = false,
     val dryRun: Boolean = false,
 ) : DaemonRequest
+
+@Serializable
+@SerialName("testRun")
+data class TestRunRequest(
+    override val token: String,
+    val target: List<String> = emptyList(),
+    val build: Boolean = true,
+    val deadlineMillis: Long = 0,
+    val cancellationPath: String? = null,
+) : DaemonRequest

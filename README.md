@@ -213,6 +213,39 @@ or serialized module reference) and their transitive dependency closure, so an u
 prints the make result as JSON.
 
 ```sh
+mops test                            # all project tests, with an incremental build
+mops test my.module .tests MyCase    # navigation target: module, model, test case
+mops test '<test-node-reference>' --no-build --json
+mops test --timeout 60
+```
+
+Tests run in a separate MPS process using the selected distribution's testing framework. Selection accepts a project
+(omit the target), module, model, test case, or individual test node. The default build includes the owning modules and
+required dependencies. `--no-build` requires existing compiled classes. The overall timeout defaults to 900 seconds;
+`--timeout 0` disables it. Ctrl-C cancels the worker. Standalone cancellation and timeouts leave the daemon usable.
+Selection follows MPS discovery, which can exclude individually disabled methods; select their test case to retain
+JUnit's skipped results.
+
+Every run saves `report.json` under the daemon workspace's `test-runs/<run-id>/` directory and updates it as results
+arrive. Text output prints a summary and the report path; `--json` prints the report. Tests, containers, skips,
+assumption aborts, failures, and source node references are retained. No discovered tests, preparation failures, test or
+container failures, and incomplete runs exit 1. Skips and assumption aborts alone do not fail a run. Worker output is
+saved next to the report in `worker.log`.
+
+Code Mode provides the same operation outside model-access blocks:
+
+```groovy
+def model = project.read { mops.lookup.requireModel('my.module.tests@tests') }
+def report = mops.testing.run(model, [build: true, timeout: 60])
+return report
+```
+
+The selection may also be the native project, module, or test node. Options default to `build: true, timeout: 900`. A
+failed report does not change the Code Mode exit status. The enclosing Code Mode deadline still terminates its daemon;
+the test worker detects that termination and saves an incomplete report. Project operations are serialized during a run,
+and changes are saved before launch. Tests use the existing checkout and may change its files.
+
+```sh
 mops explain [--schema] [PATH]
 ```
 

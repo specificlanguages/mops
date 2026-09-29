@@ -44,6 +44,8 @@ import com.specificlanguages.mops.protocol.CodeCatalogRequest
 import com.specificlanguages.mops.protocol.CodeCatalogResponse
 import com.specificlanguages.mops.protocol.CodeResultResponse
 import com.specificlanguages.mops.protocol.CodeRunRequest
+import com.specificlanguages.mops.protocol.TestRunRequest
+import com.specificlanguages.mops.protocol.TestRunResponse
 import com.specificlanguages.mops.protocol.CreateLanguageRequest
 import com.specificlanguages.mops.protocol.CreateSolutionRequest
 import com.specificlanguages.mops.protocol.CreateDevkitRequest
@@ -75,6 +77,10 @@ class DefaultDaemonClient(
 ) : DaemonClient {
 
     private var lastPongResponse: PongResponse? = null
+
+    override fun runTests(target: List<String>, build: Boolean, deadlineMillis: Long, cancellationPath: String?) =
+        exchange(TestRunRequest(token, target, build, deadlineMillis, cancellationPath),
+            TestRunResponse::class.java, Duration.ZERO)
 
     override fun ping(): PongResponse {
         return exchange(PingRequest(token = token), PongResponse::class.java)

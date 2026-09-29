@@ -97,6 +97,7 @@ fun newCommandLine(workingDirectory: Path = Path.of("").absolute()): CommandLine
     code.addLeaf("run", CodeRunCommand(rootCommand))
     code.addLeaf("help", CodeHelpCommand(rootCommand))
     root.addSubcommand("code", code)
+    root.addLeaf("test", com.specificlanguages.mops.cli.testing.TestCommand(rootCommand))
     root.addLeaf("list", MpsListCommand(rootCommand))
     root.addLeaf("wrapper", WrapperCommand(rootCommand))
     root.addLeaf("explain", ExplainCommand())

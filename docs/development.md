@@ -45,3 +45,24 @@ through the daemon launcher, without IDE-plugin host-platform validation.
 The installed CLI integration test exercises model lookup, an edit, saving and reopening the project, extension
 dispatch, and Groovy class identity. It runs both with the selected MPS distribution and with a test copy that omits its
 Groovy JAR. CI runs the aggregate integration-test task, including code-mode tests for every supported MPS version.
+
+### Test-running integration tests
+
+`TestRunningIntegrationTest` exercises native BaseLanguage, language, generator, Jupiter, parameterized, and legacy
+JUnit tests, selection at all five levels, preparation failures, and worker lifecycle behavior. The fixtures live in
+`test-projects/testing`. The lifecycle test deliberately waits for two deadlines; allow several minutes per version.
+
+```sh
+./gradlew :cli:integrationTestMps2024.1.6 --tests '*TestRunningIntegrationTest' \
+  :cli:integrationTestMps2025.1.4 --tests '*TestRunningIntegrationTest' \
+  :cli:integrationTestMps2026.1.1 --tests '*TestRunningIntegrationTest'
+```
+
+The pinned development baseline is MPS 2026.2 EAP1, build `MPS-262.9437.166` (2026-08-31), source revision
+`46065cdc79a9467a53197d1a274b4e97d2a0f603`, with JBR `25.0.3-b508.16`. Run it through `integrationTestLocal` with
+`--tests '*TestRunningIntegrationTest'` and the extracted distribution/JBR paths. Its Jupiter API stubs belong to the
+`JUnit` module; the integration fixture adjusts those imports in its temporary copy.
+
+On macOS, MPS's IDEA environment still initializes AWT in headless mode. A sandbox that prevents application
+registration can abort the JVM before tests start. Run with `--no-daemon` outside that sandbox so an existing sandboxed
+Gradle daemon is not reused.
