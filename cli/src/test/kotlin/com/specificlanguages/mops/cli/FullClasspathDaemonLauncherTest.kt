@@ -12,6 +12,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermission.*
 import java.time.Duration
+import java.util.jar.JarOutputStream
 import kotlin.io.path.*
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -84,7 +85,7 @@ class FullClasspathDaemonLauncherTest {
         val project = tempDir.mpsProject()
         val mpsHome = tempDir.mpsHome()
         val mpsTool = mpsHome.resolve("lib/mpsant").createDirectories().resolve("mps-tool.jar")
-            .also { it.writeText("") }
+            .also { JarOutputStream(Files.newOutputStream(it)).use { } }
         val fakeJava = fakeJavaHome("property-java")
 
         val configuredClasspath = listOf(

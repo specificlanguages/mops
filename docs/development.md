@@ -1,0 +1,47 @@
+# Developing mops
+
+## Build and test
+
+```sh
+./gradlew check
+./gradlew installMops
+./gradlew :cli:run --args="--mps-home /path/to/mps daemon ping"
+./gradlew :cli:run --args=--help
+./gradlew :daemon:run --args=--help
+```
+
+The repository is a Gradle-rooted Kotlin prototype with two application subprojects: `cli/` and `daemon/`.
+
+## Integration tests
+
+`./gradlew :cli:integrationTest` runs the full CLI integration suite against every version listed in
+`supportedMpsVersions` in `gradle.properties`. `./gradlew check` includes this matrix. Each version has its own task:
+
+```sh
+./gradlew :cli:integrationTestMps2024.1.6
+./gradlew :cli:integrationTestMps2025.1.4
+./gradlew :cli:integrationTestMps2026.1.1
+```
+
+Each task resolves its MPS distribution and matching host-specific JBR through mps-platform-cache. Distributions are
+cached and reused. Reports are written separately under `cli/build/reports/tests/<task-name>/`; JUnit XML results are
+under `cli/build/test-results/<task-name>/`. Apply `--tests` to a version-specific task to select tests:
+
+```sh
+./gradlew :cli:integrationTestMps2024.1.6 --tests '*CodeModeIntegrationTest'
+```
+
+To test an already extracted distribution, use the separate local task:
+
+```sh
+./gradlew :cli:integrationTestLocal -PtestMpsHome=/path/to/mps -PtestJbrHome=/path/to/java/home
+```
+
+The local task is excluded from `check` and the supported-version matrix. These tests use the generic MPS archive
+through the daemon launcher, without IDE-plugin host-platform validation.
+
+### Code-mode runtime tests
+
+The installed CLI integration test exercises model lookup, an edit, saving and reopening the project, extension
+dispatch, and Groovy class identity. It runs both with the selected MPS distribution and with a test copy that omits its
+Groovy JAR. CI runs the aggregate integration-test task, including code-mode tests for every supported MPS version.

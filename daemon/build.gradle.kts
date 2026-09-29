@@ -32,6 +32,7 @@ dependencies {
     implementation(project(":protocol"))
     implementation(project(":launcher"))
     implementation(libs.picocli)
+    implementation(libs.groovy)
     implementation(libs.project.loader)
 
     jbr(libs.mps.jbr)
@@ -73,9 +74,6 @@ dependencies {
             include("lib/intellij.platform.ide.impl.jar")
             include("lib/intellij.platform.projectModel.jar")
             include("lib/intellij.libraries.kotlinx.coroutines.core.jar")
-            // Compile against the Groovy runtime owned by the selected MPS distribution. It remains compile-only and
-            // is never copied into the mops daemon distribution.
-            include("lib/groovy.jar")
             // Java snippet parsing is supplied by the MPS Java Integration plugin rather than lib/.
             include("plugins/mps-java/lib/java-core.jar")
             include("plugins/java/lib/ecj/eclipse.jar")
@@ -152,6 +150,8 @@ tasks.test {
         testMpsRoot.map { root ->
             fileTree(root) {
                 include("lib/*.jar")
+                // Exercise the bundled code-mode runtime in daemon tests.
+                exclude("lib/groovy.jar")
                 include("lib/modules/*.jar")
                 include("lib/mpsant/mps-tool.jar")
                 include("plugins/mps-java/lib/java-core.jar")

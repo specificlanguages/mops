@@ -1,13 +1,10 @@
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+
 plugins {
     id("mops.kotlin-jvm-conventions")
     application
 
     alias(libs.plugins.mps.platform.cache)
-    alias(libs.plugins.jbr.toolchain)
-}
-
-val integrationTestMps by configurations.registering {
-    isCanBeConsumed = false
 }
 
 val integrationTest by sourceSets.creating {
@@ -31,9 +28,6 @@ dependencies {
     implementation(project(":protocol"))
     implementation(libs.picocli)
     implementation(libs.kotlinx.serialization.json)
-
-    integrationTestMps(libs.mps.distribution)
-    jbr(libs.mps.jbr)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.junit.jupiter)
@@ -79,9 +73,6 @@ sourceSets.main {
     resources.srcDir(generateEditSchema)
 }
 
-val integrationTestMpsRoot = mpsPlatformCache.getMpsRoot(integrationTestMps)
-val integrationTestJbr = jbrToolchain.javaLauncher
-
 val writeDaemonClasspath by tasks.registering {
     val outputFile = layout.buildDirectory.file("generated/daemon-classpath/mops-daemon.classpath")
     inputs.files(daemonRuntimeClasspath)
@@ -111,8 +102,13 @@ distributions {
     }
 }
 
-tasks.register<Test>("integrationTest") {
-    description = "Runs CLI integration tests against a daemon started with downloaded MPS and JBR distributions."
+fun Test.configureIntegrationTest(mpsHome: Provider<File>, jbrHome: Provider<File>) {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+
+    dependsOn(tasks.installDist)
+    inputs.property("mpsHome", mpsHome.map { it.absolutePath })
+    inputs.property("jbrHome", jbrHome.map { it.absolutePath })
+    inputs.dir(tasks.installDist.map { it.destinationDir })
 
     inputs.files(daemonRuntimeClasspath)
         .withPropertyName("daemonRuntimeClasspath")
@@ -123,12 +119,69 @@ tasks.register<Test>("integrationTest") {
 
     jvmArgumentProviders.add {
         listOf(
-            "-Dtest.mpsHome=${integrationTestMpsRoot.get()}",
-            "-Dtest.jbrHome=${integrationTestJbr.get().metadata.installationPath}",
+            "-Dtest.mpsHome=${mpsHome.get()}",
+            "-Dtest.jbrHome=${jbrHome.get()}",
+            "-Dtest.cliInstall=${tasks.installDist.get().destinationDir}",
+            "-Dtest.groovyVersion=${libs.versions.groovy.get()}",
             "-Dtest.projectsDir=${rootDir.resolve("test-projects")}",
             "-Dmops.daemon.classpath=${daemonRuntimeClasspath.get().asPath}"
         )
     }
+}
+
+val jbrOs = when {
+    System.getProperty("os.name").startsWith("Windows") -> "windows"
+    System.getProperty("os.name").startsWith("Mac") -> "osx"
+    System.getProperty("os.name").startsWith("Linux") -> "linux"
+    else -> error("Unsupported JBR operating system: ${System.getProperty("os.name")}")
+}
+val jbrArch = when (System.getProperty("os.arch")) {
+    "aarch64", "arm64" -> "aarch64"
+    "amd64", "x86_64" -> "x64"
+    else -> error("Unsupported JBR architecture: ${System.getProperty("os.arch")}")
+}
+
+val supportedMpsVersions = providers.gradleProperty("supportedMpsVersions").get().split(',').map(String::trim)
+val integrationTests = supportedMpsVersions.map { mpsVersion ->
+    val mps = configurations.register("integrationTestMps$mpsVersion") {
+        isCanBeConsumed = false
+    }
+    val jbr = configurations.register("integrationTestJbr$mpsVersion") {
+        isCanBeConsumed = false
+        resolutionStrategy.dependencySubstitution {
+            all {
+                val selector = requested
+                // The MPS marker selects the JBR version; only the actual JBR archive needs a host classifier.
+                if (selector is ModuleComponentSelector && selector.group == "com.jetbrains.jdk") {
+                    artifactSelection { selectArtifact("tgz", null, "$jbrOs-$jbrArch") }
+                }
+            }
+        }
+    }
+    dependencies.add(mps.name, "com.jetbrains:mps:$mpsVersion")
+    dependencies.add(jbr.name, "com.jetbrains.mps:mps-jbr:$mpsVersion")
+    val mpsHome = mpsPlatformCache.getMpsRoot(mps)
+    val jbrHome = mpsPlatformCache.getJbrRoot(jbr).map {
+        if (jbrOs == "osx") it.resolve("Contents/Home") else it
+    }
+    tasks.register<Test>("integrationTestMps$mpsVersion") {
+        description = "Runs CLI integration tests against MPS $mpsVersion and its matching JBR."
+        configureIntegrationTest(mpsHome, jbrHome)
+    }
+}
+
+tasks.register("integrationTest") {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = "Runs CLI integration tests against every supported MPS version."
+    dependsOn(integrationTests)
+}
+
+tasks.register<Test>("integrationTestLocal") {
+    description = "Runs CLI integration tests using -PtestMpsHome and -PtestJbrHome."
+    configureIntegrationTest(
+        providers.gradleProperty("testMpsHome").map(::file),
+        providers.gradleProperty("testJbrHome").map(::file),
+    )
 }
 
 tasks.check {

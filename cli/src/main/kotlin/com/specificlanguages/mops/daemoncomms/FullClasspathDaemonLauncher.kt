@@ -8,6 +8,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
 import java.util.*
+import java.util.jar.JarFile
 import kotlin.io.path.extension
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.pathString
@@ -39,12 +40,16 @@ class FullClasspathDaemonLauncher(
         val logFile = workspace.logFile()
         val launchJvmArgs = getJvmArgsFor(context.realMpsHome)
 
-        val runtimeClasspath = listOf(
-            daemonClasspath(),
-            mpsRuntimeClasspath(context.realMpsHome),
-        )
-            .filter { it.isNotBlank() }
-            .joinToString(File.pathSeparator)
+        val mpsClasspath = mpsRuntimeClasspath(context.realMpsHome)
+        val daemonClasspath = daemonClasspath().split(File.pathSeparator).filter { it.isNotBlank() }
+        // MPS can bundle a complete Groovy distribution, including extension modules compiled against its core.
+        // Use that runtime as a unit; the mops core dependency is a fallback for MPS distributions without Groovy.
+        val selectedDaemonClasspath = if (mpsClasspath.any(::providesGroovyCompiler)) {
+            daemonClasspath.filterNot(::providesGroovyCompiler)
+        } else {
+            daemonClasspath
+        }
+        val runtimeClasspath = (selectedDaemonClasspath + mpsClasspath).joinToString(File.pathSeparator)
 
         workspace.createDirectories()
         val classpathArgFile = Files.createTempFile(workDir, "daemon-classpath-", ".args")
@@ -173,7 +178,7 @@ class FullClasspathDaemonLauncher(
             .joinToString(File.pathSeparator) { it.normalize().pathString }
     }
 
-    private fun mpsRuntimeClasspath(mpsHome: Path): String =
+    private fun mpsRuntimeClasspath(mpsHome: Path): List<String> =
         buildList {
             addAll(jarsIn(mpsHome.resolve("lib")))
             addAll(jarsIn(mpsHome.resolve("lib/modules")))
@@ -182,7 +187,14 @@ class FullClasspathDaemonLauncher(
                 mpsHome.resolve("plugins/mps-java/lib/java-core.jar"),
                 mpsHome.resolve("plugins/java/lib/ecj/eclipse.jar"),
             ).filter { Files.isRegularFile(it) }.forEach { add(it.pathString) }
-        }.joinToString(File.pathSeparator)
+        }
+
+    private fun providesGroovyCompiler(entry: String): Boolean {
+        val file = File(entry)
+        return file.isFile && file.extension == "jar" && JarFile(file).use {
+            it.getJarEntry("org/codehaus/groovy/control/CompilerConfiguration.class") != null
+        }
+    }
 
     private fun jarsIn(directory: Path): List<String> {
         if (!Files.isDirectory(directory)) {
