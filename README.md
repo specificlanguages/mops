@@ -36,11 +36,14 @@ or daemon is required in the CLI invocation that writes the wrapper; Java must b
 
 Discovery queries configured providers, which can download and extract distributions. It does not execute preparation or
 language build task actions. It inspects all Gradle projects in the build and uses a discovered `mpsDefaults` extension
-or conventional `RunAntScript` task for the shared runtime paths. Partial discoveries show available paths without
-writing a wrapper and exit with status 1; when both paths are known, the command writes the wrappers and exits with
-status 0. Missing or unusable runtime directories are reported as warnings, so wrappers can be created before the
-project's documented preparation steps. Task-action overrides, included builds, and custom Ant property loading are
-outside this heuristic; Specific Languages values are project defaults.
+or conventional `RunAntScript` task for the shared runtime paths. Provider resolution failures stop discovery and retain
+Gradle’s dependency diagnostics; check the configured runtime versions and repositories. Partial discoveries show
+available paths without writing a wrapper and exit with status 1; when both paths are known, the command writes the
+wrappers and exits with status 0. Missing or unusable runtime directories are reported as warnings, so wrappers can be
+created before the project's documented preparation steps. If a pinned MPS prerelease is no longer available, update the
+project’s MPS prerelease version to the newest available version; prerelease artifacts are periodically deleted.
+Task-action overrides, included builds, and custom Ant property loading are outside this heuristic; Specific Languages
+values are project defaults.
 
 ## Commands
 

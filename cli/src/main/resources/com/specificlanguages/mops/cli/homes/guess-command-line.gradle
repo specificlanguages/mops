@@ -67,8 +67,14 @@ def findMpsHome(project) {
 }
 
 def findJavaHome(project) {
+    def defaults = project.extensions.findByName('mpsDefaults')
+    def path = javaLauncherHome(defaults)
+    if (path != null) {
+        return [source: 'mpsDefaults extension (com.specificlanguages.mps 2.x)', path: path]
+    }
+
     def jbrToolchain = project.extensions.findByName('jbrToolchain')
-    def path = javaLauncherHome(jbrToolchain)
+    path = javaLauncherHome(jbrToolchain)
     if (path != null) {
         return [source: 'jbrToolchain extension (com.specificlanguages.jbr-toolchain)', path: path]
     }
@@ -78,12 +84,6 @@ def findJavaHome(project) {
     path = javaHomeFromExecutable(project, executable)
     if (path != null) {
         return [source: "${downloadJbr.path} task", path: path]
-    }
-
-    def defaults = project.extensions.findByName('mpsDefaults')
-    path = javaLauncherHome(defaults)
-    if (path != null) {
-        return [source: 'mpsDefaults extension (com.specificlanguages.mps 2.x)', path: path]
     }
 
     def antTask = findRunAntScript(project)
@@ -133,7 +133,7 @@ def directoryPropertyPath(candidate, propertyName) {
     def directory = propertyOrNull(candidate, propertyName)
     try {
         return directory?.asFile?.canonicalPath
-    } catch (ignored) {
+    } catch (MissingPropertyException ignored) {
         return null
     }
 }
@@ -142,7 +142,7 @@ def javaLauncherHome(candidate) {
     def launcher = propertyOrNull(candidate, 'javaLauncher')
     try {
         return launcher?.metadata?.installationPath?.asFile?.canonicalPath
-    } catch (ignored) {
+    } catch (MissingPropertyException ignored) {
         return null
     }
 }
@@ -151,12 +151,14 @@ def propertyOrNull(candidate, propertyName) {
     if (candidate == null) {
         return null
     }
+    def value
     try {
-        def value = candidate."${propertyName}"
-        return value?.hasProperty('orNull') ? value.orNull : value
-    } catch (ignored) {
+        value = candidate."${propertyName}"
+    } catch (MissingPropertyException ignored) {
         return null
     }
+    // An absent property is unsupported; a failing provider must retain its Gradle diagnostics.
+    return value instanceof org.gradle.api.provider.Provider ? value.orNull : value
 }
 
 def javaHomeFromExecutable(project, executable) {

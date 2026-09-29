@@ -329,6 +329,43 @@ class GradleHomeDiscoveryTest {
         assertFalse(root.resolve("build/mopsw").exists())
     }
 
+    @Test
+    fun `runtime provider resolution failures are reported instead of unsupported configuration`() {
+        val root = fixture("""
+            plugins { id 'com.specificlanguages.mps' version '2.1.0' }
+            repositories { maven { url = uri('empty-repository') } }
+            dependencies { mps 'example:missing-mps:1.0' }
+        """)
+        root.resolve(".mps").createDirectory()
+
+        val (exit, output) = run(root)
+
+        assertEquals(1, exit, output)
+        assertContains(output, "Could not find example:missing-mps:1.0")
+        assertContains(output, "Gradle runtime discovery failed")
+        assertFalse(output.contains("No supported runtime configuration"), output)
+        assertFalse(root.resolve("build/mops/${root.fileName}/mopsw").exists())
+    }
+
+    @Test
+    fun `Java provider resolution failures retain dependency diagnostics`() {
+        val root = fixture("""
+            plugins { id 'com.specificlanguages.mps' version '2.1.0' }
+            repositories { maven { url = uri('empty-repository') } }
+            mpsDefaults.mpsHome = layout.projectDirectory.dir('MPS')
+            dependencies { jbr 'example:missing-jbr:1.0' }
+        """)
+        root.resolve(".mps").createDirectory()
+
+        val (exit, output) = run(root)
+
+        assertEquals(1, exit, output)
+        assertContains(output, "Could not find example:missing-jbr:1.0")
+        assertContains(output, "Gradle runtime discovery failed")
+        assertFalse(output.contains("Discovery is partial"), output)
+        assertFalse(root.resolve("build/mops/${root.fileName}/mopsw").exists())
+    }
+
     private fun fixture(build: String, settings: String = ""): Path {
         val root = temporary.resolve("project with spaces").createDirectory().toRealPath()
         root.resolve("settings.gradle").writeText("""
