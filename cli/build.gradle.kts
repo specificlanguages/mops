@@ -135,7 +135,8 @@ fun Test.configureIntegrationTest(mpsHome: Provider<File>, jbrHome: Provider<Fil
             "-Dtest.cliInstall=${tasks.installDist.get().destinationDir}",
             "-Dtest.groovyVersion=${libs.versions.groovy.get()}",
             "-Dtest.projectsDir=${rootDir.resolve("test-projects")}",
-            "-Dmops.daemon.classpath=${daemonRuntimeClasspath.get().asPath}"
+            "-Dmops.daemon.classpath=${daemonRuntimeClasspath.get().asPath}",
+            "-Dmops.daemon.mps.plugin=${tasks.installDist.get().destinationDir.resolve("mps-plugins/mops-daemon-plugin.jar")}",
         )
     }
 }
