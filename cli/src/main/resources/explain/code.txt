@@ -19,6 +19,12 @@ Native nodes support indexed access by property name or link role, including inh
   node.children['role']      — immutable list of current children in order, possibly empty
   node.references['role']    — native SReference or null; .targetNode resolves its target
 
+Containment navigation also provides node.descendants and node.ancestors. Both return immutable list snapshots of native
+nodes, excluding the receiver. Descendants are in depth-first pre-order following native child order; ancestors run
+from the immediate parent to the root. References are not followed. A leaf has no descendants and a root has no
+ancestors. Reading these properties requires project.read or project.command; retained nodes keep native MPS validity
+semantics.
+
 Reads require project.read or project.command. Assignments require project.command:
 
   node.properties['name'] = 'NewName'  // null requests clearing through the setter

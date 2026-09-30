@@ -5,6 +5,18 @@ import kotlin.test.assertContains
 
 class CodeCatalogTest {
     @Test
+    fun `containment navigation is discoverable with read access and traversal semantics`() {
+        val descendants = CodeCatalog.text("SNode.descendants")
+        assertContains(descendants, "[read]")
+        assertContains(descendants, "depth-first pre-order")
+        assertContains(descendants, "excluding this node")
+        val ancestors = CodeCatalog.text("SNode.ancestors")
+        assertContains(ancestors, "[read]")
+        assertContains(ancestors, "parent to root")
+        assertContains(ancestors, "excluding this node")
+    }
+
+    @Test
     fun `creation help uses native receivers and return types`() {
         assertContains(CodeCatalog.text("Project.createLanguage"), "Project.createLanguage(String name, Map options = [:]): Language")
         assertContains(CodeCatalog.text("Language.createGenerator"), "Language.createGenerator(String alias, Map options = [:]): Generator")

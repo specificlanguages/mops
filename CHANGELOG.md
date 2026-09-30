@@ -2,25 +2,29 @@
 
 ## Unreleased
 
+- Added Code Mode `node.descendants` and `node.ancestors` containment navigation. Both return immutable lists excluding
+  the receiver, with descendants in depth-first child order and ancestors from parent to root. Reads require model
+  access.
+
 - Daemons detach from the launching session on Unix and console on Windows to survive process-group and console cleanup.
-- `daemon status` probes recorded daemons and reports `unreachable` when an authenticated ping fails, retaining the record.
+- `daemon status` probes recorded daemons and reports `unreachable` when an authenticated ping fails, retaining the
+  record.
 
 - Added the global `--refs-as-urls` option to render node references in text output as MPS URLs. JSON output remains
   unchanged.
 
-- Added writable indexed Code Mode accessors: `node.properties[name]`, `node.child[role]`,
-  `node.children[role]`, and `node.references[role]`. The single-child accessor throws if the role has several
-  children; the plural accessor returns a list. Child assignments do not validate declared cardinality.
-  Property reads and writes use `SNodeAccessUtil.getProperty/setProperty` to invoke MPS property getter/setter
-  handlers while retaining serialized string values. Child access uses native MPS containment operations.
-  Reference assignments resolve their target and use `SNodeAccessUtil.setReferenceTarget`, including MPS reference
-  setter hooks. Unresolved targets fail without clearing the existing reference; explicit `null` clears it.
-  See `mops explain code` and `mops code help SNode`.
+- Added writable indexed Code Mode accessors: `node.properties[name]`, `node.child[role]`, `node.children[role]`, and
+  `node.references[role]`. The single-child accessor throws if the role has several children; the plural accessor
+  returns a list. Child assignments do not validate declared cardinality. Property reads and writes use
+  `SNodeAccessUtil.getProperty/setProperty` to invoke MPS property getter/setter handlers while retaining serialized
+  string values. Child access uses native MPS containment operations. Reference assignments resolve their target and use
+  `SNodeAccessUtil.setReferenceTarget`, including MPS reference setter hooks. Unresolved targets fail without clearing
+  the existing reference; explicit `null` clears it. See `mops explain code` and `mops code help SNode`.
 
 - **Breaking:** Regularized the CLI around the verb-first `mops <verb> <object>` shape. `model get-node` is now
   `get node`, `model render-node` is `render node`, `model edit` is `edit model`, `model check` is `check model`,
-  `make modules` is the singular `make module` (and still accepts multiple module arguments), and `diagnose modules`
-  is `diagnose project`. `list`, `find`, `make project`, `diagnose module`, `daemon`, and `explain` keep their existing
+  `make modules` is the singular `make module` (and still accepts multiple module arguments), and `diagnose modules` is
+  `diagnose project`. `list`, `find`, `make project`, `diagnose module`, `daemon`, and `explain` keep their existing
   paths. Commands now receive their runtime environment through constructor injection rather than their Picocli parent
   chain.
 - Moved the default daemon home from `~/.mops/daemon` to the XDG cache directory: mops now uses
@@ -59,23 +63,23 @@
   repository — and is rejected together with `--depth`. `--role <role>` lists only a node target's children in one
   containment role, and errors on a module, model, project, or repository target. JSON output carries the same summary
   and truncation information structurally (`summary`, `childTotal`).
-- Added the `mops model edit` **`wrap`** and **`unwrap`** operations. `wrap` (`{"op": "wrap", "target", "concept",
-  "role", ...}`) puts a fresh node of `concept` in the target's exact slot and moves the target under the wrapper's
-  `role` (at an optional `position` among inline-built siblings); the wrapper is built like an `addChild` inline spec
-  (`properties`/`references`/`children`, move/copy leaves included) and `as` binds it. `unwrap` (`{"op": "unwrap",
-  "target", "keep"}`) promotes `keep` — which must resolve to a proper descendant of the target — into the target's
-  slot and deletes the rest; `keep` may be any depth, so a multi-level strip is one operation. Both work on root nodes
-  (the wrapper or kept node becomes a root of the same model), preserve identity (inbound references keep resolving),
-  and are constraint-checked on the end state. Node attributes travel inside the target's subtree and are never copied
-  onto a wrapper. See `mops explain edit.wrap` and `mops explain edit.unwrap`.
-- Added the `mops model edit` **`replace`** operation: `{"op": "replace", "target": <target>, "with": <inline
-  position>, "as": ...}`. The replacement — a fresh-node spec, a **move leaf**, or a **copy leaf** — takes the target's
-  exact slot (same parent, containment role, and sibling index, or root node position when the target is a root), and
-  the remainder of the target's old subtree is deleted. Move leaves inside `with` may adopt nodes from inside the
-  replaced target, keeping their identities (and inbound references) alive; a bare move leaf of a descendant is an
-  unwrap. The swap uses MPS's own `SNodeUtil.replaceWithAnother`; the end state is constraint-checked like any other
-  edit. Inbound references to deleted nodes are left dangling (visible to `mops model check`, not rewritten). See
-  `mops explain edit.replace`.
+- Added the `mops model edit` **`wrap`** and **`unwrap`** operations. `wrap`
+  (`{"op": "wrap", "target", "concept", "role", ...}`) puts a fresh node of `concept` in the target's exact slot and
+  moves the target under the wrapper's `role` (at an optional `position` among inline-built siblings); the wrapper is
+  built like an `addChild` inline spec (`properties`/`references`/`children`, move/copy leaves included) and `as` binds
+  it. `unwrap` (`{"op": "unwrap", "target", "keep"}`) promotes `keep` — which must resolve to a proper descendant of the
+  target — into the target's slot and deletes the rest; `keep` may be any depth, so a multi-level strip is one
+  operation. Both work on root nodes (the wrapper or kept node becomes a root of the same model), preserve identity
+  (inbound references keep resolving), and are constraint-checked on the end state. Node attributes travel inside the
+  target's subtree and are never copied onto a wrapper. See `mops explain edit.wrap` and `mops explain edit.unwrap`.
+- Added the `mops model edit` **`replace`** operation:
+  `{"op": "replace", "target": <target>, "with": <inline position>, "as": ...}`. The replacement — a fresh-node spec, a
+  **move leaf**, or a **copy leaf** — takes the target's exact slot (same parent, containment role, and sibling index,
+  or root node position when the target is a root), and the remainder of the target's old subtree is deleted. Move
+  leaves inside `with` may adopt nodes from inside the replaced target, keeping their identities (and inbound
+  references) alive; a bare move leaf of a descendant is an unwrap. The swap uses MPS's own
+  `SNodeUtil.replaceWithAnother`; the end state is constraint-checked like any other edit. Inbound references to deleted
+  nodes are left dangling (visible to `mops model check`, not rewritten). See `mops explain edit.replace`.
 - Extended the `mops model edit` inline-subtree notation so a position in a `children` array holds a fresh-node spec, a
   **move leaf** (`{"role": ..., "move": <target>}`) that adopts an existing node with its subtree identity-preservingly,
   or a **copy leaf** (`{"role": ..., "copy": <target>}`) that deep-copies it with fresh IDs. Leaves work at any depth in
@@ -84,9 +88,16 @@
   aliases included) alongside the get-node-shaped `{"role": ..., "target": {...}}` form that lets `get-node` output
   round-trip. Mixing a fresh spec with a leaf, setting both `move` and `copy`, or setting both `to` and `target` is
   rejected with a field-naming decode error. See `mops explain inline-subtree`.
-- Added a trailing `in <scope-segments>` search scope clause to `mops find instances` and `mops find usages`, using the same navigation-target grammar as `mops list`. A scope resolves to the repository (`in /`), a module, a model, or a node subtree, and is searched exhaustively (including read-only library and stub models within it); without a clause the search stays scoped to editable project sources. See `mops explain scope`.
-- **Breaking:** Removed `--all` from `mops find instances` and `mops find usages`; `in /` now searches the whole MPS repository instead.
-- Added `--named <pattern>` and `--role <role>` filters to `mops find instances`. `--named` keeps only instances whose node name matches the given Go-to-Node pattern (the same matcher as `mops find root-by-name`; see `mops explain name-pattern`); `--role` keeps only instances filling that containment role, so root nodes never match. Both filters, and the scope clause, AND together to narrow results.
+- Added a trailing `in <scope-segments>` search scope clause to `mops find instances` and `mops find usages`, using the
+  same navigation-target grammar as `mops list`. A scope resolves to the repository (`in /`), a module, a model, or a
+  node subtree, and is searched exhaustively (including read-only library and stub models within it); without a clause
+  the search stays scoped to editable project sources. See `mops explain scope`.
+- **Breaking:** Removed `--all` from `mops find instances` and `mops find usages`; `in /` now searches the whole MPS
+  repository instead.
+- Added `--named <pattern>` and `--role <role>` filters to `mops find instances`. `--named` keeps only instances whose
+  node name matches the given Go-to-Node pattern (the same matcher as `mops find root-by-name`; see
+  `mops explain name-pattern`); `--role` keeps only instances filling that containment role, so root nodes never match.
+  Both filters, and the scope clause, AND together to narrow results.
 - Made `find instances` and `model edit` explain a `CONCEPT_NOT_FOUND` instead of reporting a bare "not found": they
   distinguish a malformed name, an unknown owning language, a present-but-unloaded language (reporting that language's
   load diagnosis and pointing at `diagnose module`), and a loaded language that lacks the concept (suggesting similarly
@@ -97,29 +108,44 @@
   them a large share of the project's languages stayed unloaded and their concepts were invisible to name lookup, so
   `find instances` reported `CONCEPT_NOT_FOUND` for concepts that were present and compiled.
 - Added `mops diagnose modules` and `mops diagnose module <ref>`, which report why the project's languages and
-  Java-bearing modules did or did not load. Each unloaded module is classified — absent, no Java facet, classes disabled,
-  not built, blocked by broken dependencies (reported recursively down to the root modules to fix), or a residual
-  runtime load failure. `diagnose modules` lists all languages and facet-bearing project modules with flattened root
-  causes; `diagnose module <ref>` inspects any single module (including ones absent or without a facet) and prints the
-  full dependency problem tree. This traces a `find instances` `CONCEPT_NOT_FOUND` to its cause, since a concept resolves
-  by name only when its owning language's runtime is loaded.
-- Made `mops model get-node` report a node's containment context: the exported node carries a `parent` object for its immediate containing node (containment role, `root`/`node` type, name, concept, and reference), and `--ancestry` nests that `parent` recursively up to the root node. `find usages` and `find instances` now carry each result's immediate parent too, in both JSON (a nested `parent` summary) and text (trailing `parent` columns) for non-root results.
-- Added `mops find root-by-name <pattern>`, which finds root nodes by name using MPS's Go-to-Node pattern matching (camel-hump and `*` wildcards, case-insensitive, matches anywhere in the name), ranked best match first. Searches editable project sources by default; append an `in <scope-segments>` clause to search a module, a model, or the whole repository (`in /`) exhaustively. Because it searches root nodes only, a node or root-node subtree scope is rejected with a pointer to `find instances --named`. See `mops explain name-pattern` and `mops explain scope`.
-- Added `mops model edit --constraints=advisory|best-effort|strict` (default `best-effort`). `best-effort` blocks on constraint violations and warns (once per language) about constraints it could not check because a language was not loaded; `strict` fails on such a case; `advisory` evaluates, reports, and applies anyway.
-- Made reads report a node whose MPS concept could not be resolved (usually an uncompiled language) with `conceptValid: false` instead of failing, and marked an unresolvable `get-node` reference target with `resolved: false`.
-- Made daemon startup reject an empty or module-less project (no `.mps/modules.xml`, or zero project modules) so every request surfaces the startup error rather than returning nothing.
+  Java-bearing modules did or did not load. Each unloaded module is classified — absent, no Java facet, classes
+  disabled, not built, blocked by broken dependencies (reported recursively down to the root modules to fix), or a
+  residual runtime load failure. `diagnose modules` lists all languages and facet-bearing project modules with flattened
+  root causes; `diagnose module <ref>` inspects any single module (including ones absent or without a facet) and prints
+  the full dependency problem tree. This traces a `find instances` `CONCEPT_NOT_FOUND` to its cause, since a concept
+  resolves by name only when its owning language's runtime is loaded.
+- Made `mops model get-node` report a node's containment context: the exported node carries a `parent` object for its
+  immediate containing node (containment role, `root`/`node` type, name, concept, and reference), and `--ancestry` nests
+  that `parent` recursively up to the root node. `find usages` and `find instances` now carry each result's immediate
+  parent too, in both JSON (a nested `parent` summary) and text (trailing `parent` columns) for non-root results.
+- Added `mops find root-by-name <pattern>`, which finds root nodes by name using MPS's Go-to-Node pattern matching
+  (camel-hump and `*` wildcards, case-insensitive, matches anywhere in the name), ranked best match first. Searches
+  editable project sources by default; append an `in <scope-segments>` clause to search a module, a model, or the whole
+  repository (`in /`) exhaustively. Because it searches root nodes only, a node or root-node subtree scope is rejected
+  with a pointer to `find instances --named`. See `mops explain name-pattern` and `mops explain scope`.
+- Added `mops model edit --constraints=advisory|best-effort|strict` (default `best-effort`). `best-effort` blocks on
+  constraint violations and warns (once per language) about constraints it could not check because a language was not
+  loaded; `strict` fails on such a case; `advisory` evaluates, reports, and applies anyway.
+- Made reads report a node whose MPS concept could not be resolved (usually an uncompiled language) with
+  `conceptValid: false` instead of failing, and marked an unresolvable `get-node` reference target with
+  `resolved: false`.
+- Made daemon startup reject an empty or module-less project (no `.mps/modules.xml`, or zero project modules) so every
+  request surfaces the startup error rather than returning nothing.
 - Enriched `get-node` reference targets with the target's name and concept when the target resolves.
 - Pivoted the prototype to Kotlin application subprojects for `cli` and `daemon`.
 - Added a persistent per-project daemon lifecycle behind `mops --mps-home <path> daemon ping`.
 - Added `mops daemon status` and `mops daemon stop` for inspecting and stopping known project daemons.
-- Made daemon startup prepare isolated MPS/IDEA runtime directories and report environment readiness plus daemon log path.
+- Made daemon startup prepare isolated MPS/IDEA runtime directories and report environment readiness plus daemon log
+  path.
 - Removed the old Go/offline command surface.
 - Removed the old Live IDE bridge subproject and decision records.
 
 ## 0.2.0 - 2026-04-29
 
-- Added `mops generate-ids`, which generates unused regular node IDs for standalone `.mps` files or file-per-root model folders, defaulting to short Java-friendly base64 output with a `--long` decimal mode.
-- Added `mops list-models`, which discovers `.mps` files and file-per-root `.model` metadata files and emits a model-ID-to-location JSON map.
+- Added `mops generate-ids`, which generates unused regular node IDs for standalone `.mps` files or file-per-root model
+  folders, defaulting to short Java-friendly base64 output with a `--long` decimal mode.
+- Added `mops list-models`, which discovers `.mps` files and file-per-root `.model` metadata files and emits a
+  model-ID-to-location JSON map.
 - Renamed the CLI entry point from `mps-decompress` to `mops decompress`.
 - Changed XML output to use `<empty />` syntax for empty elements to improve readability and reduce token usage.
 - Deferred `mops help <command>` support as a useful future CLI usability improvement.

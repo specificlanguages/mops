@@ -5,15 +5,33 @@ import groovy.lang.Closure
 import jetbrains.mps.project.DevKit
 import jetbrains.mps.project.Project
 import jetbrains.mps.project.Solution
+import jetbrains.mps.lang.smodel.generator.smodelAdapter.SNodeOperations
 import jetbrains.mps.smodel.Generator
 import jetbrains.mps.smodel.Language
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SNode
 import org.jetbrains.mps.openapi.module.SModule
+import java.util.Collections
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 
 object CodeModeExtensions {
+    /** Returns an immutable snapshot of containment descendants in depth-first pre-order, excluding this node. Access: read. */
+    @CodeModeExtension(MpsAccessLevel.READ)
+    @JvmStatic
+    fun getDescendants(node: SNode): List<SNode> {
+        requireRead("SNode.descendants")
+        return Collections.unmodifiableList(SNodeOperations.getNodeDescendants(node, null, false))
+    }
+
+    /** Returns an immutable snapshot of containment ancestors from parent to root, excluding this node. Access: read. */
+    @CodeModeExtension(MpsAccessLevel.READ)
+    @JvmStatic
+    fun getAncestors(node: SNode): List<SNode> {
+        requireRead("SNode.ancestors")
+        return Collections.unmodifiableList(SNodeOperations.getNodeAncestors(node, null, false))
+    }
+
     /** Returns a live indexed accessor. Reads require model access; writes require command access. */
     @CodeModeExtension(MpsAccessLevel.NONE)
     @JvmStatic
