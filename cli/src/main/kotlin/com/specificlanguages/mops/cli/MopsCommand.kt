@@ -12,6 +12,7 @@ import kotlin.io.path.isDirectory
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
+import picocli.CommandLine.ScopeType
 
 @Command(
     name = "mops",
@@ -32,6 +33,7 @@ class MopsCommand(
 
     @Option(
         names = ["--mps-home"],
+        scope = ScopeType.INHERIT,
         paramLabel = "PATH",
         description = ["MPS home used by daemon-backed commands."],
     )
@@ -39,6 +41,7 @@ class MopsCommand(
 
     @Option(
         names = ["--project-root"],
+        scope = ScopeType.INHERIT,
         paramLabel = "PATH",
         description = ["Explicit MPS project root, absolute or relative to the directory where mops was started. Overrides upward inference from the working directory."],
     )
@@ -46,6 +49,7 @@ class MopsCommand(
 
     @Option(
         names = ["--daemon-home"],
+        scope = ScopeType.INHERIT,
         paramLabel = "PATH",
         description = ["Daemon home used by daemon-backed commands."],
     )
@@ -53,6 +57,7 @@ class MopsCommand(
 
     @Option(
         names = ["--java-home"],
+        scope = ScopeType.INHERIT,
         paramLabel = "PATH",
         description = ["Java home used to start daemon-backed commands."],
     )
@@ -60,7 +65,7 @@ class MopsCommand(
 
     override var nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED
 
-    @Option(names = ["--refs-as-urls"], description = ["Render node references as MPS URLs in text output."])
+    @Option(names = ["--refs-as-urls"], scope = ScopeType.INHERIT, description = ["Render node references as MPS URLs in text output."])
     fun setRefsAsUrls(enabled: Boolean) {
         nodeReferenceFormat = if (enabled) NodeReferenceFormat.URL else NodeReferenceFormat.SERIALIZED
     }

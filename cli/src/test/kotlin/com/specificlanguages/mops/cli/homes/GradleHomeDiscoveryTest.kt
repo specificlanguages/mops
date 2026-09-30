@@ -45,9 +45,9 @@ class GradleHomeDiscoveryTest {
         assertEquals(0, exit, output)
         assertContains(output, "MPS home from mpsDefaults extension (com.specificlanguages.mps 2.x)")
         assertContains(output, "Java home from mpsDefaults extension (com.specificlanguages.mps 2.x)")
-        assertContains(output, "Project root: $mpsProject")
-        assertContains(output, "Wrapper: ${root.resolve("output/mops/MPS project/mopsw")}")
-        assertContains(output, "Wrapper: ${root.resolve("output/mops/Other MPS project/mopsw")}")
+        assertContains(output, "Project root: MPS project")
+        assertContains(output, "Wrapper: output/mops/MPS project/mopsw")
+        assertContains(output, "Wrapper: output/mops/Other MPS project/mopsw")
         val wrapper = root.resolve("output/mops/MPS project/mopsw")
         assertTrue(wrapper.isExecutable())
         assertContains(wrapper.readText(), "--mps-home='$mps'")
@@ -58,6 +58,12 @@ class GradleHomeDiscoveryTest {
             root.resolve("output/mops/Other MPS project/mopsw").readText(),
             "--project-root='$otherMpsProject'",
         )
+        mpsProject.resolve(".mps").createDirectory()
+        val (selectedExit, selectedOutput) = run(root, "--project-root", "MPS project")
+        assertEquals(0, selectedExit, selectedOutput)
+        assertContains(selectedOutput, "Wrapper: output/mops/MPS project/mopsw")
+        assertEquals(1, selectedOutput.lineSequence().count { it.startsWith("Wrapper: ") })
+        assertFalse(root.resolve("output/mopsw").exists())
     }
 
     @Test
@@ -111,17 +117,17 @@ class GradleHomeDiscoveryTest {
         assertEquals(0, rootExit, rootOutput)
         assertContains(rootOutput, "MPS home from :buildLanguages arguments (mbeddr RunAntScript)")
         assertContains(rootOutput, "Java home from :buildLanguages executable (mbeddr RunAntScript)")
-        assertContains(rootOutput, "MPS home: ${root.resolve("default MPS")}")
-        assertContains(rootOutput, "Wrapper: ${root.resolve("build/mops/Root MPS/mopsw")}")
-        assertContains(rootOutput, "Wrapper: ${root.resolve("child/build/mops/MPS project/mopsw")}")
+        assertContains(rootOutput, "MPS home: default MPS")
+        assertContains(rootOutput, "Wrapper: build/mopsw")
+        assertContains(rootOutput, "Wrapper: child/build/mopsw")
         assertEquals(2, rootOutput.lineSequence().count { it.startsWith("Wrapper: ") })
         val (exit, output) = runForProject(nested, root.resolve("child/MPS project"))
         assertEquals(0, exit, output)
         assertContains(output, "MPS home from :child:buildLanguages arguments (mbeddr RunAntScript)")
         assertContains(output, "Java home from :child:buildLanguages executable (mbeddr RunAntScript)")
-        assertContains(output, "MPS home: ${root.resolve("child's MPS")}")
-        val wrapper = root.resolve("child/build/mops/MPS project/mopsw")
-        assertContains(output, "Wrapper: $wrapper")
+        assertContains(output, "MPS home: ../../../child's MPS")
+        val wrapper = root.resolve("child/build/mopsw")
+        assertContains(output, "Wrapper: ../../build/mopsw")
         assertEquals(1, output.lineSequence().count { it.startsWith("Wrapper: ") })
         assertEquals(
             "#!/bin/sh\nexec mops --mps-home='${root}/child'\"'\"'s MPS' " +
@@ -152,7 +158,7 @@ class GradleHomeDiscoveryTest {
 
         assertEquals(0, exit, output)
         val wrapper = root.resolve("custom/mops-for-project")
-        assertContains(output, "Wrapper: $wrapper")
+        assertContains(output, "Wrapper: ${root.relativize(wrapper)}")
         assertTrue(wrapper.isExecutable())
     }
 
@@ -176,10 +182,10 @@ class GradleHomeDiscoveryTest {
         val wrapper = root.resolve("custom/mopsw")
         val (exit, output) = run(root, "--output", wrapper.toString())
         assertEquals(0, exit, output)
-        assertContains(output, "MPS home: ${root.resolve("missing MPS")}")
-        assertContains(output, "Warning: MPS home is missing: ${root.resolve("missing MPS")}")
-        assertContains(output, "Warning: Java home is missing or has no usable bin/java: ${root.resolve("missing Java")}")
-        assertContains(output, "Wrapper: $wrapper")
+        assertContains(output, "MPS home: missing MPS")
+        assertContains(output, "Warning: MPS home is missing: missing MPS")
+        assertContains(output, "Warning: Java home is missing or has no usable bin/java: missing Java")
+        assertContains(output, "Wrapper: ${root.relativize(wrapper)}")
         assertContains(wrapper.readText(), "--mps-home='${root.resolve("missing MPS")}'")
         assertContains(wrapper.readText(), "--java-home='${root.resolve("missing Java")}'")
     }
@@ -212,7 +218,7 @@ class GradleHomeDiscoveryTest {
         assertEquals(0, exit, output)
         assertContains(output, "MPS home from :resolveMps destination")
         assertContains(output, "Java home from Gradle default Java")
-        assertContains(output, "MPS home: ${root.resolve("build/mps")}")
+        assertContains(output, "MPS home: build/mps")
         assertContains(wrapper.readText(), "--mps-home='${root.resolve("build/mps")}'")
     }
 
@@ -254,7 +260,7 @@ class GradleHomeDiscoveryTest {
         assertEquals(0, exit, output)
         assertContains(output, "MPS home from :resolveMps destination")
         assertContains(output, "Java home from :downloadJbr task")
-        assertContains(output, "Java home: ${root.resolve("build/jbr/Contents/Home")}")
+        assertContains(output, "Java home: build/jbr/Contents/Home")
         assertContains(wrapper.readText(), "--java-home='${root.resolve("build/jbr/Contents/Home")}'")
     }
 
@@ -302,9 +308,12 @@ class GradleHomeDiscoveryTest {
         assertEquals(0, exit, output)
         assertContains(output, "MPS home from mpsSettings extension")
         assertContains(output, "Java home from jbrToolchain extension (com.specificlanguages.jbr-toolchain)")
-        assertContains(output, "Project root: $root")
-        val wrapper = root.resolve("build/mops/${root.fileName}/mopsw")
-        assertContains(output, "Wrapper: $wrapper")
+        assertContains(output, "Inspecting Gradle build at .")
+        assertContains(output, " in .")
+        assertContains(output, "MPS home: split MPS")
+        assertContains(output, "Project root: .")
+        val wrapper = root.resolve("build/mopsw")
+        assertContains(output, "Wrapper: ${root.relativize(wrapper)}")
         assertTrue(wrapper.isExecutable())
         assertContains(wrapper.readText(), "--mps-home='$mps'")
         assertContains(wrapper.readText(), "--java-home='")
@@ -323,7 +332,7 @@ class GradleHomeDiscoveryTest {
         val (exit, output) = run(root)
         assertEquals(1, exit, output)
         assertContains(output, "MPS home from mpsSettings extension")
-        assertContains(output, "MPS home: ${root.resolve("missing MPS")}")
+        assertContains(output, "MPS home: missing MPS")
         assertContains(output, "Java home: unknown")
         assertContains(output, "no wrapper was written")
         assertFalse(root.resolve("build/mopsw").exists())
@@ -344,7 +353,7 @@ class GradleHomeDiscoveryTest {
         assertContains(output, "Could not find example:missing-mps:1.0")
         assertContains(output, "Gradle runtime discovery failed")
         assertFalse(output.contains("No supported runtime configuration"), output)
-        assertFalse(root.resolve("build/mops/${root.fileName}/mopsw").exists())
+        assertFalse(root.resolve("build/mopsw").exists())
     }
 
     @Test
@@ -363,7 +372,7 @@ class GradleHomeDiscoveryTest {
         assertContains(output, "Could not find example:missing-jbr:1.0")
         assertContains(output, "Gradle runtime discovery failed")
         assertFalse(output.contains("Discovery is partial"), output)
-        assertFalse(root.resolve("build/mops/${root.fileName}/mopsw").exists())
+        assertFalse(root.resolve("build/mopsw").exists())
     }
 
     private fun fixture(build: String, settings: String = ""): Path {

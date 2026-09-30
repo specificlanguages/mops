@@ -18,7 +18,7 @@ internal class GradleHomeDiscovery {
             ancestors.firstOrNull { dir -> regularFileNames.any { dir.resolve(it).isRegularFile() } }
     }
 
-    fun discover(start: Path, diagnostics: PrintWriter): List<HomeGuess> {
+    fun discover(start: Path, workingDirectory: Path, diagnostics: PrintWriter): List<HomeGuess> {
         val directory = start.toRealPath()
         require(directory.isDirectory()) { "Discovery path is not a directory: $directory" }
 
@@ -48,7 +48,7 @@ internal class GradleHomeDiscovery {
             val reportDir = temporary.resolve("reports")
             Files.createDirectories(reportDir)
             val task = "mopsGuessCommandLine" + UUID.randomUUID().toString().replace("-", "")
-            diagnostics.println("Inspecting Gradle build at $root. This may cause Gradle to download or extract files.")
+            diagnostics.println("Inspecting Gradle build at ${displayPath(root, workingDirectory)}. This may cause Gradle to download or extract files.")
             diagnostics.flush()
             val processArgs = listOf(
                 "--project-dir", root.toString(),

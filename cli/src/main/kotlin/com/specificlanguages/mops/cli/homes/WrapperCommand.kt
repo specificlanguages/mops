@@ -16,6 +16,7 @@ import java.util.concurrent.Callable
         "Write a project-local mops wrapper using runtime paths discovered from Gradle.",
         "",
         "Uses the nearest Gradle wrapper to inspect all projects in its build and writes mopsw or mopsw.cmd for every discovered MPS project. Pass --project-root to write only that project's wrapper.",
+        "Wrappers go directly in each Gradle project's build directory when it has one detected MPS project; with multiple MPS projects, they go in mops/<MPS-project-name> beneath it. Reported paths are relative to the working directory.",
         "No CLI-configured MPS home or daemon is required; Java must be available to run Gradle.",
         "Querying configured providers may download and extract MPS or JBR distributions; it does not run preparation or language build task actions.",
         "Partial discoveries print available values without writing a wrapper and exit with status 1; known pairs write the wrapper and exit with status 0, with warnings when their paths are not usable yet.",
@@ -41,7 +42,7 @@ class WrapperCommand(private val root: MopsCommand) : Callable<Int> {
     override fun call(): Int {
         val start = root.workingDirectory.resolve(path ?: root.projectRoot ?: ".").toRealPath()
         val discovery = GradleHomeDiscovery()
-        val guesses = discovery.discover(start, spec.commandLine().err)
+        val guesses = discovery.discover(start, root.workingDirectory, spec.commandLine().err)
         val selectedProjectRoot = root.projectRoot?.let { root.resolveProjectPath(start) }
         val targets = if (selectedProjectRoot == null) {
             guesses.flatMap { guess -> guess.mpsProjectRoots.map { guess to it } }
@@ -50,7 +51,7 @@ class WrapperCommand(private val root: MopsCommand) : Callable<Int> {
             val owner = guesses.filter { selectedProjectRoot.startsWith(it.projectDir) }
                 .maxByOrNull { it.projectDir.nameCount }
                 ?: guesses.firstOrNull { selectedProjectRoot in it.mpsProjectRoots }
-                ?: error("MPS project is not part of the discovered Gradle build: $selectedProjectRoot")
+                ?: error("MPS project is not part of the discovered Gradle build: ${displayPath(selectedProjectRoot, root.workingDirectory)}")
             listOf(owner to selectedProjectRoot)
         }
         val targetRuntime = targets.singleOrNull()?.first?.takeIf { it.source != null }
@@ -64,14 +65,14 @@ class WrapperCommand(private val root: MopsCommand) : Callable<Int> {
                     "Pass --mps-home and --java-home directly to other mops commands."
             )
         val out = spec.commandLine().out
-        out.println("Source: ${runtime.source} in ${runtime.projectDir}")
-        out.println("MPS home: ${runtime.mpsHome ?: "unknown"}")
-        out.println("Java home: ${runtime.javaHome ?: "unknown"}")
+        out.println("Source: ${runtime.source} in ${displayPath(runtime.projectDir, root.workingDirectory)}")
+        out.println("MPS home: ${runtime.mpsHome?.let { displayPath(it, root.workingDirectory) } ?: "unknown"}")
+        out.println("Java home: ${runtime.javaHome?.let { displayPath(it, root.workingDirectory) } ?: "unknown"}")
         if (runtime.mpsHome != null && !runtime.usableMps) {
-            out.println("Warning: MPS home is missing: ${runtime.mpsHome}")
+            out.println("Warning: MPS home is missing: ${displayPath(runtime.mpsHome, root.workingDirectory)}")
         }
         if (runtime.javaHome != null && !runtime.usableJava) {
-            out.println("Warning: Java home is missing or has no usable bin/java: ${runtime.javaHome}")
+            out.println("Warning: Java home is missing or has no usable bin/java: ${displayPath(runtime.javaHome, root.workingDirectory)}")
         }
         if (!runtime.hasKnownHomes) {
             out.println("Discovery is partial; no wrapper was written. Configure both runtime paths and try again.")
@@ -86,8 +87,8 @@ class WrapperCommand(private val root: MopsCommand) : Callable<Int> {
                 val wrapper = output
                     ?.let { root.workingDirectory.resolve(it).normalize() }
                     ?: defaultWrapperPath(owner, projectRoot, windows)
-                out.println("Project root: $projectRoot")
-                out.println("Wrapper: ${runtime.writeWrapper(wrapper, projectRoot, windows)}")
+                out.println("Project root: ${displayPath(projectRoot, root.workingDirectory)}")
+                out.println("Wrapper: ${displayPath(runtime.writeWrapper(wrapper, projectRoot, windows), root.workingDirectory)}")
             }
         }
         out.flush()
@@ -97,6 +98,11 @@ class WrapperCommand(private val root: MopsCommand) : Callable<Int> {
     private fun defaultWrapperPath(guess: HomeGuess, projectRoot: Path, windows: Boolean): Path {
         val projectName = projectRoot.fileName.toString()
         val wrapperName = if (windows) "mopsw.cmd" else "mopsw"
-        return guess.buildDir.resolve("mops").resolve(projectName).resolve(wrapperName)
+        val directory = if (guess.mpsProjectRoots.size <= 1) {
+            guess.buildDir
+        } else {
+            guess.buildDir.resolve("mops").resolve(projectName)
+        }
+        return directory.resolve(wrapperName)
     }
 }

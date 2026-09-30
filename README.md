@@ -16,23 +16,28 @@ mops daemon stop
 
 The CLI starts or reuses a per-project daemon process for most commands.
 
+Global options (`--mps-home`, `--java-home`, `--daemon-home`, `--project-root`, and `--refs-as-urls`) can appear before,
+between, or after command names. Command-specific options belong after their command name.
+
 Pass `--project-root PATH` to select an MPS project explicitly. The path can be absolute or relative to the directory
 where `mops` was started, for example `mops --project-root ../my-project daemon status`.
 
-Pass `--refs-as-urls` before the command to render node references in text output as MPS URLs, for example
+Pass `--refs-as-urls` to render node references in text output as MPS URLs, for example
 `mops --refs-as-urls find instances <concept>`. JSON output is unchanged.
 
 If you do not know where MPS and Java are installed, run `mops wrapper [PATH]` from the project checkout. PATH is the
 starting point of discovery, defaulting to `--project-root` when supplied, or the working directory. `wrapper` uses the
 nearest Gradle wrapper to inspect `mpsDefaults` of the `com.specificlanguages.mps` Gradle plugin or `RunAntScript` tasks
 of the `de.itemis.mps.gradle.common` plugin. By default it writes a wrapper for every MPS project in every Gradle
-project in the build. Each `mpsw` on macOS and Linux, or `mopsw.cmd` on Windows, is written under
-`<build-directory>/mops/<MPS-project-name>/`. Pass `--project-root PATH` to write only that MPS project's wrapper. When
-one wrapper is selected, `--output PATH` selects its exact file; a relative path is resolved from the directory where
-`mops` was started. The POSIX wrappers are executable. Each wrapper supplies the shared discovered MPS and Java homes
-and its MPS project directory. MPS projects come from configured `mpsBuilds` entries and `.mps` project markers in the
-Gradle build. Run the generated wrapper in place of `mops`; arguments passed to it are forwarded to `mops`. No MPS home
-or daemon is required in the CLI invocation that writes the wrapper; Java must be available to run Gradle.
+project in the build. Each `mopsw` on macOS and Linux, or `mopsw.cmd` on Windows, is written directly in the Gradle
+project's build directory when it has one detected MPS project. With multiple MPS projects, wrappers are written under
+`<build-directory>/mops/<MPS-project-name>/`. Pass `mops wrapper --project-root PATH` to write only that MPS project's
+wrapper; `--project-root` can also precede `wrapper`. Reported paths are relative to the working directory. When one
+wrapper is selected, `--output PATH` selects its exact file; a relative path is resolved from the directory where `mops`
+was started. The POSIX wrappers are executable. Each wrapper supplies the shared discovered MPS and Java homes and its
+MPS project directory. MPS projects come from configured `mpsBuilds` entries and `.mps` project markers in the Gradle
+build. Run the generated wrapper in place of `mops`; arguments passed to it are forwarded to `mops`. No MPS home or
+daemon is required in the CLI invocation that writes the wrapper; Java must be available to run Gradle.
 
 Discovery queries configured providers, which can download and extract distributions. It does not execute preparation or
 language build task actions. It inspects all Gradle projects in the build and uses a discovered `mpsDefaults` extension
