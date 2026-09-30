@@ -80,6 +80,8 @@ object ProtocolJson {
     fun decodeResponse(text: String): DaemonResponse = json.decodeFromString(text)
 
     fun encodeTestReport(report: TestRunReport): String = json.encodeToString(report)
+
+    fun encodeMakeResponse(response: MakeResponse): String = json.encodeToString(response)
     fun decodeTestReport(text: String): TestRunReport = json.decodeFromString(text)
 
     fun encodeBatch(batch: EditBatch): String = json.encodeToString(batch)

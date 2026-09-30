@@ -3,6 +3,7 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.protocol.CodeResultResponse
 import com.specificlanguages.mops.protocol.CodeRunRequest
+import com.specificlanguages.mops.protocol.MakeResponse
 import com.specificlanguages.mops.protocol.TestRunReport
 import com.specificlanguages.mops.protocol.ProtocolJson
 import groovy.lang.Binding
@@ -62,6 +63,7 @@ internal object CodeResultAdapter {
         is SModel -> value.reference.let(persistence::asString)
         is SModule -> value.moduleReference.let(persistence::asString)
         is TestRunReport -> ProtocolJson.encodeTestReport(value)
+        is MakeResponse -> ProtocolJson.encodeMakeResponse(value)
         is String -> value
         is Char, is Boolean, is Number, is File, is Path -> value.toString()
         is Map<*, *> -> value.entries.joinToString(",", "{", "}") { json(it.key.toString()) + ":" + renderJson(it.value) }
@@ -79,7 +81,7 @@ internal object CodeResultAdapter {
         is SNode, is SModel, is SModule -> render(value)?.let(::json) ?: "null"
         is String, is Char, is File, is Path -> json(value.toString())
         is Boolean, is Number -> value.toString()
-        is TestRunReport -> render(value)!!
+        is TestRunReport, is MakeResponse -> render(value)!!
         is Map<*, *>, is Iterable<*>, is Array<*>, is BooleanArray, is IntArray, is LongArray, is DoubleArray -> render(value)!!
         else -> error("unsupported code mode result ${value.javaClass.name}; return a supported representation")
     }

@@ -5,6 +5,19 @@ mean stdin). The source is evaluated as a function body: an explicit top-level r
 command result.
 
 Results are printed out: strings are printed verbatim, structured values as JSON, and null produces no output.
+Nodes, models, and modules become serialized MPS reference strings, including when nested in maps or collections.
+The output does not contain their properties or members. Return a map from inside an access block to select the
+contents you need:
+
+  return project.read {
+    def model = mops.lookup.requireModel('my.model')
+    [model: model, roots: model.rootNodes.collect { [node: it, name: it.properties['name']] }]
+  }
+
+MakeResponse and TestRunReport results serialize as JSON objects, including when nested in maps or collections.
+For example, `return project.make()` prints outcome, moduleCount, and messages. Inside a program you can inspect
+these fields directly. Java parsing returns native nodes: return `[nodes: result.nodes, unresolved: result.unresolved]`
+to print their references, or select their contents while holding model access.
 
 Every run receives `project`, the daemon's native `jetbrains.mps.project.Project`. Values returned by resolvers and
 creation extensions are native MPS objects. Use `project.read { ... }` for model reads and `project.command { ... }`
