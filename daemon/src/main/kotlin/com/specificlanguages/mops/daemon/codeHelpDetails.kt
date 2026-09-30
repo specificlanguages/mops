@@ -51,7 +51,7 @@ internal fun examples(path: String): List<String> = listOf(withReturn(when (path
 }))
 
 private fun member(type: String, name: String, valueType: String, summary: String) = CodeHelpEntry(
-    "$type.$name", "$type.$name: $valueType", summary, "no access block required [none]", returnType = valueType.removeSuffix("?"), nullable = valueType.endsWith("?"), related = listOf(valueType.removeSuffix("?").removePrefix("List<").removeSuffix(">")),
+    "$type.$name", "$type.$name: $valueType", summary, "no access block required [none]", returnType = valueType.removeSuffix("?"), nullable = valueType.endsWith("?"), related = listOf(valueType.removeSuffix("?").removePrefix("List<").removeSuffix(">")).filter { it !in listOf("String", "boolean", "int") },
 )
 
 internal val resultMembers = mapOf(
