@@ -29,11 +29,12 @@ Every extension declares an access requirement (`none`, `read`, `command`, or `e
 and daemon-backed `mops code help` query the same **Code Mode Reference**. Extension dispatch uses Groovy's standard
 extension-module mechanism.
 
-The reference derives extension signatures and access requirements from the registered extension classes at runtime.
-Explicit catalog documentation supplies descriptions, semantic parameter names and types, defaults, option maps, and
-examples. Text and JSON help share that structured documentation. The initial view lists receiver types and namespaces;
-lookup accepts paths, the `project` alias, unqualified operation names, and documented result types. Ambiguous lookups
-report matching paths and unknown names suggest nearby entries.
+The reference derives extension access requirements from the registered extension classes at runtime. Coverage tests
+check that registered operations are documented and their arity and return types match the JVM signatures. Explicit
+catalog documentation supplies descriptions, semantic parameter names and types, defaults, option maps, and examples.
+Text and JSON help share that structured documentation. The initial view lists receiver types and namespaces; lookup
+accepts paths, the `project` alias, unqualified operation names, and documented result types. Ambiguous lookups report
+matching paths and unknown names suggest nearby entries.
 
 Native member discovery supplements extension documentation with public method, property, and field signatures from the
 selected MPS distribution. It identifies declaring types and inherited members without evaluating getters. Native API

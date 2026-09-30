@@ -84,6 +84,7 @@ object ProtocolJson {
     fun encodeMakeResponse(response: MakeResponse): String = json.encodeToString(response)
 
     fun encodeCodeHelp(document: CodeHelpDocument): String = json.encodeToString(document)
+    fun decodeCodeHelp(text: String): CodeHelpDocument = json.decodeFromString(text)
     fun decodeTestReport(text: String): TestRunReport = json.decodeFromString(text)
 
     fun encodeBatch(batch: EditBatch): String = json.encodeToString(batch)

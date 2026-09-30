@@ -1,10 +1,26 @@
 package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.protocol.CodeCatalogRequest
-import com.specificlanguages.mops.protocol.CodeCatalogResponse
+import com.specificlanguages.mops.protocol.*
 
 object CodeCatalog {
-    private data class Entry(val receiver: String, val name: String, val signature: String, val access: String, val summary: String) { val path get() = "$receiver.$name" }
+    private data class Entry(val receiver: String, val name: String, val signature: String, val access: String, val summary: String) {
+        val path get() = "$receiver.$name"
+        fun documented(): CodeHelpEntry {
+            val arguments = signature.substringAfter('(', "").substringBeforeLast(')', "")
+            val parameters = if ('(' !in signature || arguments.isEmpty()) emptyList() else arguments.split(", ").map { argument ->
+                val declaration = argument.substringBefore(" = ")
+                val type = declaration.substringBeforeLast(' ')
+                CodeHelpParameter(declaration.substringAfterLast(' '), type.removeSuffix("?"), type.endsWith("?") || argument.endsWith("= null"), argument.substringAfter(" = ", "").ifEmpty { null }, if (declaration.substringAfterLast(' ') == "body") when (path) { "mops.search.eachUsageOf" -> "Receives one SReference"; "mops.search.eachInstanceOf" -> "Receives one SNode"; else -> "Returns the value T returned by the access block" } else null)
+            }
+            val result = signature.substringAfterLast(": ")
+            return CodeHelpEntry(path, signature, summary, if (path in listOf("Project.read", "Project.command")) "outside an access block [none]" else accessDescription(CodeHelpApi.access(receiver, name, access)), parameters,
+                result.removeSuffix("?"), result.endsWith("?"), options(path), examples(path),
+                listOf(result.removeSuffix("?").removePrefix("List<").removeSuffix(">")).filter { it !in listOf("T", "void", "String") },
+                if (name in listOf("properties", "child", "children", "references")) "inside project.read or project.command" else null,
+                if (name in listOf("properties", "child", "children", "references")) "inside project.command" else null)
+        }
+    }
     private val entries = listOf(
         Entry("mops.testing", "run", "mops.testing.run(Object selection = project, Map options = [:]): TestRunReport", "extra", "Build and run project/module/model/test-node tests in an isolated process. Options: build (true), timeout (900 seconds; 0 disables). Returns failures and partial results in a saved report."),
         Entry("mops.editing", "build", "mops.editing.build: MopsEditingBuild", "none", "Editing operations for MPS build projects."),
@@ -30,8 +46,8 @@ object CodeCatalog {
         Entry("SNode", "properties", "SNode.properties: NodeProperties", "none", "Live indexed accessor: properties[name] reads with model access; properties[name] = value writes with command access. Includes inherited properties. Unknown property reads return null; unset values follow MPS getter and data type defaults. Unknown writes fail. Assign null to request clearing through the setter. Reads and writes use SNodeAccessUtil.getProperty/setProperty to invoke MPS property getter/setter handlers while retaining serialized string values. In Groovy this shadows native getProperties(); descriptors are available through node.concept.properties."),
         Entry("mops.lookup", "conceptByName", "mops.lookup.conceptByName(String name): SAbstractConcept?", "read", "Resolve a concept name; return null on a miss. Ambiguity, malformed names, and untrusted language runtimes remain errors."),
         Entry("mops.lookup", "requireConceptByName", "mops.lookup.requireConceptByName(String name): SAbstractConcept", "read", "Resolve exactly one concept; throw on a miss."),
-        Entry("mops.search", "eachUsageOf", "mops.search.eachUsageOf(SNode node, SearchScope scope, Closure body): void", "read", "Stream native SReference values."),
-        Entry("mops.search", "eachInstanceOf", "mops.search.eachInstanceOf(SAbstractConcept concept, SearchScope scope, boolean exact = false, Closure body): void", "read", "Stream native SNode values; subconcepts are included by default."),
+        Entry("mops.search", "eachUsageOf", "mops.search.eachUsageOf(SNode node, SearchScope scope, Closure body): void", "read", "Stream native SReference values; body receives one SReference."),
+        Entry("mops.search", "eachInstanceOf", "mops.search.eachInstanceOf(SAbstractConcept concept, SearchScope scope, boolean exact = false, Closure body): void", "read", "Stream native SNode values; body receives one SNode. Subconcepts are included by default."),
         Entry("mops.lookup", "model", "mops.lookup.model(String target): SModel?", "read", "Resolve a model name or serialized reference; return null on a miss and reject ambiguity."),
         Entry("mops.lookup", "requireModel", "mops.lookup.requireModel(String target): SModel", "read", "Resolve exactly one model; throw on a miss."),
         Entry("mops.lookup", "module", "mops.lookup.module(String target): SModule?", "read", "Resolve a module name or serialized reference; return null on a miss and reject ambiguity."),
@@ -42,17 +58,36 @@ object CodeCatalog {
     ).sortedBy { it.path }
 
     fun response(request: CodeCatalogRequest) = CodeCatalogResponse(if (request.json) json(request.path) else text(request.path))
-    fun text(subject: Any?): String = buildString {
-        appendLine("Code Mode Reference (mops-code-mode 1.0)")
-        select(subject).forEach { appendLine(); appendLine("${it.signature}  [${it.access}]"); appendLine(it.summary) }
-    }.trimEnd()
-    private fun json(subject: Any?): String = select(subject).joinToString(prefix = "[", postfix = "]") {
-        "{\"path\":\"${it.path}\",\"signature\":\"${it.signature}\",\"access\":\"${it.access}\",\"bundle\":\"mops-code-mode:1.0\"}"
+
+    fun text(subject: Any?): String {
+        val document = document(subject)
+        return buildString {
+            appendLine("Code Mode Reference (mops-code-mode 1.0)")
+            appendLine("Access blocks cannot nest. command saves after success and is non-transactional.")
+            if (document.index.isNotEmpty()) {
+                appendLine("Use help('path') to inspect an operation or type; help(object) and help(Class) also work.")
+                document.index.forEach { appendLine("  $it") }
+            }
+            document.entries.forEach { entry ->
+                appendLine(); appendLine(entry.signature)
+                appendLine("Access: ${entry.access}")
+                appendLine(entry.summary)
+                entry.readAccess?.let { appendLine("Indexed reads: $it; indexed writes: ${entry.writeAccess}.") }
+                entry.parameters.forEach { parameter -> appendLine("  ${parameter.name}: ${parameter.type}${if (parameter.nullable) "?" else ""}${parameter.default?.let { " = $it" }.orEmpty()}${parameter.description?.let { "; $it" }.orEmpty()}") }
+                entry.options.forEach { option -> appendLine("  options.${option.name}: ${option.type} = ${option.default}; ${option.description}${if (option.values.isEmpty()) "" else "; values: ${option.values.joinToString()}"}") }
+                entry.examples.forEach { appendLine("Example:\n$it") }
+                if (entry.related.isNotEmpty()) appendLine("Related: ${entry.related.joinToString()}")
+            }
+            document.nativeType?.let { appendLine(); append(renderMembers(it)) }
+        }.trimEnd()
     }
-    private fun select(subject: Any?): List<Entry> {
-        if (subject == null) return entries
+
+    fun json(subject: Any?): String = ProtocolJson.encodeCodeHelp(document(subject))
+
+    internal fun document(subject: Any?): CodeHelpDocument {
+        if (subject == null) return CodeHelpDocument(index = (entries.map { it.receiver } + resultMembers.keys).distinct().sorted())
         val names = when (subject) {
-            is String -> listOf(subject)
+            is String -> CodeMemberInspector.resolveType(if (subject == "project") "Project" else subject)?.let(::typeNames) ?: listOf(if (subject == "project" || subject.startsWith("project.")) "Project" + subject.removePrefix("project") else subject)
             is Mops -> listOf("mops")
             is MopsEditing -> listOf("mops.editing")
             is MopsEditingBuild -> listOf("mops.editing.build")
@@ -64,11 +99,59 @@ object CodeCatalog {
             is Class<*> -> typeNames(subject)
             else -> typeNames(subject.javaClass)
         }
-        return entries.filter { entry -> names.any { name -> entry.path == name || entry.path.startsWith("$name.") || entry.receiver == name } }
-            .also { require(it.isNotEmpty()) { "unknown Code Mode extension: $subject" } }
+        var selected = entries.filter { entry -> names.any { name -> entry.path.equals(name, true) || entry.path.startsWith("$name.", true) || entry.receiver.equals(name, true) } }
+        if (selected.isEmpty() && subject is String) {
+            selected = entries.filter { it.name.equals(subject, true) }
+            require(selected.map { it.receiver }.distinct().size <= 1) { "Ambiguous help name '$subject': ${selected.joinToString { it.path }}" }
+        }
+        val results = resultMembers.filterKeys { key -> names.any { it == key || it.substringAfterLast('.') == key || it.startsWith("$key.") } }.values.flatten().filter { entry -> names.any { it == entry.path.substringBeforeLast('.') || it.substringAfterLast('.') == entry.path.substringBeforeLast('.') || it == entry.path } }
+        val type = when (subject) {
+            is Class<*> -> subject
+            is String -> CodeMemberInspector.resolveType(if (subject == "project") "Project" else subject)
+            else -> if (subject is Mops || subject is MopsEditing || subject is MopsEditingBuild || subject is MopsParsing || subject is MopsTesting || subject is MopsSearch || subject is MopsLookup || subject is JavaSnippetParser) null else subject.javaClass
+        }
+        val native = type?.let { nativeDocument(CodeMemberInspector.inspect(it), selected) }
+        require(selected.isNotEmpty() || results.isNotEmpty() || native != null) {
+            val query = names.first().lowercase()
+            val suggestions = entries.map { it.path }.distinct().sortedBy { editDistance(query, it.lowercase()) }.take(3)
+            "Unknown Code Mode help subject '$subject'. Try: ${suggestions.joinToString()}"
+        }
+        return CodeHelpDocument(entries = selected.map { it.documented() } + results, nativeType = native)
     }
-    private fun typeNames(type: Class<*>): List<String> = sequence {
-        var current: Class<*>? = type
-        while (current != null) { yield(current.name); yield(current.simpleName); current.interfaces.forEach { yield(it.name); yield(it.simpleName) }; current = current.superclass }
-    }.toList()
+
+    private fun typeNames(type: Class<*>): List<String> = CodeMemberInspector.typeHierarchy(type).flatMap { listOf(it.name, it.simpleName) }
+
+    private fun nativeDocument(type: CodeTypeMembers, extensions: List<Entry>) = CodeHelpNativeType(
+        type.type, type.hierarchy,
+        type.methods.map { CodeHelpNativeMethod(it.name, it.parameters.mapIndexed { index, parameter -> CodeHelpParameter(parameter.name ?: "arg$index", parameter.type) }, it.returnType, it.declaringClass, it.inherited, it.static) },
+        type.properties.map { CodeHelpNativeProperty(it.name, it.type, it.getter, it.setter, it.declaringClass, it.inherited, extensions.filter { extension -> extension.name == it.name }.map { extension -> extension.path }) },
+        type.fields.map { CodeHelpNativeField(it.name, it.type, it.declaringClass, it.inherited, it.static, it.writable) },
+    )
+
+    private fun renderMembers(type: CodeHelpNativeType): String = buildString {
+        appendLine("Native members of ${type.type} (signatures only; consult MPS API contracts for access requirements):")
+        type.properties.forEach { member ->
+            appendLine("  ${member.name}: ${member.type} [${member.declaringClass}${if (member.inherited) "; inherited" else ""}]")
+            member.shadowedBy.forEach { appendLine("    Groovy property is shadowed by $it; native getter: ${member.getter}") }
+        }
+        type.methods.forEach { member -> appendLine("  ${member.name}(${member.parameters.joinToString { it.type + " " + it.name }}): ${member.returnType} [${member.declaringClass}${if (member.inherited) "; inherited" else ""}]") }
+        type.fields.forEach { member -> appendLine("  ${member.name}: ${member.type} [${member.declaringClass}]") }
+    }.trimEnd()
+
+    private fun accessDescription(access: String) = when (access) {
+        "extra" -> "outside an access block [extra]"
+        "command" -> "inside project.command [command]"
+        "read" -> "inside project.read or project.command [read]"
+        else -> "no access block required [none]"
+    }
+
+    private fun editDistance(a: String, b: String): Int {
+        var previous = IntArray(b.length + 1) { it }
+        a.forEachIndexed { i, left ->
+            val current = IntArray(b.length + 1); current[0] = i + 1
+            b.forEachIndexed { j, right -> current[j + 1] = minOf(current[j] + 1, previous[j + 1] + 1, previous[j] + if (left == right) 0 else 1) }
+            previous = current
+        }
+        return previous.last()
+    }
 }

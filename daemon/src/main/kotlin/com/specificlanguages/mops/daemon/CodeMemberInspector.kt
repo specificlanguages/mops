@@ -21,6 +21,7 @@ object CodeMemberInspector {
         "com.specificlanguages.mops.daemon.BuildModuleReloadMessage",
         "com.specificlanguages.mops.daemon.NodeChild", "com.specificlanguages.mops.daemon.NodeChildren",
         "com.specificlanguages.mops.daemon.NodeProperties", "com.specificlanguages.mops.daemon.NodeReferences",
+        "com.specificlanguages.mops.protocol.TestResult", "com.specificlanguages.mops.protocol.MakeMessageJson", "com.specificlanguages.mops.protocol.MakeOutcome", "com.specificlanguages.mops.protocol.MakeMessageKind",
         "com.specificlanguages.mops.protocol.TestRunReport", "com.specificlanguages.mops.protocol.MakeResponse",
     )
 
