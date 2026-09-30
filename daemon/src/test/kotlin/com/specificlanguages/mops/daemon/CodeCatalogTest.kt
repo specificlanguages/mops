@@ -129,6 +129,30 @@ class CodeCatalogTest {
     }
 
     @Test
+    fun `unqualified result members report ambiguous receivers`() {
+        assertContains(assertFailsWith<IllegalArgumentException> { CodeCatalog.text("kind") }.message!!, "MakeMessageJson.kind")
+        assertEquals(CodeCatalog.document("reportPath"), CodeCatalog.document("TestRunReport.reportPath"))
+    }
+
+    @Test
+    fun `Java parser documentation retains semantic types with checked JVM shapes`() {
+        CodeCatalog.document("mops.parsing.java").entries.filter { it.path.contains("addJava") }.forEach { entry ->
+            val methods = JavaSnippetParser::class.java.methods.filter { it.name == entry.path.substringAfterLast('.') }
+            assertEquals(entry.parameters.count { it.default == null }..entry.parameters.size, methods.minOf { it.parameterCount }..methods.maxOf { it.parameterCount })
+            assertEquals("JavaParsingResult", methods.first().returnType.simpleName)
+            assertContains(listOf("SNode", "SModel"), entry.parameters.first().type)
+        }
+    }
+
+    @Test
+    fun `operation return types are followable`() {
+        val entries = listOf("mops", "Project", "SNode", "Language", "global").flatMap { CodeCatalog.document(it).entries }
+        entries.flatMap { it.related }.distinct().forEach { assertNotNull(CodeCatalog.document(it)) }
+        assertContains(CodeCatalog.document("JavaSnippetParser").entries.map { it.path }, "mops.parsing.java.addJavaClassesFromString")
+        assertContains(CodeCatalog.document("MopsEditingBuild").entries.map { it.path }, "mops.editing.build.reloadModulesFromDisk")
+    }
+
+    @Test
     fun `unknown names suggest nearby paths`() {
         assertContains(assertFailsWith<IllegalArgumentException> { CodeCatalog.text("createSoluton") }.message!!, "createSolution")
     }

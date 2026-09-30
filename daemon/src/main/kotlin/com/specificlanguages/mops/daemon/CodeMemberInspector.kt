@@ -16,6 +16,7 @@ object CodeMemberInspector {
         "org.jetbrains.mps.openapi.language.SAbstractConcept", "org.jetbrains.mps.openapi.language.SConcept",
         "org.jetbrains.mps.openapi.language.SProperty", "org.jetbrains.mps.openapi.language.SContainmentLink",
         "org.jetbrains.mps.openapi.language.SReferenceLink",
+        "com.specificlanguages.mops.daemon.JavaSnippetParser", "com.specificlanguages.mops.daemon.MopsEditingBuild",
         "com.specificlanguages.mops.daemon.JavaParsingResult",
         "com.specificlanguages.mops.daemon.BuildModuleReloadResult",
         "com.specificlanguages.mops.daemon.BuildModuleReloadMessage",

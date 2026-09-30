@@ -104,7 +104,11 @@ object CodeCatalog {
             selected = entries.filter { it.name.equals(subject, true) }
             require(selected.map { it.receiver }.distinct().size <= 1) { "Ambiguous help name '$subject': ${selected.joinToString { it.path }}" }
         }
-        val results = resultMembers.filterKeys { key -> names.any { it == key || it.substringAfterLast('.') == key || it.startsWith("$key.") } }.values.flatten().filter { entry -> names.any { it == entry.path.substringBeforeLast('.') || it.substringAfterLast('.') == entry.path.substringBeforeLast('.') || it == entry.path } }
+        var results = resultMembers.filterKeys { key -> names.any { it == key || it.substringAfterLast('.') == key || it.startsWith("$key.") } }.values.flatten().filter { entry -> names.any { it == entry.path.substringBeforeLast('.') || it.substringAfterLast('.') == entry.path.substringBeforeLast('.') || it == entry.path } }
+        if (subject is String && selected.isEmpty() && results.isEmpty()) {
+            results = resultMembers.values.flatten().filter { it.path.substringAfterLast('.').equals(subject, true) }
+            require(results.map { it.path.substringBeforeLast('.') }.distinct().size <= 1) { "Ambiguous help name '$subject': ${results.joinToString { it.path }}" }
+        }
         val type = when (subject) {
             is Class<*> -> subject
             is String -> CodeMemberInspector.resolveType(if (subject == "project") "Project" else subject)
@@ -119,7 +123,13 @@ object CodeCatalog {
         return CodeHelpDocument(entries = selected.map { it.documented() } + results, nativeType = native)
     }
 
-    private fun typeNames(type: Class<*>): List<String> = CodeMemberInspector.typeHierarchy(type).flatMap { listOf(it.name, it.simpleName) }
+    private fun typeNames(type: Class<*>): List<String> = CodeMemberInspector.typeHierarchy(type).flatMap {
+        listOf(it.name, it.simpleName) + when (it.simpleName) {
+            "JavaSnippetParser" -> listOf("mops.parsing.java")
+            "MopsEditingBuild" -> listOf("mops.editing.build")
+            else -> emptyList()
+        }
+    }
 
     private fun nativeDocument(type: CodeTypeMembers, extensions: List<Entry>) = CodeHelpNativeType(
         type.type, type.hierarchy,

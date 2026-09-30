@@ -46,7 +46,7 @@ internal fun examples(path: String): List<String> = listOf(withReturn(when (path
             operation.contains("Module") || operation == "module" -> "sample.solution"
             else -> "sample.model"
         }
-        "project.read { $path('$argument') }"
+        "project.read { $path('$argument')${if (operation.contains("Concept") || operation == "conceptByName") "?.qualifiedName" else ""} }"
     }
 }))
 
