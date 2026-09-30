@@ -208,10 +208,11 @@ read-only _Related_: Code Mode, MPS Project, Edit Operation
 **Code Mode Reference**: The discoverable description of the built-in and plugin-provided **Code Mode Extensions**
 available to **Code Mode** for an **MPS Project**. It groups extensions by native MPS receiver type or by paths rooted
 at the **Code Mode Namespace**, identifies each **Code Mode Extension Bundle**, and includes signatures, access
-requirements, and usage documentation without reproducing the native MPS API. It is available through the global `help`
-function in a program and through `mops code help` at the CLI; lookup accepts no argument, a supported receiver class or
-object, or a textual extension path. _Avoid_: command help, service registry _Related_: Code Mode, Code Mode Extension,
-Code Mode Namespace, MPS Project
+requirements, option documentation, examples, and result members. Native receiver members are discoverable alongside
+extensions with their declaring types; their behavior remains governed by the selected MPS version. It is available
+through the global `help` function in a program and through `mops code help` at the CLI; lookup accepts no argument, a
+supported receiver class or object, or a textual extension path. _Avoid_: command help, service registry _Related_: Code
+Mode, Code Mode Extension, Code Mode Namespace, MPS Project
 
 **Code Mode Namespace**: The global `mops` value that groups project-wide **Code Mode Extensions** and concept-specific
 operations by purpose. It exposes capability categories such as `parsing`, `lookup`, and `search`; `testing` and

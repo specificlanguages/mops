@@ -63,5 +63,19 @@ The code is not sandboxed and runs with full access to the filesystem, network, 
 Groovy dependency injection (`@Grab` and related transforms) is disabled to avoid classpath issues. A fresh environment
 (Groovy binding and script classloader) is used for every run.
 
-The default timeout is 900 seconds; pass `--timeout 0` to disable it. Use `mops code help [PATH]` for daemon-backed
-extension discovery, `--json` for its machine-readable form, or global `help(PATH)` while exploring in a program.
+The default timeout is 900 seconds; pass `--timeout 0` to disable it.
+
+Use `mops code help` to list receiver types and namespaces, then `mops code help PATH` for details. The same reference
+is available through global `help(PATH)` in a program. `project` aliases the Project receiver, and an unqualified
+operation name such as `createSolution` works when it identifies one operation. Ambiguous names report matching paths;
+unknown names suggest nearby matches.
+
+Operation help includes parameter and return types, defaults, option keys and accepted values, access requirements,
+and Groovy examples. Follow a return type with `mops code help JavaParsingResult` or `mops code help TestRunReport`
+to inspect its fields. `--json` returns the same documentation in structured form.
+
+Inspect public native members through `help(project)`, `help(model)`, or `help(SNode)` after importing the class.
+The CLI accepts known simple type names such as SNode and fully qualified class names. Member listings include inherited
+methods, Groovy properties, fields, and declaring types alongside applicable mops extensions. They inspect class metadata
+without evaluating getters. Native signatures describe the selected MPS distribution; access requirements and behavior
+must be checked against its API. Mops extension help supplies access requirements for the extensions themselves.

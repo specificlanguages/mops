@@ -171,6 +171,33 @@ class CodeModeIntegrationTest {
             assertContains(help.stdout, "mops.parsing.java")
             assertContains(help.stdout, "mops.search.eachUsageOf")
 
+            fun helpJson(path: String) = cli("code", "help", path, "--json").also {
+                assertEquals(0, it.exitCode, it.output)
+            }.stdout.trim().let(Json::parseToJsonElement)
+
+            assertEquals(helpJson("Project"), helpJson("project"))
+            assertEquals(helpJson("project.createSolution"), helpJson("createSolution"))
+            val creationHelp = helpJson("createSolution").toString()
+            assertContains(creationHelp, "descriptor")
+            assertContains(creationHelp, "usagePreset")
+            assertContains(creationHelp, "parameters")
+            assertContains(creationHelp, "examples")
+            val parsingResultHelp = helpJson("JavaParsingResult").toString()
+            assertContains(parsingResultHelp, "nodes")
+            assertContains(parsingResultHelp, "unresolved")
+
+            program.writeText("""
+                import org.jetbrains.mps.openapi.model.SNode
+                def model = project.read { mops.lookup.requireModel('com.specificlanguages.json.structure') }
+                return [projectHelp: help(project), nodeHelp: help(SNode), modelHelp: help(model)]
+            """.trimIndent())
+            val memberHelp = cli("code", "run", program.pathString)
+            assertEquals(0, memberHelp.exitCode, memberHelp.output)
+            val helpByReceiver = Json.parseToJsonElement(memberHelp.stdout.trim()).jsonObject
+            assertContains(helpByReceiver.getValue("projectHelp").jsonPrimitive.content, "createSolution")
+            assertContains(helpByReceiver.getValue("nodeHelp").jsonPrimitive.content, "getChildren")
+            assertContains(helpByReceiver.getValue("modelHelp").jsonPrimitive.content, "getRootNodes")
+
             assertEquals(0, cli("daemon", "stop").exitCode)
             program.writeText("return project.read { mops.lookup.requireModel('com.specificlanguages.json.structure').rootNodes.iterator().next().properties['name'] }")
             val persisted = cli("code", "run", program.pathString)

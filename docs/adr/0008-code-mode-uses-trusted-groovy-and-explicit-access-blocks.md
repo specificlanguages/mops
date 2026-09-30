@@ -25,16 +25,26 @@ project and module creation conveniences, make and rendering conveniences, and s
 mirroring CLI commands; when behavior is shared, CLI and Code Mode adapters call an implementation expressed in native
 objects or neutral result types rather than calling one another.
 
-Every extension declares an access requirement (`none`, `read`, `command`, or `extra`) and carries KDoc. The build
-generates a packaged **Code Mode Reference** from that documentation. Global `help` and daemon-backed `mops code help`
-query the same reference; they document mops extensions, not the native MPS API. Extension dispatch uses Groovy's
-standard extension-module mechanism. Built-in and plugin bundles use the same descriptor/catalog contract, duplicate
-signatures are rejected, and bundle changes require a manual daemon restart for now.
+Every extension declares an access requirement (`none`, `read`, `command`, or `extra`) and carries KDoc. Global `help`
+and daemon-backed `mops code help` query the same **Code Mode Reference**. Extension dispatch uses Groovy's standard
+extension-module mechanism.
+
+The reference derives extension signatures and access requirements from the registered extension classes at runtime.
+Explicit catalog documentation supplies descriptions, semantic parameter names and types, defaults, option maps, and
+examples. Text and JSON help share that structured documentation. The initial view lists receiver types and namespaces;
+lookup accepts paths, the `project` alias, unqualified operation names, and documented result types. Ambiguous lookups
+report matching paths and unknown names suggest nearby entries.
+
+Native member discovery supplements extension documentation with public method, property, and field signatures from the
+selected MPS distribution. It identifies declaring types and inherited members without evaluating getters. Native API
+behavior and access requirements remain outside the mops extension contract. Generated KDoc reference packaging and the
+external extension-bundle loading contract are deferred.
 
 Programs may retain native MPS objects between Access Blocks, with exactly their native lifetime and validity behavior.
 Result adaptation recursively replaces nodes, models, and modules with their serialized MPS references, or `null` when
-no reference exists; it does not summarize their contents. Other existing scalar and collection result behavior remains.
-There is no requirement that every CLI operation have a Code Mode extension.
+no reference exists; it does not summarize their contents. Make and test reports cross this boundary as JSON objects,
+including inside collections. Other existing scalar and collection result behavior remains. There is no requirement that
+every CLI operation have a Code Mode extension.
 
 ## Consequences
 
