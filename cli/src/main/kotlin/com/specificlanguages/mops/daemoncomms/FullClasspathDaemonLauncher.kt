@@ -69,6 +69,7 @@ class FullClasspathDaemonLauncher(
                 buildList {
                     add(javaExecutableFromJavaHome(context.realJavaHome).pathString)
                     addAll(launchJvmArgs)
+                    addAll(mpsBootstrapJvmArgs(context.realMpsHome))
                     // IdeaEnvironment otherwise forces plugin modules onto the application classpath.
                     add("-Didea.force.use.core.classloader=false")
                     add("-Didea.config.path=${workspace.ideaConfigDir()}")
@@ -241,6 +242,19 @@ class FullClasspathDaemonLauncher(
             }
         }
 
+        internal fun mpsBootstrapJvmArgs(
+            mpsHome: Path,
+            osName: String = System.getProperty("os.name"),
+            osArch: String = System.getProperty("os.arch"),
+        ): List<String> {
+            val descriptor = listOf(
+                mpsHome.resolve("product-info.json"),
+                mpsHome.resolve("Resources/product-info.json"),
+            ).firstOrNull(Files::isRegularFile) ?: return emptyList()
+            val launch = selectMpsLaunch(readMpsLaunches(descriptor), hostPlatform(osName, osArch, descriptor), descriptor)
+            return launch.bootstrapJvmArgs.map { it.replace("\$IDE_HOME", mpsHome.pathString) }
+        }
+
         private fun readMpsLaunches(descriptor: Path): List<MpsLaunch> =
             try {
                 val launches = Json.parseToJsonElement(descriptor.readText()).jsonObject["launch"]?.jsonArray
@@ -261,6 +275,11 @@ class FullClasspathDaemonLauncher(
                     MpsLaunch(
                         os = os,
                         arch = arch,
+                        bootstrapJvmArgs = launch["additionalJvmArguments"]?.jsonArray?.mapIndexed { argIndex, arg ->
+                            val argument = arg.jsonPrimitive
+                            require(argument.isString) { "launch[$index].additionalJvmArguments[$argIndex] is not a string" }
+                            argument.content
+                        }?.filter { it.startsWith("-Xbootclasspath/a:") } ?: emptyList(),
                         bootClassPathJarNames = bootClassPath.mapIndexed { jarIndex, jar ->
                             val jarName = jar.jsonPrimitive
                             require(jarName.isString) {
@@ -290,7 +309,7 @@ class FullClasspathDaemonLauncher(
                 return launches.single()
             }
 
-            val commonBootClasspath = launches.map(MpsLaunch::bootClassPathJarNames).distinct()
+            val commonBootClasspath = launches.map { it.bootClassPathJarNames to it.bootstrapJvmArgs }.distinct()
             if (commonBootClasspath.size == 1) {
                 return launches.first()
             }
@@ -344,6 +363,7 @@ class FullClasspathDaemonLauncher(
             val os: String,
             val arch: String?,
             val bootClassPathJarNames: List<String>,
+            val bootstrapJvmArgs: List<String>,
         )
 
         internal fun startupTimeoutFromEnvironment(value: String?): Duration {
