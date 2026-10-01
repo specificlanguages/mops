@@ -45,7 +45,7 @@ fun main(args: Array<String>) {
         ProjectLoader.build {
             environmentKind = EnvironmentKind.IDEA
             environmentConfig {
-                testMode = true
+                testMode = false
                 addPluginsRecursivelyFrom(Path.of(args[3], "plugins"))
             }
         }.executeWithProject(Path.of(args[2]).toFile()) { environment, opened ->

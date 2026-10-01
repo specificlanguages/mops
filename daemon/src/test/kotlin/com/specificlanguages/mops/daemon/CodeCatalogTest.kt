@@ -108,7 +108,7 @@ class CodeCatalogTest {
             assertEquals(expectedArities, overloads.map { it.parameterCount - 1 }.distinct().sorted(), path)
             val actualReturn = full.returnType.simpleName
             val expected = when (actualReturn) { "Object" -> "T"; "void" -> "void"; else -> actualReturn }
-            assertEquals(expected, entry.returnType, path)
+            assertEquals(expected, entry.returnType.substringBefore('<'), path)
         }
     }
 

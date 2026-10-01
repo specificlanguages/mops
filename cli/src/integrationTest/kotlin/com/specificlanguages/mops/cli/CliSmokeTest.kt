@@ -31,7 +31,7 @@ class CliSmokeTest {
 
     @Test
     fun `read command round-trips through the daemon`() {
-        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val project = copyTestProject("base-language-sandbox", tempDir.resolve("base-language-sandbox"))
         val daemonHome = tempDir.resolve("daemon-home").createDirectories()
 
         try {
@@ -43,7 +43,7 @@ class CliSmokeTest {
                 "find",
                 "instances",
                 "--json",
-                CONCEPT_DECLARATION,
+                CLASS_CONCEPT,
             )
 
             assertEquals(0, result.exitCode, result.output)
@@ -131,6 +131,6 @@ class CliSmokeTest {
     }
 
     private companion object {
-        const val CONCEPT_DECLARATION = "jetbrains.mps.lang.structure.structure.ConceptDeclaration"
+        const val CLASS_CONCEPT = "jetbrains.mps.baseLanguage.structure.ClassConcept"
     }
 }
