@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.cli
 
+import com.specificlanguages.mops.daemoncomms.DefaultDaemonClient
 import com.specificlanguages.mops.protocol.DaemonContext
 import com.specificlanguages.mops.protocol.DaemonRecord
 import com.specificlanguages.mops.protocol.DaemonResponse
@@ -10,6 +11,10 @@ import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.api.parallel.ResourceLock
 import java.nio.file.Path
+import java.nio.file.Files
+import java.time.Duration
+import java.util.concurrent.FutureTask
+import kotlin.concurrent.thread
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.createDirectories
 import kotlin.io.path.pathString
@@ -20,12 +25,58 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @ResourceLock("system-streams")
 class DaemonControlIntegrationTest {
 
     @TempDir(cleanup = CleanupMode.ON_SUCCESS)
     lateinit var tempDir: Path
+
+    @Test
+    fun `discovery pings keep using a daemon during blocked code mode`() {
+        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+        val store = DaemonRecordStore.forDaemonHome(daemonHome)
+        val entered = tempDir.resolve("code-entered")
+        val release = tempDir.resolve("code-release")
+        var work: FutureTask<*>? = null
+        fun literal(path: Path) = "'" + path.pathString.replace("\\", "\\\\").replace("'", "\\'") + "'"
+        try {
+            val started = runCommandLine(project, *javaAndMpsHomeArgs(),
+                "--daemon-home", daemonHome.pathString, "daemon", "ping")
+            assertEquals(0, started.exitCode, started.output)
+            val record = requireNotNull(store.read(project)).record
+            val client = DefaultDaemonClient.fromRecord(record)
+            val request = FutureTask {
+                client.runCode("""
+                    java.nio.file.Files.writeString(java.nio.file.Path.of(${literal(entered)}), 'entered')
+                    while (!java.nio.file.Files.exists(java.nio.file.Path.of(${literal(release)}))) {
+                        Thread.sleep(20)
+                    }
+                    return 'finished'
+                """.trimIndent(), "blocked-code.groovy", Duration.ofSeconds(60))
+            }
+            work = request
+            thread(isDaemon = true) { request.run() }
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30)
+            while (!Files.exists(entered) && !request.isDone && System.nanoTime() < deadline) Thread.sleep(20)
+            assertTrue(Files.exists(entered), "Code Mode must enter the blocked operation")
+            val ping = runCommandLine(project, *javaAndMpsHomeArgs(),
+                "--daemon-home", daemonHome.pathString, "daemon", "ping")
+            assertEquals(0, ping.exitCode, ping.output)
+            assertIs<PongResponse>(ProtocolJson.decodeResponse(ping.stdout.trim()))
+            assertEquals(record, store.read(project)?.record, "discovery must retain the busy daemon")
+            assertFalse(request.isDone, "ping must finish while Code Mode is blocked")
+        } finally {
+            Files.writeString(release, "release")
+            try {
+                work?.get(30, TimeUnit.SECONDS)
+            } finally {
+                stopDaemons(project, daemonHome)
+            }
+        }
+    }
 
     @Test
     fun `daemon detaches and status detects a killed daemon`() {

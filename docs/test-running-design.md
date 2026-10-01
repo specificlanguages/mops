@@ -21,8 +21,8 @@ pinned development baseline.
 - An omitted selection runs all project tests. Selecting a non-test node is an error; the diagnostic refers to the
   nearest runnable ancestor, or an appropriate model, module, or project selection.
 - Generate and compile the selected tests' owning modules and required dependencies by default before execution.
-- Save the project before launching the worker and serialize mops operations on that project for the run. The worker
-  uses the existing checkout; this does not isolate external edits or roll back filesystem changes made by tests.
+- Save the project before launching the worker and exclude other domain operations on that project for the run. The
+  worker uses the existing checkout; this does not isolate external edits or roll back filesystem changes made by tests.
 - Support cancellation and timeouts. Retain results for completed tests, mark interrupted runs incomplete, and return a
   nonzero CLI exit status for them.
 - Use one overall deadline covering startup, build, discovery, and execution.

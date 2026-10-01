@@ -19,6 +19,11 @@ import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketTimeoutException
+import java.net.SocketException
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
@@ -32,6 +37,7 @@ class ProjectDaemon(
     val token: String,
     val idleTimeout: Duration,
 ) {
+    @Volatile
     var done = false
 
     /**
@@ -66,28 +72,59 @@ class ProjectDaemon(
                 ),
             )
 
-            server.soTimeout = idleTimeout.toMillis().toInt()
+            val handler = DomainRequestHandler(workspace.path, mpsAccess, platform)
+            val connections = Executors.newCachedThreadPool()
+            val active = AtomicInteger()
+            val lastActivity = AtomicLong(System.nanoTime())
+            val idleNanos = idleTimeout.toNanos()
+            server.soTimeout = idleTimeout.toMillis().coerceIn(1, 1000).toInt()
 
             try {
                 while (!done) {
                     val socket = try {
                         server.accept()
                     } catch (_: SocketTimeoutException) {
-                        logger.log("idle for ${idleTimeout.toMinutes()} min with no requests, shutting down")
-                        break
-                    }
-                    try {
-                        socket.use {
-                            connection(socket, mpsAccess, platform)
+                        if (idleNanos > 0 && active.get() == 0 && System.nanoTime() - lastActivity.get() >= idleNanos) {
+                            logger.log("idle for ${idleTimeout.toMinutes()} min with no requests, shutting down")
+                            break
                         }
-                    } catch (throwable: Throwable) {
-                        // One request must never take the daemon down. In particular a linkage error while lazily
-                        // loading a request class is a Throwable rather than a RuntimeException; letting it escape the
-                        // loop would strand the JVM holding the MPS workspace lock. Log and keep serving instead.
-                        logger.log("request handling failed, continuing to serve: $throwable")
+                        continue
+                    } catch (exception: SocketException) {
+                        if (done) break
+                        throw exception
+                    }
+                    active.incrementAndGet()
+                    connections.execute {
+                        try {
+                            socket.use {
+                                // Bound clients that connect without completing a request so shutdown can drain them.
+                                socket.soTimeout = 10_000
+                                connection(socket, handler) {
+                                    done = true
+                                    server.close()
+                                }
+                            }
+                        } catch (throwable: Throwable) {
+                            logger.log("request handling failed, continuing to serve: $throwable")
+                        } finally {
+                            lastActivity.set(System.nanoTime())
+                            active.decrementAndGet()
+                        }
                     }
                 }
             } finally {
+                server.close()
+                connections.shutdown()
+                // Accepted requests finish before the caller disposes the MPS environment.
+                var interrupted = false
+                while (!connections.isTerminated) {
+                    try {
+                        connections.awaitTermination(1, TimeUnit.SECONDS)
+                    } catch (_: InterruptedException) {
+                        interrupted = true
+                    }
+                }
+                if (interrupted) Thread.currentThread().interrupt()
                 // Remove our own record so the next CLI invocation starts a fresh daemon instead of tripping over a
                 // dangling record, pinging a dead port, and reporting the failure.
                 workspace.deleteDaemonRecordOwnedBy(token)
@@ -95,7 +132,7 @@ class ProjectDaemon(
         }
     }
 
-    private fun connection(socket: Socket, mpsAccess: MpsAccess, platform: Platform?) {
+    private fun connection(socket: Socket, handler: DomainRequestHandler, stop: () -> Unit) {
         val requestLine = BufferedReader(InputStreamReader(socket.getInputStream())).readLine()
 
         val response = run {
@@ -129,15 +166,16 @@ class ProjectDaemon(
                 )
 
                 is StopRequest -> StoppedResponse()
-                else -> DomainRequestHandler(workspace.path, mpsAccess, platform).handleDomainRequest(request)
+                else -> handler.handleDomainRequest(request)
             }
         }
 
-        PrintWriter(socket.getOutputStream(), true).use { writer ->
-            writer.println(ProtocolJson.encodeResponse(response))
-        }
-        if (response is StoppedResponse) {
-            done = true
+        try {
+            PrintWriter(socket.getOutputStream(), true).use { writer ->
+                writer.println(ProtocolJson.encodeResponse(response))
+            }
+        } finally {
+            if (response is StoppedResponse) stop()
         }
     }
 
