@@ -43,6 +43,7 @@ dependencies {
 
     jbr(libs.mps.jbr)
 
+    testImplementation("org.apache.groovy:groovy-json:${libs.versions.groovy.get()}")
     testImplementation(libs.system.lambda)
     testImplementation(libs.mockito.kotlin)
     testImplementation(libs.junit.jupiter)
@@ -92,6 +93,10 @@ dependencies {
 application {
     applicationName = "mops-daemon"
     mainClass = "com.specificlanguages.mops.daemon.MainKt"
+}
+
+sourceSets.test {
+    resources.srcDir(rootProject.layout.projectDirectory.dir("skills"))
 }
 
 val testMpsRoot = mpsPlatformCache.getMpsRoot(mpsZip)

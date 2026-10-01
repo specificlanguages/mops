@@ -37,6 +37,8 @@ import com.specificlanguages.mops.cli.make.MakeModulesCommand
 import com.specificlanguages.mops.cli.make.MakeOperations
 import com.specificlanguages.mops.cli.make.MakeProjectCommand
 import com.specificlanguages.mops.cli.render.ModelRenderNodeCommand
+import com.specificlanguages.mops.cli.skill.SkillOperations
+import com.specificlanguages.mops.cli.skill.SkillPathCommand
 import com.specificlanguages.mops.cli.render.RenderOperations
 import java.lang.Exception
 import java.nio.file.Path
@@ -100,6 +102,9 @@ fun newCommandLine(workingDirectory: Path = Path.of("").absolute()): CommandLine
     root.addLeaf("test", com.specificlanguages.mops.cli.testing.TestCommand(rootCommand))
     root.addLeaf("list", MpsListCommand(rootCommand))
     root.addLeaf("wrapper", WrapperCommand(rootCommand))
+    root.addGroup("skill", SkillOperations()) {
+        addLeaf("path", SkillPathCommand())
+    }
     root.addLeaf("explain", ExplainCommand())
     root.addLeaf("help", RecursiveHelpCommand())
 

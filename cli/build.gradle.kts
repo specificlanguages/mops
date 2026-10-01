@@ -99,6 +99,9 @@ val writeDaemonClasspath by tasks.registering {
 distributions {
     main {
         contents {
+            from(rootProject.layout.projectDirectory.dir("skills")) {
+                into("skills")
+            }
             into("lib") {
                 from(daemonRuntimeClasspath)
                 duplicatesStrategy = DuplicatesStrategy.EXCLUDE
