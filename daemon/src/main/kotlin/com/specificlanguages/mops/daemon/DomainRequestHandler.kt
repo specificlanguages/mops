@@ -9,92 +9,100 @@ import java.nio.file.Path
 import kotlin.io.path.pathString
 
 class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess, private val platform: Platform? = null) {
+    private val gate = ProjectRequestGate { mpsAccess.extra { refreshExternalChanges() } }
+
     fun handleDomainRequest(request: DaemonRequest): DaemonResponse =
         try {
-            mpsAccess.extra { refreshExternalChanges() }
-            when (request) {
-                is ModelGetNodeRequest ->
-                    ModelGetNodeResponse(node = mpsAccess.read { getNode(request.target, request.ancestry) })
-
-                is ModelRenderNodeRequest -> ModelRenderNodeResponse(
-                    text = mpsAccess.extra { renderNode(request.target, request.allowReflective) },
-                )
-
-                is ModelCheckRequest -> mpsAccess.read { checkModel(request.target, request.limit) }
-
-                is ProjectCheckRequest -> mpsAccess.read { checkProject(request.limit) }
-
-                is ModuleCheckRequest -> mpsAccess.read { checkModules(request.modules, request.limit) }
-
-                is FindUsagesRequest -> mpsAccess.read {
-                    findUsages(request.target, resolveScope(request.scope), request.limit)
+            gate.run(request.parallelRead) {
+                dispatch(request).also {
+                    if (request.savesProject) mpsAccess.extra { saveProject() }
                 }
-
-                is FindInstancesRequest -> mpsAccess.read {
-                    findInstances(
-                        request.concept,
-                        request.exact,
-                        resolveScope(request.scope),
-                        request.filters,
-                        request.limit,
-                    )
-                }
-
-                is FindByNameRequest -> mpsAccess.read {
-                    findByName(request.pattern, resolveScope(request.scope), request.limit)
-                }
-
-                is FindNodeByIdRequest -> mpsAccess.read {
-                    findNodeById(request.nodeId, resolveScope(request.scope), request.limit)
-                }
-
-                is ModelEditRequest -> mpsAccess.write { modelEdit(request.batch, request.constraints) }
-
-                is MpsListRequest -> MpsListResponse(
-                    root = mpsAccess.read {
-                        list(
-                            target = request.target,
-                            depth = request.depth,
-                            limit = request.limit,
-                            summary = request.summary,
-                            role = request.role,
-                        )
-                    },
-                )
-
-                is DiagnoseModulesRequest -> mpsAccess.read { diagnoseModules() }
-
-                is DiagnoseModuleRequest -> mpsAccess.read { diagnoseModule(request.module) }
-
-                is MakeModulesRequest -> mpsAccess.extra { makeModules(request.modules) }
-
-                is MakeProjectRequest -> mpsAccess.extra { makeProject() }
-
-                is TestRunRequest -> TestRunResponse(
-                    ProjectTesting(mpsAccess as JetBrainsMpsAccess, workspacePath).run(
-                        request.target, request.build, request.deadlineMillis, request.cancellationPath))
-
-                is CodeRunRequest -> {
-                    val access = mpsAccess as? JetBrainsMpsAccess
-                        ?: error("Running code mode requires the JetBrains MPS runtime")
-                    CodeModeExecutor(access, access.project, requireNotNull(platform) { "Running code mode requires the MPS platform" }, ProjectTesting(access, workspacePath))
-                        .execute(request)
-                }
-
-                is CodeCatalogRequest -> CodeCatalog.response(request)
-
-                is CreateLanguageRequest -> moduleResponse(request.dryRun) { createLanguage(request) }
-                is CreateSolutionRequest -> moduleResponse(request.dryRun) { createSolution(request) }
-                is CreateDevkitRequest -> moduleResponse(request.dryRun) { createDevkit(request) }
-                is CreateGeneratorRequest -> moduleResponse(request.dryRun) { createGenerator(request) }
-                is CreateModelRequest -> mpsAccess.write { ModelCreator((mpsAccess as JetBrainsMpsAccess).project).create(request) }
-
-                else -> errorResponse("UNSUPPORTED_REQUEST", "unsupported request type: ${request::class.simpleName}")
-            }.also { mpsAccess.extra { saveProject() } }
+            }
         } catch (exception: MpsRequestException) {
             errorResponse(exception.code.name, exception.message)
         } catch (throwable: Throwable) {
             errorResponse(MpsErrorCode.GENERIC_FAILURE.name, throwable.message ?: throwable.javaClass.name)
+        }
+
+    private fun dispatch(request: DaemonRequest): DaemonResponse =
+        when (request) {
+            is ModelGetNodeRequest ->
+                ModelGetNodeResponse(node = mpsAccess.read { getNode(request.target, request.ancestry) })
+
+            is ModelRenderNodeRequest -> ModelRenderNodeResponse(
+                text = mpsAccess.extra { renderNode(request.target, request.allowReflective) },
+            )
+
+            is ModelCheckRequest -> mpsAccess.read { checkModel(request.target, request.limit) }
+
+            is ProjectCheckRequest -> mpsAccess.read { checkProject(request.limit) }
+
+            is ModuleCheckRequest -> mpsAccess.read { checkModules(request.modules, request.limit) }
+
+            is FindUsagesRequest -> mpsAccess.read {
+                findUsages(request.target, resolveScope(request.scope), request.limit)
+            }
+
+            is FindInstancesRequest -> mpsAccess.read {
+                findInstances(
+                    request.concept,
+                    request.exact,
+                    resolveScope(request.scope),
+                    request.filters,
+                    request.limit,
+                )
+            }
+
+            is FindByNameRequest -> mpsAccess.read {
+                findByName(request.pattern, resolveScope(request.scope), request.limit)
+            }
+
+            is FindNodeByIdRequest -> mpsAccess.read {
+                findNodeById(request.nodeId, resolveScope(request.scope), request.limit)
+            }
+
+            is ModelEditRequest -> mpsAccess.write { modelEdit(request.batch, request.constraints) }
+
+            is MpsListRequest -> MpsListResponse(
+                root = mpsAccess.read {
+                    list(
+                        target = request.target,
+                        depth = request.depth,
+                        limit = request.limit,
+                        summary = request.summary,
+                        role = request.role,
+                    )
+                },
+            )
+
+            is DiagnoseModulesRequest -> mpsAccess.read { diagnoseModules() }
+
+            is DiagnoseModuleRequest -> mpsAccess.read { diagnoseModule(request.module) }
+
+            is MakeModulesRequest -> mpsAccess.extra { makeModules(request.modules) }
+
+            is MakeProjectRequest -> mpsAccess.extra { makeProject() }
+
+            is TestRunRequest -> TestRunResponse(
+                ProjectTesting(mpsAccess as JetBrainsMpsAccess, workspacePath).run(
+                    request.target, request.build, request.deadlineMillis, request.cancellationPath))
+
+            is CodeRunRequest -> {
+                val access = mpsAccess as? JetBrainsMpsAccess
+                    ?: error("Running code mode requires the JetBrains MPS runtime")
+                CodeModeExecutor(access, access.project, requireNotNull(platform) { "Running code mode requires the MPS platform" }, ProjectTesting(access, workspacePath))
+                    .execute(request)
+            }
+
+            is CodeCatalogRequest -> CodeCatalog.response(request)
+
+            is CreateLanguageRequest -> moduleResponse(request.dryRun) { createLanguage(request) }
+            is CreateSolutionRequest -> moduleResponse(request.dryRun) { createSolution(request) }
+            is CreateDevkitRequest -> moduleResponse(request.dryRun) { createDevkit(request) }
+            is CreateGeneratorRequest -> moduleResponse(request.dryRun) { createGenerator(request) }
+            is CreateModelRequest -> mpsAccess.write { ModelCreator((mpsAccess as JetBrainsMpsAccess).project).create(request) }
+
+            else -> errorResponse("UNSUPPORTED_REQUEST", "unsupported request type: ${request::class.simpleName}")
         }
 
     private fun errorResponse(code: String, message: String): DaemonErrorResponse =

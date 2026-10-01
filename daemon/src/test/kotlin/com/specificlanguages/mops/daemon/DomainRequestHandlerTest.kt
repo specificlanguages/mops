@@ -214,9 +214,9 @@ class DomainRequestHandlerTest {
         inOrder(access, operations, extra) {
             verify(extra).refreshExternalChanges()
             verify(operations).list(listOf("moduleA"), 3)
-            verify(extra).saveProject()
+
         }
-        verifyNoMoreInteractions(operations)
+        verifyNoMoreInteractions(operations, extra)
     }
 
     @Test
@@ -228,8 +228,12 @@ class DomainRequestHandlerTest {
         val response = handler.handleDomainRequest(ModelEditRequest(TOKEN, batch))
 
         assertEquals(expected, response)
-        verify(operations).modelEdit(batch)
-        verifyNoMoreInteractions(operations)
+        inOrder(extra, operations) {
+            verify(extra).refreshExternalChanges()
+            verify(operations).modelEdit(batch)
+            verify(extra).saveProject()
+        }
+        verifyNoMoreInteractions(operations, extra)
     }
 
     @Test

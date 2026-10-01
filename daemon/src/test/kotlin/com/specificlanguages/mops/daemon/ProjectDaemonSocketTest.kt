@@ -26,6 +26,10 @@ import java.net.InetAddress
 import java.net.Socket
 import java.nio.file.Path
 import java.time.Duration
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.FutureTask
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 import kotlin.io.path.createDirectories
 import kotlin.io.path.pathString
 import kotlin.test.AfterTest
@@ -165,6 +169,14 @@ class ProjectDaemonSocketTest {
     }
 
     @Test
+    fun `zero idle timeout keeps serving until stopped`() {
+        val daemon = start(idleTimeout = Duration.ZERO)
+        assertIs<PongResponse>(daemon.exchange(PingRequest(TOKEN)))
+        assertIs<StoppedResponse>(daemon.exchange(StopRequest(TOKEN)))
+        assertTrue(daemon.awaitTermination())
+    }
+
+    @Test
     fun `an idle daemon removes its own record on shutdown`() {
         val daemon = start(idleTimeout = Duration.ofMillis(200))
 
@@ -188,6 +200,65 @@ class ProjectDaemonSocketTest {
             daemon.readRecord()?.record?.token,
             "a daemon must not delete a record another daemon now owns",
         )
+    }
+
+    @Test
+    fun `ping bypasses blocked domain work and stop drains it`() {
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        whenever(operations.resolveScope(null)).thenReturn(ResolvedScope.EditableProjectSources)
+        val expected = FindInstancesResponse(limit = 100, truncated = false, nodes = emptyList())
+        whenever(operations.findInstances("blocked", false, ResolvedScope.EditableProjectSources, limit = 100))
+            .thenAnswer {
+                entered.countDown()
+                assertTrue(release.await(10, TimeUnit.SECONDS))
+                expected
+            }
+        val daemon = start()
+        val request = FutureTask { daemon.exchange(FindInstancesRequest(TOKEN, "blocked", exact = false, limit = 100)) }
+        thread(isDaemon = true) { request.run() }
+        try {
+            assertTrue(entered.await(5, TimeUnit.SECONDS))
+            assertIs<PongResponse>(daemon.exchange(PingRequest(TOKEN)))
+            assertEquals(error("TOKEN_MISMATCH", "invalid daemon token: wrong-token"),
+                daemon.exchange(StopRequest("wrong-token")))
+            assertIs<StoppedResponse>(daemon.exchange(StopRequest(TOKEN)))
+            assertTrue(daemon.isAlive(), "stop must wait for accepted domain work before teardown")
+            release.countDown()
+            assertEquals(expected, request.get(5, TimeUnit.SECONDS))
+            assertTrue(daemon.awaitTermination())
+            assertNull(daemon.readRecord())
+        } finally {
+            release.countDown()
+        }
+    }
+
+    @Test
+    fun `idle timeout starts after active work finishes`() {
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        whenever(operations.resolveScope(null)).thenReturn(ResolvedScope.EditableProjectSources)
+        whenever(operations.findInstances("blocked", false, ResolvedScope.EditableProjectSources, limit = 100))
+            .thenAnswer {
+                entered.countDown()
+                assertTrue(release.await(10, TimeUnit.SECONDS))
+                FindInstancesResponse(limit = 100, truncated = false, nodes = emptyList())
+            }
+        val daemon = start(idleTimeout = Duration.ofMillis(200))
+        val request = FutureTask { daemon.exchange(FindInstancesRequest(TOKEN, "blocked", exact = false, limit = 100)) }
+        thread(isDaemon = true) { request.run() }
+        try {
+            assertTrue(entered.await(5, TimeUnit.SECONDS))
+            Thread.sleep(500)
+            assertTrue(daemon.isAlive())
+            assertIs<PongResponse>(daemon.exchange(PingRequest(TOKEN)))
+            release.countDown()
+            assertIs<FindInstancesResponse>(request.get(5, TimeUnit.SECONDS))
+            assertTrue(daemon.awaitTermination())
+            assertNull(daemon.readRecord())
+        } finally {
+            release.countDown()
+        }
     }
 
     private fun start(idleTimeout: Duration = Duration.ofSeconds(30)): RunningDaemon {
@@ -255,6 +326,8 @@ class ProjectDaemonSocketTest {
                 socket.shutdownOutput()
                 parse(readLine(socket))
             }
+
+        fun isAlive(): Boolean = thread.isAlive
 
         fun awaitTermination(): Boolean {
             thread.join(5_000)
