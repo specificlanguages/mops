@@ -29,7 +29,7 @@ class TestFamiliesIntegrationTest {
             val allReport = ProtocolJson.decodeTestReport(all.stdout)
             assertEquals("TEST_FAILED", allReport.outcome, all.output)
             assertTrue(allReport.complete, all.output)
-            val parameterized = cli("test", "mops.tests", ".ordinary", "ParameterizedCase", "parameterized", "--no-build", "--json")
+            val parameterized = cli("test", "mops.tests", ".ordinary", "ParameterizedCase", "--no-build", "--json")
             assertEquals(0, parameterized.exitCode, parameterized.output)
             allReport to ProtocolJson.decodeTestReport(parameterized.stdout)
         } finally {

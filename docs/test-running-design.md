@@ -17,9 +17,8 @@ pinned development baseline.
 
 - Execute tests in a separate process for correctness and robustness. See
   [ADR-0013](adr/0013-tests-run-in-a-separate-process.md).
-- Support selection at five levels: individual test, test case, model, module, and whole project.
-- An omitted selection runs all project tests. Selecting a non-test node is an error; the diagnostic refers to the
-  nearest runnable ancestor, or an appropriate model, module, or project selection.
+- Support root test-case, model, module, and whole-project selection. Individual test methods are unsupported.
+- An omitted selection runs all project tests. Selecting a non-test root or a method is an error.
 - Generate and compile the selected tests' owning modules and required dependencies by default before execution.
 - Save the project before launching the worker and exclude other domain operations on that project for the run. The
   worker uses the existing checkout; this does not isolate external edits or roll back filesystem changes made by tests.
@@ -73,8 +72,8 @@ CI. The `integrationTestLocal` task accepts an extracted distribution and JBR, p
 master build without introducing a separate harness. Master is not currently included in the default release matrix.
 
 Feature validation must exercise representative native BaseLanguage, language, generator, and ordinary JUnit tests
-across the supported versions, including the MPS legacy compatibility path where applicable. Verify selection at all
-five levels, build failure, missing classes, zero tests, skips and aborts, test and container failures, cancellation,
+across the supported versions, including ordinary legacy JUnit classes recognized by Ant. Verify supported selection
+levels, build failure, missing classes, zero tests, skips and aborts, test and container failures, cancellation,
 deadlines, retained partial reports, and daemon usability after standalone worker termination.
 
 Existing Code Mode integration tests establish infrastructure behavior; they do not establish support for executing MPS
@@ -88,3 +87,25 @@ validation requirements are distinct; support must be demonstrated with represen
 
 The companion `docs/legacy-test-execution.md` note records the environment-aware legacy runner contract and runtime
 observations across the four validation baselines.
+
+## Worker startup
+
+The daemon resolves selection to persistent identities and descriptor paths. A separate controller performs the optional
+incremental build in a normal-mode preparation environment and saves the project. No-build runs start Ant without
+initializing a preparation MPS environment. It starts the selected distribution's Ant `launchtests` task on an
+independent classpath. Ant constructs the test JVM arguments and classpath; a small `LaunchTestWorker` subclass inherits
+test-mode environment startup and loads a version-specific launcher adapter through the stock launcher module's
+classloader. The adapter filters stock module discovery, forwards listener callbacks to the stock failure detector, and
+publishes atomic protocol events. The preparation process collects those events while supervising the Ant process.
+Cancellation, deadline expiration, and parent termination kill the whole process tree.
+
+Automatic plugin discovery loads installed plugins through normal plugin loading. MPS 2025.1 disables
+`com.intellij.platform.images` in the isolated test configuration because its SVG parser on the Ant application
+classpath cannot resolve the plugin's SVG language. Tests requiring Images are unsupported on 2025.1. No blacklist is
+applied to 2024.1, 2026.1, or development versions. The normal daemon retains product-info boot-classpath parsing and
+applies declared bootstrap-classpath JVM arguments.
+
+The adapters preserve Ant's session, execution, XML reporting, and failure detection. They do not add the IDE's separate
+environment-aware legacy runner. Model filtering happens after module-wide discovery and class loading; unselected
+broken classes can still fail discovery. The selected JBR must include `javac`, which compiles the small adapters
+against the actual distribution before execution.

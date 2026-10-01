@@ -1,7 +1,6 @@
 package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.protocol.*
-import java.io.File
 import java.lang.management.ManagementFactory
 import java.nio.file.Files
 import java.nio.file.Path
@@ -21,13 +20,18 @@ class ProjectTesting(private val access: JetBrainsMpsAccess, private val workspa
             return report.snapshot()
         }
         access.extra { saveProject() }
+        report.phase("DISCOVERY")
+        val selectionPath = directory.resolve("selection.properties")
+        try {
+            AntTestSelection.resolve(access, target).save(selectionPath)
+        } catch (failure: Exception) {
+            report.finish("DISCOVERY_FAILED", true, failure.stackTraceToString())
+            return report.snapshot()
+        }
         val requestPath = directory.resolve("request.json")
         Files.writeString(requestPath, ProtocolJson.encodeRequest(TestRunRequest("", target, build, deadlineMillis, cancellationPath)))
         val classpathFile = directory.resolve("classpath.args")
-        // IDEA's SVG parser references this plugin directly during background indexing in MPS 2025.1.
-        val images = Path.of(jetbrains.mps.util.PathManager.getHomePath(), "plugins/platform-images/lib/platform-images.jar")
-        val entries = listOf(System.getProperty("java.class.path")) + listOf(images).filter(Files::isRegularFile).map(Path::toString)
-        val classpath = entries.joinToString(File.pathSeparator).replace("\\", "\\\\").replace("\"", "\\\"")
+        val classpath = System.getProperty("java.class.path").replace("\\", "\\\\").replace("\"", "\\\"")
         Files.writeString(classpathFile, "-cp\n\"$classpath\"\n")
         val args = ManagementFactory.getRuntimeMXBean().inputArguments.filterNot {
             it.startsWith("-Djava.awt.headless=") || it.startsWith("-Didea.config.path=") || it.startsWith("-Didea.system.path=") ||
@@ -38,8 +42,8 @@ class ProjectTesting(private val access: JetBrainsMpsAccess, private val workspa
             "-Didea.config.path=${directory.resolve("idea-config")}",
             "-Didea.system.path=${directory.resolve("idea-system")}",
             "@$classpathFile",
-            "com.specificlanguages.mops.daemon.TestWorkerKt", requestPath.toString(), reportPath.toString(),
-            requireNotNull(access.project.project.basePath), jetbrains.mps.util.PathManager.getHomePath(),
+            "com.specificlanguages.mops.daemon.TestPreparationKt", requestPath.toString(), reportPath.toString(),
+            requireNotNull(access.project.project.basePath), jetbrains.mps.util.PathManager.getHomePath(), selectionPath.toString(),
         )
         val worker = try {
             ProcessBuilder(command).redirectErrorStream(true).redirectOutput(directory.resolve("worker.log").toFile()).start()
@@ -59,7 +63,7 @@ class ProjectTesting(private val access: JetBrainsMpsAccess, private val workspa
             }
         } finally {
             if (worker.isAlive) {
-                worker.descendants().forEach { it.destroyForcibly() }
+                worker.descendants().toList().asReversed().forEach { it.destroyForcibly() }
                 worker.destroyForcibly()
                 worker.waitFor()
             }

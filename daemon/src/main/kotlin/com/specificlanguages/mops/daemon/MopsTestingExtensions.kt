@@ -7,7 +7,7 @@ import org.jetbrains.mps.openapi.module.SModule
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 
 object MopsTestingExtensions {
-    /** Builds and runs a project, module, model, test case, or test in an isolated worker. Options: build (default true), timeout in seconds (default 900; 0 disables). Returns a saved report, including failures and interruptions. Access: extra. */
+    /** Builds and runs a project, module, model, or root test case in an isolated worker. Individual test methods are unsupported. Options: build (default true), timeout in seconds (default 900; 0 disables). Returns a saved report, including failures and interruptions. Access: extra. */
     @CodeModeExtension(MpsAccessLevel.EXTRA)
     @JvmStatic
     @JvmOverloads

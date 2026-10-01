@@ -241,17 +241,23 @@ mops test --timeout 60
 ```
 
 Tests run in a separate MPS process using the selected distribution's testing framework. Selection accepts a project
-(omit the target), module, model, test case, or individual test node. The default build includes the owning modules and
-required dependencies. `--no-build` requires existing compiled classes. The overall timeout defaults to 900 seconds;
-`--timeout 0` disables it. Ctrl-C cancels the worker. Standalone cancellation and timeouts leave the daemon usable.
-Selection follows MPS discovery, which can exclude individually disabled methods; select their test case to retain
-JUnit's skipped results.
+(omit the target), module, model, or root test case. Individual test methods are unsupported. The default build includes
+the owning modules and required dependencies. `--no-build` requires existing compiled classes. The overall timeout
+defaults to 900 seconds; `--timeout 0` disables it. Ctrl-C cancels the worker. Standalone cancellation and timeouts
+leave the daemon usable. Execution uses the distribution's Ant `launchtests` machinery in IDEA test mode, including its
+test session, failure detection, and XML reports. The test JVM's classpath is constructed independently of the normal
+daemon's boot classpath. Plugins are discovered automatically. On MPS 2025.1 only, Images
+(`com.intellij.platform.images`) is disabled to avoid its SVG parser classloader defect; tests requiring Images are
+unsupported on that version. Model and test-case filtering occurs after module-wide class discovery, so broken
+unselected classes can also fail a run, particularly with `--no-build`. A matching JBR with `javac` is required to
+compile the version-specific adapter.
 
 Every run saves `report.json` under the daemon workspace's `test-runs/<run-id>/` directory and updates it as results
 arrive. Text output prints a summary and the report path; `--json` prints the report. Tests, containers, skips,
 assumption aborts, failures, and source node references are retained. No discovered tests, preparation failures, test or
 container failures, and incomplete runs exit 1. Skips and assumption aborts alone do not fail a run. Worker output is
-saved next to the report in `worker.log`.
+saved next to the report in `worker.log` (preparation) and `ant.log` (test execution); XML reports are in
+`xml-reports/`.
 
 Code Mode provides the same operation outside model-access blocks:
 

@@ -20,7 +20,8 @@ class TestReportStore(private val path: Path) {
     }
     fun phase(phase: String) = update { it.copy(phase = phase) }
     fun finish(outcome: String, complete: Boolean, diagnostic: String? = null) = update {
-        it.copy(outcome = outcome, complete = complete,
+        if (it.outcome in setOf("CANCELLED", "TIMED_OUT", "PARENT_TERMINATED")) it
+        else it.copy(outcome = outcome, complete = complete,
             diagnostics = it.diagnostics + listOfNotNull(diagnostic))
     }
     fun event(event: Map<String, Any?>) = update { current ->
