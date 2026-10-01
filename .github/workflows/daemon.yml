@@ -5,15 +5,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-  schedule:
-    - cron: '17 2 * * *'
 
 permissions:
   contents: read
 
 jobs:
   daemon:
-    if: github.event_name != 'schedule'
     strategy:
       fail-fast: false
       matrix:
@@ -44,7 +41,6 @@ jobs:
             cli/build/reports/tests/
 
   integration-versions:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
