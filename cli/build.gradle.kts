@@ -1,4 +1,5 @@
 import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
 plugins {
     id("mops.kotlin-jvm-conventions")
@@ -117,6 +118,7 @@ fun Test.configureIntegrationTest(mpsHome: Provider<File>, jbrHome: Provider<Fil
     group = LifecycleBasePlugin.VERIFICATION_GROUP
 
     dependsOn(tasks.installDist)
+    dependsOn(daemonMpsPlugin)
     inputs.property("mpsHome", mpsHome.map { it.absolutePath })
     inputs.property("jbrHome", jbrHome.map { it.absolutePath })
     inputs.dir(tasks.installDist.map { it.destinationDir })
@@ -129,6 +131,7 @@ fun Test.configureIntegrationTest(mpsHome: Provider<File>, jbrHome: Provider<Fil
     classpath = integrationTest.runtimeClasspath
     testLogging {
         events("started", "passed", "skipped", "failed")
+        exceptionFormat = TestExceptionFormat.FULL
     }
 
     jvmArgumentProviders.add {
@@ -139,7 +142,7 @@ fun Test.configureIntegrationTest(mpsHome: Provider<File>, jbrHome: Provider<Fil
             "-Dtest.groovyVersion=${libs.versions.groovy.get()}",
             "-Dtest.projectsDir=${rootDir.resolve("test-projects")}",
             "-Dmops.daemon.classpath=${daemonRuntimeClasspath.get().asPath}",
-            "-Dmops.daemon.mps.plugin=${tasks.installDist.get().destinationDir.resolve("mps-plugins/mops-daemon-plugin.jar")}",
+            "-Dmops.daemon.mps.plugin=${daemonMpsPlugin.get().singleFile.absolutePath}"
         )
     }
 }
