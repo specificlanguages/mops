@@ -34,6 +34,10 @@ even on success, and test start/completion events appear in the job log to help 
 ./gradlew :cli:integrationTestMps2024.1.6 --tests '*CodeModeIntegrationTest'
 ```
 
+The full integration matrix runs nightly on `main` at 02:17 UTC and on manual workflow dispatch. PRs and pushes to
+`main` run only the daemon lifecycle subset on Linux, macOS, and Windows. Release validation still runs `check`,
+including the full integration matrix.
+
 To test an already extracted distribution, use the separate local task:
 
 ```sh
