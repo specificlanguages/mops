@@ -48,6 +48,22 @@ class FullClasspathDaemonLauncherTest {
     }
 
     @Test
+    fun `bootstrap classpath uses declared JVM argument and resolves IDE home`() {
+        val mpsHome = tempDir.resolve("MPS app/Contents").createDirectories()
+        mpsHome.resolve("Resources").createDirectories().resolve("product-info.json").writeText(
+            """{"launch":[{"os":"macOS","arch":"aarch64","bootClassPathJarNames":[],
+                "additionalJvmArguments":["-Xbootclasspath/a:${'$'}IDE_HOME/lib/nio-fs.jar","-Dunrelated=true"]}]}""",
+        )
+
+        assertEquals(
+            listOf("-Xbootclasspath/a:$mpsHome/lib/nio-fs.jar"),
+            FullClasspathDaemonLauncher.mpsBootstrapJvmArgs(mpsHome, "Mac OS X", "arm64"),
+        )
+        assertEquals(emptyList(), FullClasspathDaemonLauncher.mpsRuntimeClasspath(mpsHome, "Mac OS X", "arm64"))
+        assertEquals(emptyList(), FullClasspathDaemonLauncher.mpsBootstrapJvmArgs(tempDir, "Linux", "amd64"))
+    }
+
+    @Test
     fun `exact host launch entry is preferred`() {
         val mpsHome = tempDir.resolve("mps").createDirectories()
         val linuxJar = emptyJar(mpsHome.resolve("lib/linux.jar"))
