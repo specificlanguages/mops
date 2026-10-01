@@ -53,6 +53,14 @@ The installed CLI integration test exercises model lookup, an edit, saving and r
 dispatch, and Groovy class identity. It runs both with the selected MPS distribution and with a test copy that omits its
 Groovy JAR. CI includes code-mode tests for every supported MPS version.
 
+Bundled agent skills live under `skills/` and ship alongside the CLI in its `skills/` directory. `CodeSkillExamplesTest`
+extracts every fenced `groovy` block from `skills/mops-code/SKILL.md` and executes it verbatim against a fresh fixture
+copy. When adding an example, add behavioral assertions for its heading to that test. Run the examples with:
+
+```sh
+./gradlew :daemon:test --tests '*CodeSkillExamplesTest'
+```
+
 ### Test-running integration tests
 
 `TestRunningIntegrationTest` exercises native BaseLanguage, language, generator, Jupiter, parameterized, and legacy

@@ -50,6 +50,17 @@ project’s MPS prerelease version to the newest available version; prerelease a
 Task-action overrides, included builds, and custom Ant property loading are outside this heuristic; Specific Languages
 values are project defaults.
 
+## Agent skill
+
+Run `mops skill path` (or `mops skill path code`) to print the absolute path to the bundled `mops-code/SKILL.md`. Ask
+your coding agent to load that file, or symlink its containing directory into your agent's skills directory to follow
+mops upgrades. This command works without an MPS project or daemon.
+
+Use `mops skill path daemon` for daemon coordination, restart, and recovery guidance.
+
+The Code Mode skill covers model access, API discovery, queries, and edits. Its Groovy examples are executed directly
+from the skill file by daemon unit tests.
+
 ## Commands
 
 Commands that operate on MPS data use a verb-first shape: `mops <verb> <object>`. Operational commands use a concrete
@@ -267,7 +278,8 @@ mops daemon stop [--all]
 Inspect or stop known per-project daemon processes. Without `--all`, the command infers the current project from the
 working directory. With `--all`, it reads every known daemon record. Status sends an authenticated ping with a
 two-second connection/read timeout and reports `running` or `unreachable`. It does not start daemons or remove
-unreachable records. A daemon can be unreachable because it is stopped, busy, or unable to authenticate the request.
+unreachable records. A daemon can be unreachable because it is stopped, unresponsive, or unable to authenticate the
+request. Pings remain responsive during normal long operations.
 
 ## Daemon State
 
@@ -294,8 +306,10 @@ subdirectory under `projects/`, including:
 - `logs/daemon.log` - daemon startup and runtime log for the current prototype
 - `daemon/config` and `daemon/system` - isolated IDEA directories passed to the daemon JVM
 
-Daemon commands use loopback socket IPC with a per-daemon token. Requests are serialized by the daemon. Stale daemon
-records are removed when the recorded process or socket is no longer reachable.
+Daemon commands use loopback socket IPC with a per-daemon token. Independent list, get-node, find, diagnostic, and Code
+Mode help requests can run in reader batches. Edits, creation, builds, tests, checks, rendering, and Code Mode execution
+have exclusive admission; ping and stop remain responsive independently of project work. Stale daemon records are
+removed when the recorded process or socket is no longer reachable.
 
 ## Development
 
