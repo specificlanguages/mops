@@ -21,12 +21,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-java@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version: 17
-      - uses: gradle/actions/setup-gradle@v6
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
       - name: Test daemon lifecycle
         shell: bash
         run: >-
@@ -34,7 +36,7 @@ jobs:
           :cli:integrationTestMps2026.1.1 --tests '*DaemonControlIntegrationTest' --tests '*DaemonStartupIntegrationTest'
       - name: Upload test reports
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: daemon-test-reports-${{ matrix.os }}
           path: |
@@ -48,7 +50,9 @@ jobs:
     outputs:
       versions: ${{ steps.versions.outputs.versions }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - name: Read supported MPS versions
         id: versions
         run: |
@@ -65,19 +69,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-java@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version: 25
-      - uses: gradle/actions/setup-gradle@v6
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
       - name: Test CLI against MPS ${{ matrix.mps }}
         env:
           MPS_VERSION: ${{ matrix.mps }}
         run: ./gradlew --continue ":cli:integrationTestMps${MPS_VERSION}"
       - name: Upload test reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: cli-integration-test-reports-mps-${{ matrix.mps }}
           path: |
