@@ -38,7 +38,26 @@ jobs:
             cli/build/test-results/
             cli/build/reports/tests/
 
+  integration-versions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      versions: ${{ steps.versions.outputs.versions }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Read supported MPS versions
+        id: versions
+        run: |
+          versions="$(sed -n 's/^supportedMpsVersions=//p' gradle.properties)"
+          matrix="$(jq -cn --arg versions "$versions" '$versions | split(",") | map(gsub("^\\s+|\\s+$"; ""))')"
+          echo "versions=$matrix" >> "$GITHUB_OUTPUT"
+
   integration:
+    needs: integration-versions
+    strategy:
+      fail-fast: false
+      matrix:
+        mps: ${{ fromJSON(needs.integration-versions.outputs.versions) }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -48,13 +67,15 @@ jobs:
           distribution: temurin
           java-version: 25
       - uses: gradle/actions/setup-gradle@v6
-      - name: Test CLI against all supported MPS versions
-        run: ./gradlew --continue :cli:integrationTest
+      - name: Test CLI against MPS ${{ matrix.mps }}
+        env:
+          MPS_VERSION: ${{ matrix.mps }}
+        run: ./gradlew --continue ":cli:integrationTestMps${MPS_VERSION}"
       - name: Upload test reports
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: cli-integration-test-reports
+          name: cli-integration-test-reports-mps-${{ matrix.mps }}
           path: |
             cli/build/test-results/
             cli/build/reports/tests/

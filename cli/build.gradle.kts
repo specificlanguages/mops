@@ -127,6 +127,9 @@ fun Test.configureIntegrationTest(mpsHome: Provider<File>, jbrHome: Provider<Fil
 
     testClassesDirs = integrationTest.output.classesDirs
     classpath = integrationTest.runtimeClasspath
+    testLogging {
+        events("started", "passed", "skipped", "failed")
+    }
 
     jvmArgumentProviders.add {
         listOf(

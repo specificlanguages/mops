@@ -25,7 +25,10 @@ The repository is a Gradle-rooted Kotlin prototype with two application subproje
 
 Each task resolves its MPS distribution and matching host-specific JBR through mps-platform-cache. Distributions are
 cached and reused. Reports are written separately under `cli/build/reports/tests/<task-name>/`; JUnit XML results are
-under `cli/build/test-results/<task-name>/`. Apply `--tests` to a version-specific task to select tests:
+under `cli/build/test-results/<task-name>/`. CI reads the supported versions from `gradle.properties` and runs each
+version in a separate Ubuntu matrix job, with independent test JVMs and MPS daemons. Each job uploads its test reports
+even on success, and test start/completion events appear in the job log to help identify slow or stalled tests. Apply
+`--tests` to a version-specific task to select tests:
 
 ```sh
 ./gradlew :cli:integrationTestMps2024.1.6 --tests '*CodeModeIntegrationTest'
@@ -44,7 +47,7 @@ through the daemon launcher, without IDE-plugin host-platform validation.
 
 The installed CLI integration test exercises model lookup, an edit, saving and reopening the project, extension
 dispatch, and Groovy class identity. It runs both with the selected MPS distribution and with a test copy that omits its
-Groovy JAR. CI runs the aggregate integration-test task, including code-mode tests for every supported MPS version.
+Groovy JAR. CI includes code-mode tests for every supported MPS version.
 
 ### Test-running integration tests
 
