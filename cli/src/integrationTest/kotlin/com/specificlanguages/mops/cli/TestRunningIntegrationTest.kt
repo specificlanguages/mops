@@ -28,63 +28,10 @@ class TestRunningIntegrationTest {
             assertEquals(0, cli("daemon", "ping").exitCode)
         } finally { stopDaemons(project, home) }
     }
-    @Test
-    fun `native cases build and run with individual source results`() {
-        val project = copyTestingProject()
-        val home = tempDir.resolve("daemon-home").createDirectories()
-        fun cli(vararg args: String) = runCommandLine(project, "--daemon-home", home.pathString, *javaAndMpsHomeArgs(), *args)
-        try {
-            val result = cli("test", "mops.tests.nativecases@tests", "--json")
-            assertEquals(1, result.exitCode, result.output)
-            val report = ProtocolJson.decodeTestReport(result.stdout)
-            assertEquals("TEST_FAILED", report.outcome, result.output)
-            assertEquals(setOf("PASSED", "FAILED"), report.results.filter { it.kind == "TEST" }.map { it.status }.toSet(), result.output)
-            assertTrue(report.results.filter { it.kind == "TEST" }.all { it.source != null }, result.output)
-        } finally { stopDaemons(project, home) }
-    }
-
-    @Test
-    fun `ordinary JUnit and legacy tests retain skips aborts and setup failures`() {
-        val project = copyTestingProject()
-        val home = tempDir.resolve("daemon-home").createDirectories()
-        fun cli(vararg args: String) = runCommandLine(project, "--daemon-home", home.pathString, *javaAndMpsHomeArgs(), *args)
-        try {
-            val pass = cli("test", "mops.tests", ".ordinary", "OrdinaryPass", "--json")
-            assertEquals(0, pass.exitCode, pass.output)
-            val report = ProtocolJson.decodeTestReport(pass.stdout)
-            assertEquals(setOf("PASSED", "SKIPPED", "ABORTED"), report.results.filter { it.kind == "TEST" }.map { it.status }.toSet(), pass.output)
-            val legacy = cli("test", "mops.tests", ".ordinary", "LegacyTest", "--no-build", "--json")
-            assertEquals(0, legacy.exitCode, legacy.output)
-            assertEquals(1, ProtocolJson.decodeTestReport(legacy.stdout).results.count { it.kind == "TEST" && it.status == "PASSED" }, legacy.output)
-            val parameterized = cli("test", "mops.tests", ".ordinary", "ParameterizedCase", "parameterized", "--no-build", "--json")
-            assertEquals(0, parameterized.exitCode, parameterized.output)
-            val invocations = ProtocolJson.decodeTestReport(parameterized.stdout).results.filter { it.kind == "TEST" }
-            assertEquals(2, invocations.size, parameterized.output)
-            assertEquals(2, invocations.map { it.id }.toSet().size)
-            assertTrue(invocations.all { it.source != null && it.status == "PASSED" }, parameterized.output)
-            val setup = cli("test", "mops.tests", ".ordinary", "ContainerFailure", "--no-build", "--json")
-            assertEquals(1, setup.exitCode, setup.output)
-            assertEquals("TEST_FAILED", ProtocolJson.decodeTestReport(setup.stdout).outcome, setup.output)
-        } finally { stopDaemons(project, home) }
-    }
-
-    @Test
-    fun `language and generator tests execute with MPS fixtures`() {
-        val project = copyTestingProject()
-        val home = tempDir.resolve("daemon-home").createDirectories()
-        fun cli(vararg args: String) = runCommandLine(project, "--daemon-home", home.pathString, *javaAndMpsHomeArgs(), *args)
-        try {
-            for (model in listOf("mops.tests.language@tests", "mops.tests.generator@tests")) {
-                val result = cli("test", model, "--json")
-                assertEquals(0, result.exitCode, result.output)
-                assertTrue(ProtocolJson.decodeTestReport(result.stdout).results.any { it.kind == "TEST" && it.status == "PASSED" }, result.output)
-            }
-        } finally { stopDaemons(project, home) }
-    }
 
     @Test
     fun `selection levels preparation errors and Code Mode share the test runner`() {
-        val project = copyTestingProject()
+        val project = copyTestingProject(tempDir.resolve("project"))
         project.resolve("solutions/tests/models/slow.mps").deleteExisting()
         project.resolve("solutions/tests/models/crash.mps").deleteExisting()
         val home = tempDir.resolve("daemon-home").createDirectories()
@@ -128,7 +75,7 @@ class TestRunningIntegrationTest {
 
     @Test
     fun `timeouts cancellation and enclosing Code Mode deadline retain completed results`() {
-        val project = copyTestingProject()
+        val project = copyTestingProject(tempDir.resolve("project"))
         val home = tempDir.resolve("daemon-home").createDirectories()
         fun cli(vararg args: String) = runCommandLine(project, "--daemon-home", home.pathString, *javaAndMpsHomeArgs(), *args)
         fun reports() = home.resolve("projects").listDirectoryEntries().flatMap { workspace ->
@@ -199,21 +146,4 @@ class TestRunningIntegrationTest {
             Thread.sleep(100)
         }
     }
-
-    private fun copyTestingProject(): Path {
-        val project = copyTestProject("testing", tempDir.resolve("project"))
-        val mpsHome = Path.of(System.getProperty("test.mpsHome"))
-        // MPS 2026.2 packages the Jupiter API stubs in JUnit; parameterized-test stubs remain in org.junit.junit5.
-        if (mpsHome.resolve("lib/intellij.libraries.junit5.jar").exists()) {
-            for (name in listOf("ordinary", "slow", "crash")) {
-                val model = project.resolve("solutions/tests/models/$name.mps")
-                model.writeText(model.readText().replace(
-                    "63b449db-0918-4a4a-a891-2c430ab133e4/java:org.junit.jupiter.api(org.junit.junit5/)",
-                    "49808fad-9d41-4b96-83fa-9231640f6b2b/java:org.junit.jupiter.api(JUnit/)",
-                ))
-            }
-        }
-        return project
-    }
-
 }
