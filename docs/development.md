@@ -107,11 +107,11 @@ suite uses the last supported MPS version, and the full integration matrix runs 
 ### Test-running integration tests
 
 `TestFamiliesIntegrationTest` checks native BaseLanguage, language, generator, Jupiter, parameterized, and legacy JUnit
-results. Its test methods share immutable reports from a completed full-project run and a parameterized-method selection
+results. Its test methods share immutable reports from a completed full-project run and a parameterized-case selection
 run. The fixture daemon stops before any method inspects those reports. Slow and crashing models are removed from that
 fixture copy. Each request still executes in a separate worker process.
 
-`TestRunningIntegrationTest` uses fresh project copies for selection at all five levels, preparation failures, and
+`TestRunningIntegrationTest` uses fresh project copies for root test-case/model/module/project selection, multiple test modules, preparation failures, and
 worker lifecycle behavior. The fixtures live in `test-projects/testing`. The lifecycle test deliberately waits for two
 90-second deadlines; allow several minutes per version. Runtime reload and daemon lifecycle tests also retain their
 independent process boundaries.

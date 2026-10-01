@@ -146,8 +146,8 @@ Lookup, Search Scope, Concept Instance, Node Usage
 
 ### Test Execution
 
-**Test Selection**: The individual test, test case, **MPS Model**, **MPS Module**, or **MPS Project** chosen for test
-execution. _Related_: Navigation Target, Test Run
+**Test Selection**: The root test case, **MPS Model**, **MPS Module**, or **MPS Project** chosen for test execution.
+_Related_: Navigation Target, Test Run
 
 **Test Run**: An execution of the tests identified by a **Test Selection**, including results for completed tests when
 execution is interrupted. _Related_: Test Selection, Test Run Report
