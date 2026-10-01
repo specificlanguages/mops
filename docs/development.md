@@ -55,20 +55,26 @@ Groovy JAR. CI includes code-mode tests for every supported MPS version.
 
 ### Test-running integration tests
 
-`TestRunningIntegrationTest` exercises native BaseLanguage, language, generator, Jupiter, parameterized, and legacy
-JUnit tests, selection at all five levels, preparation failures, and worker lifecycle behavior. The fixtures live in
-`test-projects/testing`. The lifecycle test deliberately waits for two deadlines; allow several minutes per version.
+`TestFamiliesIntegrationTest` checks native BaseLanguage, language, generator, Jupiter, parameterized, and legacy JUnit
+results. Its test methods share immutable reports from a completed full-project run and a parameterized-method selection
+run. The fixture daemon stops before any method inspects those reports. Slow and crashing models are removed from that
+fixture copy. Each request still executes in a separate worker process.
+
+`TestRunningIntegrationTest` uses fresh project copies for selection at all five levels, preparation failures, and
+worker lifecycle behavior. The fixtures live in `test-projects/testing`. The lifecycle test deliberately waits for two
+90-second deadlines; allow several minutes per version. Runtime reload and daemon lifecycle tests also retain their
+independent process boundaries.
 
 ```sh
-./gradlew :cli:integrationTestMps2024.1.6 --tests '*TestRunningIntegrationTest' \
-  :cli:integrationTestMps2025.1.4 --tests '*TestRunningIntegrationTest' \
-  :cli:integrationTestMps2026.1.1 --tests '*TestRunningIntegrationTest'
+./gradlew :cli:integrationTestMps2024.1.6 --tests '*TestRunningIntegrationTest' --tests '*TestFamiliesIntegrationTest' \
+  :cli:integrationTestMps2025.1.4 --tests '*TestRunningIntegrationTest' --tests '*TestFamiliesIntegrationTest' \
+  :cli:integrationTestMps2026.1.1 --tests '*TestRunningIntegrationTest' --tests '*TestFamiliesIntegrationTest'
 ```
 
 The pinned development baseline is MPS 2026.2 EAP1, build `MPS-262.9437.166` (2026-08-31), source revision
 `46065cdc79a9467a53197d1a274b4e97d2a0f603`, with JBR `25.0.3-b508.16`. Run it through `integrationTestLocal` with
-`--tests '*TestRunningIntegrationTest'` and the extracted distribution/JBR paths. Its Jupiter API stubs belong to the
-`JUnit` module; the integration fixture adjusts those imports in its temporary copy.
+`--tests '*TestRunningIntegrationTest' --tests '*TestFamiliesIntegrationTest'` and the extracted distribution/JBR paths.
+Its Jupiter API stubs belong to the `JUnit` module; the integration fixture adjusts those imports in its temporary copy.
 
 On macOS, MPS's IDEA environment still initializes AWT in headless mode. A sandbox that prevents application
 registration can abort the JVM before tests start. Run with `--no-daemon` outside that sandbox so an existing sandboxed

@@ -7,8 +7,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.time.Instant.now
-import kotlin.io.path.createDirectories
-import kotlin.io.path.pathString
+import kotlin.io.path.*
 import kotlin.jvm.optionals.getOrNull
 import kotlin.use
 
@@ -93,4 +92,20 @@ private fun waitForAllDaemons(daemonHome: Path) {
             return
         }
     }
+}
+
+fun copyTestingProject(target: Path): Path {
+    val project = copyTestProject("testing", target)
+    val mpsHome = Path.of(System.getProperty("test.mpsHome"))
+    // MPS 2026.2 packages the Jupiter API stubs in JUnit; parameterized-test stubs remain in org.junit.junit5.
+    if (mpsHome.resolve("lib/intellij.libraries.junit5.jar").exists()) {
+        for (name in listOf("ordinary", "slow", "crash")) {
+            val model = project.resolve("solutions/tests/models/$name.mps")
+            model.writeText(model.readText().replace(
+                "63b449db-0918-4a4a-a891-2c430ab133e4/java:org.junit.jupiter.api(org.junit.junit5/)",
+                "49808fad-9d41-4b96-83fa-9231640f6b2b/java:org.junit.jupiter.api(JUnit/)",
+            ))
+        }
+    }
+    return project
 }
