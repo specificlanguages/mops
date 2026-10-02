@@ -70,7 +70,8 @@ class CodeModeIntegrationTest {
             "bin",
             if (System.getProperty("os.name").startsWith("Windows")) "java.exe" else "java",
         )
-        val output = tempDir.resolve("java-parser-output.txt")
+        val stdout = tempDir.resolve("java-parser-stdout.txt")
+        val stderr = tempDir.resolve("java-parser-stderr.txt")
 
         fun cli(vararg args: String): CliResult {
             val process = ProcessBuilder(
@@ -81,10 +82,13 @@ class CodeModeIntegrationTest {
                 "--java-home", System.getProperty("test.jbrHome"),
                 "--mps-home", System.getProperty("test.mpsHome"),
                 *args,
-            ).redirectErrorStream(true).redirectOutput(output.toFile()).start()
+            ).redirectOutput(stdout.toFile()).redirectError(stderr.toFile()).start()
             try {
-                assertTrue(process.waitFor(3, TimeUnit.MINUTES), "CLI timed out: ${output.readText()}")
-                return CliResult(process.exitValue(), output.readText(), "")
+                val finished = process.waitFor(3, TimeUnit.MINUTES)
+                val result = CliResult(if (finished) process.exitValue() else -1, stdout.readText(), stderr.readText())
+                if (result.stderr.isNotEmpty()) System.err.print(result.stderr)
+                assertTrue(finished, "CLI timed out: ${result.output}")
+                return result
             } finally {
                 if (process.isAlive) process.destroyForcibly()
             }
@@ -130,7 +134,8 @@ class CodeModeIntegrationTest {
             val install = Path.of(System.getProperty("test.cliInstall"))
             val java = Path.of(System.getProperty("java.home"), "bin",
                 if (System.getProperty("os.name").startsWith("Windows")) "java.exe" else "java")
-            val output = tempDir.resolve("cli-output.txt")
+            val stdout = tempDir.resolve("cli-stdout.txt")
+            val stderr = tempDir.resolve("cli-stderr.txt")
             val builder = ProcessBuilder(
                 java.pathString, "-cp", install.resolve("lib/*").pathString,
                 "com.specificlanguages.mops.cli.MainKt",
@@ -138,13 +143,16 @@ class CodeModeIntegrationTest {
                 "--daemon-home", daemonHome.pathString,
                 "--java-home", System.getProperty("test.jbrHome"),
                 "--mps-home", mpsHome.pathString, *args,
-            ).redirectErrorStream(true).redirectOutput(output.toFile())
+            ).redirectOutput(stdout.toFile()).redirectError(stderr.toFile())
             // The installed manifest must supply all daemon dependencies.
             listOf("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS").forEach(builder.environment()::remove)
             val process = builder.start()
             try {
-                assertTrue(process.waitFor(3, TimeUnit.MINUTES), "CLI timed out: ${output.readText()}")
-                return CliResult(process.exitValue(), output.readText(), "")
+                val finished = process.waitFor(3, TimeUnit.MINUTES)
+                val result = CliResult(if (finished) process.exitValue() else -1, stdout.readText(), stderr.readText())
+                if (result.stderr.isNotEmpty()) System.err.print(result.stderr)
+                assertTrue(finished, "CLI timed out: ${result.output}")
+                return result
             } finally {
                 if (process.isAlive) process.destroyForcibly()
             }

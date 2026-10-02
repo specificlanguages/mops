@@ -95,18 +95,22 @@ class TestRunningIntegrationTest {
             assertTrue(report.results.any { it.kind == "TEST" && it.status == "PASSED" }, timed.output)
             assertEquals(0, cli("daemon", "ping").exitCode)
             val prior = reports().map { it.reportPath }.toSet()
-            val output = tempDir.resolve("cancel-output.txt")
+            val stdout = tempDir.resolve("cancel-stdout.txt")
+            val stderr = tempDir.resolve("cancel-stderr.txt")
             val install = Path.of(System.getProperty("test.cliInstall"))
             val process = ProcessBuilder(
                 Path.of(System.getProperty("java.home"), "bin", "java").pathString,
                 "-cp", install.resolve("lib/*").pathString, "com.specificlanguages.mops.cli.MainKt",
                 "--project-root", project.pathString, "--daemon-home", home.pathString, *javaAndMpsHomeArgs(),
                 "test", "mops.tests", ".slow", "SlowTest", "--no-build", "--timeout", "0", "--json",
-            ).redirectErrorStream(true).redirectOutput(output.toFile()).start()
+            ).redirectOutput(stdout.toFile()).redirectError(stderr.toFile()).start()
             try {
                 awaitCondition { reports().any { it.reportPath !in prior && it.results.any { result -> result.kind == "TEST" && result.status == "PASSED" } } }
                 process.destroy()
-                assertTrue(process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS), output.readText())
+                val finished = process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)
+                val result = CliResult(if (finished) process.exitValue() else -1, stdout.readText(), stderr.readText())
+                if (result.stderr.isNotEmpty()) System.err.print(result.stderr)
+                assertTrue(finished, result.output)
                 awaitCondition { reports().any { it.reportPath !in prior && it.outcome == "CANCELLED" } }
                 val cancelled = reports().single { it.reportPath !in prior }
                 assertFalse(cancelled.complete)
