@@ -1,3 +1,5 @@
+<!-- Generated from examples/pages and examples/specs; run :cli:updateExamples. -->
+
 # Search
 
 Default searches cover editable project sources. An explicit `in` scope can include library/platform content.

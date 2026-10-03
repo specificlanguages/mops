@@ -1,12 +1,10 @@
-<!-- Generated from examples/pages and examples/specs; run :cli:updateExamples. -->
-
 # Mops examples
 
 Examples use `mops`; substitute the project’s generated `mopsw` when available. Replace sample names and uppercase
 reference placeholders with actual project targets. Copy serialized references whole and quote shell metacharacters.
 
-Start with `mops examples setup`, then `mops examples navigation` and `mops examples search` to find targets. For
-changes, read `mops examples editing`; for verification, read `mops examples validation`. `mops examples all` prints
+Start with `{{example-1}}`, then `{{example-2}}` and `{{example-3}}` to find targets. For
+changes, read `{{example-4}}`; for verification, read `{{example-5}}`. `{{example-6}}` prints
 every topic. These commands work without MPS, Java runtime discovery, or a daemon.
 
 - [Setup and API discovery](setup.md)

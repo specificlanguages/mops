@@ -1,167 +1,106 @@
 package com.specificlanguages.mops.cli
 
-import org.junit.jupiter.api.Tag
-import com.specificlanguages.mops.cli.examples.ExampleTopics
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import groovy.json.JsonSlurper
+import groovy.lang.Binding
+import groovy.lang.Closure
+import groovy.lang.GroovyShell
+import kotlinx.serialization.json.*
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.api.parallel.ResourceLock
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.TimeUnit
 import kotlin.io.path.*
 import kotlin.test.*
 
 @ResourceLock("system-streams")
 @Tag("smoke")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class BundledExamplesIntegrationTest {
-    @TempDir(cleanup = CleanupMode.ON_SUCCESS)
-    lateinit var tempDir: Path
+    private lateinit var tempDir: Path
 
-    @Test
-    fun `bundled recipes execute through one daemon and persist their edits`() {
-        val project = copyTestProject("base-language-sandbox", tempDir.resolve("project"))
-        val home = tempDir.resolve("daemon-home").createDirectories()
-        val program = tempDir.resolve("example.groovy")
-        fun cli(vararg args: String): CliResult {
-            val install = Path.of(System.getProperty("test.cliInstall"))
-            val java = Path.of(System.getProperty("java.home"), "bin",
-                if (System.getProperty("os.name").startsWith("Windows")) "java.exe" else "java")
-            val output = tempDir.resolve("cli-output.txt")
-            val process = ProcessBuilder(
-                java.pathString, "-cp", install.resolve("lib/*").pathString,
-                "com.specificlanguages.mops.cli.MainKt", "--project-root", project.pathString,
-                "--daemon-home", home.pathString, *javaAndMpsHomeArgs(), *args,
-            ).redirectErrorStream(true).redirectOutput(output.toFile()).start()
-            try {
-                assertTrue(process.waitFor(3, TimeUnit.MINUTES), "CLI timed out: ${output.readText()}")
-                return CliResult(process.exitValue(), output.readText(), "")
-            } finally {
-                if (process.isAlive) process.destroyForcibly()
-            }
-        }
-        fun run(source: String, substitutions: Map<String, String> = emptyMap()): String {
-            val actual = substitutions.entries.fold(source) { text, (key, value) -> text.replace(key, value) }
-            program.writeText(actual)
-            val result = cli("code", "run", program.pathString)
-            assertEquals(0, result.exitCode, "Recipe:\n$actual\n${result.output}")
-            return result.stdout.trim()
-        }
-        fun blocks(topic: String): List<String> =
-            Regex("""(?m)^```groovy\r?\n([\s\S]*?)^```\r?$""").findAll(ExampleTopics.page(topic))
-                .map { it.groupValues[1] }.toList()
+    private lateinit var project: Path
+    private lateinit var home: Path
+    private lateinit var cli: InstalledCli
+    private lateinit var initialPid: String
 
-        fun daemonPid(): String = Files.walk(home).use { paths ->
-            val record = paths.filter { it.fileName.toString() == "daemon.json" }.findFirst().orElseThrow()
-            Json.parseToJsonElement(record.readText()).jsonObject.getValue("pid").jsonPrimitive.content
-        }
+    @BeforeAll
+    fun startDaemon(@TempDir(cleanup = CleanupMode.ON_SUCCESS) directory: Path) {
+        tempDir = directory
+        project = copyTestProject("base-language-sandbox", tempDir.resolve("project"))
+        home = tempDir.resolve("daemon-home").createDirectories()
+        cli = InstalledCli(project, home, tempDir)
+        val result = cli.run("daemon", "ping")
+        assertEquals(0, result.exitCode, result.output)
+        initialPid = daemonPid()
+    }
 
-        try {
-            val fixture = Json.parseToJsonElement(run("""
-                project.command {
-                    def model = mops.lookup.requireModel('baselanguage.sandbox')
-                    def parsed = mops.parsing.java.addJavaClassesFromString(model,
-                        'public class Example { private Example peer; public int answer() { return 1; } }')
-                    def root = parsed.nodes[0]
-                    def method = root.children['member'].find { it.properties['name'] == 'answer' }
-                    def type = root.descendants.find { it.concept.qualifiedName.endsWith('.ClassifierType') }
-                    def module = model.module
-                    def oldModel = module.createModel('old.model')
-                    def newModel = module.createModel('new.model')
-                    def old = mops.parsing.java.addJavaClassesFromString(oldModel, 'public class OldTarget {}').nodes[0]
-                    def replacement = mops.parsing.java.addJavaClassesFromString(newModel, 'public class NewTarget {}').nodes[0]
-                    type.references['classifier'] = old
-                    new jetbrains.mps.smodel.ModelImports(model).addModelImport(oldModel.reference)
-                    model.save()
-                    [root: root, method: method, type: type, statements: method.child['body'], old: old, replacement: replacement]
+    @AfterAll
+    fun stopDaemon() {
+        if (::cli.isInitialized) cli.run("daemon", "stop")
+    }
+
+    @TestFactory
+    fun `bundled examples satisfy their specifications`(): List<DynamicTest> {
+        val examples = Json.parseToJsonElement(resource("examples.json")).jsonArray
+            .map { it.jsonObject }.filter { it["kind"]?.jsonPrimitive?.content == "groovy" }
+        assertTrue(examples.any { "verify" in it }, "No executable examples in the catalog")
+        return examples.mapIndexed { index, example ->
+            val name = "${example.getValue("topic").jsonPrimitive.content}/${example.getValue("id").jsonPrimitive.content}"
+            DynamicTest.dynamicTest(name) {
+                Assumptions.assumeTrue("verify" in example, example["untested"]?.jsonPrimitive?.content)
+                val modelName = "examples.case$index"
+                val fixtureData = JsonSlurper().parseText(run(resource("fixture.groovy").replace("CASE_MODEL_NAME", modelName))) as Map<*, *>
+                val fixture = fixtureData.entries.associate { it.key.toString() to it.value }
+                val substitutions = mapOf(
+                    "sample.model" to fixture.getValue("model").toString(),
+                    "old.model" to fixture.getValue("oldModel").toString(),
+                    "new.model" to fixture.getValue("newModel").toString(),
+                    "NODE_REF" to fixture.getValue("root").toString(),
+                    "CLASS_REF" to fixture.getValue("root").toString(),
+                    "TYPE_REF" to fixture.getValue("type").toString(),
+                    "STATEMENTS_REF" to fixture.getValue("statements").toString(),
+                    "TARGET_REF" to fixture.getValue("replacement").toString(),
+                    "OLD_REF" to fixture.getValue("old").toString(),
+                    "NEW_REF" to fixture.getValue("replacement").toString(),
+                ) + example["bindings"]?.jsonObject.orEmpty().mapValues { (_, selector) ->
+                    val key = selector.jsonPrimitive.content
+                    (fixture[key] ?: key).toString()
                 }
-            """.trimIndent())).jsonObject
-            val initialPid = daemonPid()
-            val root = fixture.getValue("root").jsonPrimitive.content
-            val replacements = mapOf(
-                "sample.model" to "baselanguage.sandbox",
-                "NODE_REF" to root,
-                "CLASS_REF" to root,
-                "TARGET_REF" to fixture.getValue("replacement").jsonPrimitive.content,
-                "STATEMENTS_REF" to fixture.getValue("statements").jsonPrimitive.content,
-                "OLD_REF" to fixture.getValue("old").jsonPrimitive.content,
-                "NEW_REF" to fixture.getValue("replacement").jsonPrimitive.content,
-            )
-            val rows = Regex("""(?m)^\|\s*([^|]+?)\s*\|\s*`([^`]+)`\s*\|$""")
-                .findAll(ExampleTopics.page("editing.nodes")).toList()
-            assertEquals(19, rows.size, "Every node recipe needs an execution and assertion")
-            for (row in rows) {
-                val task = row.groupValues[1].trim()
-                val substitutions = when (task) {
-                    "Create a solution and model" -> replacements - "sample.model"
-                    "Read one child", "Clear a child role" -> replacements +
-                        ("NODE_REF" to fixture.getValue("method").jsonPrimitive.content)
-                    "Resolve a reference target", "Change a reference target" -> replacements +
-                        ("NODE_REF" to fixture.getValue("type").jsonPrimitive.content)
-                    else -> replacements
+                fun execute(source: String): String = run(substitutions.entries.fold(source) { text, (key, value) ->
+                    text.replace(key, value)
+                })
+                val before = example["before"]?.jsonPrimitive?.content?.let(::execute)
+                val output = execute(example.getValue("code").jsonPrimitive.content)
+                val result = if (example["output"]?.jsonPrimitive?.content == "text") output else JsonSlurper().parseText(output)
+                val modelFile = Files.walk(project).use { paths ->
+                    paths.filter { it.fileName.toString() == "$modelName.mps" }.findFirst().orElseThrow().toFile()
                 }
-                val source = row.groupValues[2]
-                val memberQuery = "project.read { mops.lookup.requireNode('$root').children['member'] }"
-                val membersBefore = if (task == "Reverse ordered members") Json.parseToJsonElement(run(memberQuery)).jsonArray else null
-                val result = run(source, substitutions)
-                when (task) {
-                    "List root names and references" -> assertContains(result, "Example")
-                    "Read a node property" -> assertEquals("Example", result)
-                    "Find a root with an exact name" -> assertEquals(root, result)
-                    "List containment descendants" -> assertContains(result, "node")
-                    "List ancestors" -> assertEquals("[]", result)
-                    "List available property names" -> assertContains(result, "name")
-                    "List child roles" -> assertContains(result, "member")
-                    "List reference roles" -> Json.parseToJsonElement(result).jsonArray
-                    "Read one child" -> assertEquals(fixture.getValue("statements").jsonPrimitive.content, result)
-                    "Read ordered children in a role" -> assertTrue(Json.parseToJsonElement(result).jsonArray.size >= 2)
-                    "Resolve a reference target" -> assertEquals(fixture.getValue("old").jsonPrimitive.content, result)
-                    "Rename a node" -> assertEquals("Renamed", run("project.read { mops.lookup.requireNode('$root').properties['name'] }"))
-                    "Change a reference target" -> assertEquals(fixture.getValue("replacement").jsonPrimitive.content,
-                        run("project.read { mops.lookup.requireNode('${fixture.getValue("type").jsonPrimitive.content}').references['classifier'].targetNode }"))
-                    "Clear a child role" -> assertEquals("true", run("project.read { mops.lookup.requireNode('${fixture.getValue("method").jsonPrimitive.content}').child['body'] == null }"))
-                    "Reverse ordered members" -> assertEquals(membersBefore!!.reversed(), Json.parseToJsonElement(run(memberQuery)).jsonArray.toList())
-                    "Create a class root" -> assertEquals("Example", run("project.read { mops.lookup.requireNode('$result').properties['name'] }"))
-                    "Create a solution and model" -> assertContains(result, "sample.model")
-                    "Render a node" -> assertContains(result, "Renamed")
-                    "Inspect a runtime object's API" -> assertContains(result, "SNode")
-                    else -> fail("Missing assertion for $task")
+                val runClosure = object : Closure<String>(this) {
+                    fun doCall(source: String): String = execute(source)
                 }
+                GroovyShell(Binding(mapOf("result" to result, "fixture" to fixture, "run" to runClosure,
+                    "before" to before, "modelFile" to modelFile)))
+                    .evaluate(example.getValue("verify").jsonPrimitive.content, "$name.verify.groovy")
+                assertEquals(initialPid, daemonPid(), "All examples must reuse the same MPS daemon")
             }
-            for (source in blocks("editing.nodes")) {
-                assertTrue(Json.parseToJsonElement(run(source, replacements + ("NODE_REF" to replacements.getValue("TARGET_REF")))).jsonArray.isNotEmpty())
-            }
-            val javaBlocks = blocks("editing.java")
-            assertEquals(3, javaBlocks.size)
-            var javaReplacements = replacements
-            for ((index, source) in javaBlocks.withIndex()) {
-                val result = Json.parseToJsonElement(run(source, javaReplacements)).jsonObject
-                assertTrue(result.getValue("nodes").jsonArray.isNotEmpty())
-                assertEquals(0, result.getValue("unresolved").jsonArray.size)
-                if (index == 0) {
-                    val classifier = result.getValue("nodes").jsonArray.single().jsonPrimitive.content
-                    val statements = run("project.read { mops.lookup.requireNode('$classifier').children['member'].find { it.properties['name'] == 'answer' }.child['body'] }")
-                    javaReplacements = replacements + mapOf("CLASS_REF" to classifier, "STATEMENTS_REF" to statements)
-                }
-            }
-            val referenceBlocks = blocks("editing.references")
-            assertEquals(2, referenceBlocks.size)
-            run("project.command { mops.lookup.requireNode('${fixture.getValue("type").jsonPrimitive.content}').references['classifier'] = mops.lookup.requireNode('${fixture.getValue("old").jsonPrimitive.content}') }")
-            assertEquals("1", run(referenceBlocks[0], replacements))
-            run(referenceBlocks[1], replacements)
-            val persisted = project.resolve("solutions/baselanguage.sandbox/models/baselanguage.sandbox.mps").readText()
-            assertContains(persisted, "Renamed")
-            assertContains(persisted, "new.model")
-            assertFalse(persisted.contains("(old.model)"))
-            val status = cli("daemon", "status")
-            assertEquals(0, status.exitCode, status.output)
-            assertContains(status.stdout, "running")
-            assertEquals(initialPid, daemonPid(), "All recipes must reuse the same MPS daemon")
-        } finally {
-            cli("daemon", "stop")
         }
     }
+
+    private fun run(source: String): String {
+        val program = tempDir.resolve("example.groovy")
+        program.writeText(source)
+        val result = cli.run("code", "run", program.pathString)
+        assertEquals(0, result.exitCode, "Program:\n$source\n${result.output}")
+        return result.stdout.trim()
+    }
+
+    private fun daemonPid(): String = Files.walk(home).use { paths ->
+        val record = paths.filter { it.fileName.toString() == "daemon.json" }.findFirst().orElseThrow()
+        Json.parseToJsonElement(record.readText()).jsonObject.getValue("pid").jsonPrimitive.content
+    }
+
+    private fun resource(name: String): String = checkNotNull(javaClass.getResourceAsStream("/$name")) { name }
+        .bufferedReader().use { it.readText() }
 }

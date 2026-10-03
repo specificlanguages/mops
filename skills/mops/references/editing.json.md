@@ -1,3 +1,5 @@
+<!-- Generated from examples/pages and examples/specs; run :cli:updateExamples. -->
+
 # JSON edits
 
 Use batches when you want explicit edit operations and constraint diagnostics. This one-liner renames a node:

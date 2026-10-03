@@ -1,3 +1,5 @@
+<!-- Generated from examples/pages and examples/specs; run :cli:updateExamples. -->
+
 # Retarget references and update model imports
 
 To replace references to one node across editable project sources, collect usages before changing them:

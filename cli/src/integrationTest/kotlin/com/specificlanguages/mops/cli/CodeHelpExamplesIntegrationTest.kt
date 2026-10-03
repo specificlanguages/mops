@@ -8,7 +8,6 @@ import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.api.parallel.ResourceLock
 import java.nio.file.Path
-import java.util.concurrent.TimeUnit
 import kotlin.io.path.*
 import kotlin.test.*
 
@@ -22,23 +21,8 @@ class CodeHelpExamplesIntegrationTest {
         val project = copyTestProject("base-language-sandbox", tempDir.resolve("project"))
         val home = tempDir.resolve("daemon-home").createDirectories()
         val program = tempDir.resolve("example.groovy")
-        fun cli(vararg args: String): CliResult {
-            val install = Path.of(System.getProperty("test.cliInstall"))
-            val java = Path.of(System.getProperty("java.home"), "bin",
-                if (System.getProperty("os.name").startsWith("Windows")) "java.exe" else "java")
-            val output = tempDir.resolve("cli-output.txt")
-            val process = ProcessBuilder(
-                java.pathString, "-cp", install.resolve("lib/*").pathString,
-                "com.specificlanguages.mops.cli.MainKt", "--project-root", project.pathString,
-                "--daemon-home", home.pathString, *javaAndMpsHomeArgs(), *args,
-            ).redirectErrorStream(true).redirectOutput(output.toFile()).start()
-            try {
-                assertTrue(process.waitFor(3, TimeUnit.MINUTES), "CLI timed out: ${output.readText()}")
-                return CliResult(process.exitValue(), output.readText(), "")
-            } finally {
-                if (process.isAlive) process.destroyForcibly()
-            }
-        }
+        val installed = InstalledCli(project, home, tempDir)
+        fun cli(vararg args: String): CliResult = installed.run(*args)
         fun execute(path: String, substitutions: Map<String, String> = emptyMap()): String {
             val help = cli("code", "help", path, "--json")
             assertEquals(0, help.exitCode, help.output)

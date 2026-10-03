@@ -1,3 +1,5 @@
+<!-- Generated from examples/pages and examples/specs; run :cli:updateExamples. -->
+
 # Code Mode: run compact Groovy programs
 
 Save a snippet as `task.groovy` and run `mops code run task.groovy`, or pass it on stdin:

@@ -1,3 +1,5 @@
+<!-- Generated from examples/pages and examples/specs; run :cli:updateExamples. -->
+
 # Navigate and read
 
 Navigation uses separate space-delimited segments. Model names include stereotypes; a `.suffix` segment is relative to
