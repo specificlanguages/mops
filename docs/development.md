@@ -77,25 +77,28 @@ When adding an example, add behavioral assertions for its heading to that test. 
 
 ### Bundled task recipe checks
 
-Task recipes live in `skills/mops/references/` and are copied into CLI resources by `processResources`. The skill and
-`mops examples` therefore ship the same Markdown sources. `ExamplesCommandTest` reads the bundled pages, parses
-documented CLI recipes with the current command tree without executing them, and decodes JSON edit batches with the
-current protocol serializer and generated schema. It also checks bundled reference links. The smoke CI job includes
-these checks on pull requests.
+The source catalog lives in [`examples/`](../examples/README.md). Groovy maps hold the snippets and their assertions;
+Markdown templates supply the surrounding guidance and topic layout. `generateExamples` produces the CLI pages and a
+test manifest from that catalog. `updateExamples` refreshes the checked-in skill references; `checkExamples` rejects
+stale references and runs in both `check` and `smokeTest`.
 
 ```sh
+./gradlew :cli:updateExamples :cli:checkExamples
 ./gradlew :cli:test --tests '*ExamplesCommandTest'
 ```
 
-These checks catch CLI syntax and edit protocol drift without starting MPS. `BundledExamplesIntegrationTest` also
-extracts the documented node-editing, search, Java insertion, and reference/import Groovy recipes and executes them
-through one daemon in a disposable BaseLanguage fixture project. It checks result values, node edits, and persisted
-model imports. Only sample names and reference placeholders are substituted; the documented operations run verbatim. The
-PR smoke job includes this test against the last entry in `supportedMpsVersions`, and the full integration matrix runs
-it on each version.
+`ExamplesCommandTest` parses documented CLI recipes with the current command tree without executing them, validates JSON
+edit batches with the protocol serializer and generated schema, and checks bundled reference links. These checks catch
+syntax and protocol drift without starting MPS.
+
+`BundledExamplesIntegrationTest` creates a named JUnit dynamic test for each executable Groovy spec. It starts one
+daemon and gives every example fresh models in a disposable BaseLanguage project. Each spec declares its placeholder
+bindings, optional preparation, and assertions on CLI output or saved model data. The runner executes the same snippet
+used to generate the Markdown. Examples requiring other fixtures declare an explicit `untested` reason. The PR smoke
+suite uses the last supported MPS version, and the full integration matrix runs the specs on each version.
 
 ```sh
-./gradlew :cli:integrationTestMps2026.1.1 --tests '*BundledExamplesIntegrationTest'
+./gradlew :cli:smokeIntegrationTest --tests '*BundledExamplesIntegrationTest'
 ```
 
 ### Test-running integration tests

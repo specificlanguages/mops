@@ -1,3 +1,5 @@
+<!-- Generated from examples/pages and examples/specs; run :cli:updateExamples. -->
+
 # Build, check, test, and recover
 
 | Task                                               | Command                                                  |

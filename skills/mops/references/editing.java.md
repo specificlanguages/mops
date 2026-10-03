@@ -1,3 +1,5 @@
+<!-- Generated from examples/pages and examples/specs; run :cli:updateExamples. -->
+
 # Insert Java as BaseLanguage nodes
 
 The parser accepts Java 8 snippets and inserts native nodes. Return both `nodes` and `unresolved`; a successful parse
