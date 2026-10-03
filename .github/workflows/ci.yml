@@ -42,11 +42,9 @@ jobs:
           distribution: temurin
           java-version: 25
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
-      - name: Test daemon lifecycle
+      - name: Test CLI smoke suite
         shell: bash
-        run: >-
-          ./gradlew --continue :cli:test --tests '*DaemonStatusStopCommandTest' --tests '*FullClasspathDaemonLauncherTest'
-          :cli:integrationTestMps2026.1.1 --tests '*DaemonControlIntegrationTest' --tests '*DaemonStartupIntegrationTest'
+        run: ./gradlew --continue :cli:smokeTest
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

@@ -11,7 +11,7 @@ import kotlin.test.*
 class CodeSkillExamplesTest {
     @TestFactory
     fun `skill examples execute verbatim against MPS`(): List<DynamicTest> {
-        val skill = checkNotNull(javaClass.getResourceAsStream("/mops-code/SKILL.md"))
+        val skill = checkNotNull(javaClass.getResourceAsStream("/mops/SKILL.md"))
             .bufferedReader().use { it.readText() }
         val blocks = Regex("""(?m)^```groovy\r?\n([\s\S]*?)^```\r?$""").findAll(skill).toList()
         assertTrue(blocks.isNotEmpty(), "The skill must contain executable examples")

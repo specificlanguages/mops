@@ -22,6 +22,7 @@ import com.specificlanguages.mops.cli.diagnose.DiagnoseModulesCommand
 import com.specificlanguages.mops.cli.diagnose.DiagnoseOperations
 import com.specificlanguages.mops.cli.edit.EditOperations
 import com.specificlanguages.mops.cli.edit.ModelEditCommand
+import com.specificlanguages.mops.cli.examples.ExamplesCommand
 import com.specificlanguages.mops.cli.explain.ExplainCommand
 import com.specificlanguages.mops.cli.find.FindInstancesCommand
 import com.specificlanguages.mops.cli.find.FindNodeByIdCommand
@@ -106,6 +107,7 @@ fun newCommandLine(workingDirectory: Path = Path.of("").absolute()): CommandLine
         addLeaf("path", SkillPathCommand())
     }
     root.addLeaf("explain", ExplainCommand())
+    root.addLeaf("examples", ExamplesCommand())
     root.addLeaf("help", RecursiveHelpCommand())
 
     return root.setExecutionExceptionHandler(PrintErrorAndExit)

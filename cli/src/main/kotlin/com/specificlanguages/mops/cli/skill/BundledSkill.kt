@@ -5,13 +5,13 @@ import kotlin.io.path.isRegularFile
 
 object BundledSkill {
     fun path(
-        name: String = "mops-code",
+        name: String = "mops",
         codeLocation: Path = Path.of(BundledSkill::class.java.protectionDomain.codeSource.location.toURI()),
     ): Path {
         val skillName = when (name) {
-            "mops-code", "code" -> "mops-code"
+            "mops" -> "mops"
             "mops-daemon", "daemon" -> "mops-daemon"
-            else -> throw IllegalArgumentException("Unknown skill '$name'; available: mops-code (alias: code), mops-daemon (alias: daemon)")
+            else -> throw IllegalArgumentException("Unknown skill '$name'; available: mops, mops-daemon (alias: daemon)")
         }
         val location = codeLocation.toAbsolutePath().normalize()
         return generateSequence(location) { it.parent }

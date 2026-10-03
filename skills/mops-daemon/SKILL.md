@@ -2,7 +2,7 @@
 name: mops-daemon
 description:
   Start, inspect, restart, and recover mops project daemons, and coordinate concurrent reads and exclusive operations.
-  Use when running mops commands, diagnosing a stuck daemon, or cleaning up daemon state.
+  Use when coordinating concurrent agents, restarting or diagnosing a project daemon, or cleaning up daemon state.
 ---
 
 # Working with mops daemons
@@ -20,14 +20,14 @@ later readers overtaking it.
 
 Batch related queries into one Code Mode program when they depend on each other or need one read action. Never call a
 daemon-backed mops command for the same project from inside that program: it would wait for the program's exclusive
-admission to finish. Use the Code Mode API within the program instead; locate its guidance with `mops skill path code`.
+admission to finish. Use the Code Mode API within the program instead; locate its guidance with `mops skill path`.
 
 Ping and stop are handled independently of project admission, so a long operation does not block them. Stop acknowledges
 shutdown, stops accepting connections, and waits for accepted requests to finish. The CLI can force termination if the
 process does not exit within its stop deadline.
 
 Commands for separate projects have separate daemons and can run concurrently. Offline commands such as `mops --help`,
-`mops explain`, and `mops skill path` do not use the daemon.
+`mops explain`, `mops examples`, and `mops skill path` do not use the daemon.
 
 ## Inspect and restart
 

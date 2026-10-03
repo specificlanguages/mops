@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.cli
 
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.api.parallel.ResourceLock
@@ -14,6 +15,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 
 @ResourceLock("system-streams")
+@Tag("smoke")
 class DaemonStartupIntegrationTest {
 
     @TempDir(cleanup = CleanupMode.ON_SUCCESS)
