@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added offline `mops examples` task recipes, including an editing guide and focused topics for creation, node edits,
+  references, Java insertion, and JSON batches. The recipes are also bundled as references in the mops skill.
+- Broadened the bundled `mops-code` skill into `mops`, covering CLI workflows as well as Code Mode. Use
+  `mops skill path` or `mops skill path mops`; the former `code` and `mops-code` names are removed.
+
 - Added Code Mode `node.descendants` and `node.ancestors` containment navigation. Both return immutable lists excluding
   the receiver, with descendants in depth-first child order and ancestors from parent to root. Reads require model
   access.

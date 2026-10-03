@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.cli
 
+import org.junit.jupiter.api.Tag
 import com.specificlanguages.mops.daemoncomms.DefaultDaemonClient
 import com.specificlanguages.mops.protocol.DaemonContext
 import com.specificlanguages.mops.protocol.DaemonRecord
@@ -28,6 +29,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @ResourceLock("system-streams")
+@Tag("smoke")
 class DaemonControlIntegrationTest {
 
     @TempDir(cleanup = CleanupMode.ON_SUCCESS)

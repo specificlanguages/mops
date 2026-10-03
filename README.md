@@ -52,14 +52,19 @@ values are project defaults.
 
 ## Agent skill
 
-Run `mops skill path` (or `mops skill path code`) to print the absolute path to the bundled `mops-code/SKILL.md`. Ask
-your coding agent to load that file, or symlink its containing directory into your agent's skills directory to follow
-mops upgrades. This command works without an MPS project or daemon.
+Run `mops skill path` to print the absolute path to the bundled `mops/SKILL.md`. Ask your coding agent to load that
+file, or symlink its containing directory into your agent's skills directory to follow mops upgrades. This command works
+without an MPS project or daemon.
 
 Use `mops skill path daemon` for daemon coordination, restart, and recovery guidance.
 
-The Code Mode skill covers model access, API discovery, queries, and edits. Its Groovy examples are executed directly
-from the skill file by daemon unit tests.
+The mops skill covers command selection, model navigation, editing, builds, checks, tests, and Code Mode. Its Groovy
+examples are executed directly from the skill file by daemon unit tests.
+
+For short task-oriented examples, run `mops examples` or read the
+[bundled topic index](skills/mops/references/README.md). Start with `mops examples editing` to choose an editing
+approach, then read a focused topic such as `mops examples editing.java`. `mops examples all` prints the full
+collection. Examples work offline without a daemon.
 
 ## Commands
 

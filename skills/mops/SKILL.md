@@ -1,11 +1,25 @@
 ---
-name: mops-code
+name: mops
 description:
-  Inspect and edit JetBrains MPS models with mops Code Mode, using Groovy programs and native MPS objects. Use for MPS
-  model tasks that need traversal, queries, or edits beyond a single CLI operation.
+  Inspect, create, edit, build, check, and test JetBrains MPS projects with the mops CLI and Groovy Code Mode. Use when
+  working with MPS models through mops, choosing commands, or discovering its APIs and task recipes.
 ---
 
-# MPS Code Mode
+# Working with MPS through mops
+
+## Choose commands and find targets
+
+Use the project’s `mopsw` wrapper when available. Start with `mops examples` for task recipes and `mops --help` for
+commands. Use `list`, `find`, `get node`, and `render node` to inspect models and obtain stable references before
+editing. Copy serialized references whole; names can be ambiguous. Prefer a direct CLI command when it handles the task.
+
+Read `mops examples editing` to choose JSON edit batches, Java insertion, or Code Mode. JSON batches report containment
+constraint violations; Code Mode supports custom traversal and logic. Check edited models with `check model`, build with
+`make module`, and run relevant tests with `test`. Constraint checks alone do not establish model or build correctness.
+
+For concurrent agents, daemon restarts, or stuck processes, read the skill printed by `mops skill path daemon`.
+
+## Code Mode
 
 Run Groovy against the project's MPS daemon with `mops code run program.groovy`. Omit the file or use `-` to read stdin.
 Select the project with `--project-root PATH`, or run from inside its directory. Use the project's `mopsw` wrapper when
@@ -48,6 +62,12 @@ other JVM objects to supported data while still inside the access block.
 Run rendering, make, and test operations outside access blocks, as specified by `code help`. Check their returned
 diagnostics and outcomes; a returned failure report does not itself make `code run` exit nonzero.
 `code run --timeout SECONDS` sets the hard deadline (default 900; 0 disables it); expiry terminates the daemon.
+
+## Task recipes
+
+Start with `mops examples` for the topic index, or read [the bundled index](references/README.md).
+`mops examples editing` helps choose creation, node editing, references/imports, Java insertion, or JSON batches. Read
+only the topic relevant to the task; `mops examples all` prints the full collection.
 
 ## Examples
 
