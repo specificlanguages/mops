@@ -35,8 +35,8 @@ even on success, and test start/completion events appear in the job log to help 
 ```
 
 The full integration matrix runs nightly on `main` at 02:17 UTC and on manual workflow dispatch. PRs and pushes to
-`main` run only the daemon lifecycle subset on Linux, macOS, and Windows. Release validation still runs `check`,
-including the full integration matrix.
+`main` also run the CLI smoke suite on Linux, macOS, and Windows. Release validation still runs `check`, including the
+full integration matrix.
 
 To test an already extracted distribution, use the separate local task:
 
@@ -47,6 +47,20 @@ To test an already extracted distribution, use the separate local task:
 The local task is excluded from `check` and the supported-version matrix. These tests use the generic MPS archive
 through the daemon launcher, without IDE-plugin host-platform validation.
 
+### Cross-platform smoke tests
+
+```sh
+./gradlew :cli:smokeTest
+./gradlew :cli:smokeUnitTest
+./gradlew :cli:smokeIntegrationTest
+```
+
+`smokeTest` combines unit and integration tests tagged `@Tag("smoke")`. The unit task uses the normal unit-test
+classpath and starts no MPS daemon. The integration task shares runtime configuration with the full integration suite
+and uses the last version listed in `supportedMpsVersions` and its matching JBR. Both tasks have separate reports. Tag a
+test class or method to add focused cross-platform smoke coverage; no workflow filter needs updating. Tagged tests also
+run in their normal unit/integration suites. The smoke tasks are not added to `check`, which already runs those suites.
+
 ### Code-mode runtime tests
 
 The installed CLI integration test exercises model lookup, an edit, saving and reopening the project, extension
@@ -54,11 +68,34 @@ dispatch, and Groovy class identity. It runs both with the selected MPS distribu
 Groovy JAR. CI includes code-mode tests for every supported MPS version.
 
 Bundled agent skills live under `skills/` and ship alongside the CLI in its `skills/` directory. `CodeSkillExamplesTest`
-extracts every fenced `groovy` block from `skills/mops-code/SKILL.md` and executes it verbatim against a fresh fixture
-copy. When adding an example, add behavioral assertions for its heading to that test. Run the examples with:
+extracts every fenced `groovy` block from `skills/mops/SKILL.md` and executes it verbatim against a fresh fixture copy.
+When adding an example, add behavioral assertions for its heading to that test. Run the examples with:
 
 ```sh
 ./gradlew :daemon:test --tests '*CodeSkillExamplesTest'
+```
+
+### Bundled task recipe checks
+
+Task recipes live in `skills/mops/references/` and are copied into CLI resources by `processResources`. The skill and
+`mops examples` therefore ship the same Markdown sources. `ExamplesCommandTest` reads the bundled pages, parses
+documented CLI recipes with the current command tree without executing them, and decodes JSON edit batches with the
+current protocol serializer and generated schema. It also checks bundled reference links. The smoke CI job includes
+these checks on pull requests.
+
+```sh
+./gradlew :cli:test --tests '*ExamplesCommandTest'
+```
+
+These checks catch CLI syntax and edit protocol drift without starting MPS. `BundledExamplesIntegrationTest` also
+extracts the documented node-editing, search, Java insertion, and reference/import Groovy recipes and executes them
+through one daemon in a disposable BaseLanguage fixture project. It checks result values, node edits, and persisted
+model imports. Only sample names and reference placeholders are substituted; the documented operations run verbatim. The
+PR smoke job includes this test against the last entry in `supportedMpsVersions`, and the full integration matrix runs
+it on each version.
+
+```sh
+./gradlew :cli:integrationTestMps2026.1.1 --tests '*BundledExamplesIntegrationTest'
 ```
 
 ### Test-running integration tests

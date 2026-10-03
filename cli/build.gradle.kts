@@ -81,6 +81,12 @@ sourceSets.main {
     resources.srcDir(generateEditSchema)
 }
 
+tasks.processResources {
+    from(rootProject.layout.projectDirectory.dir("skills/mops/references")) {
+        into("examples")
+    }
+}
+
 val writeDaemonClasspath by tasks.registering {
     val outputFile = layout.buildDirectory.file("generated/daemon-classpath/mops-daemon.classpath")
     inputs.files(daemonRuntimeClasspath)
@@ -163,6 +169,12 @@ val jbrArch = when (System.getProperty("os.arch")) {
 }
 
 val supportedMpsVersions = providers.gradleProperty("supportedMpsVersions").get().split(',').map(String::trim)
+val smokeMpsVersion = supportedMpsVersions.last()
+val smokeIntegrationTest = tasks.register<Test>("smokeIntegrationTest") {
+    description = "Runs smoke integration tests against MPS $smokeMpsVersion and its matching JBR."
+    useJUnitPlatform { includeTags("smoke") }
+}
+
 val integrationTests = supportedMpsVersions.map { mpsVersion ->
     val mps = configurations.register("integrationTestMps$mpsVersion") {
         isCanBeConsumed = false
@@ -184,6 +196,9 @@ val integrationTests = supportedMpsVersions.map { mpsVersion ->
     val mpsHome = mpsPlatformCache.getMpsRoot(mps)
     val jbrHome = mpsPlatformCache.getJbrRoot(jbr).map {
         if (jbrOs == "osx") it.resolve("Contents/Home") else it
+    }
+    if (mpsVersion == smokeMpsVersion) {
+        smokeIntegrationTest.configure { configureIntegrationTest(mpsHome, jbrHome) }
     }
     tasks.register<Test>("integrationTestMps$mpsVersion") {
         description = "Runs CLI integration tests against MPS $mpsVersion and its matching JBR."
@@ -212,6 +227,20 @@ tasks.check {
 
 tasks.test {
     useJUnitPlatform { excludeTags("gradle-discovery") }
+}
+
+val smokeUnitTest by tasks.registering(Test::class) {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = "Runs smoke unit tests without starting MPS."
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform { includeTags("smoke") }
+}
+
+tasks.register("smokeTest") {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = "Runs cross-platform CLI smoke unit and integration tests."
+    dependsOn(smokeUnitTest, smokeIntegrationTest)
 }
 
 tasks.register<Test>("gradleDiscoveryTest") {

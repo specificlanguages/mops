@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.cli
 
+import org.junit.jupiter.api.Tag
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.PongResponse
@@ -25,6 +26,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @ResourceLock("system-streams")
+@Tag("smoke")
 class DaemonStatusStopCommandTest {
     @TempDir(cleanup = CleanupMode.ON_SUCCESS)
     lateinit var tempDir: Path

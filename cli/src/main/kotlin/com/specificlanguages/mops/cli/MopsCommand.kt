@@ -19,6 +19,7 @@ import picocli.CommandLine.ScopeType
     mixinStandardHelpOptions = true,
     versionProvider = MopsVersionProvider::class,
     description = ["Kotlin CLI for the daemon-backed MPS prototype."],
+    footer = ["Start with mops examples for task recipes; mops examples editing helps choose an editing approach."],
 )
 class MopsCommand(
     /**
