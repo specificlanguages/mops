@@ -32,26 +32,6 @@
                 code: '''mops check model sample.model --format jsonl --limit 0''',
             ],
             [
-                title: 'Build and run all project tests',
-                kind: 'cli',
-                code: '''mops test''',
-            ],
-            [
-                title: 'Run one test case',
-                kind: 'cli',
-                code: '''mops test sample.tests .tests MyCase''',
-            ],
-            [
-                title: 'Run a test node using compiled classes',
-                kind: 'cli',
-                code: '''mops test 'NODE_REF' --no-build --json''',
-            ],
-            [
-                title: 'Set the test worker deadline',
-                kind: 'cli',
-                code: '''mops test --timeout 60''',
-            ],
-            [
                 title: 'Diagnose unloaded project modules',
                 kind: 'cli',
                 code: '''mops diagnose project''',
@@ -85,6 +65,38 @@
                 title: 'Stop all known daemons',
                 kind: 'cli',
                 code: '''mops daemon stop --all''',
+            ],
+        ],
+        'tests': [
+            [
+                title: 'Build and run all project tests',
+                kind: 'cli',
+                code: '''mops test''',
+            ],
+            [
+                title: 'Build and run all tests in a module',
+                kind: 'cli',
+                code: '''mops test sample.tests --json''',
+            ],
+            [
+                title: 'Build and run all tests in a model',
+                kind: 'cli',
+                code: '''mops test 'sample.tests.tests@tests' --json''',
+            ],
+            [
+                title: 'Run one root test case',
+                kind: 'cli',
+                code: '''mops test sample.tests .tests MyCase''',
+            ],
+            [
+                title: 'Run a root test case using compiled classes',
+                kind: 'cli',
+                code: '''mops test 'NODE_REF' --no-build --json''',
+            ],
+            [
+                title: 'Set the overall test deadline (seconds)',
+                kind: 'cli',
+                code: '''mops test --timeout 60''',
             ],
         ],
     ],

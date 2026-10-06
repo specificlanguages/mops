@@ -5,3 +5,6 @@ The canonical examples are bundled with the [mops skill](../skills/mops/SKILL.md
 editing approach and `mops examples all` to read every topic.
 
 Research evidence is recorded in the [transcript source index](mops-transcript-sources.md).
+
+For test selection, results, deadlines, and runner limitations, run `mops examples validation` or read the
+[validation recipes](../skills/mops/references/validation.md#run-tests).
