@@ -15,7 +15,7 @@ class TestRunningIntegrationTest {
 
     @Test
     fun `Ant test worker uses test mode and version scoped Images blacklist`() {
-        val project = copyTestingProject()
+        val project = copyTestingProject(tempDir.resolve("project"))
         val home = tempDir.resolve("daemon-home").createDirectories()
         fun cli(vararg args: String) = runCommandLine(project, "--daemon-home", home.pathString, *javaAndMpsHomeArgs(), *args)
         try {
@@ -173,7 +173,7 @@ class TestRunningIntegrationTest {
 
     @Test
     fun `project inventory runs both test modules and module selection runs only one`() {
-        val project = copyTestingProject()
+        val project = copyTestingProject(tempDir.resolve("project"))
         val peer = project.resolve("solutions/peer").createDirectories()
         peer.resolve("models").createDirectories()
         val descriptor = project.resolve("solutions/tests/tests.msd").readText()
