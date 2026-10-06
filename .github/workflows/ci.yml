@@ -1,4 +1,4 @@
-name: Daemon lifecycle
+name: CI
 
 on:
   pull_request:
@@ -9,7 +9,23 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  prek:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: j178/prek-action@1382ad72dea72f9d53832f2bcb65b3e87a947204 # v3.0.1
+        with:
+          prek-version: v0.5.5
+          extra-args: --all-files
+
   daemon:
     strategy:
       fail-fast: false
@@ -78,10 +94,23 @@ jobs:
           MPS_VERSION: ${{ matrix.mps }}
         run: ./gradlew --continue ":cli:integrationTestMps${MPS_VERSION}"
       - name: Upload test reports
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: cli-integration-test-reports-mps-${{ matrix.mps }}
           path: |
             cli/build/test-results/
             cli/build/reports/tests/
+
+  ci-passed:
+    name: CI passed
+    needs: [prek, daemon, integration-versions, integration]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require all jobs to succeed
+        env:
+          JOB_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$JOB_RESULTS" | jq -e 'all(.[]; .result == "success")'
