@@ -5,26 +5,14 @@ with no unresolved nodes still requires a full model check. Classifier snippets 
 classifier, and statement snippets into a statement list. The optional third argument inserts before an existing child;
 `null` appends.
 
-<!-- markdownlint-disable MD013 -->
-
 ```groovy
 {{parse-classes}}
 ```
-
-<!-- markdownlint-enable MD013 -->
-
-<!-- markdownlint-disable MD013 -->
 
 ```groovy
 {{parse-members}}
 ```
 
-<!-- markdownlint-enable MD013 -->
-
-<!-- markdownlint-disable MD013 -->
-
 ```groovy
 {{parse-statements}}
 ```
-
-<!-- markdownlint-enable MD013 -->

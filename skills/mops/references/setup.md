@@ -1,5 +1,3 @@
-<!-- Generated from examples/pages and examples/specs; run :cli:updateExamples. -->
-
 # Setup and discover the API
 
 | Task                                                   | Command                                     |

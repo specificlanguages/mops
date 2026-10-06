@@ -1,45 +1,66 @@
 [
-    'example-1': [
+    'find-class-nodes': [
+        group: 'commands',
+        title: 'Find class nodes',
         kind: 'cli',
         code: '''mops find instances jetbrains.mps.baseLanguage.ClassConcept''',
     ],
-    'example-2': [
+    'find-only-direct-instances': [
+        group: 'commands',
+        title: 'Find only direct instances',
         kind: 'cli',
         code: '''mops find instances --exact jetbrains.mps.baseLanguage.ClassConcept''',
     ],
-    'example-3': [
+    'find-named-roots-by-camel-hump-wildcard-pattern': [
+        group: 'commands',
+        title: 'Find named roots by camel-hump/wildcard pattern',
         kind: 'cli',
         code: '''mops find root-by-name '*Builder*'''',
     ],
-    'example-4': [
+    'search-roots-in-one-model': [
+        group: 'commands',
+        title: 'Search roots in one model',
         kind: 'cli',
         code: '''mops find root-by-name '*Builder*' in sample.solution .main''',
     ],
-    'example-5': [
+    'search-roots-across-the-repository': [
+        group: 'commands',
+        title: 'Search roots across the repository',
         kind: 'cli',
         code: '''mops find root-by-name '*Builder*' in /''',
     ],
-    'example-6': [
+    'find-references-to-a-node': [
+        group: 'commands',
+        title: 'Find references to a node',
         kind: 'cli',
         code: '''mops find usages 'NODE_REF'''',
     ],
-    'example-7': [
+    'find-all-matching-node-ids': [
+        group: 'commands',
+        title: 'Find all matching node IDs',
         kind: 'cli',
         code: '''mops find node-by-id 123456789 in /''',
     ],
-    'example-8': [
+    'get-machine-readable-matches': [
+        group: 'commands',
+        title: 'Get machine-readable matches',
         kind: 'cli',
         code: '''mops find instances --json jetbrains.mps.baseLanguage.ClassConcept''',
     ],
-    'example-9': [
+    'return-every-match-as-a-reference': [
+        group: 'commands',
+        title: 'Return every match as a reference',
         kind: 'cli',
         code: '''mops find root-by-name --refs-only --limit 0 '*Builder*'''',
     ],
-    'example-10': [
+    'render-every-matching-root': [
+        group: 'commands',
+        title: 'Render every matching root',
         kind: 'cli',
-        code: '''mops find root-by-name --refs-only --limit 0 '*Builder*' \\| while IFS= read -r ref; do mops render node "$ref"; done''',
+        code: '''mops find root-by-name --refs-only --limit 0 '*Builder*' | while IFS= read -r ref; do mops render node "$ref"; done''',
     ],
-    'example-11': [
+    'name-pattern-help': [
+        group: 'guidance',
         kind: 'cli',
         code: '''mops explain name-pattern''',
     ],

@@ -1,5 +1,3 @@
-<!-- Generated from examples/pages and examples/specs; run :cli:updateExamples. -->
-
 # Mops examples
 
 Examples use `mops`; substitute the project’s generated `mopsw` when available. Replace sample names and uppercase

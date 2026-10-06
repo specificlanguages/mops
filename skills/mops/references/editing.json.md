@@ -1,37 +1,23 @@
-<!-- Generated from examples/pages and examples/specs; run :cli:updateExamples. -->
-
 # JSON edits
 
 Use batches when you want explicit edit operations and constraint diagnostics. This one-liner renames a node:
-
-<!-- markdownlint-disable MD013 -->
 
 ```sh
 printf '%s\n' '{"operations":[{"op":"setProperty","target":"NODE_REF","name":"name","value":"Renamed"}]}' | mops edit model
 ```
 
-<!-- markdownlint-enable MD013 -->
-
 Copy an existing test/root into another model and rename the copy in the same batch (`MODEL_REF` is the destination
 model's serialized reference). Single shell quotes preserve the batch-local `$copy` alias:
-
-<!-- markdownlint-disable MD013 -->
 
 ```sh
 printf '%s\n' '{"operations":[{"op":"copyAsRoot","model":"MODEL_REF","source":"SOURCE_REF","as":"copy"},{"op":"setProperty","target":"$copy","name":"name","value":"RegressionTest"}]}' | mops edit model
 ```
 
-<!-- markdownlint-enable MD013 -->
-
 Copy a member subtree into a class, preserving its references and assigning fresh node IDs:
-
-<!-- markdownlint-disable MD013 -->
 
 ```sh
 printf '%s\n' '{"operations":[{"op":"copyAsChild","target":"CLASS_REF","source":"MEMBER_REF","role":"member","position":"last"}]}' | mops edit model
 ```
-
-<!-- markdownlint-enable MD013 -->
 
 | Task                                        | Command                                                    |
 | ------------------------------------------- | ---------------------------------------------------------- |

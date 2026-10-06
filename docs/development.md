@@ -78,18 +78,20 @@ When adding an example, add behavioral assertions for its heading to that test. 
 ### Bundled task recipe checks
 
 The source catalog lives in [`examples/`](../examples/README.md). Groovy maps hold the snippets and their assertions;
-Markdown templates supply the surrounding guidance and topic layout. `generateExamples` produces the CLI pages and a
-test manifest from that catalog. `updateExamples` refreshes the checked-in skill references; `checkExamples` rejects
-stale references and runs in both `check` and `smokeTest`.
+Markdown templates supply prose and table-group slots; each spec supplies its group and row title. `generateExamples`
+produces the CLI pages and a test manifest from that catalog. `updateExamples` refreshes the checked-in skill
+references; `checkExamples` rejects stale references and runs in both `check` and `smokeTest`.
 
 ```sh
 ./gradlew :cli:updateExamples :cli:checkExamples
 ./gradlew :cli:test --tests '*ExamplesCommandTest'
 ```
 
-`ExamplesCommandTest` parses documented CLI recipes with the current command tree without executing them, validates JSON
-edit batches with the protocol serializer and generated schema, and checks bundled reference links. These checks catch
-syntax and protocol drift without starting MPS.
+`ExamplesCommandTest` parses CLI recipes directly from the catalog with the current command tree, including commands in
+shell pipelines, without executing them. It validates JSON edit batches with the protocol serializer and generated
+schema, and checks bundled reference links. These checks catch syntax and protocol drift without starting MPS. The
+pre-commit CI job generates the pages first; Markdown lint includes the generated build output as well as checked-in
+references. Line-length checks apply to prose, excluding code blocks and tables globally.
 
 `BundledExamplesIntegrationTest` creates a named JUnit dynamic test for each executable Groovy spec. It starts one
 daemon and gives every example fresh models in a disposable BaseLanguage project. Each spec declares its placeholder

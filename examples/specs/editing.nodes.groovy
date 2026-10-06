@@ -1,5 +1,7 @@
 [
     'root-names': [
+        group: 'nodes',
+        title: 'List root names and references',
         kind: 'groovy',
         code: '''project.read { mops.lookup.requireModel('sample.model').rootNodes.collect { [name: it.properties['name'], node: it] } }''',
         verify: '''
@@ -7,6 +9,8 @@
         ''',
     ],
     'property': [
+        group: 'nodes',
+        title: 'Read a node property',
         kind: 'groovy',
         code: '''project.read { mops.lookup.requireNode('NODE_REF').properties['name'] }''',
         verify: '''
@@ -15,6 +19,8 @@
         output: 'text',
     ],
     'find-root': [
+        group: 'nodes',
+        title: 'Find a root with an exact name',
         kind: 'groovy',
         code: '''project.read { mops.lookup.requireModel('sample.model').rootNodes.find { it.properties['name'] == 'Example' } }''',
         verify: '''
@@ -23,6 +29,8 @@
         output: 'text',
     ],
     'descendants': [
+        group: 'nodes',
+        title: 'List containment descendants',
         kind: 'groovy',
         code: '''project.read { mops.lookup.requireNode('NODE_REF').descendants.collect { [concept: it.concept.qualifiedName, node: it] } }''',
         verify: '''
@@ -32,6 +40,8 @@
         ''',
     ],
     'ancestors': [
+        group: 'nodes',
+        title: 'List ancestors',
         kind: 'groovy',
         code: '''project.read { mops.lookup.requireNode('NODE_REF').ancestors }''',
         verify: '''
@@ -39,6 +49,8 @@
         ''',
     ],
     'property-names': [
+        group: 'nodes',
+        title: 'List available property names',
         kind: 'groovy',
         code: '''project.read { mops.lookup.requireNode('NODE_REF').concept.properties.collect { it.name } }''',
         verify: '''
@@ -46,6 +58,8 @@
         ''',
     ],
     'child-roles': [
+        group: 'nodes',
+        title: 'List child roles',
         kind: 'groovy',
         code: '''project.read { mops.lookup.requireNode('NODE_REF').concept.containmentLinks.collect { it.name } }''',
         verify: '''
@@ -53,6 +67,8 @@
         ''',
     ],
     'reference-roles': [
+        group: 'nodes',
+        title: 'List reference roles',
         kind: 'groovy',
         code: '''project.read { mops.lookup.requireNode('NODE_REF').concept.referenceLinks.collect { it.name } }''',
         verify: '''
@@ -62,6 +78,8 @@
         bindings: ['NODE_REF': 'type'],
     ],
     'single-child': [
+        group: 'nodes',
+        title: 'Read one child',
         kind: 'groovy',
         code: '''project.read { mops.lookup.requireNode('NODE_REF').child['body'] }''',
         verify: '''
@@ -71,6 +89,8 @@
         bindings: ['NODE_REF': 'method'],
     ],
     'ordered-children': [
+        group: 'nodes',
+        title: 'Read ordered children in a role',
         kind: 'groovy',
         code: '''project.read { mops.lookup.requireNode('CLASS_REF').children['member'] }''',
         verify: '''
@@ -78,6 +98,8 @@
         ''',
     ],
     'reference-target': [
+        group: 'nodes',
+        title: 'Resolve a reference target',
         kind: 'groovy',
         code: '''project.read { mops.lookup.requireNode('NODE_REF').references['classifier']?.targetNode }''',
         verify: '''
@@ -87,6 +109,8 @@
         bindings: ['NODE_REF': 'type'],
     ],
     'rename': [
+        group: 'nodes',
+        title: 'Rename a node',
         kind: 'groovy',
         code: '''project.command { def n = mops.lookup.requireNode('NODE_REF'); n.properties['name'] = 'Renamed'; n }''',
         verify: '''
@@ -97,6 +121,8 @@
         output: 'text',
     ],
     'retarget': [
+        group: 'nodes',
+        title: 'Change a reference target',
         kind: 'groovy',
         code: '''project.command { def n = mops.lookup.requireNode('NODE_REF'); n.references['classifier'] = mops.lookup.requireNode('TARGET_REF'); n }''',
         verify: '''
@@ -107,6 +133,8 @@
         bindings: ['NODE_REF': 'type'],
     ],
     'clear-child': [
+        group: 'nodes',
+        title: 'Clear a child role',
         kind: 'groovy',
         code: '''project.command { def n = mops.lookup.requireNode('NODE_REF'); n.child['body'] = null; n }''',
         verify: '''
@@ -117,6 +145,8 @@
         bindings: ['NODE_REF': 'method'],
     ],
     'reverse-members': [
+        group: 'nodes',
+        title: 'Reverse ordered members',
         kind: 'groovy',
         code: '''project.command { def n = mops.lookup.requireNode('CLASS_REF'); n.children['member'] = n.children['member'].reverse(); n }''',
         verify: '''
@@ -126,6 +156,8 @@
         output: 'text',
     ],
     'create-root': [
+        group: 'nodes',
+        title: 'Create a class root',
         kind: 'groovy',
         code: '''project.command { def m = mops.lookup.requireModel('sample.model'); def n = m.createNode(mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.ClassConcept')); n.properties['name'] = 'Example'; m.addRootNode(n); n }''',
         verify: '''
@@ -134,6 +166,8 @@
         output: 'text',
     ],
     'create-solution-model': [
+        group: 'nodes',
+        title: 'Create a solution and model',
         kind: 'groovy',
         code: '''project.command { project.createSolution('sample.solution', [usagePreset: 'java']).createModel('sample.model') }''',
         verify: '''
@@ -144,6 +178,8 @@
         bindings: ['sample.model': 'sample.model'],
     ],
     'render': [
+        group: 'nodes',
+        title: 'Render a node',
         kind: 'groovy',
         code: '''def n = project.read { mops.lookup.requireNode('NODE_REF') }; n.render()''',
         verify: '''
@@ -152,6 +188,8 @@
         output: 'text',
     ],
     'runtime-help': [
+        group: 'nodes',
+        title: 'Inspect a runtime object\'s API',
         kind: 'groovy',
         code: '''project.read { help(mops.lookup.requireNode('NODE_REF')) }''',
         verify: '''
@@ -160,6 +198,7 @@
         output: 'text',
     ],
     'instances': [
+        group: 'guidance',
         kind: 'groovy',
         code: '''project.read { def found = []; mops.search.eachInstanceOf(mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.ClassConcept'), project.scope) { found << [name: it.properties['name'], node: it] }; found }''',
         verify: '''
@@ -167,6 +206,7 @@
         ''',
     ],
     'usages': [
+        group: 'guidance',
         kind: 'groovy',
         code: '''project.read { def found = []; mops.search.eachUsageOf(mops.lookup.requireNode('NODE_REF'), project.scope) { found << [role: it.link.name, source: it.sourceNode] }; found }''',
         verify: '''
@@ -175,15 +215,18 @@
         output: 'json',
         bindings: ['NODE_REF': 'old'],
     ],
-    'example-22': [
+    'run-file': [
+        group: 'guidance',
         kind: 'cli',
         code: '''mops code run task.groovy''',
     ],
-    'example-23': [
+    'node-api': [
+        group: 'guidance',
         kind: 'cli',
         code: '''mops code help SNode''',
     ],
-    'example-24': [
+    'run-stdin': [
+        group: 'guidance',
         kind: 'shell',
         code: '''printf '%s\\n' 'project.read { project.projectModules.collect { it.moduleName } }' | mops code run -''',
     ],

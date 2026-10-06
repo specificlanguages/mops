@@ -1,11 +1,7 @@
-<!-- Generated from examples/pages and examples/specs; run :cli:updateExamples. -->
-
 # Search
 
 Default searches cover editable project sources. An explicit `in` scope can include library/platform content.
 `find instances` includes subconcepts by default; `--exact` restricts it to the direct concept.
-
-<!-- markdownlint-disable MD013 -->
 
 | Task                                            | Command                                                                                                                |
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
@@ -19,8 +15,6 @@ Default searches cover editable project sources. An explicit `in` scope can incl
 | Get machine-readable matches                    | `mops find instances --json jetbrains.mps.baseLanguage.ClassConcept`                                                   |
 | Return every match as a reference               | `mops find root-by-name --refs-only --limit 0 '*Builder*'`                                                             |
 | Render every matching root                      | `mops find root-by-name --refs-only --limit 0 '*Builder*' \| while IFS= read -r ref; do mops render node "$ref"; done` |
-
-<!-- markdownlint-enable MD013 -->
 
 `find` defaults to 100 matches; `--limit 0` removes the cap. `--refs-only` cannot be combined with `--json`. Use
 `mops explain name-pattern` for pattern matching rules.

@@ -46,8 +46,8 @@ dependencies {
     testImplementation(libs.json.schema.validator)
     testRuntimeOnly(libs.junit.platform.launcher)
 
-    add(integrationTest.implementationConfigurationName, libs.groovy)
-    add(integrationTest.implementationConfigurationName, "org.apache.groovy:groovy-json:${libs.versions.groovy.get()}")
+    testImplementation(libs.groovy)
+    testImplementation("org.apache.groovy:groovy-json:${libs.versions.groovy.get()}")
 
     editSchemaGeneratorClasspath(project(":protocol"))
     daemonRuntimeClasspath(project(":daemon"))
@@ -127,6 +127,14 @@ val checkExamples by tasks.registering {
 
 tasks.processResources {
     from(generateExamples.map { it.outputs.files.singleFile.resolve("pages") }) { into("examples") }
+}
+
+sourceSets.test {
+    resources.srcDir(generateExamples.map { it.outputs.files.singleFile.resolve("specs") })
+}
+
+tasks.processTestResources {
+    from(exampleSources.file("generate.groovy"))
 }
 
 integrationTest.resources {

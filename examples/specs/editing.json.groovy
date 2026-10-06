@@ -1,45 +1,64 @@
 [
-    'example-1': [
+    'apply-a-saved-batch': [
+        group: 'commands',
+        title: 'Apply a saved batch',
         kind: 'cli',
         code: '''mops edit model --file edits.json''',
     ],
-    'example-2': [
+    'require-all-concepts-to-be-checkable': [
+        group: 'commands',
+        title: 'Require all concepts to be checkable',
         kind: 'cli',
         code: '''mops edit model --file edits.json --constraints strict''',
     ],
-    'example-3': [
+    'apply-while-reporting-constraint-violations': [
+        group: 'commands',
+        title: 'Apply while reporting constraint violations',
         kind: 'cli',
         code: '''mops edit model --file edits.json --constraints advisory''',
     ],
-    'example-4': [
+    'discover-subtree-creation-notation': [
+        group: 'commands',
+        title: 'Discover subtree creation notation',
         kind: 'cli',
         code: '''mops explain edit.addRoot''',
     ],
-    'example-5': [
+    'discover-replacement-notation': [
+        group: 'commands',
+        title: 'Discover replacement notation',
         kind: 'cli',
         code: '''mops explain edit.replace''',
     ],
-    'example-6': [
+    'discover-wrapping-notation': [
+        group: 'commands',
+        title: 'Discover wrapping notation',
         kind: 'cli',
         code: '''mops explain edit.wrap''',
     ],
-    'example-7': [
+    'discover-copying-notation': [
+        group: 'commands',
+        title: 'Discover copying notation',
         kind: 'cli',
         code: '''mops explain edit.copyAsChild''',
     ],
-    'example-8': [
+    'export-the-batch-schema': [
+        group: 'commands',
+        title: 'Export the batch schema',
         kind: 'cli',
         code: '''mops explain --schema edit''',
     ],
-    'example-9': [
+    'rename-node': [
+        group: 'guidance',
         kind: 'shell',
         code: '''printf '%s\\n' '{"operations":[{"op":"setProperty","target":"NODE_REF","name":"name","value":"Renamed"}]}' | mops edit model''',
     ],
-    'example-10': [
+    'copy-root': [
+        group: 'guidance',
         kind: 'shell',
         code: '''printf '%s\\n' '{"operations":[{"op":"copyAsRoot","model":"MODEL_REF","source":"SOURCE_REF","as":"copy"},{"op":"setProperty","target":"$copy","name":"name","value":"RegressionTest"}]}' | mops edit model''',
     ],
-    'example-11': [
+    'copy-member': [
+        group: 'guidance',
         kind: 'shell',
         code: '''printf '%s\\n' '{"operations":[{"op":"copyAsChild","target":"CLASS_REF","source":"MEMBER_REF","role":"member","position":"last"}]}' | mops edit model''',
     ],

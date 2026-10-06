@@ -1,5 +1,3 @@
-<!-- Generated from examples/pages and examples/specs; run :cli:updateExamples. -->
-
 # Editing: choose an approach
 
 Start with navigation and search to obtain stable references. Replace the uppercase placeholders in examples with

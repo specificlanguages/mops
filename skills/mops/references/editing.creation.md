@@ -1,5 +1,3 @@
-<!-- Generated from examples/pages and examples/specs; run :cli:updateExamples. -->
-
 # Create modules and models
 
 | Task                                  | Command                                                                      |

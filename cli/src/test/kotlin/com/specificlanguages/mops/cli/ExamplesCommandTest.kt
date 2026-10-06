@@ -9,6 +9,7 @@ import com.networknt.schema.SpecificationVersion
 import com.specificlanguages.mops.cli.explain.ExplainTopics
 import com.specificlanguages.mops.cli.examples.ExampleTopics
 import com.specificlanguages.mops.protocol.ProtocolJson
+import kotlinx.serialization.json.*
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -44,20 +45,26 @@ class ExamplesCommandTest {
 
     @Test
     fun `documented CLI recipes parse against the current command tree`() {
-        var checked = 0
-        for (topic in ExampleTopics.topics) {
-            val page = ExampleTopics.page(topic)
-            val commands = Regex("`(mops [^`]+)`").findAll(page).map { it.groupValues[1] }.toList() +
-                Regex("(?m)^mops [^\\n]+").findAll(page).map { it.value }.toList()
+        val catalog = Json.parseToJsonElement(checkNotNull(javaClass.getResourceAsStream("/examples.json"))
+            .bufferedReader().use { it.readText() }).jsonArray.map { it.jsonObject }
+        val specs = catalog.filter { it.getValue("kind").jsonPrimitive.content in setOf("cli", "shell") }
+        assertTrue(specs.isNotEmpty(), "No CLI examples in the catalog")
+        for (spec in specs) {
+            val source = spec.getValue("code").jsonPrimitive.content
+            val commands = Regex("""\bmops\s+[^|;\n]+""").findAll(source).map { it.value.trim() }.toList()
+            assertTrue(commands.isNotEmpty(), "No mops command in ${spec.getValue("id")}")
             for (command in commands) {
-                val firstCommand = command.substringBefore("|").trimEnd(' ', '\\')
-                val args = Regex("'[^']*'|\"[^\"]*\"|\\S+").findAll(firstCommand)
-                    .map { it.value.removeSurrounding("'").removeSurrounding("\"") }.drop(1).toList()
+                val tokens = Regex("""'([^']*)'|"([^"]*)"|([^\s'"]+)""").findAll(command).toList()
+                var end = 0
+                for (token in tokens) {
+                    assertTrue(command.substring(end, token.range.first).isBlank(), "Invalid shell quoting: $command")
+                    end = token.range.last + 1
+                }
+                assertTrue(command.substring(end).isBlank(), "Invalid shell quoting: $command")
+                val args = tokens.map { it.value.removeSurrounding("'").removeSurrounding("\"") }.drop(1)
                 newCommandLine().parseArgs(*args.toTypedArray())
-                checked++
             }
         }
-        assertTrue(checked > 50, "Expected to validate the CLI recipes, checked $checked")
     }
 
     @Test

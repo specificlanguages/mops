@@ -1,5 +1,3 @@
-<!-- Generated from examples/pages and examples/specs; run :cli:updateExamples. -->
-
 # Build, check, test, and recover
 
 | Task                                               | Command                                                  |
@@ -28,23 +26,15 @@ Run make, render, and testing helpers outside access blocks:
 project.make()
 ```
 
-<!-- markdownlint-disable MD013 -->
-
 ```groovy
 def model = project.read { mops.lookup.requireModel('sample.tests.tests@tests') }; def r = mops.testing.run(model, [build: true, timeout: 60]); [successful: r.successful, diagnostics: r.diagnostics, reportPath: r.reportPath]
 ```
 
-<!-- markdownlint-enable MD013 -->
-
 To refresh existing module entries in an MPS build-language project from descriptor files:
-
-<!-- markdownlint-disable MD013 -->
 
 ```groovy
 project.command { def r = mops.editing.build.reloadModulesFromDisk(mops.lookup.requireNode('BUILD_PROJECT_REF')); [succeeded: r.succeeded, messages: r.messages.collect { [kind: it.kind, text: it.text, node: it.node] }] }
 ```
-
-<!-- markdownlint-enable MD013 -->
 
 Check the returned outcome of Code Mode make/testing operations: returned failure reports do not themselves make
 `code run` exit nonzero. Tests save `report.json` and `worker.log` under the daemon workspace's `test-runs/<run-id>/`.

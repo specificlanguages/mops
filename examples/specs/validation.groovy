@@ -1,88 +1,126 @@
 [
     'make': [
+        group: 'guidance',
         kind: 'groovy',
         code: '''project.make()''',
         untested: 'Requires module generation; excluded from the short recipe run.',
     ],
     'run-tests': [
+        group: 'guidance',
         kind: 'groovy',
         code: '''def model = project.read { mops.lookup.requireModel('sample.tests.tests@tests') }; def r = mops.testing.run(model, [build: true, timeout: 60]); [successful: r.successful, diagnostics: r.diagnostics, reportPath: r.reportPath]''',
         untested: 'Requires a compiled test-model fixture.',
     ],
     'reload-build': [
+        group: 'guidance',
         kind: 'groovy',
         code: '''project.command { def r = mops.editing.build.reloadModulesFromDisk(mops.lookup.requireNode('BUILD_PROJECT_REF')); [succeeded: r.succeeded, messages: r.messages.collect { [kind: it.kind, text: it.text, node: it.node] }] }''',
         untested: 'Requires a build-language fixture.',
     ],
-    'example-4': [
+    'make-selected-modules-and-their-dependencies': [
+        group: 'commands',
+        title: 'Make selected modules and their dependencies',
         kind: 'cli',
         code: '''mops make module sample.language sample.solution''',
     ],
-    'example-5': [
+    'make-all-generatable-project-modules': [
+        group: 'commands',
+        title: 'Make all generatable project modules',
         kind: 'cli',
         code: '''mops make project''',
     ],
-    'example-6': [
+    'check-a-model-including-typesystem-checking-rules': [
+        group: 'commands',
+        title: 'Check a model, including typesystem/checking rules',
         kind: 'cli',
         code: '''mops check model sample.model''',
     ],
-    'example-7': [
+    'check-selected-modules': [
+        group: 'commands',
+        title: 'Check selected modules',
         kind: 'cli',
         code: '''mops check module sample.language sample.solution''',
     ],
-    'example-8': [
+    'check-the-project': [
+        group: 'commands',
+        title: 'Check the project',
         kind: 'cli',
         code: '''mops check project''',
     ],
-    'example-9': [
+    'emit-all-model-findings-as-json-lines': [
+        group: 'commands',
+        title: 'Emit all model findings as JSON lines',
         kind: 'cli',
         code: '''mops check model sample.model --format jsonl --limit 0''',
     ],
-    'example-10': [
+    'build-and-run-all-project-tests': [
+        group: 'commands',
+        title: 'Build and run all project tests',
         kind: 'cli',
         code: '''mops test''',
     ],
-    'example-11': [
+    'run-one-test-case': [
+        group: 'commands',
+        title: 'Run one test case',
         kind: 'cli',
         code: '''mops test sample.tests .tests MyCase''',
     ],
-    'example-12': [
+    'run-a-test-node-using-compiled-classes': [
+        group: 'commands',
+        title: 'Run a test node using compiled classes',
         kind: 'cli',
         code: '''mops test 'NODE_REF' --no-build --json''',
     ],
-    'example-13': [
+    'set-the-test-worker-deadline': [
+        group: 'commands',
+        title: 'Set the test worker deadline',
         kind: 'cli',
         code: '''mops test --timeout 60''',
     ],
-    'example-14': [
+    'diagnose-unloaded-project-modules': [
+        group: 'commands',
+        title: 'Diagnose unloaded project modules',
         kind: 'cli',
         code: '''mops diagnose project''',
     ],
-    'example-15': [
+    'include-loaded-modules-in-diagnosis': [
+        group: 'commands',
+        title: 'Include loaded modules in diagnosis',
         kind: 'cli',
         code: '''mops diagnose project --all''',
     ],
-    'example-16': [
+    'inspect-a-module-s-load-dependency-problem': [
+        group: 'commands',
+        title: 'Inspect a module\'s load/dependency problem',
         kind: 'cli',
         code: '''mops diagnose module sample.language''',
     ],
-    'example-17': [
+    'start-reuse-the-daemon-and-check-connectivity': [
+        group: 'commands',
+        title: 'Start/reuse the daemon and check connectivity',
         kind: 'cli',
         code: '''mops daemon ping''',
     ],
-    'example-18': [
+    'inspect-all-known-daemons': [
+        group: 'commands',
+        title: 'Inspect all known daemons',
         kind: 'cli',
         code: '''mops daemon status --all''',
     ],
-    'example-19': [
+    'stop-the-project-s-daemon': [
+        group: 'commands',
+        title: 'Stop the project\'s daemon',
         kind: 'cli',
         code: '''mops daemon stop''',
     ],
-    'example-20': [
+    'stop-all-known-daemons': [
+        group: 'commands',
+        title: 'Stop all known daemons',
         kind: 'cli',
         code: '''mops daemon stop --all''',
     ],
-    'example-21': [
+    'disable-deadline': [
+        group: 'guidance',
         kind: 'cli',
         code: '''mops code run --timeout 0 task.groovy''',
     ],

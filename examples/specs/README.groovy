@@ -1,25 +1,31 @@
 [
-    'example-1': [
+    'setup': [
+        group: 'guidance',
         kind: 'cli',
         code: '''mops examples setup''',
     ],
-    'example-2': [
+    'navigation': [
+        group: 'guidance',
         kind: 'cli',
         code: '''mops examples navigation''',
     ],
-    'example-3': [
+    'search': [
+        group: 'guidance',
         kind: 'cli',
         code: '''mops examples search''',
     ],
-    'example-4': [
+    'editing': [
+        group: 'guidance',
         kind: 'cli',
         code: '''mops examples editing''',
     ],
-    'example-5': [
+    'validation': [
+        group: 'guidance',
         kind: 'cli',
         code: '''mops examples validation''',
     ],
-    'example-6': [
+    'all-topics': [
+        group: 'guidance',
         kind: 'cli',
         code: '''mops examples all''',
     ],

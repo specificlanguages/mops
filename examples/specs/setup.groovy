@@ -1,49 +1,73 @@
 [
-    'example-1': [
+    'discover-gradle-configured-mps-java-and-write-wrappers': [
+        group: 'commands',
+        title: 'Discover Gradle-configured MPS/Java and write wrappers',
         kind: 'cli',
         code: '''mops wrapper''',
     ],
-    'example-2': [
+    'write-a-wrapper-for-one-project': [
+        group: 'commands',
+        title: 'Write a wrapper for one project',
         kind: 'cli',
         code: '''mops wrapper --project-root ../my-project''',
     ],
-    'example-3': [
+    'select-a-project-explicitly': [
+        group: 'commands',
+        title: 'Select a project explicitly',
         kind: 'cli',
         code: '''mops --project-root ../my-project list''',
     ],
-    'example-4': [
+    'supply-an-mps-distribution-directly': [
+        group: 'commands',
+        title: 'Supply an MPS distribution directly',
         kind: 'cli',
         code: '''mops --mps-home /path/to/MPS list''',
     ],
-    'example-5': [
+    'discover-cli-commands': [
+        group: 'commands',
+        title: 'Discover CLI commands',
         kind: 'cli',
         code: '''mops --help''',
     ],
-    'example-6': [
+    'discover-a-command-s-options': [
+        group: 'commands',
+        title: 'Discover a command\'s options',
         kind: 'cli',
         code: '''mops create solution --help''',
     ],
-    'example-7': [
+    'discover-groovy-helpers': [
+        group: 'commands',
+        title: 'Discover Groovy helpers',
         kind: 'cli',
         code: '''mops code help''',
     ],
-    'example-8': [
+    'inspect-helper-signatures-and-access-requirements': [
+        group: 'commands',
+        title: 'Inspect helper signatures and access requirements',
         kind: 'cli',
         code: '''mops code help mops.parsing.java''',
     ],
-    'example-9': [
+    'inspect-native-node-members-and-extensions': [
+        group: 'commands',
+        title: 'Inspect native node members and extensions',
         kind: 'cli',
         code: '''mops code help SNode''',
     ],
-    'example-10': [
+    'read-edit-notation': [
+        group: 'commands',
+        title: 'Read edit notation',
         kind: 'cli',
         code: '''mops explain edit''',
     ],
-    'example-11': [
+    'read-search-scope-syntax': [
+        group: 'commands',
+        title: 'Read search scope syntax',
         kind: 'cli',
         code: '''mops explain scope''',
     ],
-    'example-12': [
+    'locate-bundled-agent-guidance': [
+        group: 'commands',
+        title: 'Locate bundled agent guidance',
         kind: 'cli',
         code: '''mops skill path''',
     ],
