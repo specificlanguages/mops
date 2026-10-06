@@ -14,3 +14,5 @@ include("daemon-core")
 include("daemon-mps-plugin")
 include("launcher")
 include("protocol")
+
+include("ant-test-adapters")

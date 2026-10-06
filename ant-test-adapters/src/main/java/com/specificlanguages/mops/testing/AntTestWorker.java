@@ -19,7 +19,11 @@ public class AntTestWorker extends LaunchTestWorker {
       ModuleClassCode code = new ModuleClassCode("c234a56a-502f-4751-aded-6f9846fff7ce(jetbrains.mps.lang.test.junit5)");
       code.load(myEnvironment.getPlatform(), "jetbrains.mps.lang.test.junit5.ScriptJUnit5Launcher");
       ClassLoader parent = code.instanceMethod("launchTests").orElseThrow().getDeclaringClass().getClassLoader();
-      try (URLClassLoader loader = new URLClassLoader(new URL[]{new File(System.getProperty("mops.test.adapter")).toURI().toURL()}, parent)) {
+      Class<?> launcher = parent.loadClass("jetbrains.mps.lang.test.junit5.ScriptJUnit5Launcher");
+      String variant = LauncherApi.select(launcher);
+      File jar = new File(System.getProperty("mops.test.adapters"), variant + ".jar");
+      System.out.println("MOPS_TEST_ADAPTER=" + variant);
+      try (URLClassLoader loader = new URLClassLoader(new URL[]{jar.toURI().toURL()}, parent)) {
         Class<?> adapter = loader.loadClass("com.specificlanguages.mops.testing.ModelLauncher");
         int failures = (Integer) adapter.getMethod("run", Script.class, Environment.class, Object.class).invoke(null, myWhatToDo, myEnvironment, this);
         System.out.println("MOPS_TEST_FAILURES=" + failures);

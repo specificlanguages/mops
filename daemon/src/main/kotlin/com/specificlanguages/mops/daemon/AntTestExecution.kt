@@ -12,33 +12,16 @@ class AntTestExecution(private val mps: Path, private val directory: Path, priva
     fun run(project: Path, selection: AntTestSelection) {
         val (modules, moduleIds, libraries, model, node) = selection
         val javaHome = Path.of(System.getProperty("java.home"))
-        val sources = directory.resolve("sources").createDirectories()
-        val boot = directory.resolve("boot").createDirectories()
-        val adapter = directory.resolve("adapter").createDirectories()
+        val adapters = directory.resolve("adapters").createDirectories()
+        for (name in listOf("boot", "legacy", "current")) {
+            requireNotNull(javaClass.getResourceAsStream("/testing/ant/$name.jar")).use { input ->
+                Files.copy(input, adapters.resolve("$name.jar"))
+            }
+        }
+        val boot = adapters.resolve("boot.jar")
         val events = directory.resolve("events").createDirectories()
         val properties = Properties().also { properties -> Files.newInputStream(mps.resolve("build.properties")).use { properties.load(it) } }
         val version = properties.getProperty("mpsBootstrapCore.version")
-        val legacy = version.startsWith("2024.1") || version.startsWith("2025.1")
-        fun resource(name: String) = requireNotNull(javaClass.getResource("/testing/ant/$name")).readText()
-        val worker = sources.resolve("AntTestWorker.java").also { it.writeText(resource("AntTestWorker.java")) }
-        val task = sources.resolve("MopsLaunchTestTask.java").also { it.writeText(resource("MopsLaunchTestTask.java")) }
-        val launcher = sources.resolve("ModelLauncher.java").also { it.writeText(resource(if (legacy) "legacy.java" else "current.java")) }
-        val support = sources.resolve("SelectionSupport.java").also { it.writeText(resource("SelectionSupport.java")) }
-        val compileClasspath = listOf(mps.resolve("lib"), mps.resolve("plugins/mps-testing"), mps.resolve("plugins/mps-junit5"))
-            .flatMap { root -> Files.walk(root).use { paths -> paths.filter { it.toString().endsWith(".jar") }.toList() } }
-            .filterNot { it.name.endsWith("-src.jar") || it.name.endsWith("-sources.jar") }
-            .joinToString(File.pathSeparator)
-        fun compile(destination: Path, vararg files: Path) {
-            val argsFile = sources.resolve("javac.args")
-            fun quote(value: String) = "\"${value.replace("\\", "\\\\").replace("\"", "\\\"")}\""
-            argsFile.writeText((listOf("-proc:none", "-cp", compileClasspath, "-d", destination.toString()) + files.map { it.toString() })
-                .joinToString("\n", transform = ::quote))
-            val compiler = ProcessBuilder(javaHome.resolve("bin/javac").toString(), "@$argsFile")
-                .redirectErrorStream(true).redirectOutput(directory.resolve("compile.log").toFile()).start()
-            check(compiler.waitFor() == 0) { "Cannot compile Ant test adapter: ${directory.resolve("compile.log").readText()}" }
-        }
-        compile(boot, worker, task)
-        compile(adapter, launcher, support)
         fun xml(value: Any) = value.toString().replace("&", "&amp;").replace("\"", "&quot;").replace("<", "&lt;").replace(">", "&gt;")
         val config = directory.resolve("test-config").createDirectories()
         // The 2025.1 SVG parser is on Ant's application classpath, but its language is in the Images plugin loader.
@@ -52,7 +35,7 @@ class AntTestExecution(private val mps: Path, private val directory: Path, priva
             "-ea", "-Xmx2048m", "-Dplugin.path=$pluginPath", "-Djava.awt.headless=true", "-Didea.config.path=$config",
             "-Didea.system.path=${directory.resolve("test-system")}", "-Didea.log.path=${directory.resolve("test-log")}",
             "-Djna.boot.library.path=${mps.resolve("lib/jna/$jnaArch")}",
-            "-Dmops.test.modules=${moduleIds.joinToString(",")}", "-Dmops.test.adapter=$adapter", "-Dmops.test.events=$events",
+            "-Dmops.test.modules=${moduleIds.joinToString(",")}", "-Dmops.test.adapters=$adapters", "-Dmops.test.events=$events",
         ) + listOfNotNull(model?.let { "-Dmops.test.model=$it" }, node?.let { "-Dmops.test.node=$it" }) +
             if (version.startsWith("2024.1")) listOf("-Djava.system.class.loader=com.intellij.util.lang.PathClassLoader") else emptyList()
         val antFile = directory.resolve("launchtests.xml")

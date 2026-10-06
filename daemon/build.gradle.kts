@@ -19,6 +19,8 @@ plugins {
     alias(libs.plugins.jbr.toolchain)
 }
 
+val antTestAdapters = configurations.register("antTestAdapters") { isCanBeConsumed = false }
+
 val mpsZip = configurations.register("mpsZip") { isCanBeConsumed = false }
 val mpsRuntime = configurations.register("mpsRuntime") { isCanBeConsumed = false }
 val mpsPlugin = configurations.register("mpsPlugin") {
@@ -32,6 +34,7 @@ configurations {
 }
 
 dependencies {
+    antTestAdapters(project(path = ":ant-test-adapters", configuration = "adapters"))
     implementation(project(":daemon-core"))
     implementation(project(":protocol"))
     implementation(project(":launcher"))
@@ -266,4 +269,9 @@ val checkDaemonRelocation by tasks.registering {
 
 tasks.check {
     dependsOn(checkDaemonRelocation)
+}
+
+// Nested JARs retain the separate Ant/application and MPS module classloader boundaries.
+tasks.processResources {
+    from(antTestAdapters) { into("testing/ant") }
 }
