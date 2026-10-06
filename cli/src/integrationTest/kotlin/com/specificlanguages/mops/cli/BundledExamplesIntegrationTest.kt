@@ -47,7 +47,8 @@ class BundledExamplesIntegrationTest {
             .map { it.jsonObject }.filter { it["kind"]?.jsonPrimitive?.content == "groovy" }
         assertTrue(examples.any { "verify" in it }, "No executable examples in the catalog")
         return examples.mapIndexed { index, example ->
-            val name = "${example.getValue("topic").jsonPrimitive.content}/${example.getValue("id").jsonPrimitive.content}"
+            val name = listOfNotNull(example["topic"], example["group"], example["title"] ?: example["id"])
+                .joinToString("/") { it.jsonPrimitive.content }
             DynamicTest.dynamicTest(name) {
                 Assumptions.assumeTrue("verify" in example, example["untested"]?.jsonPrimitive?.content)
                 val modelName = "examples.case$index"

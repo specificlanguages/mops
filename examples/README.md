@@ -5,24 +5,30 @@ Edit `specs/<topic>.groovy` to change a snippet and its expectations. Edit `page
 supplies the row's `title` and `code`. `{{id}}` slots insert a named snippet into prose or a code fence. The generated
 pages serve both `mops examples` and the bundled skill references.
 
-A topic file returns a Groovy map. For example:
+A topic file returns a map with named `groups` and named standalone `snippets`. Group members are ID-less maps:
 
 ```groovy
 [
-    property: [
-        group: 'nodes',
-        title: 'Read a node property',
-        kind: 'groovy',
-        code: '''project.read { mops.lookup.requireNode('NODE_REF').properties['name'] }''',
-        output: 'text',
-        verify: '''assert result == 'Example' ''',
+    groups: [
+        nodes: [
+            [
+                title: 'Read a node property',
+                kind: 'groovy',
+                code: "project.read { mops.lookup.requireNode('NODE_REF').properties['name'] }",
+                output: 'text',
+                verify: "assert result == 'Example'",
+            ],
+        ],
+    ],
+    snippets: [
+        nodeApi: [kind: 'cli', code: 'mops code help SNode'],
     ],
 ]
 ```
 
-Groups are scoped to their topic. A template containing `{{table:nodes|Groovy program}}` includes the example above and
-all other `nodes` members; the template does not enumerate individual rows. The generated JSON manifest includes each
-example's `group`.
+`{{table:nodes|Groovy program}}` renders every member of `groups.nodes`; `{{nodeApi}}` inserts the standalone snippet.
+Groups and snippet names are scoped to their topic. The generated JSON gives group members a `group` and `title`, and
+standalone snippets an `id`. Group members have no individual IDs and cannot be referenced individually.
 
 Groovy snippets require either `verify` assertions or an `untested` fixture requirement. The generator rejects missing
 expectations, unused specs, and unknown slots or groups. `ExamplesCommandTest` parses every `cli` and `shell` catalog
@@ -42,8 +48,9 @@ Assertions run as Groovy on the test JVM. Their bindings are:
 - `before`: stdout from the optional preparation program.
 - `modelFile`: the case model's persisted `.mps` file, for save/import assertions.
 
-Each Groovy spec appears separately in JUnit reports as `<topic>/<id>`. Adding a spec to a displayed group adds a row
-and a test without changing the template or runner. Specs with `untested` requirements appear as skipped tests.
+Each Groovy spec appears separately in JUnit reports as `<topic>/<group>/<title>` for group members or `<topic>/<id>`
+for standalone snippets. Adding a member to a displayed group adds a row and a test without changing the template or
+runner. Specs with `untested` requirements appear as skipped tests.
 
 ```sh
 ./gradlew :cli:updateExamples :cli:checkExamples

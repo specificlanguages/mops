@@ -15,12 +15,14 @@ class ExampleGeneratorTest {
     lateinit var tempDir: Path
 
     @Test
-    fun `one group slot includes every member and preserves other groups`() {
+    fun `one group slot includes every member and preserves standalone snippets`() {
         val specs = """
             [
-                first: [group: 'commands', title: 'First task', kind: 'cli', code: 'mops list'],
-                second: [group: 'commands', title: 'Second task', kind: 'cli', code: 'mops list /'],
-                help: [group: 'guidance', kind: 'cli', code: 'mops --help'],
+                groups: [commands: [
+                    [title: 'First task', kind: 'cli', code: 'mops list'],
+                    [title: 'Second task', kind: 'cli', code: 'mops list /'],
+                ]],
+                snippets: [help: [kind: 'cli', code: 'mops --help']],
             ]
         """.trimIndent()
         val output = generate("# Tasks\n\n{{table:commands|Command}}\n\nRead `{{help}}`.\n", specs)
@@ -36,7 +38,10 @@ class ExampleGeneratorTest {
 
         """.trimIndent(), output.resolve("pages/sample.md").readText())
         val catalog = Json.parseToJsonElement(output.resolve("specs/examples.json").readText()).jsonArray
-        assertEquals(listOf("commands", "commands", "guidance"), catalog.map { it.jsonObject.getValue("group").jsonPrimitive.content })
+        assertEquals(listOf("commands", "commands"), catalog.take(2).map { it.jsonObject.getValue("group").jsonPrimitive.content })
+        assertTrue(catalog.take(2).all { "id" !in it.jsonObject })
+        assertEquals("help", catalog.last().jsonObject.getValue("id").jsonPrimitive.content)
+        assertTrue("group" !in catalog.last().jsonObject)
     }
 
     @Test
@@ -46,11 +51,20 @@ class ExampleGeneratorTest {
     }
 
     @Test
-    fun `unused examples fail generation`() {
+    fun `unused groups fail generation`() {
         val error = assertFailsWith<AssertionError> {
-            generate("# Tasks\n", "[list: [group: 'commands', title: 'List', kind: 'cli', code: 'mops list']]")
+            generate("# Tasks\n", "[groups: [commands: [[title: 'List', kind: 'cli', code: 'mops list']]]]")
         }
-        assertContains(error.message.orEmpty(), "undocumented examples [list]")
+        assertContains(error.message.orEmpty(), "undocumented groups [commands]")
+    }
+
+    @Test
+    fun `group members cannot be referenced individually`() {
+        val error = assertFailsWith<AssertionError> {
+            generate("{{table:commands|Command}}\n{{list}}",
+                "[groups: [commands: [[title: 'List', kind: 'cli', code: 'mops list']]]]")
+        }
+        assertContains(error.message.orEmpty(), "unknown snippet 'list'")
     }
 
     private fun generate(page: String, specs: String): Path {

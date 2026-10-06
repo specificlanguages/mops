@@ -1,32 +1,28 @@
 [
-    'setup': [
-        group: 'guidance',
-        kind: 'cli',
-        code: '''mops examples setup''',
-    ],
-    'navigation': [
-        group: 'guidance',
-        kind: 'cli',
-        code: '''mops examples navigation''',
-    ],
-    'search': [
-        group: 'guidance',
-        kind: 'cli',
-        code: '''mops examples search''',
-    ],
-    'editing': [
-        group: 'guidance',
-        kind: 'cli',
-        code: '''mops examples editing''',
-    ],
-    'validation': [
-        group: 'guidance',
-        kind: 'cli',
-        code: '''mops examples validation''',
-    ],
-    'all-topics': [
-        group: 'guidance',
-        kind: 'cli',
-        code: '''mops examples all''',
+    snippets: [
+        'setup': [
+            kind: 'cli',
+            code: '''mops examples setup''',
+        ],
+        'navigation': [
+            kind: 'cli',
+            code: '''mops examples navigation''',
+        ],
+        'search': [
+            kind: 'cli',
+            code: '''mops examples search''',
+        ],
+        'editing': [
+            kind: 'cli',
+            code: '''mops examples editing''',
+        ],
+        'validation': [
+            kind: 'cli',
+            code: '''mops examples validation''',
+        ],
+        'all-topics': [
+            kind: 'cli',
+            code: '''mops examples all''',
+        ],
     ],
 ]

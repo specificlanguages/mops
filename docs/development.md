@@ -78,9 +78,10 @@ When adding an example, add behavioral assertions for its heading to that test. 
 ### Bundled task recipe checks
 
 The source catalog lives in [`examples/`](../examples/README.md). Groovy maps hold the snippets and their assertions;
-Markdown templates supply prose and table-group slots; each spec supplies its group and row title. `generateExamples`
-produces the CLI pages and a test manifest from that catalog. `updateExamples` refreshes the checked-in skill
-references; `checkExamples` rejects stale references and runs in both `check` and `smokeTest`.
+Markdown templates supply prose and table-group slots. Catalogs contain named groups of ID-less examples and named
+standalone snippets; group members supply their row titles. `generateExamples` produces the CLI pages and a test
+manifest from that catalog. `updateExamples` refreshes the checked-in skill references; `checkExamples` rejects stale
+references and runs in both `check` and `smokeTest`.
 
 ```sh
 ./gradlew :cli:updateExamples :cli:checkExamples

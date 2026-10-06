@@ -50,9 +50,10 @@ class ExamplesCommandTest {
         val specs = catalog.filter { it.getValue("kind").jsonPrimitive.content in setOf("cli", "shell") }
         assertTrue(specs.isNotEmpty(), "No CLI examples in the catalog")
         for (spec in specs) {
+            val name = spec["title"] ?: spec["id"]
             val source = spec.getValue("code").jsonPrimitive.content
             val commands = Regex("""\bmops\s+[^|;\n]+""").findAll(source).map { it.value.trim() }.toList()
-            assertTrue(commands.isNotEmpty(), "No mops command in ${spec.getValue("id")}")
+            assertTrue(commands.isNotEmpty(), "No mops command in $name")
             for (command in commands) {
                 val tokens = Regex("""'([^']*)'|"([^"]*)"|([^\s'"]+)""").findAll(command).toList()
                 var end = 0

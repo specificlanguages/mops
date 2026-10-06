@@ -6,26 +6,38 @@ def cases = []
 def shell = new GroovyShell()
 new File(sourceDir, 'pages').listFiles().sort { it.name }.each { template ->
     def topic = template.name - '.md'
-    def specs = shell.evaluate(new File(sourceDir, "specs/${topic}.groovy"))
-    assert specs instanceof Map: "${topic}: expected an example map"
-    specs.each { id, spec ->
-        assert spec.group instanceof String && spec.group.trim(): "${topic}/${id}: missing group"
-        assert spec.kind in ['cli', 'shell', 'groovy']: "${topic}/${id}: unknown kind"
-        assert spec.code instanceof String && spec.code.trim(): "${topic}/${id}: missing code"
+    def catalog = shell.evaluate(new File(sourceDir, "specs/${topic}.groovy"))
+    assert catalog instanceof Map: "${topic}: expected a catalog map"
+    def groups = catalog.groups ?: [:]
+    def snippets = catalog.snippets ?: [:]
+    def validate = { spec, name ->
+        assert spec.kind in ['cli', 'shell', 'groovy']: "${name}: unknown kind"
+        assert spec.code instanceof String && spec.code.trim(): "${name}: missing code"
         if (spec.kind == 'groovy') {
             assert (spec.verify?.trim() as boolean) != (spec.untested?.trim() as boolean):
-                "${topic}/${id}: declare verify or an explicit untested reason"
+                "${name}: declare verify or an explicit untested reason"
         }
         spec.code = spec.code.trim()
+    }
+    groups.each { group, members ->
+        assert members instanceof List: "${topic}/${group}: expected a list of examples"
+        members.each { spec ->
+            assert spec.title instanceof String && spec.title.trim(): "${topic}/${group}: example needs a title"
+            validate(spec, "${topic}/${group}/${spec.title}")
+            cases << ([topic: topic, group: group] + spec)
+        }
+    }
+    snippets.each { id, spec ->
+        validate(spec, "${topic}/${id}")
         cases << ([topic: topic, id: id] + spec)
     }
-    def used = [] as Set
+    def usedGroups = [] as Set
+    def usedSnippets = [] as Set
     def page = template.getText('UTF-8').replaceAll(/\{\{table:([^|}]+)\|([^}]+)\}\}/) { match, group, heading ->
-        def members = specs.findAll { id, spec -> spec.group == group }
+        def members = groups[group]
         assert members: "${topic}: unknown or empty table group '${group}'"
-        def rows = [['Task', heading]] + members.collect { id, spec ->
-            assert spec.title instanceof String && spec.title.trim(): "${topic}/${id}: table example needs a title"
-            used << id
+        usedGroups << group
+        def rows = [['Task', heading]] + members.collect { spec ->
             [spec.title, "`${spec.code.replace('|', '\\|')}`"]
         }
         def widths = [0, 1].collect { column -> rows.collect { it[column].size() }.max() }
@@ -33,11 +45,12 @@ new File(sourceDir, 'pages').listFiles().sort { it.name }.each { template ->
         ([render(rows.first()), '| ' + widths.collect { '-' * it }.join(' | ') + ' |'] + rows.drop(1).collect(render)).join('\n')
     }
     page = page.replaceAll(/\{\{([^}]+)\}\}/) { match, id ->
-        assert specs.containsKey(id): "${topic}: unknown example '${id}'"
-        used << id
-        specs[id].code
+        assert snippets.containsKey(id): "${topic}: unknown snippet '${id}'"
+        usedSnippets << id
+        snippets[id].code
     }
-    assert used == specs.keySet(): "${topic}: undocumented examples ${specs.keySet() - used}"
+    assert usedGroups == groups.keySet(): "${topic}: undocumented groups ${groups.keySet() - usedGroups}"
+    assert usedSnippets == snippets.keySet(): "${topic}: undocumented snippets ${snippets.keySet() - usedSnippets}"
     def output = new File(outputDir, "pages/${template.name}")
     output.parentFile.mkdirs()
     output.setText(page, 'UTF-8')
