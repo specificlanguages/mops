@@ -17,6 +17,9 @@ Read `mops examples editing` to choose JSON edit batches, Java insertion, or Cod
 constraint violations; Code Mode supports custom traversal and logic. Check edited models with `check model`, build with
 `make module`, and run relevant tests with `test`. Constraint checks alone do not establish model or build correctness.
 
+For test selection, build options, failure reports, and worker limitations, read `mops examples validation` or the
+[bundled validation recipes](references/validation.md).
+
 For concurrent agents, daemon restarts, or stuck processes, read the skill printed by `mops skill path daemon`.
 
 ## Code Mode
