@@ -97,7 +97,7 @@ jobs:
       - name: Test CLI against MPS ${{ matrix.mps }}
         env:
           MPS_VERSION: ${{ matrix.mps }}
-        run: ./gradlew --continue ":cli:integrationTestMps${MPS_VERSION}"
+        run: xvfb-run -a ./gradlew --continue ":cli:integrationTestMps${MPS_VERSION}"
       - name: Upload test reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
