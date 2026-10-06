@@ -107,5 +107,7 @@ applies declared bootstrap-classpath JVM arguments.
 
 The adapters preserve Ant's session, execution, XML reporting, and failure detection. They do not add the IDE's separate
 environment-aware legacy runner. Model filtering happens after module-wide discovery and class loading; unselected
-broken classes can still fail discovery. The selected JBR must include `javac`, which compiles the small adapters
-against the actual distribution before execution.
+broken classes can still fail discovery. The adapters are compiled when building mops, against MPS 2024.1.6 and
+2026.1.1, and packaged as separate JARs with Java 17 bytecode. The worker selects the launcher adapter by its
+constructor API before creating a project or executing tests. Adapter selection does not retry test execution on linkage
+failures. Running tests does not require `javac`.
