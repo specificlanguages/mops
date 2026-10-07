@@ -18,3 +18,98 @@ Default searches cover editable project sources. An explicit `in` scope can incl
 
 `find` defaults to 100 matches; `--limit 0` removes the cap. `--refs-only` cannot be combined with `--json`. Use
 `mops explain name-pattern` for pattern matching rules.
+
+## Code Mode: concepts and instances
+
+Save a program below as `search.groovy` and run `mops code run search.groovy`. Concept lookups and instance searches
+belong in `project.read`.
+
+Look up a concept by fully qualified name:
+
+```groovy
+project.read {
+    def concept = mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.structure.ClassConcept')
+    concept.qualifiedName
+}
+```
+
+Return null when a concept name is missing:
+
+```groovy
+project.read {
+    mops.lookup.conceptByName('jetbrains.mps.baseLanguage.structure.NoSuchMopsConcept') == null
+}
+```
+
+`requireConceptByName` throws on a missing concept; `conceptByName` returns null. Both reject ambiguous names and
+untrusted language runtimes. Fully qualified names include the structure model, such as
+`jetbrains.mps.baseLanguage.structure.ClassConcept`.
+
+Get a serialized concept ID:
+
+```groovy
+import org.jetbrains.mps.openapi.persistence.PersistenceFacade
+project.read {
+    def concept = mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.structure.ClassConcept')
+    PersistenceFacade.instance.asString(concept)
+}
+```
+
+Look up a concept by serialized ID:
+
+```groovy
+import org.jetbrains.mps.openapi.persistence.PersistenceFacade
+project.read {
+    def concept = PersistenceFacade.instance.createConcept(
+        'c:f3061a53-9226-4cc5-a443-f952ceaf5816/1068390468198:jetbrains.mps.baseLanguage.structure.ClassConcept')
+    [name: concept.qualifiedName, valid: concept.valid]
+}
+```
+
+For ID lookup, copy the entire serialized value returned by `PersistenceFacade.instance.asString(concept)`, including
+its prefix, language UUID, numeric concept ID, and name. `createConcept` reconstructs the concept descriptor;
+check `concept.valid` before using it. A concept ID is distinct from a declaration node reference or a bare node ID.
+
+Collect instances, including subconcepts, with custom result data:
+
+```groovy
+project.read {
+    def concept = mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.structure.Classifier')
+    def found = []
+    mops.search.eachInstanceOf(concept, project.scope) { node ->
+        found << [name: node.properties['name'], node: node]
+    }
+    found
+}
+```
+
+Collect only direct instances:
+
+```groovy
+project.read {
+    def concept = mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.structure.Classifier')
+    def found = []
+    mops.search.eachInstanceOf(concept, project.scope, true) { node -> found << node }
+    found
+}
+```
+
+Find instances of a concept identified by ID:
+
+```groovy
+import org.jetbrains.mps.openapi.persistence.PersistenceFacade
+project.read {
+    def concept = PersistenceFacade.instance.createConcept(
+        'c:f3061a53-9226-4cc5-a443-f952ceaf5816/1068390468198:jetbrains.mps.baseLanguage.structure.ClassConcept')
+    assert concept.valid
+    def found = []
+    mops.search.eachInstanceOf(concept, project.scope) { node -> found << node }
+    found
+}
+```
+
+`mops.search.eachInstanceOf` passes native `SNode` objects to the closure. It includes subconcepts unless the third
+argument is `true`. The example searches for `Classifier`, so the subclass `ClassConcept` matches the first search
+and is excluded by the direct-instance search. `project.scope` covers the project's modules, including generators.
+These searches have no CLI result limit; collect the data you need in the closure and return it. Native nodes in
+the returned lists or maps become serialized node references.
