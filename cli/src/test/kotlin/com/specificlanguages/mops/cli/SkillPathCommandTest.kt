@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.cli
 
+import org.junit.jupiter.api.Tag
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.cli.skill.BundledSkill
@@ -10,19 +11,20 @@ import kotlin.io.path.*
 import kotlin.test.*
 
 @ResourceLock("system-streams")
+@Tag("smoke")
 class SkillPathCommandTest {
     @TempDir
     lateinit var tempDir: Path
 
     @Test
     fun `default and named skills print only an existing absolute skill path outside any project`() {
-        for (args in listOf(emptyArray(), arrayOf("mops-code"), arrayOf("code"), arrayOf("mops-daemon"), arrayOf("daemon"))) {
+        for (args in listOf(emptyArray(), arrayOf("mops"), arrayOf("mops-daemon"), arrayOf("daemon"))) {
             var exitCode = -1
             val output = tapSystemOut {
                 exitCode = newCommandLine(tempDir).execute("skill", "path", *args)
             }
             assertEquals(0, exitCode)
-            val expected = BundledSkill.path(args.firstOrNull() ?: "mops-code")
+            val expected = BundledSkill.path(args.firstOrNull() ?: "mops")
             assertEquals("$expected${System.lineSeparator()}", output)
             assertTrue(Path.of(output.trim()).isAbsolute)
             assertContains(Path.of(output.trim()).readText(), "name: ${expected.parent.fileName}")
@@ -31,7 +33,7 @@ class SkillPathCommandTest {
 
     @Test
     fun `unknown skill and extra arguments fail without printing a path`() {
-        for (args in listOf(arrayOf("missing"), arrayOf("code", "extra"))) {
+        for (args in listOf(arrayOf("missing"), arrayOf("mops", "extra"))) {
             var exitCode = 0
             val stderr = tapSystemErr {
                 val stdout = tapSystemOut {
@@ -56,7 +58,7 @@ class SkillPathCommandTest {
     @Test
     fun `resolution follows relocated distribution and source class locations rather than cwd`() {
         val install = tempDir.resolve("relocated installation").createDirectories()
-        val skill = install.resolve("skills/mops-code/SKILL.md")
+        val skill = install.resolve("skills/mops/SKILL.md")
         skill.parent.createDirectories()
         skill.writeText("installed skill")
         val jar = install.resolve("lib/mops-cli.jar")
@@ -70,7 +72,7 @@ class SkillPathCommandTest {
         assertEquals(daemonSkill, BundledSkill.path("mops-daemon", jar))
 
         val source = tempDir.resolve("source checkout").createDirectories()
-        val sourceSkill = source.resolve("skills/mops-code/SKILL.md")
+        val sourceSkill = source.resolve("skills/mops/SKILL.md")
         sourceSkill.parent.createDirectories()
         sourceSkill.writeText("source skill")
         val classes = source.resolve("cli/build/classes/kotlin/main").createDirectories()
@@ -80,6 +82,6 @@ class SkillPathCommandTest {
     @Test
     fun `missing bundled skill reports a useful error`() {
         val failure = assertFailsWith<IllegalStateException> { BundledSkill.path(codeLocation = tempDir) }
-        assertContains(failure.message.orEmpty(), "Could not locate the bundled mops-code skill")
+        assertContains(failure.message.orEmpty(), "Could not locate the bundled mops skill")
     }
 }

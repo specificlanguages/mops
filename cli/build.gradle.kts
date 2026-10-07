@@ -1,3 +1,5 @@
+import groovy.lang.Binding
+import groovy.lang.GroovyShell
 import org.gradle.api.artifacts.component.ModuleComponentSelector
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
@@ -44,6 +46,9 @@ dependencies {
     testImplementation(libs.json.schema.validator)
     testRuntimeOnly(libs.junit.platform.launcher)
 
+    testImplementation(libs.groovy)
+    testImplementation("org.apache.groovy:groovy-json:${libs.versions.groovy.get()}")
+
     editSchemaGeneratorClasspath(project(":protocol"))
     daemonRuntimeClasspath(project(":daemon"))
     daemonMpsPlugin(project(":daemon-mps-plugin"))
@@ -81,6 +86,65 @@ sourceSets.main {
     resources.srcDir(generateEditSchema)
 }
 
+val exampleSources = rootProject.layout.projectDirectory.dir("examples")
+val generateExamples by tasks.registering {
+    val outputDir = layout.buildDirectory.dir("generated/examples")
+    inputs.dir(exampleSources)
+    outputs.dir(outputDir)
+    doLast {
+        val binding = Binding(mapOf("sourceDir" to exampleSources.asFile, "outputDir" to outputDir.get().asFile))
+        GroovyShell(binding).evaluate(exampleSources.file("generate.groovy").asFile)
+    }
+}
+
+tasks.register("updateExamples") {
+    group = "documentation"
+    description = "Regenerates the checked-in skill reference pages from the example specs."
+    val generated = generateExamples.map { it.outputs.files.singleFile.resolve("pages") }
+    val checkedIn = rootProject.layout.projectDirectory.dir("skills/mops/references")
+    inputs.dir(generated)
+    doLast {
+        project.sync {
+            from(generated)
+            into(checkedIn)
+        }
+    }
+}
+
+val checkExamples by tasks.registering {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = "Checks that the skill reference pages match the executable example specs."
+    val generated = generateExamples.map { it.outputs.files.singleFile.resolve("pages") }
+    val checkedIn = rootProject.layout.projectDirectory.dir("skills/mops/references")
+    inputs.dir(generated)
+    inputs.dir(checkedIn)
+    doLast {
+        val expected = generated.get().listFiles()!!.associate { it.name to it.readText() }
+        val actual = checkedIn.asFile.listFiles()!!.associate { it.name to it.readText() }
+        check(expected == actual) { "Skill reference pages are stale. Run ./gradlew :cli:updateExamples." }
+    }
+}
+
+tasks.processResources {
+    from(generateExamples.map { it.outputs.files.singleFile.resolve("pages") }) { into("examples") }
+}
+
+sourceSets.test {
+    resources.srcDir(generateExamples.map { it.outputs.files.singleFile.resolve("specs") })
+}
+
+tasks.processTestResources {
+    from(exampleSources.file("generate.groovy"))
+}
+
+integrationTest.resources {
+    srcDir(generateExamples.map { it.outputs.files.singleFile.resolve("specs") })
+}
+
+tasks.named<ProcessResources>(integrationTest.processResourcesTaskName) {
+    from(exampleSources) { include("fixture.groovy") }
+}
+
 val writeDaemonClasspath by tasks.registering {
     val outputFile = layout.buildDirectory.file("generated/daemon-classpath/mops-daemon.classpath")
     inputs.files(daemonRuntimeClasspath)
@@ -101,6 +165,10 @@ distributions {
         contents {
             from(rootProject.layout.projectDirectory.dir("skills")) {
                 into("skills")
+                exclude("mops/references/**")
+            }
+            from(generateExamples.map { it.outputs.files.singleFile.resolve("pages") }) {
+                into("skills/mops/references")
             }
             into("lib") {
                 from(daemonRuntimeClasspath)
@@ -163,6 +231,12 @@ val jbrArch = when (System.getProperty("os.arch")) {
 }
 
 val supportedMpsVersions = providers.gradleProperty("supportedMpsVersions").get().split(',').map(String::trim)
+val smokeMpsVersion = supportedMpsVersions.last()
+val smokeIntegrationTest = tasks.register<Test>("smokeIntegrationTest") {
+    description = "Runs smoke integration tests against MPS $smokeMpsVersion and its matching JBR."
+    useJUnitPlatform { includeTags("smoke") }
+}
+
 val integrationTests = supportedMpsVersions.map { mpsVersion ->
     val mps = configurations.register("integrationTestMps$mpsVersion") {
         isCanBeConsumed = false
@@ -185,6 +259,9 @@ val integrationTests = supportedMpsVersions.map { mpsVersion ->
     val jbrHome = mpsPlatformCache.getJbrRoot(jbr).map {
         if (jbrOs == "osx") it.resolve("Contents/Home") else it
     }
+    if (mpsVersion == smokeMpsVersion) {
+        smokeIntegrationTest.configure { configureIntegrationTest(mpsHome, jbrHome) }
+    }
     tasks.register<Test>("integrationTestMps$mpsVersion") {
         description = "Runs CLI integration tests against MPS $mpsVersion and its matching JBR."
         configureIntegrationTest(mpsHome, jbrHome)
@@ -206,12 +283,27 @@ tasks.register<Test>("integrationTestLocal") {
 }
 
 tasks.check {
+    dependsOn(checkExamples)
     dependsOn("integrationTest")
     dependsOn("gradleDiscoveryTest")
 }
 
 tasks.test {
     useJUnitPlatform { excludeTags("gradle-discovery") }
+}
+
+val smokeUnitTest by tasks.registering(Test::class) {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = "Runs smoke unit tests without starting MPS."
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform { includeTags("smoke") }
+}
+
+tasks.register("smokeTest") {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = "Runs cross-platform CLI smoke unit and integration tests."
+    dependsOn(checkExamples, smokeUnitTest, smokeIntegrationTest)
 }
 
 tasks.register<Test>("gradleDiscoveryTest") {

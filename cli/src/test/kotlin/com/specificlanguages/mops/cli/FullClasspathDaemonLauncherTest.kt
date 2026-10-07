@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.cli
 
+import org.junit.jupiter.api.Tag
 import com.github.stefanbirkner.systemlambda.SystemLambda
 import com.specificlanguages.mops.daemoncomms.FullClasspathDaemonLauncher
 import com.specificlanguages.mops.protocol.DaemonContext
@@ -21,6 +22,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+@Tag("smoke")
 class FullClasspathDaemonLauncherTest {
     @TempDir
     lateinit var tempDir: Path

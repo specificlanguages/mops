@@ -35,8 +35,8 @@ even on success, and test start/completion events appear in the job log to help 
 ```
 
 The full integration matrix runs nightly on `main` at 02:17 UTC and on manual workflow dispatch. PRs and pushes to
-`main` run only the daemon lifecycle subset on Linux, macOS, and Windows. Release validation still runs `check`,
-including the full integration matrix.
+`main` also run the CLI smoke suite on Linux, macOS, and Windows. Release validation still runs `check`, including the
+full integration matrix.
 
 To test an already extracted distribution, use the separate local task:
 
@@ -47,6 +47,20 @@ To test an already extracted distribution, use the separate local task:
 The local task is excluded from `check` and the supported-version matrix. These tests use the generic MPS archive
 through the daemon launcher, without IDE-plugin host-platform validation.
 
+### Cross-platform smoke tests
+
+```sh
+./gradlew :cli:smokeTest
+./gradlew :cli:smokeUnitTest
+./gradlew :cli:smokeIntegrationTest
+```
+
+`smokeTest` combines unit and integration tests tagged `@Tag("smoke")`. The unit task uses the normal unit-test
+classpath and starts no MPS daemon. The integration task shares runtime configuration with the full integration suite
+and uses the last version listed in `supportedMpsVersions` and its matching JBR. Both tasks have separate reports. Tag a
+test class or method to add focused cross-platform smoke coverage; no workflow filter needs updating. Tagged tests also
+run in their normal unit/integration suites. The smoke tasks are not added to `check`, which already runs those suites.
+
 ### Code-mode runtime tests
 
 The installed CLI integration test exercises model lookup, an edit, saving and reopening the project, extension
@@ -54,11 +68,40 @@ dispatch, and Groovy class identity. It runs both with the selected MPS distribu
 Groovy JAR. CI includes code-mode tests for every supported MPS version.
 
 Bundled agent skills live under `skills/` and ship alongside the CLI in its `skills/` directory. `CodeSkillExamplesTest`
-extracts every fenced `groovy` block from `skills/mops-code/SKILL.md` and executes it verbatim against a fresh fixture
-copy. When adding an example, add behavioral assertions for its heading to that test. Run the examples with:
+extracts every fenced `groovy` block from `skills/mops/SKILL.md` and executes it verbatim against a fresh fixture copy.
+When adding an example, add behavioral assertions for its heading to that test. Run the examples with:
 
 ```sh
 ./gradlew :daemon:test --tests '*CodeSkillExamplesTest'
+```
+
+### Bundled task recipe checks
+
+The source catalog lives in [`examples/`](../examples/README.md). Groovy maps hold the snippets and their assertions;
+Markdown templates supply prose and table-group slots. Catalogs contain named groups of ID-less examples and named
+standalone snippets; group members supply their row titles. `generateExamples` produces the CLI pages and a test
+manifest from that catalog. `updateExamples` refreshes the checked-in skill references; `checkExamples` rejects stale
+references and runs in both `check` and `smokeTest`.
+
+```sh
+./gradlew :cli:updateExamples :cli:checkExamples
+./gradlew :cli:test --tests '*ExamplesCommandTest'
+```
+
+`ExamplesCommandTest` parses CLI recipes directly from the catalog with the current command tree, including commands in
+shell pipelines, without executing them. It validates JSON edit batches with the protocol serializer and generated
+schema, and checks bundled reference links. These checks catch syntax and protocol drift without starting MPS. The
+pre-commit CI job generates the pages first; Markdown lint includes the generated build output as well as checked-in
+references. Line-length checks apply to prose, excluding code blocks and tables globally.
+
+`BundledExamplesIntegrationTest` creates a named JUnit dynamic test for each executable Groovy spec. It starts one
+daemon and gives every example fresh models in a disposable BaseLanguage project. Each spec declares its placeholder
+bindings, optional preparation, and assertions on CLI output or saved model data. The runner executes the same snippet
+used to generate the Markdown. Examples requiring other fixtures declare an explicit `untested` reason. The PR smoke
+suite uses the last supported MPS version, and the full integration matrix runs the specs on each version.
+
+```sh
+./gradlew :cli:smokeIntegrationTest --tests '*BundledExamplesIntegrationTest'
 ```
 
 ### Test-running integration tests
