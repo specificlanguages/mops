@@ -14,29 +14,6 @@ class TestRunningIntegrationTest {
     lateinit var tempDir: Path
 
     @Test
-    fun `Ant test worker uses test mode and version scoped Images blacklist`() {
-        val project = copyTestingProject(tempDir.resolve("project"))
-        val home = tempDir.resolve("daemon-home").createDirectories()
-        fun cli(vararg args: String) = runCommandLine(project, "--daemon-home", home.pathString, *javaAndMpsHomeArgs(), *args)
-        try {
-            val result = cli("test", "mops.tests", ".ordinary", "OrdinaryPass", "--json")
-            assertEquals(0, result.exitCode, result.output)
-            val report = ProtocolJson.decodeTestReport(result.stdout)
-            assertEquals("SUCCESS", report.outcome, result.output)
-            assertTrue(report.results.any { it.kind == "TEST" && it.status == "PASSED" }, result.output)
-            val run = Path.of(report.reportPath).parent
-            val workerLog = run.resolve("ant.log").readText()
-            assertContains(workerLog, "MOPS_TEST_MODE=USUAL")
-            assertFalse(workerLog.contains("SvgParserDefinition"), workerLog)
-            val disabled = run.resolve("test-config/disabled_plugins.txt")
-            if (Path.of(System.getProperty("test.mpsHome")).fileName.toString() == "2025.1.4")
-                assertContains(disabled.readText(), "com.intellij.platform.images")
-            else assertFalse(disabled.exists(), "Images must remain available outside 2025.1")
-            assertFalse(workerLog.contains("Language with ID 'SVG' is already registered"), "SVG language conflict; see ${report.reportPath}")
-        } finally { stopDaemons(project, home) }
-    }
-
-    @Test
     fun `zero tests is a saved discovery failure and daemon remains usable`() {
         val project = copyTestProject("base-language-sandbox", tempDir.resolve("project"))
         val home = tempDir.resolve("daemon-home").createDirectories()
@@ -115,6 +92,22 @@ class TestRunningIntegrationTest {
         try {
             val warm = cli("test", "mops.tests", ".ordinary", "OrdinaryPass", "--json", "--timeout", "0")
             assertEquals(0, warm.exitCode, warm.output)
+            val warmReport = ProtocolJson.decodeTestReport(warm.stdout)
+            assertEquals("SUCCESS", warmReport.outcome, warm.output)
+            assertTrue(warmReport.results.any { it.kind == "TEST" && it.status == "PASSED" }, warm.output)
+            assertTrue(warmReport.timingsMillis.keys.containsAll(listOf(
+                "preparationStartup", "build", "antStartupAndDiscovery", "execution", "antShutdown", "workerLifetime",
+            )), warmReport.toString())
+            assertTrue(warmReport.timingsMillis.values.all { it >= 0 }, warmReport.toString())
+            val run = Path.of(warmReport.reportPath).parent
+            val workerLog = run.resolve("ant.log").readText()
+            assertContains(workerLog, "MOPS_TEST_MODE=USUAL")
+            assertFalse(workerLog.contains("SvgParserDefinition"), workerLog)
+            val disabled = run.resolve("test-config/disabled_plugins.txt")
+            if (Path.of(System.getProperty("test.mpsHome")).fileName.toString() == "2025.1.4")
+                assertContains(disabled.readText(), "com.intellij.platform.images")
+            else assertFalse(disabled.exists(), "Images must remain available outside 2025.1")
+            assertFalse(workerLog.contains("Language with ID 'SVG' is already registered"), "SVG language conflict; see ${warmReport.reportPath}")
             val timed = cli("test", "mops.tests", ".slow", "SlowTest", "--no-build", "--json", "--timeout", "90")
             assertEquals(1, timed.exitCode, timed.output)
             val report = ProtocolJson.decodeTestReport(timed.stdout)

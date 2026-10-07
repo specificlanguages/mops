@@ -14,6 +14,7 @@ import kotlin.concurrent.thread
 fun main(args: Array<String>) {
     val request = ProtocolJson.decodeRequest(Files.readString(Path.of(args[0]))) as TestRunRequest
     val report = TestReportStore(Path.of(args[1]))
+    report.beginTiming("preparationStartup")
     // The daemon owns the write end of this pipe. EOF also detects a killed parent that remains a zombie.
     thread(name = "test-worker-parent", isDaemon = true) {
         while (System.`in`.read() != -1) { }
@@ -38,6 +39,7 @@ fun main(args: Array<String>) {
     }
     try {
         if (!request.build) {
+            report.endTiming()
             report.phase("DISCOVERY")
             val selection = AntTestSelection.load(Path.of(args[4]))
             AntTestExecution(Path.of(args[3]), Path.of(args[1]).parent, report).run(Path.of(args[2]), selection)
@@ -50,6 +52,7 @@ fun main(args: Array<String>) {
                 addPluginsRecursivelyFrom(Path.of(args[3], "plugins"))
             }
         }.executeWithProject(Path.of(args[2]).toFile()) { _, opened ->
+            report.endTiming()
             val project = opened as MPSProject
             val access = JetBrainsMpsAccess(project, DaemonLogger())
             report.phase("DISCOVERY")
@@ -64,6 +67,7 @@ fun main(args: Array<String>) {
             }
             if (request.build) {
                 report.phase("BUILD")
+                report.beginTiming("build")
                 val names = access.read { modules.map { it.moduleReference.toString() } }
                 val build = ProjectMake(project).makeModules(names)
                 report.update { it.copy(build = build) }
@@ -72,6 +76,7 @@ fun main(args: Array<String>) {
                     return@executeWithProject
                 }
                 access.extra { saveProject() }
+                report.endTiming()
             }
             report.phase("DISCOVERY")
             AntTestExecution(Path.of(args[3]), Path.of(args[1]).parent, report)

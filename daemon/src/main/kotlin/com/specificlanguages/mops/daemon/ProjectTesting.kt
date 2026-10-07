@@ -45,6 +45,7 @@ class ProjectTesting(private val access: JetBrainsMpsAccess, private val workspa
             "com.specificlanguages.mops.daemon.TestPreparationKt", requestPath.toString(), reportPath.toString(),
             requireNotNull(access.project.project.basePath), jetbrains.mps.util.PathManager.getHomePath(), selectionPath.toString(),
         )
+        val workerStarted = System.nanoTime()
         val worker = try {
             ProcessBuilder(command).redirectErrorStream(true).redirectOutput(directory.resolve("worker.log").toFile()).start()
         } catch (failure: Exception) {
@@ -73,6 +74,7 @@ class ProjectTesting(private val access: JetBrainsMpsAccess, private val workspa
         if (interruption != null) saved.finish(interruption, false)
         else if (saved.snapshot().outcome == "RUNNING")
             saved.finish("WORKER_FAILED", false, "Test worker exited ${worker.exitValue()}; see ${directory.resolve("worker.log")}")
+        saved.recordTiming("workerLifetime", (System.nanoTime() - workerStarted) / 1_000_000)
         return saved.snapshot()
     }
 }

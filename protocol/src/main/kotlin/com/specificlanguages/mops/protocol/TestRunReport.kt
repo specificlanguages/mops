@@ -12,6 +12,7 @@ data class TestRunReport(
     val results: List<TestResult> = emptyList(),
     val diagnostics: List<String> = emptyList(),
     val build: MakeResponse? = null,
+    val timingsMillis: Map<String, Long> = emptyMap(),
 ) {
     val successful: Boolean get() = complete && outcome == "SUCCESS"
 }

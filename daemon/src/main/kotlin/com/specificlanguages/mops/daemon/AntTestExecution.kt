@@ -10,6 +10,7 @@ import kotlin.io.path.*
 /** Uses the selected distribution's Ant task to construct and start the test-mode JVM. */
 class AntTestExecution(private val mps: Path, private val directory: Path, private val report: TestReportStore) {
     fun run(project: Path, selection: AntTestSelection) {
+        report.beginTiming("antStartupAndDiscovery")
         val (modules, moduleIds, libraries, model, node) = selection
         val javaHome = Path.of(System.getProperty("java.home"))
         val adapters = directory.resolve("adapters").createDirectories()
@@ -69,9 +70,13 @@ class AntTestExecution(private val mps: Path, private val directory: Path, priva
                 val event = Properties().also { properties -> Files.newInputStream(path).use { properties.load(it) } }
                 next++
                 when {
-                    event.containsKey("finished") -> finished = true
+                    event.containsKey("finished") -> {
+                        finished = true
+                        report.beginTiming("antShutdown")
+                    }
                     event.containsKey("discovered") -> {
                         report.event(mapOf("discovered" to event.getProperty("discovered").toInt()))
+                        report.beginTiming("execution")
                         if (event.getProperty("discovered").toInt() > 0) report.phase("EXECUTION")
                     }
                     else -> report.event(event.stringPropertyNames().associateWith { event.getProperty(it) })

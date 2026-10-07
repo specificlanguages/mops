@@ -72,6 +72,7 @@ internal val resultMembers = mapOf(
         member("TestRunReport", "outcome", "String", "Overall run outcome."),
         member("TestRunReport", "phase", "String", "Last run phase."),
         member("TestRunReport", "discovered", "int", "Number of discovered tests."),
+        member("TestRunReport", "timingsMillis", "Map<String, Long>", "Monotonic phase durations in milliseconds; workerLifetime overlaps the worker phases."),
         member("TestRunReport", "build", "MakeResponse?", "Build result if building was requested."),
     ),
     "BuildModuleReloadMessage" to listOf(
