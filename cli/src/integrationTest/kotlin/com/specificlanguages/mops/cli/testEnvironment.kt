@@ -45,6 +45,7 @@ public fun javaAndMpsHomeArgs(): Array<String> =
     )
 
 fun runCommandLine(workingDirectory: Path, vararg args: String): CliResult {
+    val started = System.nanoTime()
     var exitCode = Int.MIN_VALUE
     var stderr = ""
     val stdout = tapSystemOut {
@@ -53,6 +54,7 @@ fun runCommandLine(workingDirectory: Path, vararg args: String): CliResult {
         }
     }
 
+    println("MOPS_CLI_TIMING millis=${(System.nanoTime() - started) / 1_000_000} args=${args.joinToString(" ")}")
     return CliResult(exitCode = exitCode, stdout = stdout, stderr = stderr)
 }
 
@@ -66,6 +68,7 @@ data class CliResult(
 }
 
 fun stopDaemons(project: Path, daemonHome: Path) {
+    val started = System.nanoTime()
     runCommandLine(
         project,
         "--daemon-home",
@@ -75,6 +78,22 @@ fun stopDaemons(project: Path, daemonHome: Path) {
     )
 
     waitForAllDaemons(daemonHome)
+    println("MOPS_DAEMON_STOP_TIMING millis=${(System.nanoTime() - started) / 1_000_000} home=$daemonHome")
+    val projects = daemonHome.resolve("projects")
+    if (projects.exists()) for (workspace in projects.listDirectoryEntries()) {
+        val runs = workspace.resolve("test-runs")
+        if (!runs.isDirectory()) continue
+        for (run in runs.listDirectoryEntries()) {
+            if (!run.resolve("report.json").exists()) continue
+            val destination = Path.of("build/test-results/test-run-diagnostics")
+                .resolve(Path.of(requiredProperty("test.mpsHome")).fileName)
+                .resolve(run.fileName).createDirectories()
+            for (name in listOf("report.json", "worker.log", "ant.log")) {
+                val source = run.resolve(name)
+                if (source.exists()) source.copyTo(destination.resolve(name), overwrite = true)
+            }
+        }
+    }
 }
 
 private fun waitForAllDaemons(daemonHome: Path) {
