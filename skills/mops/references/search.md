@@ -113,3 +113,52 @@ argument is `true`. The example searches for `Classifier`, so the subclass `Clas
 and is excluded by the direct-instance search. `project.scope` covers the project's modules, including generators.
 These searches have no CLI result limit; collect the data you need in the closure and return it. Native nodes in
 the returned lists or maps become serialized node references.
+
+## Code Mode: usages
+
+Replace `NODE_REF` with the serialized reference of the target node. Run these programs with
+`mops code run search.groovy`; usage searches belong in `project.read`.
+
+Collect incoming references with their roles and source nodes:
+
+```groovy
+project.read {
+    def target = mops.lookup.requireNode('NODE_REF')
+    def found = []
+    mops.search.eachUsageOf(target, project.scope) { reference ->
+        found << [role: reference.link.name, source: reference.sourceNode]
+    }
+    found
+}
+```
+
+Collect only source nodes whose reference uses the `classifier` role:
+
+```groovy
+project.read {
+    def target = mops.lookup.requireNode('NODE_REF')
+    def found = []
+    mops.search.eachUsageOf(target, project.scope) { reference ->
+        if (reference.link.name == 'classifier') found << reference.sourceNode
+    }
+    found
+}
+```
+
+Collect the roots containing usages, returning each root once even if it contains multiple references:
+
+```groovy
+project.read {
+    def target = mops.lookup.requireNode('NODE_REF')
+    def roots = []
+    mops.search.eachUsageOf(target, project.scope) { reference ->
+        roots << reference.sourceNode.containingRoot
+    }
+    roots.unique { it.reference }
+}
+```
+
+`mops.search.eachUsageOf` passes native `SReference` objects to the closure. `reference.sourceNode` is the node
+holding the reference; `reference.link.name` is its role. `project.scope` covers the project's modules, including
+generators. Results have no CLI limit. Return source nodes or containing roots to get serialized node references;
+collect role names and other metadata in maps when needed.
