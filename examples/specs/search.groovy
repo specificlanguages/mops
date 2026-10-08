@@ -125,6 +125,56 @@ project.read {
 }''',
             verify: 'assert result.contains(fixture.root)',
         ],
+        'usages': [
+            kind: 'groovy',
+            code: '''project.read {
+    def target = mops.lookup.requireNode('NODE_REF')
+    def found = []
+    mops.search.eachUsageOf(target, project.scope) { reference ->
+        found << [role: reference.link.name, source: reference.sourceNode]
+    }
+    found
+}''',
+            bindings: ['NODE_REF': 'old'],
+            verify: "assert result == [[role: 'classifier', source: fixture.type]]",
+        ],
+        'usages-by-role': [
+            kind: 'groovy',
+            code: '''project.read {
+    def target = mops.lookup.requireNode('NODE_REF')
+    def found = []
+    mops.search.eachUsageOf(target, project.scope) { reference ->
+        if (reference.link.name == 'classifier') found << reference.sourceNode
+    }
+    found
+}''',
+            bindings: ['NODE_REF': 'old'],
+            verify: 'assert result == [fixture.type]',
+        ],
+        'usage-roots': [
+            kind: 'groovy',
+            code: '''project.read {
+    def target = mops.lookup.requireNode('NODE_REF')
+    def roots = []
+    mops.search.eachUsageOf(target, project.scope) { reference ->
+        roots << reference.sourceNode.containingRoot
+    }
+    roots.unique { it.reference }
+}''',
+            bindings: ['NODE_REF': 'old'],
+            before: '''project.command {
+    def root = mops.lookup.requireNode('CLASS_REF')
+    mops.parsing.java.addJavaMembersFromString(root, 'private Example otherPeer;', null)
+    def target = mops.lookup.requireNode('NODE_REF')
+    def types = root.descendants.findAll {
+        it.concept.qualifiedName.endsWith('.ClassifierType')
+    }
+    types.each { it.references['classifier'] = target }
+    types.size()
+}''',
+            verify: '''assert before == '2'
+assert result == [fixture.root]''',
+        ],
         'name-pattern-help': [
             kind: 'cli',
             code: '''mops explain name-pattern''',
