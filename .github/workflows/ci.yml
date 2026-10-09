@@ -33,6 +33,29 @@ jobs:
           prek-version: v0.5.5
           extra-args: --all-files
 
+  verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
+      - name: Run unit tests and verification checks
+        run: xvfb-run -a ./gradlew --continue check -x :cli:integrationTest
+      - name: Upload test reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: verification-test-reports
+          path: |
+            */build/test-results/
+            */build/reports/tests/
+
   daemon:
     strategy:
       fail-fast: false
@@ -109,7 +132,7 @@ jobs:
 
   ci-passed:
     name: CI passed
-    needs: [prek, daemon, integration-versions, integration]
+    needs: [prek, verification, daemon, integration-versions, integration]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
