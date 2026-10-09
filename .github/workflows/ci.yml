@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 25
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
       - name: Generate and check example pages
         run: ./gradlew :cli:generateExamples :cli:checkExamples
@@ -54,7 +54,7 @@ jobs:
         run: ./gradlew --continue :cli:smokeTest
       - name: Upload test reports
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: daemon-test-reports-${{ matrix.os }}
           path: |
@@ -100,7 +100,7 @@ jobs:
         run: xvfb-run -a ./gradlew --continue ":cli:integrationTestMps${MPS_VERSION}"
       - name: Upload test reports
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: cli-integration-test-reports-mps-${{ matrix.mps }}
           path: |
