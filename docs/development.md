@@ -5,12 +5,14 @@
 ```sh
 ./gradlew check
 ./gradlew installMops
-./gradlew :cli:run --args="--mps-home /path/to/mps daemon ping"
+./gradlew :cli:run --args="--mps-home /path/to/mps --java-home /path/to/jbr --project-root /path/to/project daemon ping"
 ./gradlew :cli:run --args=--help
 ./gradlew :daemon:run --args=--help
 ```
 
-The repository is a Gradle-rooted Kotlin prototype with two application subprojects: `cli/` and `daemon/`.
+The repository is a Gradle-rooted Kotlin prototype with two application subprojects: `cli/` and `daemon/`. The ping
+command requires an MPS project root containing `.mps/`. `--java-home` can be omitted when the MPS distribution bundles
+Java.
 
 ## Integration tests
 
@@ -113,11 +115,11 @@ results. Its test methods share immutable reports from a completed full-project 
 run. The fixture daemon stops before any method inspects those reports. Slow and crashing models are removed from that
 fixture copy. Each request still executes in a separate worker process.
 
-Integration JUnit output includes `MOPS_CLI_TIMING` for each CLI call and `MOPS_DAEMON_STOP_TIMING` for daemon shutdown
-including its exit wait. CLI duration includes daemon startup when a call starts a daemon. Before deleting fixtures,
-teardown copies test-run reports and preparation/Ant logs to
-`cli/build/test-results/test-run-diagnostics/<MPS version>/<run ID>/`, included in CI's test-report artifact. A job
-killed before fixture teardown may not retain these files.
+Integration JUnit output includes `MOPS_CLI_TIMING` for calls through the `runCommandLine` test helper. The
+`stopDaemons` helper emits `MOPS_DAEMON_STOP_TIMING` for daemon shutdown including its exit wait. CLI duration includes
+daemon startup when a call starts a daemon. Before deleting fixtures, `stopDaemons` copies test-run reports and
+preparation/Ant logs to `cli/build/test-results/test-run-diagnostics/<MPS version>/<run ID>/`, included in CI's
+test-report artifact. A job killed before fixture teardown may not retain these files.
 
 Each test report's `timingsMillis` records process-local monotonic durations: `preparationStartup` measures preparation
 entry to project opening (or the no-build shortcut), `build` includes generation/compilation and saving,
@@ -138,10 +140,10 @@ daemon lifecycle tests also retain their independent process boundaries.
   :cli:integrationTestMps2026.1.1 --tests '*TestRunningIntegrationTest' --tests '*TestFamiliesIntegrationTest'
 ```
 
-The pinned development baseline is MPS 2026.2 EAP1, build `MPS-262.9437.166` (2026-08-31), source revision
-`46065cdc79a9467a53197d1a274b4e97d2a0f603`, with JBR `25.0.3-b508.16`. Run it through `integrationTestLocal` with
-`--tests '*TestRunningIntegrationTest' --tests '*TestFamiliesIntegrationTest'` and the extracted distribution/JBR paths.
-Its Jupiter API stubs belong to the `JUnit` module; the integration fixture adjusts those imports in its temporary copy.
+The build pins MPS 2026.1.1 in `gradle/libs.versions.toml`. To test an MPS 2026.2 development distribution, use
+`integrationTestLocal` with `--tests '*TestRunningIntegrationTest' --tests '*TestFamiliesIntegrationTest'` and the
+extracted distribution/JBR paths. For distributions containing `lib/intellij.libraries.junit5.jar`, the integration
+fixture adjusts Jupiter API imports to the `JUnit` module in its temporary copy.
 
 On macOS, MPS's IDEA environment still initializes AWT in headless mode. A sandbox that prevents application
 registration can abort the JVM before tests start. Run with `--no-daemon` outside that sandbox so an existing sandboxed
