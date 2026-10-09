@@ -74,11 +74,15 @@ internal class GradleHomeDiscovery {
             }
             val fragments = reportDir.listDirectoryEntries("*.json")
             check(fragments.isNotEmpty()) { "Gradle did not produce any runtime discovery reports." }
-            return addMpsProjectMarkers(root, fragments.map { parseReport(it.readText()) })
+            return addMpsProjectMarkers(root, parseReports(fragments.map { it.readText() }))
         } finally {
             temporary.toFile().deleteRecursively()
         }
     }
+
+    internal fun parseReports(reports: List<String>): List<HomeGuess> =
+        reports.map(::parseReport)
+            .sortedWith(compareBy<HomeGuess> { it.projectDir.nameCount }.thenBy { it.projectDir.toString() })
 
     internal fun parseReport(text: String): HomeGuess {
         val report = Json.parseToJsonElement(text).jsonObject

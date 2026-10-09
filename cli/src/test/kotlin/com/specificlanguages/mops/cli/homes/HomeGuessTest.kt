@@ -25,6 +25,20 @@ class HomeGuessTest {
     }
 
     @Test
+    fun `reports put parents before children regardless of fragment order`() {
+        val projects = listOf("/project", "/project/a", "/project/b")
+        val reports = projects.map { project ->
+            """{"version":2,"project":{"projectDir":"$project","buildDir":"$project/build","mpsProjectRoots":[]}}"""
+        }
+        val discovery = GradleHomeDiscovery()
+        val orders = listOf(reports, reports.reversed(), listOf(reports[2], reports[0], reports[1]))
+
+        orders.forEach { order ->
+            assertEquals(projects.map(Path::of), discovery.parseReports(order).map { it.projectDir })
+        }
+    }
+
+    @Test
     fun `wrappers pass configured paths and caller arguments`() {
         val guess = HomeGuess(
             projectDir = temporary,
