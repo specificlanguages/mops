@@ -203,7 +203,8 @@ object SharedMpsEnvironment {
                 }
             }
         }
-        return target
+        // Open fixture projects without incidental symlinks in the system temporary directory.
+        return target.toRealPath()
     }
 
     // MPS build outputs (source_gen, classes_gen, and their .caches siblings) must never enter a test's working copy:
