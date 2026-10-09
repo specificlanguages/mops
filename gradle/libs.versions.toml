@@ -8,6 +8,7 @@ picocli = "4.7.7"
 groovy = "4.0.33"
 project-loader = "6.0.2.230.7aa8cfe"
 mps = "2026.1.1"
+mps-legacy = "2024.1.6"
 system-lambda = "1.2.1"
 mockito-kotlin = "6.4.0"
 kotlinx-serialization = "1.11.0"
@@ -22,6 +23,7 @@ asm-commons = { module = "org.ow2.asm:asm-commons", version.ref = "asm" }
 picocli = { module = "info.picocli:picocli", version.ref = "picocli" }
 project-loader = { module = "de.itemis.mps.build-backends:project-loader", version.ref = "project-loader" }
 mps-distribution = { module = "com.jetbrains:mps", version.ref = "mps" }
+mps-legacy-distribution = { module = "com.jetbrains:mps", version.ref = "mps-legacy" }
 mps-jbr = { module = "com.jetbrains.mps:mps-jbr", version.ref = "mps" }
 system-lambda = { module = "com.github.stefanbirkner:system-lambda", version.ref = "system-lambda" }
 mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockito-kotlin" }

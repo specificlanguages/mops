@@ -1,0 +1,22 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "group:all"
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": ["org.apache.groovy:*"],
+      "allowedVersions": "/^4\\./"
+    },
+    {
+      "description": "Allow only bugfix updates for legacy adapter MPS",
+      "matchManagers": ["gradle"],
+      "matchFileNames": ["gradle/libs.versions.toml"],
+      "matchPackageNames": ["com.jetbrains:mps"],
+      "matchJsonata": ["sharedVariableName = 'mps.legacy'"],
+      "matchUpdateTypes": ["major", "minor"],
+      "enabled": false
+    }
+  ]
+}
