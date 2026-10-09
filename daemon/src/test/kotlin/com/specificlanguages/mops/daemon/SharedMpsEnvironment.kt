@@ -46,7 +46,12 @@ object SharedMpsEnvironment {
     private var openSharedProject: MPSProject? = null
 
     val sharedMpsAccess: MpsAccess
-        get() = JetBrainsMpsAccess(ensureSharedProject(), DaemonLogger())
+        get() {
+            val project = ensureSharedProject()
+            environment.flushAllEvents()
+            IndexingTestUtil.waitUntilIndexesAreReady(project.project)
+            return JetBrainsMpsAccess(project, DaemonLogger())
+        }
 
     val platform: Platform
         get() = environment.platform
