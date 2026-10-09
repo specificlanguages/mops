@@ -7,8 +7,8 @@ val legacyMps = configurations.register("legacyMps") { isCanBeConsumed = false }
 val currentMps = configurations.register("currentMps") { isCanBeConsumed = false }
 
 dependencies {
-    legacyMps("com.jetbrains:mps:2024.1.6")
-    currentMps("com.jetbrains:mps:2026.1.1")
+    legacyMps(libs.mps.legacy.distribution)
+    currentMps(libs.mps.distribution)
 }
 
 fun adapterClasspath(distribution: NamedDomainObjectProvider<Configuration>) = files(
