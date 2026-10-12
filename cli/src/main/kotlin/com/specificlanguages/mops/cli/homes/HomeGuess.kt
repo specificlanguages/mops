@@ -22,23 +22,23 @@ internal data class HomeGuess(
         (java.isRegularFile() && java.isExecutable()) || it.resolve("bin/java.exe").isRegularFile()
     } == true
 
-    fun writeWrapper(wrapper: Path, mpsProjectRoot: Path, windows: Boolean): Path {
+    fun writeWrapper(wrapper: Path, mpsProjectRoot: Path, mopsExecutable: Path, windows: Boolean): Path {
         wrapper.parent.createDirectories()
-        wrapper.writeText(if (windows) windowsWrapper(mpsProjectRoot) else posixWrapper(mpsProjectRoot))
+        wrapper.writeText(if (windows) windowsWrapper(mpsProjectRoot, mopsExecutable) else posixWrapper(mpsProjectRoot, mopsExecutable))
         if (!windows) check(wrapper.toFile().setExecutable(true)) { "Could not make wrapper executable: $wrapper" }
         return wrapper
     }
 
-    internal fun posixWrapper(mpsProjectRoot: Path): String = listOfNotNull(
-        "#!/bin/sh\nexec mops",
+    internal fun posixWrapper(mpsProjectRoot: Path, mopsExecutable: Path): String = listOfNotNull(
+        "#!/bin/sh\nexec ${quoteForShell(mopsExecutable.toAbsolutePath().toString())}",
         mpsHome?.let { "--mps-home=${quoteForShell(it.toString())}" },
         javaHome?.let { "--java-home=${quoteForShell(it.toString())}" },
         "--project-root=${quoteForShell(mpsProjectRoot.toString())}",
         "\"\$@\"\n",
     ).joinToString(" ")
 
-    internal fun windowsWrapper(mpsProjectRoot: Path): String = listOfNotNull(
-        "@echo off\r\nmops",
+    internal fun windowsWrapper(mpsProjectRoot: Path, mopsExecutable: Path): String = listOfNotNull(
+        "@echo off\r\n${quoteForCmd(mopsExecutable.toAbsolutePath().toString())}",
         mpsHome?.let { "--mps-home=${quoteForCmd(it.toString())}" },
         javaHome?.let { "--java-home=${quoteForCmd(it.toString())}" },
         "--project-root=${quoteForCmd(mpsProjectRoot.toString())}",

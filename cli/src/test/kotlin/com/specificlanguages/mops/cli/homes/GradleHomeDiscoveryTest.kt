@@ -130,7 +130,7 @@ class GradleHomeDiscoveryTest {
         assertContains(output, "Wrapper: ../../build/mopsw")
         assertEquals(1, output.lineSequence().count { it.startsWith("Wrapper: ") })
         assertEquals(
-            "#!/bin/sh\nexec mops --mps-home='${root}/child'\"'\"'s MPS' " +
+            "#!/bin/sh\nexec '${nested}/bin/mops' --mps-home='${root}/child'\"'\"'s MPS' " +
                 "--java-home='${root}/child'\"'\"'s Java' " +
                 "--project-root='${root}/child/MPS project' \"\$@\"\n",
             wrapper.readText(),
@@ -404,7 +404,7 @@ class GradleHomeDiscoveryTest {
 
     private fun run(directory: Path, vararg args: String): Pair<Int, String> {
         val output = StringWriter()
-        val command = newCommandLine(directory)
+        val command = newCommandLine(directory, mopsExecutable = { directory.resolve("bin/mops") })
         command.out = PrintWriter(output, true)
         command.err = PrintWriter(output, true)
         return command.execute("wrapper", *args) to output.toString()
@@ -412,7 +412,7 @@ class GradleHomeDiscoveryTest {
 
     private fun runForProject(directory: Path, projectRoot: Path, vararg args: String): Pair<Int, String> {
         val output = StringWriter()
-        val command = newCommandLine(directory)
+        val command = newCommandLine(directory, mopsExecutable = { directory.resolve("bin/mops") })
         command.out = PrintWriter(output, true)
         command.err = PrintWriter(output, true)
         return command.execute("--project-root", projectRoot.toString(), "wrapper", *args) to output.toString()

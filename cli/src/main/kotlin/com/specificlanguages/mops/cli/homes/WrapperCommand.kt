@@ -22,7 +22,10 @@ import java.util.concurrent.Callable
         "Partial discoveries print available values without writing a wrapper and exit with status 1; known pairs write the wrapper and exit with status 0, with warnings when their paths are not usable yet.",
     ],
 )
-class WrapperCommand(private val root: MopsCommand) : Callable<Int> {
+class WrapperCommand(
+    private val root: MopsCommand,
+    private val mopsExecutable: () -> Path = { mopsExecutablePath() },
+) : Callable<Int> {
     @Parameters(
         index = "0", arity = "0..1", paramLabel = "PATH",
         description = ["Starting point of discovery; default is --project-root when supplied, otherwise the working directory."]
@@ -83,12 +86,13 @@ class WrapperCommand(private val root: MopsCommand) : Callable<Int> {
             check(output == null || targets.size == 1) {
                 "--output requires --project-root when discovery finds multiple MPS projects."
             }
+            val executable = mopsExecutable()
             targets.forEach { (owner, projectRoot) ->
                 val wrapper = output
                     ?.let { root.workingDirectory.resolve(it).normalize() }
                     ?: defaultWrapperPath(owner, projectRoot, windows)
                 out.println("Project root: ${displayPath(projectRoot, root.workingDirectory)}")
-                out.println("Wrapper: ${displayPath(runtime.writeWrapper(wrapper, projectRoot, windows), root.workingDirectory)}")
+                out.println("Wrapper: ${displayPath(runtime.writeWrapper(wrapper, projectRoot, executable, windows), root.workingDirectory)}")
             }
         }
         out.flush()

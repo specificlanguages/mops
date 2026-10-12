@@ -36,8 +36,9 @@ wrapper; `--project-root` can also precede `wrapper`. Reported paths are relativ
 wrapper is selected, `--output PATH` selects its exact file; a relative path is resolved from the directory where `mops`
 was started. The POSIX wrappers are executable. Each wrapper supplies the shared discovered MPS and Java homes and its
 MPS project directory. MPS projects come from configured `mpsBuilds` entries and `.mps` project markers in the Gradle
-build. Run the generated wrapper in place of `mops`; arguments passed to it are forwarded to `mops`. No MPS home or
-daemon is required in the CLI invocation that writes the wrapper; Java must be available to run Gradle.
+build. Each wrapper invokes the full path of the mops installation that generated it, so mops need not be in `PATH`. Run
+the generated wrapper in place of `mops`; arguments passed to it are forwarded to `mops`. No MPS home or daemon is
+required in the CLI invocation that writes the wrapper; Java must be available to run Gradle.
 
 Discovery queries configured providers, which can download and extract distributions. It does not execute preparation or
 language build task actions. It inspects all Gradle projects in the build and uses a discovered `mpsDefaults` extension

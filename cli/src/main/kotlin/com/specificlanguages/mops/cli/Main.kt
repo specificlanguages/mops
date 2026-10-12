@@ -33,6 +33,7 @@ import com.specificlanguages.mops.cli.get.GetOperations
 import com.specificlanguages.mops.cli.get.ModelGetNodeCommand
 import com.specificlanguages.mops.cli.help.RecursiveHelpCommand
 import com.specificlanguages.mops.cli.homes.WrapperCommand
+import com.specificlanguages.mops.cli.homes.mopsExecutablePath
 import com.specificlanguages.mops.cli.list.MpsListCommand
 import com.specificlanguages.mops.cli.make.MakeModulesCommand
 import com.specificlanguages.mops.cli.make.MakeOperations
@@ -51,7 +52,10 @@ fun main(args: Array<String>) {
     exitProcess(newCommandLine().execute(*args))
 }
 
-fun newCommandLine(workingDirectory: Path = Path.of("").absolute()): CommandLine {
+fun newCommandLine(
+    workingDirectory: Path = Path.of("").absolute(),
+    mopsExecutable: () -> Path = { mopsExecutablePath() },
+): CommandLine {
     val rootCommand = MopsCommand(workingDirectory)
     val root = CommandLine(rootCommand)
     root.commandSpec.parser().allowSubcommandsAsOptionParameters(true)
@@ -102,7 +106,7 @@ fun newCommandLine(workingDirectory: Path = Path.of("").absolute()): CommandLine
     root.addSubcommand("code", code)
     root.addLeaf("test", com.specificlanguages.mops.cli.testing.TestCommand(rootCommand))
     root.addLeaf("list", MpsListCommand(rootCommand))
-    root.addLeaf("wrapper", WrapperCommand(rootCommand))
+    root.addLeaf("wrapper", WrapperCommand(rootCommand, mopsExecutable))
     root.addGroup("skill", SkillOperations()) {
         addLeaf("path", SkillPathCommand())
     }

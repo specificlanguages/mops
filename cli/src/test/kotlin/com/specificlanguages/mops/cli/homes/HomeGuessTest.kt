@@ -51,20 +51,20 @@ class HomeGuessTest {
         assertTrue(guess.hasKnownHomes)
 
         assertEquals(
-            "#!/bin/sh\nexec mops --mps-home='/MPS home'\"'\"'s' --java-home='/Java home' --project-root='/MPS project' \"\$@\"\n",
-            guess.posixWrapper(Path.of("/MPS project")),
+            "#!/bin/sh\nexec '/mops bin/mops' --mps-home='/MPS home'\"'\"'s' --java-home='/Java home' --project-root='/MPS project' \"\$@\"\n",
+            guess.posixWrapper(Path.of("/MPS project"), Path.of("/mops bin/mops")),
         )
         assertEquals(
-            "@echo off\r\nmops --mps-home=\"/MPS home's\" --java-home=\"/Java home\" --project-root=\"/MPS project\" %*\r\n",
-            guess.windowsWrapper(Path.of("/MPS project")),
+            "@echo off\r\n\"/mops bin/mops.bat\" --mps-home=\"/MPS home's\" --java-home=\"/Java home\" --project-root=\"/MPS project\" %*\r\n",
+            guess.windowsWrapper(Path.of("/MPS project"), Path.of("/mops bin/mops.bat")),
         )
         val wrapper = temporary.resolve("custom/wrapper.cmd")
-        assertEquals(wrapper, guess.writeWrapper(wrapper, Path.of("/MPS project"), windows = true))
+        assertEquals(wrapper, guess.writeWrapper(wrapper, Path.of("/MPS project"), Path.of("/mops bin/mops.bat"), windows = true))
     }
 
     @Test
-    fun `POSIX wrapper forwards its arguments`() {
-        val bin = temporary.resolve("bin").createDirectories()
+    fun `POSIX wrapper runs mops outside PATH and forwards its arguments`() {
+        val bin = temporary.resolve("bin with spaces and a quote'").createDirectories()
         val mops = bin.resolve("mops")
         mops.writeText("#!/bin/sh\nprintf '%s\\n' \"\$@\"\n")
         assertTrue(mops.toFile().setExecutable(true))
@@ -79,11 +79,12 @@ class HomeGuessTest {
         val wrapper = guess.writeWrapper(
             temporary.resolve("custom/mopsw"),
             Path.of("/MPS project"),
+            mopsExecutable = mops,
             windows = false,
         )
         val process = ProcessBuilder(wrapper.toString(), "find", "things with spaces")
             .redirectErrorStream(true)
-            .apply { environment()["PATH"] = "$bin:${environment()["PATH"]}" }
+            .apply { environment()["PATH"] = "/usr/bin:/bin" }
             .start()
 
         assertEquals(
