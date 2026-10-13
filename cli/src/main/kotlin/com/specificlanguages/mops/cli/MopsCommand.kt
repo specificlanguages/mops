@@ -13,6 +13,7 @@ import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.ScopeType
+import picocli.CommandLine.Spec
 
 @Command(
     name = "mops",
@@ -71,8 +72,11 @@ class MopsCommand(
         nodeReferenceFormat = if (enabled) NodeReferenceFormat.URL else NodeReferenceFormat.SERIALIZED
     }
 
+    @Spec
+    lateinit var commandSpec: CommandLine.Model.CommandSpec
+
     override fun run() {
-        CommandLine(this).usage(System.out)
+        commandSpec.commandLine().usage(System.out)
     }
 
     private var daemonPool: DefaultDaemonPool? = null

@@ -12,6 +12,10 @@ import picocli.CommandLine.Parameters
 @Command(
     name = "node",
     description = ["Render one MPS node as the plain text of its default editor."],
+    customSynopsis = [
+        "mops render node [OPTIONS] NODE_REFERENCE",
+        "   or: mops render node [OPTIONS] MODEL_TARGET NODE_ID",
+    ],
 )
 class ModelRenderNodeCommand(private val environment: CommandEnvironment) : CliCommand() {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
@@ -25,20 +29,25 @@ class ModelRenderNodeCommand(private val environment: CommandEnvironment) : CliC
     var allowReflective: Boolean = false
 
     @Parameters(
-        index = "0..1",
-        arity = "1..2",
-        paramLabel = "NODE_REFERENCE | MODEL_TARGET NODE_ID",
-        description = ["Serialized node reference, or model target followed by node ID."],
+        index = "0",
+        paramLabel = "NODE_REFERENCE | MODEL_TARGET",
+        description = ["Serialized node reference, or the model target of NODE_ID."],
     )
-    lateinit var nodeTarget: Array<String>
+    lateinit var nodeReferenceOrModelTarget: String
+
+    @Parameters(
+        index = "1",
+        arity = "0..1",
+        paramLabel = "NODE_ID",
+        description = ["Node ID within MODEL_TARGET, in either the decimal or the encoded spelling."],
+    )
+    var nodeId: String? = null
 
     override fun run() {
         val client = environment.daemon()
-        val response = when (nodeTarget.size) {
-            1 -> client.renderNode(NodeTarget.NodeReference(nodeTarget[0]), allowReflective)
-            2 -> client.renderNode(NodeTarget.InModel(modelTarget = nodeTarget[0], nodeId = nodeTarget[1]), allowReflective)
-            else -> error("expected one node reference or model target plus node ID")
-        }
+        val target = nodeId?.let { NodeTarget.InModel(modelTarget = nodeReferenceOrModelTarget, nodeId = it) }
+            ?: NodeTarget.NodeReference(nodeReferenceOrModelTarget)
+        val response = client.renderNode(target, allowReflective)
 
         println(response.text)
     }

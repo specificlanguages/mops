@@ -42,6 +42,11 @@ class CommandHelpTest {
     }
 
     @Test
+    fun `bare mops prints the same usage as --help`() {
+        assertEquals(runHelp("--help"), runHelp())
+    }
+
+    @Test
     fun `edit help lists model subcommand`() {
         val output = runHelp("edit", "--help")
 
@@ -121,6 +126,29 @@ class CommandHelpTest {
                 assertContains(output.substring(globalOptions), option)
             }
             assertFalse(output.substring(globalOptions).contains("--help"), "$name help should keep --help out of global options")
+        }
+    }
+
+    @Test
+    fun `find help head shows every find subcommand`() {
+        val head = runHelp("find", "--help").lines().take(12).joinToString("\n")
+
+        for (subcommand in listOf("instances", "usages", "root-by-name", "node-by-id")) {
+            assertContains(head, "  $subcommand ")
+        }
+    }
+
+    @Test
+    fun `node commands show one synopsis per positional form`() {
+        for (verb in listOf("get", "render")) {
+            val output = runHelp(verb, "node", "--help")
+
+            assertContains(output, "Usage: mops $verb node [OPTIONS] NODE_REFERENCE\n")
+            assertContains(output, "   or: mops $verb node [OPTIONS] MODEL_TARGET NODE_ID\n")
+            val parameters = output.substringAfter("Parameters:").substringBefore("Options:")
+            assertContains(parameters, "NODE_REFERENCE | MODEL_TARGET")
+            assertContains(parameters, "[NODE_ID]")
+            assertFalse(parameters.contains("[NODE_REFERENCE"), "$verb node repeats the positional label:$parameters")
         }
     }
 

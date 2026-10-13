@@ -10,7 +10,14 @@ import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 
-@Command(name = "node", description = ["Export one MPS node as JSON."])
+@Command(
+    name = "node",
+    description = ["Export one MPS node as JSON."],
+    customSynopsis = [
+        "mops get node [OPTIONS] NODE_REFERENCE",
+        "   or: mops get node [OPTIONS] MODEL_TARGET NODE_ID",
+    ],
+)
 class ModelGetNodeCommand(private val environment: CommandEnvironment) : CliCommand() {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
 
@@ -21,20 +28,25 @@ class ModelGetNodeCommand(private val environment: CommandEnvironment) : CliComm
     var ancestry: Boolean = false
 
     @Parameters(
-        index = "0..1",
-        arity = "1..2",
-        paramLabel = "NODE_REFERENCE | MODEL_TARGET NODE_ID",
-        description = ["Serialized node reference, or model target followed by node ID."],
+        index = "0",
+        paramLabel = "NODE_REFERENCE | MODEL_TARGET",
+        description = ["Serialized node reference, or the model target of NODE_ID."],
     )
-    lateinit var nodeTarget: Array<String>
+    lateinit var nodeReferenceOrModelTarget: String
+
+    @Parameters(
+        index = "1",
+        arity = "0..1",
+        paramLabel = "NODE_ID",
+        description = ["Node ID within MODEL_TARGET, in either the decimal or the encoded spelling."],
+    )
+    var nodeId: String? = null
 
     override fun run() {
         val client = environment.daemon()
-        val response = when (nodeTarget.size) {
-            1 -> client.getNode(NodeTarget.NodeReference(nodeTarget[0]), ancestry)
-            2 -> client.getNode(NodeTarget.InModel(modelTarget = nodeTarget[0], nodeId = nodeTarget[1]), ancestry)
-            else -> error("expected one node reference or model target plus node ID")
-        }
+        val target = nodeId?.let { NodeTarget.InModel(modelTarget = nodeReferenceOrModelTarget, nodeId = it) }
+            ?: NodeTarget.NodeReference(nodeReferenceOrModelTarget)
+        val response = client.getNode(target, ancestry)
 
         println(renderJson(response.node))
     }

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Reordered command help so `mops <command> --help | head` shows what matters first: subcommands follow the description,
+  then parameters and the command's own options, and the global options (`--mps-home`, `--project-root`,
+  `--daemon-home`, `--java-home`, `--refs-as-urls`) appear once in a trailing `Global options:` section instead of in
+  every synopsis and option list. Each entry in a `Commands:` list is one line. `mops examples --help` and
+  `mops explain --help` list their topics, `mops get node --help` and `mops render node --help` show one synopsis per
+  positional form, and a bare `mops` prints the same usage as `mops --help`, including the command list.
 - Added offline `mops examples` task recipes, including an editing guide and focused topics for creation, node edits,
   references, Java insertion, and JSON batches. The recipes are also bundled as references in the mops skill.
 - Broadened the bundled `mops-code` skill into `mops`, covering CLI workflows as well as Code Mode. Use
