@@ -2,12 +2,16 @@ package com.specificlanguages.mops.cli.testing
 
 import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
+import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
+import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.ProtocolJson
 import picocli.CommandLine.*
 import java.nio.file.Files
 
 @Command(name = "test", description = ["Build and run MPS tests in a separate process."])
 class TestCommand(private val environment: CommandEnvironment) : CliCommand(), IExitCodeGenerator {
+    constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
+
     @Parameters(arity = "0..*", paramLabel = "TARGET_SEGMENT")
     var target: List<String> = emptyList()
     @Option(names = ["--no-build"], description = ["Use existing compiled output."])
@@ -30,7 +34,7 @@ class TestCommand(private val environment: CommandEnvironment) : CliCommand(), I
             if (json) println(ProtocolJson.encodeTestReport(report)) else {
                 val counts = report.results.filter { it.kind == "TEST" }.groupingBy { it.status }.eachCount()
                 println("${report.outcome}: ${counts.entries.joinToString { "${it.value} ${it.key.lowercase()}" }}")
-                report.diagnostics.forEach { println(it.lineSequence().first()) }
+                report.diagnostics.forEach { System.err.println(it.lineSequence().first()) }
                 println("Report: ${report.reportPath}")
             }
             resultCode = if (report.successful) 0 else 1
