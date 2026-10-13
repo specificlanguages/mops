@@ -3,6 +3,8 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.MpsNodeJson
+import com.specificlanguages.mops.protocol.MpsNodeParentJson
+import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import com.specificlanguages.mops.protocol.MpsNodeReferenceTargetJson
 import com.specificlanguages.mops.protocol.NodeTarget
 import kotlin.io.path.readText
@@ -198,6 +200,104 @@ class GetNodeSemanticsTest {
     }
 
     @Test
+    fun `exports the children at the requested depth as stubs and marks the truncation level`() {
+        val node = SharedMpsEnvironment.sharedMpsAccess.read {
+            getNode(NodeTarget.InModel(STRUCTURE_MODEL_NAME, JSON_FILE_NODE_ID), depth = 1)
+        }
+
+        assertEquals(1, node.truncatedAt)
+        assertEquals("JsonFile", propertyValue(node, "name"))
+        assertEquals(
+            listOf(
+                MpsNodeJson(
+                    role = "implements",
+                    concept = "jetbrains.mps.lang.structure.structure.InterfaceConceptReference",
+                    reference = "$STRUCTURE_MODEL_REFERENCE/2110045694544566905",
+                    childCount = 0,
+                ),
+                MpsNodeJson(
+                    role = "linkDeclaration",
+                    concept = "jetbrains.mps.lang.structure.structure.LinkDeclaration",
+                    name = "content",
+                    reference = "$STRUCTURE_MODEL_REFERENCE/2110045694544566910",
+                    childCount = 0,
+                ),
+            ),
+            node.children,
+        )
+    }
+
+    @Test
+    fun `exports the levels above the requested depth in full and the depth level as stubs`() {
+        val root = SharedMpsEnvironment.sharedMpsAccess.read {
+            getNode(NodeTarget.InModel(EDITOR_MODEL_REFERENCE, EDITOR_ROOT_NODE_ID), depth = 2)
+        }
+
+        assertEquals(2, root.truncatedAt)
+        val collection = requireNotNull(root.children).single()
+        // Level 1 is a full node: it carries its id and properties, and no stub fields.
+        assertEquals("jetbrains.mps.lang.editor.structure.CellModel_Collection", collection.concept)
+        assertNotNull(collection.id)
+        assertNull(collection.reference)
+        assertNull(collection.childCount)
+        assertNull(collection.truncatedAt)
+        // Level 2 holds the stubs; each reports how many style items it stands in for.
+        val cells = requireNotNull(collection.children)
+        assertTrue(cells.all { it.id == null && it.reference != null && it.childCount != null })
+        assertEquals(listOf(0, 0, 2, 1, 1, 0), cells.map { it.childCount })
+    }
+
+    @Test
+    fun `leaves out the children entirely at depth zero`() {
+        val node = SharedMpsEnvironment.sharedMpsAccess.read {
+            getNode(NodeTarget.InModel(STRUCTURE_MODEL_NAME, JSON_FILE_NODE_ID), depth = 0)
+        }
+
+        assertEquals(0, node.truncatedAt)
+        assertNull(node.children)
+        assertEquals("JsonFile", propertyValue(node, "name"))
+        assertNotNull(node.references)
+    }
+
+    @Test
+    fun `summarizes a node with its parent and per-role child counts`() {
+        val summary = SharedMpsEnvironment.sharedMpsAccess.read {
+            getNodeSummary(NodeTarget.InModel(EDITOR_MODEL_REFERENCE, EDITOR_COLLECTION_NODE_ID))
+        }
+
+        assertEquals(
+            MpsNodeSummaryJson(
+                type = "node",
+                name = null,
+                concept = "jetbrains.mps.lang.editor.structure.CellModel_Collection",
+                reference = "$EDITOR_MODEL_REFERENCE/2110045694544566940",
+                parent = MpsNodeParentJson(
+                    type = "root",
+                    role = "cellModel",
+                    name = "JsonFile_Editor",
+                    concept = "jetbrains.mps.lang.editor.structure.ConceptEditorDeclaration",
+                    reference = "$EDITOR_MODEL_REFERENCE/2110045694544566938",
+                ),
+                children = mapOf("childCellModel" to 5, "cellLayout" to 1),
+            ),
+            summary,
+        )
+    }
+
+    @Test
+    fun `summary nests the full ancestry chain when requested`() {
+        val summary = SharedMpsEnvironment.sharedMpsAccess.read {
+            getNodeSummary(NodeTarget.InModel(EDITOR_MODEL_REFERENCE, DEEP_STYLE_NODE_ID), ancestry = true)
+        }
+
+        assertEquals("jetbrains.mps.lang.editor.structure.PunctuationLeftStyleClassItem", summary.concept)
+        assertEquals(emptyMap(), summary.children)
+        val root = summary.parent?.parent?.parent
+        assertEquals("root", assertNotNull(root).type)
+        assertNull(root.parent)
+    }
+
+    @Test
     fun `fails instead of guessing when model target is ambiguous`() {
         SharedMpsEnvironment.withProjectCopy(
             prepare = { project ->
@@ -242,6 +342,8 @@ class GetNodeSemanticsTest {
         // A style item three containment levels below its ConceptEditorDeclaration root: style item -> constant cell ->
         // collection cell -> editor declaration.
         const val DEEP_STYLE_NODE_ID = "1P8oQ4NaXEQ"
+        const val EDITOR_ROOT_NODE_ID = "1P8oQ4NaXEq"
+        const val EDITOR_COLLECTION_NODE_ID = "1P8oQ4NaXEs"
         const val STRUCTURE_MODEL_PATH = "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps"
     }
 }

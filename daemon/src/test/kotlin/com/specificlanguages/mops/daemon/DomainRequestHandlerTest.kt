@@ -23,12 +23,15 @@ import com.specificlanguages.mops.protocol.ModelEditRequest
 import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.ModelGetNodeRequest
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
+import com.specificlanguages.mops.protocol.ModelGetNodeSummaryRequest
+import com.specificlanguages.mops.protocol.ModelGetNodeSummaryResponse
 import com.specificlanguages.mops.protocol.ModelRenderNodeRequest
 import com.specificlanguages.mops.protocol.ModelRenderNodeResponse
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import com.specificlanguages.mops.protocol.MpsListRequest
 import com.specificlanguages.mops.protocol.MpsListResponse
 import com.specificlanguages.mops.protocol.MpsNodeJson
+import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import com.specificlanguages.mops.protocol.NodeFilter
 import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.PingRequest
@@ -67,6 +70,32 @@ class DomainRequestHandlerTest {
 
         assertEquals(ModelGetNodeResponse(node), response)
         verify(operations).getNode(target)
+        verifyNoMoreInteractions(operations)
+    }
+
+    @Test
+    fun `get-node passes the depth through to the export`() {
+        val node = MpsNodeJson(concept = "SomeConcept", id = "42", truncatedAt = 1)
+        val target = NodeTarget.NodeReference("r:model/1")
+        whenever(operations.getNode(target, ancestry = false, depth = 1)).thenReturn(node)
+
+        val response = handler.handleDomainRequest(ModelGetNodeRequest(TOKEN, target, depth = 1))
+
+        assertEquals(ModelGetNodeResponse(node), response)
+        verify(operations).getNode(target, ancestry = false, depth = 1)
+        verifyNoMoreInteractions(operations)
+    }
+
+    @Test
+    fun `get-node-summary reads and wraps the node summary`() {
+        val summary = MpsNodeSummaryJson(type = "node", name = "n", concept = "SomeConcept", reference = "r:model/1")
+        val target = NodeTarget.NodeReference("r:model/1")
+        whenever(operations.getNodeSummary(target, ancestry = true)).thenReturn(summary)
+
+        val response = handler.handleDomainRequest(ModelGetNodeSummaryRequest(TOKEN, target, ancestry = true))
+
+        assertEquals(ModelGetNodeSummaryResponse(summary), response)
+        verify(operations).getNodeSummary(target, ancestry = true)
         verifyNoMoreInteractions(operations)
     }
 
