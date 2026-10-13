@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- `create solution` now reports the usage preset it applied and the facets that preset produced, in the creation report
+  as well as the `--dry-run` plan; `--json` carries them as `usagePreset` and `facets`. `--usage-preset` documents its
+  values and default (`not-generated`) in `--help`, and an unknown value is rejected as a usage error naming the
+  accepted spellings.
 - Added offline `mops examples` task recipes, including an editing guide and focused topics for creation, node edits,
   references, Java insertion, and JSON batches. The recipes are also bundled as references in the mops skill.
 - Broadened the bundled `mops-code` skill into `mops`, covering CLI workflows as well as Code Mode. Use
