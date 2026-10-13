@@ -182,7 +182,7 @@ class ExplainCommandTest {
     }
 
     @Test
-    fun `in-model example targets name a model, not a persistence file`() {
+    fun `in-model example targets name a model, not a file path`() {
         for (topic in allTopics.filter { it !in nonBatchTopics }) {
             val batch = ProtocolJson.decodeBatch(exampleJson(pageText(topic)))
             val inModelTargets = batch.operations.flatMap(::targetsOf).filterIsInstance<EditTarget.InModel>()
