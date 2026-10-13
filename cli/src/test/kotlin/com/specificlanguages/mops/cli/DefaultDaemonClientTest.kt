@@ -12,6 +12,7 @@ import com.specificlanguages.mops.protocol.EditTarget
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindUsagesResponse
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
+import com.specificlanguages.mops.protocol.ModelGetNodeSummaryResponse
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import com.specificlanguages.mops.protocol.MpsListResponse
 import com.specificlanguages.mops.protocol.MpsNodeJson
@@ -53,6 +54,30 @@ class DefaultDaemonClientTest {
         assertContains(daemon.requestsReceived.single(), "\"target\"")
         assertContains(daemon.requestsReceived.single(), "\"modelTarget\":\"r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)\"")
         assertContains(daemon.requestsReceived.single(), "\"nodeId\":\"2110045694544566904\"")
+    }
+
+    @Test
+    fun `get node summary sends the summary request with the ancestry flag`() {
+        val response = ModelGetNodeSummaryResponse(
+            node = MpsNodeSummaryJson(
+                type = "root",
+                name = "JsonFile",
+                concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+                children = mapOf("implements" to 1),
+            ),
+        )
+        val daemon = startPrerecordedDaemon(response)
+
+        val actual = DefaultDaemonClient(daemon.port, "secret").getNodeSummary(
+            NodeTarget.NodeReference("r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"),
+            ancestry = true,
+        )
+
+        daemon.join(5_000)
+        assertEquals(response, actual)
+        assertContains(daemon.requestsReceived.single(), "\"type\":\"model-get-node-summary\"")
+        assertContains(daemon.requestsReceived.single(), "\"ancestry\":true")
     }
 
     @Test
