@@ -16,3 +16,7 @@ not drowned in library matches.
 Broader scope is now requested with a trailing `in <scope-segments>` clause instead; `in /` searches the whole **MPS
 Repository** (**Project and Libraries**). The default narrow scope over **Editable Project Sources** described above is
 unchanged.
+
+Concept hierarchy queries are an exception to the source-node search scope: `find subconcepts` enumerates concepts from
+all loaded language runtimes, including libraries. It returns qualified concept names rather than node locations and has
+no `in` scope clause.

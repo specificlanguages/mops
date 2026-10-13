@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.daemon.core
 
 import com.specificlanguages.mops.protocol.FindByNameResponse
+import com.specificlanguages.mops.protocol.FindSubconceptsResponse
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindNodeByIdResponse
 import com.specificlanguages.mops.protocol.FindUsagesResponse
@@ -60,6 +61,9 @@ interface MpsRead {
      * the whole repository. An ambiguous or missing segment fails with the same error shapes navigation uses.
      */
     fun resolveScope(segments: List<String>?): ResolvedScope
+
+    /** Finds concept descendants in loaded language runtimes, excluding the queried concept. */
+    fun findSubconcepts(concept: String, concreteOnly: Boolean = false, direct: Boolean = false): FindSubconceptsResponse
 
     /**
      * Finds instances of [concept] within [scope], keeping only those that satisfy every [filter][filters]. The filters

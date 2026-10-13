@@ -57,6 +57,20 @@ object MopsLookupExtensions {
         }
     }
 
+    /** Finds descendants in loaded languages, excluding the queried concept. Access: read. */
+    @CodeModeExtension(MpsAccessLevel.READ)
+    @JvmStatic
+    @JvmOverloads
+    fun subConceptsOf(
+        lookup: MopsLookup,
+        concept: SAbstractConcept,
+        concreteOnly: Boolean = false,
+        direct: Boolean = false,
+    ): List<SAbstractConcept> {
+        requireRead(lookup.mops, "mops.lookup.subConceptsOf")
+        return ConceptHierarchy(lookup.mops.project).subConceptsOf(concept, concreteOnly, direct)
+    }
+
     /** Resolves exactly one module, throwing on a miss or ambiguity. Access: read. */
     @CodeModeExtension(MpsAccessLevel.READ)
     @JvmStatic

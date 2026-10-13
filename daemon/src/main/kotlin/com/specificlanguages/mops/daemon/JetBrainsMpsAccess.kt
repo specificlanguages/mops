@@ -235,6 +235,12 @@ class JetBrainsMpsAccess(
             )
         }
 
+        override fun findSubconcepts(concept: String, concreteOnly: Boolean, direct: Boolean): FindSubconceptsResponse =
+            FindSubconceptsResponse(
+                ConceptHierarchy(project).subConceptsOf(ConceptResolver(project).resolve(concept), concreteOnly, direct)
+                    .map { it.qualifiedName },
+            )
+
         override fun findInstances(
             concept: String,
             exact: Boolean,
