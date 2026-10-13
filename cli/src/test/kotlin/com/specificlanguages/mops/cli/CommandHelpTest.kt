@@ -150,6 +150,11 @@ class CommandHelpTest {
             arrayOf("check", "model"),
             arrayOf("make", "module"),
             arrayOf("make", "project"),
+            arrayOf("create", "language"),
+            arrayOf("create", "solution"),
+            arrayOf("create", "devkit"),
+            arrayOf("create", "generator"),
+            arrayOf("create", "model"),
             arrayOf("diagnose", "module"),
             arrayOf("diagnose", "project"),
             arrayOf("daemon", "ping"),
@@ -163,6 +168,17 @@ class CommandHelpTest {
             assertContains(output, "Usage:", message = "help for '${command.joinToString(" ")}' should print usage")
             assertContains(output, command.last())
         }
+    }
+
+    @Test
+    fun `create solution help lists the usage presets and the default`() {
+        val output = runHelp("create", "solution", "--help")
+
+        assertContains(output, "--usage-preset=PRESET")
+        for (preset in listOf("not-generated", "text", "java", "java-tests", "java-mps-plugin")) {
+            assertContains(output, preset, message = "help should list the preset '$preset'")
+        }
+        assertContains(output, "Default: not-generated")
     }
 
     @Test
