@@ -13,6 +13,7 @@ import com.specificlanguages.mops.protocol.ModulesDiagnosticsResponse
 import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
+import com.specificlanguages.mops.protocol.ModelGetNodeSummaryResponse
 import com.specificlanguages.mops.protocol.ModelRenderNodeResponse
 import com.specificlanguages.mops.protocol.NodeFilter
 import com.specificlanguages.mops.protocol.NodeTarget
@@ -34,7 +35,8 @@ interface DaemonClient {
         target: List<String>, build: Boolean, deadlineMillis: Long, cancellationPath: String?,
     ): TestRunResponse
     fun ping(): PongResponse
-    fun getNode(target: NodeTarget, ancestry: Boolean = false): ModelGetNodeResponse
+    fun getNode(target: NodeTarget, ancestry: Boolean = false, depth: Int? = null): ModelGetNodeResponse
+    fun getNodeSummary(target: NodeTarget, ancestry: Boolean = false): ModelGetNodeSummaryResponse
 
     /** Reports where MPS locates the files of the module named by [module] (a name or serialized module reference). */
     fun getModule(module: String): GetModuleResponse

@@ -166,6 +166,19 @@ class CommandHelpTest {
     }
 
     @Test
+    fun `node command help shows one synopsis line per positional form`() {
+        val getNode = runHelp("get", "node", "--help")
+        assertContains(getNode, "Usage: mops get node [OPTIONS] NODE_REFERENCE\n       mops get node [OPTIONS] MODEL_TARGET NODE_ID\n")
+        assertFalse(getNode.contains("NODE_ID NODE_REFERENCE"), getNode)
+        assertFalse(getNode.contains("NODE_ID ["), getNode)
+
+        val renderNode = runHelp("render", "node", "--help")
+        assertContains(renderNode, "Usage: mops render node [OPTIONS] NODE_REFERENCE\n       mops render node [OPTIONS] MODEL_TARGET NODE_ID\n")
+        assertFalse(renderNode.contains("NODE_ID NODE_REFERENCE"), renderNode)
+        assertFalse(renderNode.contains("NODE_ID ["), renderNode)
+    }
+
+    @Test
     fun `wrapper help describes the generated wrapper`() {
         val output = runHelp("wrapper", "--help")
 
