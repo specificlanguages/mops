@@ -5,20 +5,31 @@ import com.specificlanguages.mops.protocol.MpsNodeParentJson
 import com.specificlanguages.mops.protocol.MpsNodePropertyJson
 import com.specificlanguages.mops.protocol.MpsNodeReferenceJson
 import com.specificlanguages.mops.protocol.MpsNodeReferenceTargetJson
-import jetbrains.mps.smodel.SNodeUtil
+import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import org.jetbrains.mps.openapi.model.SNode
-import org.jetbrains.mps.openapi.model.SNodeAccessUtil
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 
 class JsonNodeExporter(
     private val persistence: PersistenceFacade = PersistenceFacade.getInstance(),
 ) {
-    fun export(node: SNode, ancestry: Boolean = false): MpsNodeJson =
+    /**
+     * Exports [node] with its parent (the full chain when [ancestry] is set). [depth] bounds the export: [depth]
+     * containment levels below the node are exported in full and the nodes at that level become stubs; 0 drops the
+     * children and null exports the whole Node Subtree.
+     */
+    fun export(node: SNode, ancestry: Boolean = false, depth: Int? = null): MpsNodeJson =
         export(
             node,
             includeModel = true,
             includeRole = false,
             parent = nodeParent(node, fullChain = ancestry, persistence),
+            remainingDepth = depth,
+        ).copy(truncatedAt = depth)
+
+    /** Summarizes [node] without visiting its subtree beyond counting the children per Containment Role. */
+    fun exportSummary(node: SNode, ancestry: Boolean = false): MpsNodeSummaryJson =
+        nodeSummary(node, persistence, fullChain = ancestry).copy(
+            children = node.children.groupingBy { it.containmentLink?.role ?: "<none>" }.eachCount(),
         )
 
     private fun export(
@@ -26,6 +37,7 @@ class JsonNodeExporter(
         includeModel: Boolean,
         includeRole: Boolean,
         parent: MpsNodeParentJson? = null,
+        remainingDepth: Int?,
     ): MpsNodeJson {
         val model = node.model
 
@@ -63,10 +75,13 @@ class JsonNodeExporter(
             .sortedBy { it.role }
             .takeIf { it.isNotEmpty() }
 
-        val children = node.children
-            .map { export(node = it, includeModel = false, includeRole = true) }
-            .toList()
-            .takeIf { it.isNotEmpty() }
+        val children = when (remainingDepth) {
+            0 -> null
+            1 -> node.children.map(::stub)
+            else -> node.children.map {
+                export(node = it, includeModel = false, includeRole = true, remainingDepth = remainingDepth?.minus(1))
+            }
+        }?.toList()?.takeIf { it.isNotEmpty() }
 
         return MpsNodeJson(
             model = model
@@ -85,6 +100,13 @@ class JsonNodeExporter(
         )
     }
 
-    private fun nodeName(node: SNode): String? =
-        SNodeAccessUtil.getPropertyValue(node, SNodeUtil.property_INamedConcept_name) as String?
+    private fun stub(node: SNode): MpsNodeJson =
+        MpsNodeJson(
+            role = node.containmentLink?.role,
+            concept = node.concept.qualifiedName,
+            conceptValid = node.concept.isValid,
+            name = nodeName(node),
+            reference = persistence.asString(node.reference),
+            childCount = node.children.count(),
+        )
 }
