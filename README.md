@@ -235,11 +235,11 @@ or serialized module reference) and their transitive dependency closure, so an u
 prints the make result as JSON.
 
 ```sh
-mops --mps-home <path> create language [--descriptor FILE] [--with-generator] [--dry-run] [--json] <module-name>
-mops --mps-home <path> create solution [--descriptor FILE] [--usage-preset PRESET] [--dry-run] [--json] <module-name>
-mops --mps-home <path> create devkit [--descriptor FILE] [--dry-run] [--json] <module-name>
-mops --mps-home <path> create generator --language <language> --alias <alias> [--standalone] [--descriptor FILE] [--dry-run] [--json]
-mops --mps-home <path> create model --module <module> [--file-per-root] [--dry-run] [--json] <model-name>
+mops create language [--descriptor FILE] [--with-generator] [--dry-run] [--json] <module-name>
+mops create solution [--descriptor FILE] [--usage-preset PRESET] [--dry-run] [--json] <module-name>
+mops create devkit [--descriptor FILE] [--dry-run] [--json] <module-name>
+mops create generator --language <lang> --alias <alias> [--standalone] [--descriptor FILE] [--dry-run] [--json]
+mops create model --module <module> [--file-per-root] [--dry-run] [--json] <model-name>
 ```
 
 Creates project modules and models through the daemon and registers them with the project. Each module lands under the
