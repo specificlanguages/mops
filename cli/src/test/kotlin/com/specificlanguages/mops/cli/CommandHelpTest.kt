@@ -104,11 +104,12 @@ class CommandHelpTest {
 
     @Test
     fun `find instances help names every accepted concept spelling`() {
-        val output = runHelp("find", "instances", "--help")
+        // Picocli wraps the description, so compare against a single-spaced copy.
+        val output = runHelp("find", "instances", "--help").replace(Regex("\\s+"), " ")
 
-        assertContains(output, "<language>.structure.<Concept>")
-        assertContains(output, ".structure.")
-        assertContains(output, "short name")
+        assertContains(output, "<language>.structure.<ConceptName>")
+        assertContains(output, "with .structure. dropped")
+        assertContains(output, "bare short name")
     }
 
     @Test

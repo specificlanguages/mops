@@ -86,7 +86,7 @@ class FindInstancesCommand(private val environment: CommandEnvironment) : CliCom
         arity = "1",
         paramLabel = "CONCEPT",
         description = [
-            "The MPS concept to search for: its qualified name (<language>.structure.<Concept>), the same name with " +
+            "The MPS concept to search for: its qualified name (<language>.structure.<ConceptName>), the same name with " +
                 ".structure. dropped, or a bare short name that is unique across loaded languages.",
         ],
     )
