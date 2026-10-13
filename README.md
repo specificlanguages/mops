@@ -1,7 +1,7 @@
 # mops
 
-`mops` is a small helper CLI for helping LLMs work with JetBrains MPS models. This checkout is a Gradle-rooted Kotlin
-prototype with two application subprojects: `cli/` and `daemon/`.
+`mops` is a small CLI for letting coding agents work with JetBrains MPS projects. This checkout is a Gradle-rooted
+Kotlin prototype with two application subprojects: `cli/` and `daemon/`.
 
 ## Usage
 
