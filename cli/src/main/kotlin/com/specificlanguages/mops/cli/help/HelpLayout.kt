@@ -68,8 +68,8 @@ object HelpLayout {
         ): Ansi.Text = createDetailedSynopsisOptionsText(done, commandOptions(), optionSort, clusterBooleanOptions)
     }
 
-    private fun heading(text: String, applies: (Help) -> Boolean) =
-        IHelpSectionRenderer { help -> if (applies(help)) help.createHeading(text) else "" }
+    private fun heading(text: String, hasContent: (Help) -> Boolean) =
+        IHelpSectionRenderer { help -> if (hasContent(help)) help.createHeading(text) else "" }
 
     private fun Help.commandOptions(): List<OptionSpec> = visibleOptions().filter { !it.isGlobal() }
 

@@ -113,8 +113,8 @@ fun newCommandLine(
     root.addGroup("skill", SkillOperations()) {
         addLeaf("path", SkillPathCommand())
     }
-    root.addLeaf("explain", ExplainCommand()).footer(ExplainTopics.topicList())
-    root.addLeaf("examples", ExamplesCommand()).footer(ExampleTopics.topicList())
+    root.addLeaf("explain", ExplainCommand()).appendDescription(ExplainTopics.topicList())
+    root.addLeaf("examples", ExamplesCommand()).appendDescription(ExampleTopics.topicList())
     root.addLeaf("help", RecursiveHelpCommand())
     HelpLayout.apply(root)
 
@@ -134,9 +134,10 @@ private fun CommandLine.addLeaf(name: String, command: Any): CommandLine {
     return leaf
 }
 
-/** Appends [text] to the command's help, separated from the preceding section by a blank line. */
-private fun CommandLine.footer(text: String) {
-    commandSpec.usageMessage().footer("", *text.trimEnd().lines().toTypedArray())
+/** Appends [text] to the command's description, separated from it by a blank line, so it precedes the option sections. */
+private fun CommandLine.appendDescription(text: String) {
+    val usage = commandSpec.usageMessage()
+    usage.description(*usage.description(), "", *text.trimEnd().lines().toTypedArray())
 }
 
 object PrintErrorAndExit : CommandLine.IExecutionExceptionHandler {

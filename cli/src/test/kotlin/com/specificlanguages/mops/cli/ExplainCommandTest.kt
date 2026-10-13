@@ -42,6 +42,7 @@ class ExplainCommandTest {
     fun `explain help lists the top-level topics with their summaries`() {
         val help = runExplain("--help")
 
+        assertTrue(help.indexOf("Topics:") in 0 until help.indexOf("Options:"), "topics should precede the options")
         val block = help.lines().dropWhile { it != "Topics:" }.drop(1).takeWhile { it.startsWith("  ") }
         val entries = block.filter { it.matches(Regex("  \\S.*")) }
         assertEquals(listOf("code") + topLevelTopics, entries.map { it.trim().substringBefore(' ') })
