@@ -1,7 +1,15 @@
 package com.specificlanguages.mops.cli
 
 import org.junit.jupiter.api.Tag
+import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
+import com.specificlanguages.mops.cli.common.CommandEnvironment
+import com.specificlanguages.mops.cli.daemon.DaemonStopCommand
+import com.specificlanguages.mops.daemoncomms.DaemonPool
+import com.specificlanguages.mops.protocol.StoredDaemonRecord
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
+import picocli.CommandLine
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.PongResponse
 import com.specificlanguages.mops.protocol.DaemonErrorResponse
@@ -225,8 +233,92 @@ class DaemonStatusStopCommandTest {
         }
 
         assertEquals(0, exitCode)
-        assertContains(stdout, "removed stale daemon record for project=${staleRecord.projectPath.pathString}")
+        assertContains(
+            stdout,
+            "removed stale daemon record for project=${staleRecord.projectPath.pathString}; " +
+                "no response from pid=999999, process not signalled",
+        )
         assertFalse(staleRecord.recordPath.exists())
+    }
+
+    @Test
+    fun `daemon stop fails when the daemon process did not terminate`() {
+        val project = tempDir.mpsProject()
+        val stored = StoredDaemonRecord(
+            recordPath = tempDir.resolve("daemon-home/projects/example/daemon.json"),
+            record = daemonRecord(
+                port = 4321,
+                pid = 4242,
+                project = project,
+                mpsHome = tempDir.mpsHome(),
+                workspace = tempDir.resolve("daemon-home/projects/example"),
+            ),
+        )
+        val pool = mock<DaemonPool>()
+        whenever(pool.findRecords(DaemonPool.Spec.All)).thenReturn(listOf(stored))
+        whenever(pool.stop(stored)).thenReturn(DaemonPool.StopOutcome.NOT_TERMINATED)
+        var exitCode = Int.MIN_VALUE
+        var stderr = ""
+
+        val stdout = tapSystemOut {
+            stderr = tapSystemErr {
+                exitCode = CommandLine(DaemonStopCommand(environmentWith(pool))).execute("--all")
+            }
+        }
+
+        assertEquals(1, exitCode)
+        assertEquals("", stdout)
+        assertContains(stderr, "project=${project.pathString}")
+        assertContains(stderr, "pid=4242")
+        assertContains(stderr, "record")
+    }
+
+    @Test
+    fun `daemon stop all reports every record and fails when one did not terminate`() {
+        val mpsHome = tempDir.mpsHome()
+        val stuck = StoredDaemonRecord(
+            recordPath = tempDir.resolve("daemon-home/projects/stuck/daemon.json"),
+            record = daemonRecord(
+                port = 4321,
+                pid = 4242,
+                project = tempDir.mpsProject("stuck"),
+                mpsHome = mpsHome,
+                workspace = tempDir.resolve("daemon-home/projects/stuck"),
+            ),
+        )
+        val stopped = StoredDaemonRecord(
+            recordPath = tempDir.resolve("daemon-home/projects/stopped/daemon.json"),
+            record = daemonRecord(
+                port = 4322,
+                pid = 4343,
+                project = tempDir.mpsProject("stopped"),
+                mpsHome = mpsHome,
+                workspace = tempDir.resolve("daemon-home/projects/stopped"),
+            ),
+        )
+        val pool = mock<DaemonPool>()
+        whenever(pool.findRecords(DaemonPool.Spec.All)).thenReturn(listOf(stuck, stopped))
+        whenever(pool.stop(stuck)).thenReturn(DaemonPool.StopOutcome.NOT_TERMINATED)
+        whenever(pool.stop(stopped)).thenReturn(DaemonPool.StopOutcome.STOPPED)
+        var exitCode = Int.MIN_VALUE
+
+        val stdout = tapSystemOut {
+            tapSystemErr {
+                exitCode = CommandLine(DaemonStopCommand(environmentWith(pool))).execute("--all")
+            }
+        }
+
+        assertEquals(1, exitCode)
+        assertEquals(
+            "stopped project=${stopped.record.context.realProjectPath} pid=4343" + System.lineSeparator(),
+            stdout,
+        )
+    }
+
+    private fun environmentWith(pool: DaemonPool): CommandEnvironment {
+        val environment = mock<CommandEnvironment>()
+        whenever(environment.daemonPool()).thenReturn(pool)
+        return environment
     }
 
     private fun writeStaleDaemonRecord(
