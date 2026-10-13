@@ -279,6 +279,110 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `model get-node request carries the depth and omits it by default`() {
+        val target = NodeTarget.NodeReference("r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/300")
+
+        val unbounded = ProtocolJson.encodeRequest(ModelGetNodeRequest(token = "secret", target = target))
+        assertFalse(unbounded.contains("depth"), unbounded)
+        assertEquals(ModelGetNodeRequest(token = "secret", target = target), ProtocolJson.decodeRequest(unbounded))
+
+        val bounded = ProtocolJson.encodeRequest(ModelGetNodeRequest(token = "secret", target = target, depth = 2))
+        assertContains(bounded, """"depth":2""")
+        assertEquals(ModelGetNodeRequest(token = "secret", target = target, depth = 2), ProtocolJson.decodeRequest(bounded))
+    }
+
+    @Test
+    fun `depth-bounded node export round-trips stubs and the truncation marker`() {
+        val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
+        val node = MpsNodeJson(
+            model = model,
+            concept = "com.acme.Class",
+            id = "100",
+            truncatedAt = 1,
+            properties = listOf(MpsNodePropertyJson("name", "Foo")),
+            children = listOf(
+                MpsNodeJson(role = "member", concept = "com.acme.Method", name = "run", reference = "$model/200", childCount = 3),
+                MpsNodeJson(role = "member", concept = "com.acme.Field", reference = "$model/300", childCount = 0),
+            ),
+        )
+
+        val encoded = ProtocolJson.encodeNode(node)
+
+        assertEquals(
+            """{"model":"$model","concept":"com.acme.Class","id":"100","truncatedAt":1,""" +
+                """"properties":[{"name":"name","value":"Foo"}],""" +
+                """"children":[""" +
+                """{"role":"member","concept":"com.acme.Method","name":"run","reference":"$model/200","childCount":3},""" +
+                """{"role":"member","concept":"com.acme.Field","reference":"$model/300","childCount":0}]}""",
+            encoded,
+        )
+        assertEquals(node, ProtocolJson.decodeNode(encoded))
+    }
+
+    @Test
+    fun `node summary request and response round-trip per-role child counts`() {
+        val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
+        val target = NodeTarget.NodeReference("$model/300")
+        val request = ModelGetNodeSummaryRequest(token = "secret", target = target, ancestry = true)
+        val encodedRequest = ProtocolJson.encodeRequest(request)
+        assertContains(encodedRequest, """"type":"model-get-node-summary"""")
+        assertEquals(request, ProtocolJson.decodeRequest(encodedRequest))
+
+        val summary = MpsNodeSummaryJson(
+            type = "node",
+            name = "run",
+            concept = "com.acme.Method",
+            reference = "$model/300",
+            parent = MpsNodeParentJson(type = "root", role = "member", name = "Foo", concept = "com.acme.Class", reference = "$model/100"),
+            children = mapOf("parameter" to 2, "body" to 1),
+        )
+        val encoded = ProtocolJson.encodeNodeSummary(summary)
+        assertContains(encoded, """"children":{"parameter":2,"body":1}""")
+        assertEquals(ModelGetNodeSummaryResponse(summary), ProtocolJson.decodeResponse(ProtocolJson.encodeResponse(ModelGetNodeSummaryResponse(summary))))
+
+        // find and check summaries never carry counts, so the key stays off their output.
+        assertFalse(ProtocolJson.encodeResponse(FindInstancesResponse(limit = 1, truncated = false, nodes = listOf(summary.copy(children = null)))).contains("children"))
+    }
+
+    @Test
+    fun `pretty node encoding indents by two spaces and leaves the compact encoding unchanged`() {
+        val node = MpsNodeJson(concept = "com.acme.Class", id = "100", children = listOf(MpsNodeJson(role = "member", concept = "com.acme.Field", id = "300")))
+
+        assertEquals("""{"concept":"com.acme.Class","id":"100","children":[{"role":"member","concept":"com.acme.Field","id":"300"}]}""", ProtocolJson.encodeNode(node))
+        assertEquals(
+            """
+            {
+              "concept": "com.acme.Class",
+              "id": "100",
+              "children": [
+                {
+                  "role": "member",
+                  "concept": "com.acme.Field",
+                  "id": "300"
+                }
+              ]
+            }
+            """.trimIndent(),
+            ProtocolJson.encodeNode(node, pretty = true),
+        )
+        val summary = MpsNodeSummaryJson(type = "root", name = "Foo", concept = "com.acme.Class", reference = "m/100", children = mapOf("member" to 2))
+        assertEquals(
+            """
+            {
+              "type": "root",
+              "name": "Foo",
+              "concept": "com.acme.Class",
+              "reference": "m/100",
+              "children": {
+                "member": 2
+              }
+            }
+            """.trimIndent(),
+            ProtocolJson.encodeNodeSummary(summary, pretty = true),
+        )
+    }
+
+    @Test
     fun `model get-node request carries the ancestry flag and defaults it to false`() {
         val target = NodeTarget.NodeReference(
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/300",

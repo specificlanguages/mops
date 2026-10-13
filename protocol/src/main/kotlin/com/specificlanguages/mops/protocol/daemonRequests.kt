@@ -31,6 +31,21 @@ data class ModelGetNodeRequest(
     // When set, the exported node carries its full containment chain up to the Root Node; otherwise only the immediate
     // parent.
     val ancestry: Boolean = false,
+    // Number of containment levels below the node to export in full; the nodes at that level are emitted as stubs.
+    // Null exports the whole Node Subtree.
+    val depth: Int? = null,
+) : DaemonRequest
+
+/**
+ * Request for the summary of one node: its name, concept, reference, parent, and the number of children per Role,
+ * without serializing the Node Subtree.
+ */
+@Serializable
+@SerialName("model-get-node-summary")
+data class ModelGetNodeSummaryRequest(
+    override val token: String,
+    val target: NodeTarget,
+    val ancestry: Boolean = false,
 ) : DaemonRequest
 
 /**
