@@ -42,6 +42,11 @@ class CommandHelpTest {
     }
 
     @Test
+    fun `bare mops prints the same usage as --help`() {
+        assertEquals(runHelp("--help"), runHelp())
+    }
+
+    @Test
     fun `edit help lists model subcommand`() {
         val output = runHelp("edit", "--help")
 
@@ -123,6 +128,15 @@ class CommandHelpTest {
                 assertContains(output.substring(globalOptions), option)
             }
             assertFalse(output.substring(globalOptions).contains("--help"), "$name help should keep --help out of global options")
+        }
+    }
+
+    @Test
+    fun `find help head shows every find subcommand`() {
+        val head = runHelp("find", "--help").lines().take(12).joinToString("\n")
+
+        for (subcommand in listOf("instances", "usages", "root-by-name", "node-by-id")) {
+            assertContains(head, "  $subcommand ")
         }
     }
 
