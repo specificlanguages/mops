@@ -181,6 +181,19 @@ class ExplainCommandTest {
         assertEquals(setOf("First", "Last", "Only", "Index"), positionForms)
     }
 
+    @Test
+    fun `in-model example targets name a model, not a persistence file`() {
+        for (topic in allTopics.filter { it !in nonBatchTopics }) {
+            val batch = ProtocolJson.decodeBatch(exampleJson(pageText(topic)))
+            val inModelTargets = batch.operations.flatMap(::targetsOf).filterIsInstance<EditTarget.InModel>()
+            for (target in inModelTargets) {
+                val model = target.modelTarget
+                assertTrue(!model.contains('/') && !model.endsWith(".mps"),
+                    "$topic example target names a file path '$model' where a model name or reference is expected")
+            }
+        }
+    }
+
     private fun targetsOf(op: EditOperation): List<EditTarget> = when (op) {
         is EditOperation.SetProperty -> listOf(op.target)
         is EditOperation.Delete -> listOf(op.target)
