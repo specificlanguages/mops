@@ -48,8 +48,8 @@ class DaemonStopCommand(private val environment: CommandEnvironment) : CliComman
 
                     DaemonPool.StopOutcome.NOT_TERMINATED -> {
                         System.err.println(
-                            "mops: could not stop project=$project; pid=${record.pid} is still running after a " +
-                                "force-kill, its record is kept so the next daemon stop retries it",
+                            "mops: could not stop project=$project: pid=${record.pid} is still running after a " +
+                                "force-kill; its record is kept so the next daemon stop retries it",
                         )
                         exitCode = 1
                     }
