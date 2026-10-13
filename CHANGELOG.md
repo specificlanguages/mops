@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Breaking:** `check model`, `check module`, and `check project` exit `1` when the finding totals include an error, in
+  both formats. Text output prints the summary as `# <counts>` or `# no findings` metadata lines, and truncation as
+  `# truncated: showing <shown> of <total> findings; pass --limit 0 for all` instead of `(showing N)`. `--format jsonl`
+  ends with a `{"type":"summary",...}` record carrying `shown`, `total`, per-severity counts, `limit`, `truncated`, and
+  a `hint` when truncated, so a JSONL reader learns about a cut list.
 - **Breaking:** `find` and `list` text output report truncation as a `#` metadata line instead of a `truncated` row.
   `find` prints `# truncated: showing <shown>; pass --limit 0 for all`; `list` prints
   `# truncated: showing <shown> of <total> children; pass --limit 0 for all` indented under the level it describes.
