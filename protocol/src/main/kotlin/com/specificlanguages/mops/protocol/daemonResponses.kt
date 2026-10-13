@@ -202,3 +202,8 @@ data class ReadyMessage(val port: Int) : DaemonResponse
 @Serializable
 @SerialName("testRun")
 data class TestRunResponse(val report: TestRunReport) : DaemonResponse
+
+/** Qualified descendant concept names, unique and sorted. */
+@Serializable
+@SerialName("subconcepts")
+data class FindSubconceptsResponse(val concepts: List<String>) : DaemonResponse

@@ -2,6 +2,7 @@ package com.specificlanguages.mops.daemoncomms
 
 import com.specificlanguages.mops.protocol.ConstraintEnforcement
 import com.specificlanguages.mops.protocol.FindByNameResponse
+import com.specificlanguages.mops.protocol.FindSubconceptsResponse
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindNodeByIdResponse
 import com.specificlanguages.mops.protocol.FindUsagesResponse
@@ -48,6 +49,8 @@ interface DaemonClient {
     /** Runs one combined check over the named Project Modules, with [limit] applied globally. */
     fun checkModules(modules: List<String>, limit: Int): ModelCheckResponse
     fun findUsages(target: NodeTarget, scope: List<String>? = null, limit: Int): FindUsagesResponse
+    fun findSubconcepts(concept: String, concreteOnly: Boolean = false, direct: Boolean = false): FindSubconceptsResponse
+
     fun findInstances(
         concept: String,
         exact: Boolean,

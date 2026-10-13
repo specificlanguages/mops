@@ -15,3 +15,6 @@ compatibility contract for external extension bundles are deferred until concret
 Lookup operations return one object or null when the supplied identity does not resolve; ambiguity remains an error.
 Their `require*` variants reject a miss. Search operations discover zero or more matches for criteria within an explicit
 scope; exact, pattern-based, and fuzzy matching are search strategies rather than different lookup contracts.
+
+`mops.lookup.subConceptsOf` is an exception to the single-object lookup contract. It accepts a native concept identity
+and returns its descendants from loaded language runtimes, with optional direct and concrete filters.

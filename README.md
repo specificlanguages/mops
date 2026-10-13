@@ -146,6 +146,32 @@ root cause: not built, absent, or a broken dependency) and points at `mops make 
 that simply defines no editor is not an error: MPS renders it with its generic reflective editor (concept aliases and
 roles rather than the language's own notation), which the command prints as-is.
 
+Concept hierarchy lookup searches concepts in all loaded language runtimes, including libraries:
+
+```sh
+mops find subconcepts jetbrains.mps.baseLanguage.Expression
+mops find subconcepts jetbrains.mps.lang.core.INamedConcept --concrete --direct
+```
+
+Results exclude the queried concept and contain extending concepts and interface implementors, sorted by qualified name.
+The default includes transitive descendants, abstract concepts, and interfaces. `--direct` keeps only immediate
+superclass or interface relationships; `--concrete` excludes abstract concepts and interfaces. Text output is one
+qualified concept name per line; `--json` returns a `concepts` array of qualified names. Unloaded languages contribute
+no results; build project languages before querying their hierarchy. Concept names resolve using the same rules as
+`find instances`.
+
+In Code Mode, use native concepts inside a read block:
+
+```groovy
+return project.read {
+    def concept = mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.Expression')
+    mops.lookup.subConceptsOf(concept, true, false).collect { it.qualifiedName }
+}
+```
+
+`mops.lookup.subConceptsOf(concept, concreteOnly = false, direct = false)` returns a sorted list of native
+`SAbstractConcept` objects with the same hierarchy filters as the CLI. Pass booleans positionally in Groovy.
+
 ```sh
 mops --mps-home <path> find instances [--exact] [--limit N] [--full-concept] [--refs-only] [--json] <concept>
 ```

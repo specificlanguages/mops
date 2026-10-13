@@ -13,6 +13,8 @@ import com.specificlanguages.mops.protocol.FindByNameResponse
 import com.specificlanguages.mops.protocol.FindNodeByIdRequest
 import com.specificlanguages.mops.protocol.FindNodeByIdResponse
 import com.specificlanguages.mops.protocol.NodeFilter
+import com.specificlanguages.mops.protocol.FindSubconceptsRequest
+import com.specificlanguages.mops.protocol.FindSubconceptsResponse
 import com.specificlanguages.mops.protocol.FindInstancesRequest
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindUsagesRequest
@@ -125,6 +127,9 @@ class DefaultDaemonClient(
             FindUsagesRequest(token = token, target = target, scope = scope, limit = limit),
             FindUsagesResponse::class.java
         )
+
+    override fun findSubconcepts(concept: String, concreteOnly: Boolean, direct: Boolean): FindSubconceptsResponse =
+        exchange(FindSubconceptsRequest(token, concept, concreteOnly, direct), FindSubconceptsResponse::class.java)
 
     override fun findInstances(
         concept: String,

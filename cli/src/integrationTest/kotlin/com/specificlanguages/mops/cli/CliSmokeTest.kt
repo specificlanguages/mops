@@ -3,6 +3,7 @@ package com.specificlanguages.mops.cli
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
+import com.specificlanguages.mops.protocol.FindSubconceptsResponse
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.ProtocolJson
 import org.junit.jupiter.api.io.CleanupMode
@@ -28,6 +29,39 @@ import kotlin.test.assertTrue
 class CliSmokeTest {
     @TempDir(cleanup = CleanupMode.ON_SUCCESS)
     lateinit var tempDir: Path
+
+    @Test
+    fun `concept hierarchy command round-trips through the daemon`() {
+        val project = copyTestProject("base-language-sandbox", tempDir.resolve("base-language-sandbox"))
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+        try {
+            val result = runCommandLine(
+                project, "--daemon-home", daemonHome.pathString, *javaAndMpsHomeArgs(),
+                "find", "subconcepts", "jetbrains.mps.baseLanguage.Expression", "--concrete", "--json",
+            )
+            assertEquals(0, result.exitCode, result.output)
+            val response = ProtocolJson.decodeResponse(result.stdout) as FindSubconceptsResponse
+            assertContains(response.concepts, "jetbrains.mps.baseLanguage.structure.IntegerConstant")
+            assertTrue("jetbrains.mps.baseLanguage.structure.Expression" !in response.concepts)
+            assertEquals(response.concepts.sorted().distinct(), response.concepts)
+            val direct = runCommandLine(
+                project, "--daemon-home", daemonHome.pathString, *javaAndMpsHomeArgs(),
+                "find", "subconcepts", "jetbrains.mps.baseLanguage.Expression", "--direct", "--json",
+            )
+            assertEquals(0, direct.exitCode, direct.output)
+            val directResponse = ProtocolJson.decodeResponse(direct.stdout) as FindSubconceptsResponse
+            assertContains(directResponse.concepts, "jetbrains.mps.baseLanguage.structure.BinaryOperation")
+            assertTrue("jetbrains.mps.baseLanguage.structure.IntegerConstant" !in directResponse.concepts)
+            val missing = runCommandLine(
+                project, "--daemon-home", daemonHome.pathString, *javaAndMpsHomeArgs(),
+                "find", "subconcepts", "jetbrains.mps.baseLanguage.NoSuchMopsConcept",
+            )
+            assertTrue(missing.exitCode != 0, missing.output)
+            assertContains(missing.output, "concept \"NoSuchMopsConcept\" was not found")
+        } finally {
+            stopDaemons(project, daemonHome)
+        }
+    }
 
     @Test
     fun `read command round-trips through the daemon`() {
