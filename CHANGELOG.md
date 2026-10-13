@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Breaking:** the remaining text-mode notices follow the output contract. `diagnose project` prints its closing note
+  as a `#` metadata line instead of a `note` row; `daemon status` and `daemon stop` print `# no mops daemons` when no
+  record matches (still exit 0); `test` prints its diagnostics (failed discovery, crashed worker) on stderr, leaving
+  only the summary and `Report:` lines on stdout. `--json` output is unchanged.
 - **Breaking:** `check model`, `check module`, and `check project` exit `1` when the finding totals include an error, in
   both formats. Text output prints the summary as `# <counts>` or `# no findings` metadata lines, and truncation as
   `# truncated: showing <shown> of <total> findings; pass --limit 0 for all` instead of `(showing N)`. `--format jsonl`
