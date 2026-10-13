@@ -5,7 +5,8 @@
 - Code Mode `node.children`, `node.references`, and `node.properties` accessors are iterable like the native collections
   they shadow, so Groovy's `collect`, `findAll`, `each`, and `size()` work on them, including on explicit
   `getChildren()`, `getReferences()`, and `getProperties()` calls. Accessing any other member on an accessor fails with
-  a message naming the native alternative. A returned accessor renders as a JSON array like a list.
+  a message naming the native alternative. Code Mode results are rendered inside a read action, so a program can return
+  `node.children` and get a JSON array of node references.
 
 - Added offline `mops examples` task recipes, including an editing guide and focused topics for creation, node edits,
   references, Java insertion, and JSON batches. The recipes are also bundled as references in the mops skill.
