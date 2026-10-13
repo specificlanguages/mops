@@ -32,6 +32,11 @@
                 code: '''mops check model sample.model --format jsonl --limit 0''',
             ],
             [
+                title: 'Show check findings without the # metadata lines',
+                kind: 'cli',
+                code: '''mops check model sample.model | grep -v '^#\'''',
+            ],
+            [
                 title: 'Diagnose unloaded project modules',
                 kind: 'cli',
                 code: '''mops diagnose project''',

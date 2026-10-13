@@ -8,6 +8,7 @@
 | Check selected modules                             | `mops check module sample.language sample.solution`      |
 | Check the project                                  | `mops check project`                                     |
 | Emit all model findings as JSON lines              | `mops check model sample.model --format jsonl --limit 0` |
+| Show check findings without the # metadata lines   | `mops check model sample.model \| grep -v '^#'`          |
 | Diagnose unloaded project modules                  | `mops diagnose project`                                  |
 | Include loaded modules in diagnosis                | `mops diagnose project --all`                            |
 | Inspect a module's load/dependency problem         | `mops diagnose module sample.language`                   |

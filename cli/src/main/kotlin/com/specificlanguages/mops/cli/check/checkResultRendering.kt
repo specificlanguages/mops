@@ -23,7 +23,7 @@ internal fun renderCheckResponse(
     when (outputFormat) {
         CheckOutputFormat.HUMAN -> {
             response.findings.forEach { renderHuman(it, nodeReferenceFormat) }
-            println(metadataLine(summary(response.totals)))
+            println(metadataLine(countsText(response.totals)))
             if (response.truncated) {
                 println(truncationLine(response.findings.size, response.totals.total, unit = "findings"))
             }
@@ -59,7 +59,7 @@ private fun renderHuman(finding: ModelCheckFindingJson, nodeReferenceFormat: Nod
     println(columns.joinToString("\t"))
 }
 
-private fun summary(totals: ModelCheckFindingCounts): String {
+private fun countsText(totals: ModelCheckFindingCounts): String {
     if (totals.total == 0) return "no findings"
     return listOf(
         count(totals.errors, "error"),

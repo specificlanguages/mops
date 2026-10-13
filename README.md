@@ -243,8 +243,8 @@ mops --mps-home <path> check module [--format human|jsonl] [--limit N] <module>.
 mops --mps-home <path> check project [--format human|jsonl] [--limit N]
 ```
 
-Runs MPS's full model check (typesystem, model, module, and checking rules) over one model, the named Project Modules,
-or every Project Module, through the daemon. Findings print most severe first, capped at `--limit` (default 20; `0` is
+Runs MPS's full model check (typesystem, model, module, and checking rules) over one model, the named project modules,
+or every project module, through the daemon. Findings print most severe first, capped at `--limit` (default 20; `0` is
 unlimited). Text output is one tab-separated row per finding (`severity`, message, and for a node-level finding the
 node's name, concept, and reference) followed by `#` metadata lines: `# <errors>, <warnings>, <infos>` (or
 `# no findings`) and, when the cap cut the list,

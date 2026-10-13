@@ -7,7 +7,9 @@ import com.specificlanguages.mops.protocol.FindingSeverity
 import com.specificlanguages.mops.protocol.ModelCheckFindingCounts
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
 import com.specificlanguages.mops.protocol.ModelCheckResponse
+import com.specificlanguages.mops.protocol.ModelCheckSummaryJson
 import com.specificlanguages.mops.protocol.PongResponse
+import com.specificlanguages.mops.protocol.ProtocolJson
 import java.nio.file.Path
 import kotlin.io.path.pathString
 import kotlin.test.Test
@@ -37,7 +39,19 @@ class CheckOutputPipeTest {
         val records = output.stdout.lines().map { Json.parseToJsonElement(it).jsonObject }
         assertEquals(3, records.size, output.stdout)
         assertEquals(listOf(null, null, "summary"), records.map { it["type"]?.jsonPrimitive?.content })
-        assertEquals("true", records.last()["truncated"]?.jsonPrimitive?.content, output.stdout)
+        assertEquals(
+            ModelCheckSummaryJson(
+                shown = 2,
+                total = 4,
+                errors = 1,
+                warnings = 2,
+                infos = 1,
+                limit = 2,
+                truncated = true,
+                hint = "pass --limit 0 for all",
+            ),
+            ProtocolJson.decodeCheckSummary(output.stdout.lines().last()),
+        )
     }
 
     @Test

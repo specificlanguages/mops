@@ -9,7 +9,7 @@ import picocli.CommandLine.Command
 @Command(
     name = "project",
     description = [
-        "Run MPS's full check over every Project Module and its models. Exits 1 when any finding is an error.",
+        "Run MPS's full check over every project module and its models. Exits 1 when any finding is an error.",
     ],
 )
 class ProjectCheckCommand(environment: CommandEnvironment) : CheckCommand(environment) {
