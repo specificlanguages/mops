@@ -2,6 +2,9 @@
 
 ## Project state
 
+`docs/VISION.md` states what mops is for, who it serves, its principles, and what is out of scope. Read it before
+triaging requests or designing features.
+
 This is a prototype:
 
 - Make breaking changes as necessary, do not maintain backward compatibility unless told otherwise.
@@ -11,11 +14,11 @@ This is a prototype:
 
 ### Issue tracker
 
-Issues are tracked as local Markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
+Issues and specs are GitHub issues in this repo. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
-See `docs/agents/triage-labels.md`.
+The five canonical triage roles map one-to-one to GitHub labels. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
