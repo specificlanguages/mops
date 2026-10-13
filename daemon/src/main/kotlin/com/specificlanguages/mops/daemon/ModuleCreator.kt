@@ -99,7 +99,7 @@ class ModuleCreator(private val project: Project) {
     fun planSolution(name: String, descriptorOverride: String?, preset: SolutionUsagePreset): ModuleCreationPlan {
         val descriptor = descriptorPath(name, ModuleKind.SOLUTION, descriptorOverride)
         preflight(name, descriptor, ".msd")
-        return ModuleCreationPlan(planEntry(name, ModuleKind.SOLUTION, descriptor, facets = plannedFacets(preset)))
+        return ModuleCreationPlan(planEntry(name, ModuleKind.SOLUTION, descriptor, usagePreset = preset, facets = plannedFacets(preset)))
     }
 
     fun planDevkit(name: String, descriptorOverride: String?): ModuleCreationPlan {
@@ -250,8 +250,8 @@ class ModuleCreator(private val project: Project) {
 
     private fun planEntry(name: String, kind: ModuleKind, descriptor: Path, source: String? = null, alias: String? = null,
                           persistence: GeneratorPersistence? = null, generatorDirectory: String? = null,
-                          facets: List<FacetMementoJson> = emptyList()) =
-        ModuleCreationPlanEntry(name, kind, descriptor.toString(), source, alias, persistence, generatorDirectory, facets)
+                          usagePreset: SolutionUsagePreset? = null, facets: List<FacetMementoJson> = emptyList()) =
+        ModuleCreationPlanEntry(name, kind, descriptor.toString(), source, alias, persistence, generatorDirectory, usagePreset, facets)
 
     private fun plannedFacets(preset: SolutionUsagePreset): List<FacetMementoJson> = when (preset) {
         SolutionUsagePreset.NOT_GENERATED -> emptyList()

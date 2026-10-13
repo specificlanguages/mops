@@ -27,14 +27,19 @@ abstract class CreateModuleCommand(protected val environment: CommandEnvironment
             value.alias?.let { println("  alias: $it") }
             value.persistence?.let { println("  persistence: ${it.name.lowercase()}") }
             value.generatorDirectory?.let { println("  generator directory: $it") }
-            value.facets.forEach { println("  facet ${it.type}: ${it.values}") }
+            renderFacets(value.usagePreset, value.facets)
         }
         entry(plan.primary); plan.companions.forEach(::entry)
     }
     private fun renderReport(report: ModuleCreationReport) {
         fun entry(value: ModuleCreationEntry, companion: Boolean) {
             println("created ${if (companion) "companion " else ""}${value.kind.name.lowercase()} ${value.moduleName} [${value.moduleReference}] at ${value.descriptorPath}")
+            renderFacets(value.usagePreset, value.facets)
         }
         entry(report.primary, false); report.companions.forEach { entry(it, true) }
+    }
+    private fun renderFacets(usagePreset: SolutionUsagePreset?, facets: List<FacetMementoJson>) {
+        usagePreset?.let { println("  usage preset: ${it.wireName}") }
+        facets.forEach { println("  facet ${it.type}: ${it.values}") }
     }
 }

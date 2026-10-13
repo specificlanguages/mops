@@ -3,9 +3,11 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.protocol.CreateLanguageRequest
 import com.specificlanguages.mops.protocol.CreateSolutionRequest
 import com.specificlanguages.mops.protocol.CreateGeneratorRequest
+import com.specificlanguages.mops.protocol.FacetMementoJson
 import com.specificlanguages.mops.protocol.GeneratorPersistence
 import com.specificlanguages.mops.protocol.ModuleCreationResponse
 import com.specificlanguages.mops.protocol.ModuleKind
+import com.specificlanguages.mops.protocol.SolutionUsagePreset
 import kotlin.io.path.exists
 import kotlin.io.path.readText
 import kotlin.test.assertIs
@@ -31,6 +33,37 @@ class ModuleCreationSemanticsTest {
                 projectPath.resolve(".mps/modules.xml").readText(),
                 "\$PROJECT_DIR\$/solutions/example.created/example.created.msd",
             )
+        }
+    }
+
+    @Test
+    fun `solution report names the usage preset and the facets it produced`() {
+        SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
+            val response = project.modelAccess.computeWriteAction {
+                ModuleCreationCliAdapter(ModuleCreator(project))
+                    .createSolution(CreateSolutionRequest("", "example.text", usagePreset = SolutionUsagePreset.TEXT))
+            }
+
+            val primary = response.report!!.primary
+            assertEquals(SolutionUsagePreset.TEXT, primary.usagePreset)
+            assertEquals(
+                listOf(FacetMementoJson("plaintext", mapOf("folders" to "true", "root" to "\${module}/source_gen"))),
+                primary.facets,
+            )
+        }
+    }
+
+    @Test
+    fun `solution plan names the usage preset and the facets it would produce`() {
+        SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
+            val response = project.modelAccess.computeReadAction {
+                ModuleCreationCliAdapter(ModuleCreator(project))
+                    .createSolution(CreateSolutionRequest("", "example.java", usagePreset = SolutionUsagePreset.JAVA, dryRun = true))
+            }
+
+            val primary = response.plan!!.primary
+            assertEquals(SolutionUsagePreset.JAVA, primary.usagePreset)
+            assertEquals(listOf(FacetMementoJson("java", mapOf("compile" to "mps", "classes" to "mps", "ext" to "no"))), primary.facets)
         }
     }
 
