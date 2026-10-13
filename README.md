@@ -161,8 +161,9 @@ name is not well formed; the owning language is unknown to the project; the owni
 (in which case it reports that language's load diagnosis and points at `diagnose module`, since only loaded languages
 contribute concepts to name lookup); or the language is loaded but has no such concept (in which case it suggests
 similarly named concepts from that language). A bare short name is resolved by counting matches across loaded languages:
-one that names concepts in several languages fails as ambiguous and lists the qualified candidates, and one offered
-while a project language is unbuilt is refused rather than guessed, since the unbuilt language could define it too.
+one that names concepts in several languages fails with `AMBIGUOUS_TARGET` and lists the qualified candidates, and one
+offered while a project language is unbuilt fails with `LANGUAGE_NOT_LOADED` rather than guessing, since the unbuilt
+language could define it too.
 
 Text output is tab-separated rows of `root` or `node`, the node name (or `<unnamed>`), the node's actual concept, and
 its serialized node reference; a non-root node appends its immediate parent as trailing `parent`, parent name (or
