@@ -18,7 +18,7 @@ import picocli.CommandLine
 @ResourceLock("system-streams")
 class DiagnoseModulesCommandTest {
     @Test
-    fun `diagnose modules prints the summary, failed rows with flattened root causes, and a note`() {
+    fun `diagnose modules prints the summary, failed rows with flattened root causes, and a # note line`() {
         val client = mock<DaemonClient>()
         whenever(client.diagnoseModules()).thenReturn(sampleResponse())
 
@@ -28,7 +28,7 @@ class DiagnoseModulesCommandTest {
             "modules\t1/2 loaded\t1 failed" + nl +
                 "org.example.expr\tlanguage\tBROKEN_DEPENDENCIES" + nl +
                 "\tjetbrains.mps.lang.editor.tooltips\tABSENT" + nl +
-                "note\tmodules without a Java facet are not listed; diagnose one with: mops diagnose module <module>" + nl,
+                "# modules without a Java facet are not listed; diagnose one with: mops diagnose module <module>" + nl,
             stdout,
         )
     }
@@ -45,7 +45,7 @@ class DiagnoseModulesCommandTest {
                 "org.example.base\tlanguage\tloaded" + nl +
                 "org.example.expr\tlanguage\tBROKEN_DEPENDENCIES" + nl +
                 "\tjetbrains.mps.lang.editor.tooltips\tABSENT" + nl +
-                "note\tmodules without a Java facet are not listed; diagnose one with: mops diagnose module <module>" + nl,
+                "# modules without a Java facet are not listed; diagnose one with: mops diagnose module <module>" + nl,
             stdout,
         )
     }
@@ -73,7 +73,7 @@ class DiagnoseModulesCommandTest {
         assertEquals(
             "modules\t0/1 loaded\t1 failed" + nl +
                 "org.example.base\tlanguage\tNOT_BUILT" + nl +
-                "note\tmodules without a Java facet are not listed; diagnose one with: mops diagnose module <module>" + nl,
+                "# modules without a Java facet are not listed; diagnose one with: mops diagnose module <module>" + nl,
             stdout,
         )
     }
