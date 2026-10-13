@@ -4,7 +4,9 @@ import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.cli.check.ModuleCheckCommand
 import com.specificlanguages.mops.daemoncomms.DaemonClient
+import com.specificlanguages.mops.protocol.FindingSeverity
 import com.specificlanguages.mops.protocol.ModelCheckFindingCounts
+import com.specificlanguages.mops.protocol.ModelCheckFindingJson
 import com.specificlanguages.mops.protocol.ModelCheckResponse
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -44,7 +46,39 @@ class ModuleCheckCommandTest {
         }
 
         verify(client).checkModules(modules, 20)
-        assertEquals("no findings", stdout.trim())
+        assertEquals("# no findings", stdout.trim())
+    }
+
+    @Test
+    fun `module check exits 1 when the totals count an error, in both formats`() {
+        val client = mock<DaemonClient>()
+        whenever(client.checkModules(listOf("FOO"), 20)).thenReturn(ONE_ERROR)
+
+        for (args in listOf(arrayOf("FOO"), arrayOf("--format", "jsonl", "FOO"))) {
+            var exitCode = Int.MIN_VALUE
+            val stdout = tapSystemOut {
+                exitCode = CommandLine(ModuleCheckCommand(client))
+                    .setExecutionExceptionHandler(PrintErrorAndExit)
+                    .execute(*args)
+            }
+            assertEquals(1, exitCode, "${args.toList()}: $stdout")
+        }
+    }
+
+    @Test
+    fun `module check exits 0 when the findings are warnings only`() {
+        val client = mock<DaemonClient>()
+        whenever(client.checkModules(listOf("FOO"), 20)).thenReturn(ONE_WARNING)
+        var exitCode = Int.MIN_VALUE
+
+        val stdout = tapSystemOut {
+            exitCode = CommandLine(ModuleCheckCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("FOO")
+        }
+
+        assertEquals(0, exitCode, stdout)
+        assertEquals(listOf("warning\tmodel-level note", "# 0 errors, 1 warning, 0 infos"), stdout.trim().lines())
     }
 
     private companion object {
@@ -53,6 +87,20 @@ class ModuleCheckCommandTest {
             truncated = false,
             totals = ModelCheckFindingCounts(errors = 0, warnings = 0, infos = 0),
             findings = emptyList(),
+        )
+
+        val ONE_ERROR = ModelCheckResponse(
+            limit = 20,
+            truncated = false,
+            totals = ModelCheckFindingCounts(errors = 1, warnings = 0, infos = 0),
+            findings = listOf(ModelCheckFindingJson(severity = FindingSeverity.ERROR, message = "Unresolved reference")),
+        )
+
+        val ONE_WARNING = ModelCheckResponse(
+            limit = 20,
+            truncated = false,
+            totals = ModelCheckFindingCounts(errors = 0, warnings = 1, infos = 0),
+            findings = listOf(ModelCheckFindingJson(severity = FindingSeverity.WARNING, message = "model-level note")),
         )
     }
 }
