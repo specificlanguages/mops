@@ -12,6 +12,9 @@
   access.
 
 - Daemons detach from the launching session on Unix and console on Windows to survive process-group and console cleanup.
+- `daemon stop` exits with code 1 when a daemon acknowledged the stop but its process survived the force-kill; the
+  diagnostic moves to stderr and the record is kept for the next `daemon stop`. Removing a stale record still exits 0,
+  and its message now states that the stop request got no response and the recorded process was not signalled.
 - `daemon status` probes recorded daemons and reports `unreachable` when an authenticated ping fails, retaining the
   record.
 
