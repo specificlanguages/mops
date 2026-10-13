@@ -8,6 +8,7 @@ import picocli.CommandLine.Command
  */
 @Command(
     name = "make",
+    header = ["Generate and compile modules or the whole project."],
     description = ["Run the MPS make (generation and compilation) on modules or the whole project."],
 )
 class MakeOperations : CommandGroup()
