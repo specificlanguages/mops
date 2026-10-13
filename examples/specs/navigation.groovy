@@ -67,6 +67,16 @@
                 code: '''mops get node --ancestry 'NODE_REF'''',
             ],
             [
+                title: 'Summarize a node: name, parent, child counts per role',
+                kind: 'cli',
+                code: '''mops get node --summary 'NODE_REF'''',
+            ],
+            [
+                title: 'Export one level, deeper nodes as stubs',
+                kind: 'cli',
+                code: '''mops get node --depth 1 'NODE_REF'''',
+            ],
+            [
                 title: 'Resolve an ID within a model',
                 kind: 'cli',
                 code: '''mops get node sample.model 123456789''',
