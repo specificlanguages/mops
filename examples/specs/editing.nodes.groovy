@@ -90,6 +90,31 @@
                 ''',
             ],
             [
+                title: 'Iterate all children across roles',
+                kind: 'groovy',
+                code: '''project.read { mops.lookup.requireNode('CLASS_REF').children.collect { [role: it.containmentLink.name, node: it] } }''',
+                verify: '''
+                    assert result.findAll { it.role == 'member' }.collect { it.node } == fixture.members
+                ''',
+            ],
+            [
+                title: 'Iterate all references with targets',
+                kind: 'groovy',
+                code: '''project.read { mops.lookup.requireNode('NODE_REF').references.collect { [role: it.link.name, target: it.targetNode] } }''',
+                verify: '''
+                    assert result == [[role: 'classifier', target: fixture.old]]
+                ''',
+                bindings: ['NODE_REF': 'type'],
+            ],
+            [
+                title: 'List set property names',
+                kind: 'groovy',
+                code: '''project.read { mops.lookup.requireNode('NODE_REF').properties.collect { it.name } }''',
+                verify: '''
+                    assert 'name' in result
+                ''',
+            ],
+            [
                 title: 'Resolve a reference target',
                 kind: 'groovy',
                 code: '''project.read { mops.lookup.requireNode('NODE_REF').references['classifier']?.targetNode }''',
