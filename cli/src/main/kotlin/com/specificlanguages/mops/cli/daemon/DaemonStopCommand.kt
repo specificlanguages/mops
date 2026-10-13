@@ -2,6 +2,7 @@ package com.specificlanguages.mops.cli.daemon
 
 import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
+import com.specificlanguages.mops.cli.output.metadataLine
 import com.specificlanguages.mops.daemoncomms.DaemonPool
 import com.specificlanguages.mops.protocol.StoredDaemonRecord
 import picocli.CommandLine.*
@@ -27,7 +28,7 @@ class DaemonStopCommand(private val environment: CommandEnvironment) : CliComman
         val selected = pool.findRecords(recordSpec)
 
         if (selected.isEmpty()) {
-            println("no mops daemons")
+            println(metadataLine("no mops daemons"))
         } else {
             selected.forEach { storedRecord: StoredDaemonRecord ->
                 val record = storedRecord.record
