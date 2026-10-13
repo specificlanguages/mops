@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Documented the Code Mode execution contract in `mops explain code` and the mops skill: the program runs on the daemon
+  request thread outside model access, access blocks are per thread, a worker thread may open its own `project.read`,
+  and every started thread must be joined before the run ends.
 - Added offline `mops examples` task recipes, including an editing guide and focused topics for creation, node edits,
   references, Java insertion, and JSON batches. The recipes are also bundled as references in the mops skill.
 - Broadened the bundled `mops-code` skill into `mops`, covering CLI workflows as well as Code Mode. Use
