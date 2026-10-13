@@ -20,6 +20,11 @@ internal class RecordingDaemon(val responseIterator: Iterator<DaemonResponse>) :
     val port get() = server.localPort
     val requestsReceived: MutableList<String> = mutableListOf()
 
+    init {
+        // A daemon thread, so a test that records more responses than the CLI requests cannot keep the JVM alive.
+        isDaemon = true
+    }
+
     override fun run() {
         server = ServerSocket(0, 1, InetAddress.getLoopbackAddress())
         server.use {

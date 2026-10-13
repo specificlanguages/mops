@@ -8,16 +8,11 @@ package com.specificlanguages.mops.cli.output
 internal fun metadataLine(text: String): String = "# $text"
 
 /**
- * Metadata line reporting that a result was cut at a limit. It gives the number of entries shown, the total where it
- * is known, and the option that lifts the cap, so a caller who did not choose the default limit learns how to get
- * everything. [unit] names what was counted, for example `children`.
+ * Metadata line reporting that a result was cut at the `--limit` cap. It gives the number of entries shown, the total
+ * where it is known, and the option that lifts the cap, so a caller who did not choose the default limit learns how to
+ * get everything. [unit] names what was counted, for example `children`.
  */
-internal fun truncationLine(
-    shown: Int,
-    total: Int? = null,
-    unit: String? = null,
-    liftingOption: String = "--limit 0",
-): String {
+internal fun truncationLine(shown: Int, total: Int? = null, unit: String? = null): String {
     val count = listOfNotNull(shown.toString(), total?.let { "of $it" }, unit).joinToString(" ")
-    return metadataLine("truncated: showing $count; pass $liftingOption for all")
+    return metadataLine("truncated: showing $count; pass --limit 0 for all")
 }
