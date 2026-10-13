@@ -25,6 +25,12 @@ for mutations. Access blocks cannot nest or start under already-held model acces
 outside access blocks. A successful command saves project changes; commands are non-transactional, so failure may leave
 native partial changes or external side effects.
 
+The program runs on the daemon request thread, outside any model access. `project.read` and `project.command` open
+access for the calling thread only, so a worker thread started by the program may open its own `project.read`. The
+program must join every thread it starts before returning: the `mops` context is cleared when the run ends, so a leaked
+thread fails on `mops.*` and on access blocks, and it outlives the request inside the daemon. The hard timeout (default
+900 seconds; `--timeout 0` disables it) terminates the daemon.
+
 Native nodes support indexed access by property name or link role, including inherited features:
 
   node.properties['name']    — property getter value as a string, or null for an unknown property
@@ -71,8 +77,6 @@ The code is not sandboxed and runs with full access to the filesystem, network, 
 
 Groovy dependency injection (`@Grab` and related transforms) is disabled to avoid classpath issues. A fresh environment
 (Groovy binding and script classloader) is used for every run.
-
-The default timeout is 900 seconds; pass `--timeout 0` to disable it.
 
 Use `mops code help` to list receiver types and namespaces, then `mops code help PATH` for details. The same reference
 is available through global `help(PATH)` in a program. `project` aliases the Project receiver, and an unqualified
