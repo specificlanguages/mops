@@ -21,7 +21,7 @@ class CreateSolutionCommand(environment: CommandEnvironment) : CreateModuleComma
             "Generation-target facets for the solution's intended use: not-generated (no facets, models are only analyzed), " +
                 "text (generates plain text), java (generates Java compiled and loaded by MPS), " +
                 "java-tests (java plus the tests facet), java-mps-plugin (java whose classes extend MPS as a plugin). " +
-                "Default: not-generated.",
+                "Default: \${DEFAULT-VALUE}.",
         ],
     )
     lateinit var usagePreset: SolutionUsagePreset
@@ -29,9 +29,6 @@ class CreateSolutionCommand(environment: CommandEnvironment) : CreateModuleComma
 
     class UsagePresetConverter : ITypeConverter<SolutionUsagePreset> {
         override fun convert(value: String): SolutionUsagePreset = SolutionUsagePreset.fromWireName(value)
-            ?: throw TypeConversionException("unknown --usage-preset value '$value'; expected ${acceptedPresets()}")
-
-        private fun acceptedPresets() = SolutionUsagePreset.entries.map { it.wireName }
-            .let { it.dropLast(1).joinToString(", ") + ", or " + it.last() }
+            ?: throw TypeConversionException("expected one of ${SolutionUsagePreset.entries.joinToString(", ") { it.wireName }}")
     }
 }

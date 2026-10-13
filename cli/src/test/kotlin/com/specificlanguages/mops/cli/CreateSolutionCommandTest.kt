@@ -86,7 +86,7 @@ class CreateSolutionCommandTest {
         }
 
         assertEquals(2, exitCode)
-        assertContains(stderr, "unknown --usage-preset value 'bogus'; expected not-generated, text, java, java-tests, or java-mps-plugin")
+        assertContains(stderr, "Invalid value for option '--usage-preset': expected one of not-generated, text, java, java-tests, java-mps-plugin")
         verifyNoInteractions(client)
     }
 }

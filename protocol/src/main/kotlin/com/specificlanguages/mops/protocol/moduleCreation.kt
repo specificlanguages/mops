@@ -1,12 +1,17 @@
 package com.specificlanguages.mops.protocol
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable enum class ModuleKind { LANGUAGE, SOLUTION, DEVKIT, GENERATOR }
 @Serializable enum class SolutionUsagePreset {
-    NOT_GENERATED, TEXT, JAVA, JAVA_TESTS, JAVA_MPS_PLUGIN;
+    @SerialName("not-generated") NOT_GENERATED,
+    @SerialName("text") TEXT,
+    @SerialName("java") JAVA,
+    @SerialName("java-tests") JAVA_TESTS,
+    @SerialName("java-mps-plugin") JAVA_MPS_PLUGIN;
 
-    /** The kebab-case spelling used on the command line and in text output, e.g. `java-tests`. */
+    /** The kebab-case spelling used on the command line, in text output, and in JSON, e.g. `java-tests`. */
     val wireName: String get() = name.lowercase().replace('_', '-')
 
     companion object {
