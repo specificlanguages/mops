@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Breaking:** `find` and `list` text output report truncation as a `#` metadata line instead of a `truncated` row.
+  `find` prints `# truncated: showing <shown>; pass --limit 0 for all`; `list` prints
+  `# truncated: showing <shown> of <total> children; pass --limit 0 for all` indented under the level it describes.
+  Lines starting with `#` are metadata, so `grep -v '^#'` leaves only result rows. `--refs-only` still reports
+  truncation on stderr and `--json` is unchanged.
 - Added offline `mops examples` task recipes, including an editing guide and focused topics for creation, node edits,
   references, Java insertion, and JSON batches. The recipes are also bundled as references in the mops skill.
 - Broadened the bundled `mops-code` skill into `mops`, covering CLI workflows as well as Code Mode. Use

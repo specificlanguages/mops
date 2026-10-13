@@ -120,10 +120,11 @@ them for the project root, or pass `/` for the repository root. `--depth` bounds
 `model`, `root`, or `node`); `--json` prints the semantic tree.
 
 `--limit N` caps how many children each level shows (default 50; `0` is unlimited). A level wider than the cap is
-truncated and gains a final `truncated <shown> <total>` row so the omission is explicit. `--summary` replaces the
-target's children with grouped counts — per **role** (with the dominant concepts) for a node, per concept for a model's
-roots, per model for a module, per kind for the project or repository — and cannot be combined with `--depth`.
-`--role ROLE` lists only the target node's children in one containment role and is valid only for a node target.
+truncated and ends in an indented `# truncated: showing <shown> of <total> children; pass --limit 0 for all` line, so
+the omission is explicit and the line is told apart from a row by its `#`. `--summary` replaces the target's children
+with grouped counts — per **role** (with the dominant concepts) for a node, per concept for a model's roots, per model
+for a module, per kind for the project or repository — and cannot be combined with `--depth`. `--role ROLE` lists only
+the target node's children in one containment role and is valid only for a node target.
 
 Text output shows short concept names; `--full-concept` restores the fully qualified names. JSON output keeps qualified
 concept names regardless.
@@ -182,8 +183,10 @@ concept, and parent reference columns. `--json` prints an object with `limit`, `
 entries carry the reference `role` and a nested `owner` node summary, itself carrying a nested `parent` summary for a
 non-root owner. Concept columns follow the same short-name default, `--full-concept`, and JSON-keeps-qualified rules as
 `find instances`; `--refs-only` prints one serialized reference per referencing node. Both `find` modes default to
-`--limit 100`, treat `--limit 0` as unlimited, reject negative limits, and append a `truncated` row (in text) or set
-`truncated` (in JSON) only when more matches exist than were returned.
+`--limit 100`, treat `--limit 0` as unlimited, reject negative limits, and append a
+`# truncated: showing <shown>; pass --limit 0 for all` line (in text) or set `truncated` (in JSON) only when more
+matches exist than were returned. Lines starting with `#` are metadata, never results, so `grep -v '^#'` leaves only
+rows.
 
 ```sh
 mops --mps-home <path> find root-by-name [--limit N] [--full-concept] [--refs-only] [--json] <pattern> [in <scope-segment>...]
