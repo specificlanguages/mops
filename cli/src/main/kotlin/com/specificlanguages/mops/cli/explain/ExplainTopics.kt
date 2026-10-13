@@ -11,6 +11,8 @@ import com.specificlanguages.mops.protocol.levenshteinDistance
  * format.
  */
 object ExplainTopics {
+    private const val LINE_WIDTH = 80
+
     private val topLevelTopics =
         listOf("code", "edit", "inline-subtree", "target", "position", "node-ref", "name-pattern", "scope")
 
@@ -18,19 +20,42 @@ object ExplainTopics {
 
     private val allTopics: List<String> = topLevelTopics + operationTopics
 
-    /** Renders the topic index: each top-level topic with a one-line summary. */
-    fun index(): String {
-        val width = topLevelTopics.maxOf { it.length }
+    /** Renders the topic index: the [topicList] framed by what the pages are and how to open one. */
+    fun index(): String = buildString {
+        appendLine("mops explain — reference for mops notations (the textual formats mops exchanges with agents).")
+        appendLine()
+        append(topicList())
+        appendLine()
+        appendLine("Run `mops explain <topic>` for a page; `mops explain edit` lists the edit operations.")
+    }
+
+    /** Renders a `Topics:` block with each top-level topic and its summary, wrapped to [LINE_WIDTH] columns. */
+    fun topicList(): String {
+        val nameWidth = topLevelTopics.maxOf { it.length }
+        val summaryIndent = " ".repeat(2 + nameWidth + 2)
         return buildString {
-            appendLine("mops explain — reference for mops notations (the textual formats mops exchanges with agents).")
-            appendLine()
             appendLine("Topics:")
             for (topic in topLevelTopics) {
-                appendLine("  ${topic.padEnd(width)}  ${summaryOf(topic)}")
+                val summaryLines = wrap(summaryOf(topic), LINE_WIDTH - summaryIndent.length)
+                appendLine("  ${topic.padEnd(nameWidth)}  ${summaryLines.first()}")
+                for (line in summaryLines.drop(1)) appendLine(summaryIndent + line)
             }
-            appendLine()
-            appendLine("Run `mops explain <topic>` for a page; `mops explain edit` lists the edit operations.")
         }
+    }
+
+    private fun wrap(text: String, width: Int): List<String> {
+        val lines = mutableListOf<String>()
+        var line = ""
+        for (word in text.split(' ')) {
+            if (line.isNotEmpty() && line.length + 1 + word.length > width) {
+                lines += line
+                line = word
+            } else {
+                line = if (line.isEmpty()) word else "$line $word"
+            }
+        }
+        lines += line
+        return lines
     }
 
     /** Returns the verbatim page for [path], or throws [UnknownTopicException] when it does not resolve. */

@@ -32,6 +32,14 @@ class ExamplesCommandTest {
     }
 
     @Test
+    fun `examples help lists the topics`() {
+        val help = tapSystemOut { assertEquals(0, newCommandLine().execute("examples", "--help")) }
+
+        val topics = help.substringAfter("\nTopics:")
+        for (topic in ExampleTopics.topics) assertContains(topics, topic)
+    }
+
+    @Test
     fun `bundled reference links resolve`() {
         val index = ExampleTopics.index()
         for (topic in ExampleTopics.topics) assertContains(index, "($topic.md)")

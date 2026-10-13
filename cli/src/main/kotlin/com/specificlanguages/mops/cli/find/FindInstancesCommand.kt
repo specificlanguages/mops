@@ -15,6 +15,7 @@ import picocli.CommandLine.Parameters
 
 @Command(
     name = "instances",
+    header = ["Find instances of one MPS concept."],
     description = [
         "Find instances of one MPS concept, optionally narrowed by `--named` and `--role` (which AND together with " +
             "each other and the scope). Searches editable project sources by default; append `in <scope-segments>` to " +

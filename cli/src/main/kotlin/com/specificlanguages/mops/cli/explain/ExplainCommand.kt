@@ -13,6 +13,7 @@ import picocli.CommandLine.Parameters
  */
 @Command(
     name = "explain",
+    header = ["Explain mops notations such as node references and edit batches."],
     description = ["Explain mops notations (the textual formats mops exchanges with agents)."],
 )
 class ExplainCommand : CliCommand() {

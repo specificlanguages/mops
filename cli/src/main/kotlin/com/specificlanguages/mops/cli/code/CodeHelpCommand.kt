@@ -6,7 +6,11 @@ import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 
-@Command(name = "help", description = ["Show the Code Mode extension reference from the selected project daemon."])
+@Command(
+    name = "help",
+    header = ["Show the Code Mode extension reference."],
+    description = ["Show the Code Mode extension reference from the selected project daemon."],
+)
 class CodeHelpCommand(private val environment: CommandEnvironment) : CliCommand() {
     @Parameters(index = "0", arity = "0..1", paramLabel = "PATH")
     var path: String? = null

@@ -16,12 +16,11 @@ import java.io.PrintWriter
  */
 @Command(
     name = "help",
-    header = ["Display help information about the specified command."],
-    synopsisHeading = "%nUsage: ",
     helpCommand = true,
     description = [
-        "%nWhen no COMMAND is given, the usage help for the main command is displayed.",
-        "If a COMMAND is specified, the help for that command is shown.%n",
+        "Display help information about the specified command.",
+        "When no COMMAND is given, the usage help for the main command is displayed.",
+        "If a COMMAND is specified, the help for that command is shown.",
     ],
 )
 class RecursiveHelpCommand : IHelpCommandInitializable2, Runnable {

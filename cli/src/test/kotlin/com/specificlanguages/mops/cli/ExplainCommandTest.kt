@@ -39,6 +39,17 @@ class ExplainCommandTest {
     }
 
     @Test
+    fun `explain help lists the top-level topics with their summaries`() {
+        val help = runExplain("--help")
+
+        val block = help.lines().dropWhile { it != "Topics:" }.drop(1).takeWhile { it.startsWith("  ") }
+        val entries = block.filter { it.matches(Regex("  \\S.*")) }
+        assertEquals(listOf("code") + topLevelTopics, entries.map { it.trim().substringBefore(' ') })
+        assertContains(entries.single { it.trim().startsWith("edit ") }, "edit-batch notation")
+        for (line in block) assertTrue(line.length <= 80, "topic line exceeds 80 columns: '$line'")
+    }
+
+    @Test
     fun `explain edit prints the edit page and exits zero`() {
         val output = runExplain("edit")
 

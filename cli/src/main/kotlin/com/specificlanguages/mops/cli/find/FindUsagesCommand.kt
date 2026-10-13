@@ -14,6 +14,7 @@ import picocli.CommandLine.Parameters
 
 @Command(
     name = "usages",
+    header = ["Find references to one MPS node."],
     description = [
         "Find references to one MPS node. Searches editable project sources by default; append " +
             "`in <scope-segments>` to search a module, model, or subtree exhaustively, or `in /` for the whole " +

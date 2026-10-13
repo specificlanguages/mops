@@ -12,6 +12,7 @@ import picocli.CommandLine.Parameters
 
 @Command(
     name = "module",
+    header = ["Diagnose the load state of one module."],
     description = ["Diagnose the load state of one module, addressed by name or serialized module reference."],
 )
 class DiagnoseModuleCommand(private val environment: CommandEnvironment) : CliCommand() {

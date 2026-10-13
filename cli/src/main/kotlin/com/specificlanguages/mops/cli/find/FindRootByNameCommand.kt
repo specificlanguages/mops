@@ -12,6 +12,7 @@ import picocli.CommandLine.Parameters
 
 @Command(
     name = "root-by-name",
+    header = ["Find root nodes by name pattern."],
     description = [
         "Find root nodes by name using MPS Go-to-Node pattern matching. Searches editable project sources by " +
             "default; append `in <scope-segments>` to search a module, model, or the whole repository (`in /`). Only " +
