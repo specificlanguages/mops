@@ -150,16 +150,19 @@ roles rather than the language's own notation), which the command prints as-is.
 mops --mps-home <path> find instances [--exact] [--limit N] [--full-concept] [--refs-only] [--json] <concept>
 ```
 
-Searches **editable project sources** for nodes that are instances of a fully qualified MPS concept
-(`<language>.structure.<ConceptName>`), including subconcepts and MPS interface matches by default. `--exact` restricts
-results to nodes whose direct concept is the queried one. An existing concept with no matches succeeds with no rows.
+Searches **editable project sources** for nodes that are instances of an MPS concept, including subconcepts and MPS
+interface matches by default. The concept may be named three ways: its qualified name
+(`<language>.structure.<ConceptName>`), the same name with `.structure.` dropped, or a bare short name that is unique
+across loaded languages. `--exact` restricts results to nodes whose direct concept is the queried one. An existing
+concept with no matches succeeds with no rows.
 
 A concept that does not resolve fails with `CONCEPT_NOT_FOUND`, and the error explains which of the causes applies: the
 name is not well formed; the owning language is unknown to the project; the owning language is present but not loaded
 (in which case it reports that language's load diagnosis and points at `diagnose module`, since only loaded languages
 contribute concepts to name lookup); or the language is loaded but has no such concept (in which case it suggests
-similarly named concepts from that language). A dropped `.structure.` infix is forgiven: `<language>.<ConceptName>`
-resolves as if written in full when the language is loaded.
+similarly named concepts from that language). A bare short name is resolved by counting matches across loaded languages:
+one that names concepts in several languages fails as ambiguous and lists the qualified candidates, and one offered
+while a project language is unbuilt is refused rather than guessed, since the unbuilt language could define it too.
 
 Text output is tab-separated rows of `root` or `node`, the node name (or `<unnamed>`), the node's actual concept, and
 its serialized node reference; a non-root node appends its immediate parent as trailing `parent`, parent name (or

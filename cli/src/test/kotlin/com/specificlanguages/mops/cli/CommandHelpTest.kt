@@ -103,6 +103,15 @@ class CommandHelpTest {
     }
 
     @Test
+    fun `find instances help names every accepted concept spelling`() {
+        val output = runHelp("find", "instances", "--help")
+
+        assertContains(output, "<language>.structure.<Concept>")
+        assertContains(output, ".structure.")
+        assertContains(output, "short name")
+    }
+
+    @Test
     fun `code run has no run-wide constraints option`() {
         assertFalse(runHelp("code", "run", "--help").contains("--constraints"))
     }
