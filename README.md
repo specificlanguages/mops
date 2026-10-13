@@ -293,6 +293,12 @@ two-second connection/read timeout and reports `running` or `unreachable`. It do
 unreachable records. A daemon can be unreachable because it is stopped, unresponsive, or unable to authenticate the
 request. Pings remain responsive during normal long operations.
 
+Stop sends a stop request to each selected daemon and waits for its process to exit, force-killing it if necessary. A
+stopped daemon's record is removed and reported as `stopped`. If the stop request gets no response, the record is
+removed as stale and reported as `removed stale daemon record ...; process not signalled`; the recorded process is not
+killed. If the daemon acknowledges the stop but its process survives the force-kill, the record is kept so the next
+`daemon stop` retries it, the PID is reported on stderr, and the command exits non-zero.
+
 ## Daemon State
 
 Daemons detach from the launching command's session on Unix and from its console on Windows. Their stdout and stderr are
