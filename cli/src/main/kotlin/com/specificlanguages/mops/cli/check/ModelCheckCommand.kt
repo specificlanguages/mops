@@ -1,40 +1,20 @@
 package com.specificlanguages.mops.cli.check
 
-import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
 import com.specificlanguages.mops.daemoncomms.DaemonClient
+import com.specificlanguages.mops.protocol.ModelCheckResponse
 import picocli.CommandLine.Command
-import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 
 @Command(
     name = "model",
-    description = ["Run MPS's full model check over one model and report the findings."],
+    description = [
+        "Run MPS's full model check over one model and report the findings. Exits 1 when any finding is an error.",
+    ],
 )
-class ModelCheckCommand(private val environment: CommandEnvironment) : CliCommand() {
+class ModelCheckCommand(environment: CommandEnvironment) : CheckCommand(environment) {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
-
-    @Option(
-        names = ["--format"],
-        paramLabel = "FORMAT",
-        converter = [CheckOutputFormat.Converter::class],
-        description = [
-            "How to print findings: human (a readable list sorted by severity; default) or jsonl (one finding " +
-                "object per line).",
-        ],
-    )
-    var format: CheckOutputFormat = CheckOutputFormat.HUMAN
-
-    @Option(
-        names = ["--limit"],
-        paramLabel = "N",
-        description = [
-            "Maximum findings to report, most severe first. Defaults to 20 so a broken model does not flood the " +
-                "output; 0 means unlimited.",
-        ],
-    )
-    var limit: Int = 20
 
     @Parameters(
         index = "0",
@@ -44,10 +24,5 @@ class ModelCheckCommand(private val environment: CommandEnvironment) : CliComman
     )
     lateinit var target: String
 
-    override fun run() {
-        require(limit >= 0) { "limit must not be negative" }
-        val client = environment.daemon()
-        val response = client.checkModel(target, limit)
-        renderCheckResponse(response, format, environment.nodeReferenceFormat)
-    }
+    override fun check(client: DaemonClient): ModelCheckResponse = client.checkModel(target, limit)
 }
