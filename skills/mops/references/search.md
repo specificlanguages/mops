@@ -42,8 +42,9 @@ project.read {
 ```
 
 `requireConceptByName` throws on a missing concept; `conceptByName` returns null. Both reject ambiguous names and
-untrusted language runtimes. Fully qualified names include the structure model, such as
-`jetbrains.mps.baseLanguage.structure.ClassConcept`.
+untrusted language runtimes. Both accept the same spellings as `find instances`: the qualified name
+(`jetbrains.mps.baseLanguage.structure.ClassConcept`), the same name with `.structure.` dropped
+(`jetbrains.mps.baseLanguage.ClassConcept`), or a bare short name that is unique across loaded languages.
 
 Get a serialized concept ID:
 

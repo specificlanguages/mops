@@ -12,6 +12,7 @@ import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.parallel.ResourceLock
@@ -44,6 +45,8 @@ class ExplainCommandTest {
 
         assertContains(output, "SHAPE")
         assertContains(output, "DRILL DOWN")
+        assertContains(output, "--constraints")
+        assertFalse(output.contains("--no-constraints"))
     }
 
     @Test
