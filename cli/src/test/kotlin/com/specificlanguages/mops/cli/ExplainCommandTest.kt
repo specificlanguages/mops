@@ -184,7 +184,7 @@ class ExplainCommandTest {
         assertEquals(setOf("First", "Last", "Only", "Index"), positionForms)
     }
 
-    private fun targetsOf(op: EditOperation): List<EditTarget> = when (op) {
+        private fun targetsOf(op: EditOperation): List<EditTarget> = when (op) {
         is EditOperation.SetProperty -> listOf(op.target)
         is EditOperation.Delete -> listOf(op.target)
         is EditOperation.DeleteChild -> listOf(op.target)

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fixed the `mops explain` examples for `edit.setReference`, `edit.copyAsChild`, `edit.moveAsChild`, and `edit.unwrap`,
+  whose `{"model": ..., "nodeId": ...}` targets named a `.mps` file path where the target notation takes a model name or
+  reference.
 - Added offline `mops examples` task recipes, including an editing guide and focused topics for creation, node edits,
   references, Java insertion, and JSON batches. The recipes are also bundled as references in the mops skill.
 - Broadened the bundled `mops-code` skill into `mops`, covering CLI workflows as well as Code Mode. Use

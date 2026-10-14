@@ -24,7 +24,7 @@ EXAMPLE
     {
       "op": "copyAsChild",
       "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
-      "source": {"model": "solutions/app.mps", "nodeId": "8007894750083424799"},
+      "source": {"model": "com.specificlanguages.json.structure", "nodeId": "8007894750083424799"},
       "role": "members",
       "position": 3,
       "as": "copy"
