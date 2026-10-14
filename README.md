@@ -256,9 +256,10 @@ compile the version-specific adapter.
 Every run saves `report.json` under the daemon workspace's `test-runs/<run-id>/` directory and updates it as results
 arrive. Text output prints a summary and the report path; `--json` prints the report. Tests, containers, skips,
 assumption aborts, failures, and source node references are retained. No discovered tests, preparation failures, test or
-container failures, and incomplete runs exit 1. Skips and assumption aborts alone do not fail a run. Worker output is
-saved next to the report in `worker.log` (preparation) and `ant.log` (test execution); XML reports are in
-`xml-reports/`.
+container failures, and incomplete runs exit 1; a run that discovers no tests reports which selection resolved to
+nothing (the project, or the module, model, or root test case named by the target). Skips and assumption aborts alone do
+not fail a run. Worker output is saved next to the report in `worker.log` (preparation) and `ant.log` (test execution);
+XML reports are in `xml-reports/`.
 
 Code Mode provides the same operation outside model-access blocks:
 

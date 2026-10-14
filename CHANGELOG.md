@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `mops test` now names the test selection that resolved to no tests in its discovery-failure diagnostic, as the
+  project, module, model, or root test case it resolved to; the build-failure diagnostic uses the same description.
 - Added offline `mops examples` task recipes, including an editing guide and focused topics for creation, node edits,
   references, Java insertion, and JSON batches. The recipes are also bundled as references in the mops skill.
 - Broadened the bundled `mops-code` skill into `mops`, covering CLI workflows as well as Code Mode. Use
