@@ -17,7 +17,7 @@ public class ModelLauncher extends ScriptJUnit5Launcher {
     filtered.removeIf(c -> !support.accept(c));
     if (filtered.isEmpty()) {
       support.nothingDiscovered();
-      throw new IllegalArgumentException("No tests discovered for the selection");
+      throw new IllegalArgumentException("No test classes matched the selection");
     }
     super.launchTestsWithSession(filtered, support.listener(listener));
   }

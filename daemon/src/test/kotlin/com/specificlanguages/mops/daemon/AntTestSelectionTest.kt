@@ -5,10 +5,7 @@ import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/**
- * The resolved Test Selection describes itself by the identity it resolved to, so a diagnostic about it names the
- * module, model, or root test case rather than echoing the caller's target segments.
- */
+/** The resolved Test Selection describes itself by the identity it resolved to: the project, a module, a model, or a root test case. */
 class AntTestSelectionTest {
     @TempDir
     lateinit var directory: Path

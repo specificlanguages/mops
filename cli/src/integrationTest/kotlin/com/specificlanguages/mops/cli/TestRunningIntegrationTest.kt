@@ -15,7 +15,7 @@ class TestRunningIntegrationTest {
     lateinit var tempDir: Path
 
     @Test
-    fun `zero tests is a saved discovery failure and daemon remains usable`() {
+    fun `zero tests is a saved discovery failure naming the selection and daemon remains usable`() {
         val project = copyTestProject("base-language-sandbox", tempDir.resolve("project"))
         val home = tempDir.resolve("daemon-home").createDirectories()
         fun cli(vararg args: String) = runCommandLine(project, "--daemon-home", home.pathString, *javaAndMpsHomeArgs(), *args)
@@ -26,11 +26,11 @@ class TestRunningIntegrationTest {
             assertEquals("DISCOVERY_FAILED", report.outcome, result.output)
             assertContains(report.diagnostics, "No tests discovered for selection: project (no target given)")
             assertEquals(report, ProtocolJson.decodeTestReport(Path.of(report.reportPath).readText()))
-            val module = cli("test", "baselanguage.sandbox", "--no-build", "--json")
-            assertEquals(1, module.exitCode, module.output)
-            val moduleReport = ProtocolJson.decodeTestReport(module.stdout)
-            assertEquals("DISCOVERY_FAILED", moduleReport.outcome, module.output)
-            assertContains(moduleReport.diagnostics, "No tests discovered for selection: module baselanguage.sandbox")
+            val model = cli("test", "r:9363093b-3fa9-4e39-87cb-26240d0efa37(baselanguage.sandbox)", "--no-build", "--json")
+            assertEquals(1, model.exitCode, model.output)
+            val modelReport = ProtocolJson.decodeTestReport(model.stdout)
+            assertEquals("DISCOVERY_FAILED", modelReport.outcome, model.output)
+            assertContains(modelReport.diagnostics, "No tests discovered for selection: model baselanguage.sandbox")
             assertEquals(0, cli("daemon", "ping").exitCode)
         } finally { stopDaemons(project, home) }
     }
