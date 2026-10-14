@@ -244,7 +244,7 @@ class ModuleLoadDiagnostics(private val project: Project) {
     // Each module is analysed with its own memo: loaded dependencies short-circuit before recursion, so sharing a memo
     // across the scan buys little, and a memo left in a tentative state by a dependency cycle would otherwise leak an
     // inconsistent result into later modules.
-    private fun describe(module: SModule): ModuleLoadDiagnosticJson {
+    fun describe(module: SModule): ModuleLoadDiagnosticJson {
         val problem = analyze(module, hashMapOf(), hashSetOf())
         return ModuleLoadDiagnosticJson(
             module = nameOf(module),

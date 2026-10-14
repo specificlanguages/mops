@@ -33,6 +33,8 @@ internal fun examples(path: String): List<String> = listOf(withReturn(when (path
     "mops.parsing.java.addJavaStatementsFromString" -> "project.command {\n  def statements = mops.lookup.requireNode('STATEMENT_LIST_NODE_REFERENCE')\n  def result = mops.parsing.java.addJavaStatementsFromString(statements, 'return;', null)\n  [nodes: result.nodes, unresolved: result.unresolved]\n}"
     "mops.search.eachUsageOf" -> "import jetbrains.mps.project.GlobalScope\nproject.read {\n  def usages = []\n  def scope = new GlobalScope(project.repository)\n  mops.search.eachUsageOf(mops.lookup.requireNode('NODE_REFERENCE'), scope) { reference -> usages << reference.sourceNode }\n  usages\n}"
     "mops.search.eachInstanceOf" -> "import jetbrains.mps.project.GlobalScope\nproject.read {\n  def nodes = []\n  def scope = new GlobalScope(project.repository)\n  mops.search.eachInstanceOf(mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.structure.ClassConcept'), scope, false) { node -> nodes << node }\n  nodes\n}"
+    "mops.runtime.loadClass" -> "project.read { mops.runtime.loadClass('sample.language', 'sample.language.runtime.Registry')?.name }"
+    "mops.runtime.requireClass" -> "project.read {\n  def registry = mops.runtime.requireClass('sample.language', 'sample.language.runtime.Registry')\n  registry.getMethod('getInstance').invoke(null).toString()\n}"
     "global.help" -> "help('project.createSolution')"
     "SNode.properties" -> "project.read { mops.lookup.requireNode('NODE_REFERENCE').properties['name'] }"
     "SNode.child" -> "project.read { mops.lookup.requireNode('NODE_REFERENCE').child['body'] }"

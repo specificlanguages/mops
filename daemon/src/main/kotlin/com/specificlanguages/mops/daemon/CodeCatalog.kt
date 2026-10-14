@@ -16,7 +16,7 @@ object CodeCatalog {
             val result = signature.substringAfterLast(": ")
             return CodeHelpEntry(path, signature, summary, if (path in listOf("Project.read", "Project.command")) "outside an access block [none]" else accessDescription(CodeHelpApi.access(receiver, name, access)), parameters,
                 result.removeSuffix("?"), result.endsWith("?"), options(path), examples(path),
-                listOf(result.removeSuffix("?").removePrefix("List<").removeSuffix(">")).filter { it !in listOf("T", "void", "String") },
+                listOf(result.removeSuffix("?").removePrefix("List<").removeSuffix(">")).filter { it !in listOf("T", "void", "String", "Class") },
                 if (name in listOf("properties", "child", "children", "references")) "inside project.read or project.command" else null,
                 if (name in listOf("properties", "child", "children", "references")) "inside project.command" else null)
         }
@@ -54,6 +54,8 @@ object CodeCatalog {
         Entry("mops.lookup", "requireModule", "mops.lookup.requireModule(String target): SModule", "read", "Resolve exactly one module; throw on a miss."),
         Entry("mops.lookup", "node", "mops.lookup.node(String reference): SNode?", "read", "Resolve a node reference; return null on a miss and reject malformed references."),
         Entry("mops.lookup", "requireNode", "mops.lookup.requireNode(String reference): SNode", "read", "Resolve exactly one node; throw on a miss."),
+        Entry("mops.runtime", "loadClass", "mops.runtime.loadClass(String moduleTarget, String className): Class?", "read", "Load a class through a module's class loader, which sees the module's own compiled classes and those of its dependencies; return null when the class is missing. The module is resolved like mops.lookup.module. An unknown or ambiguous module, a module without a class loader (a devkit), and a module whose runtime is not loaded (not compiled: run mops make module) are errors."),
+        Entry("mops.runtime", "requireClass", "mops.runtime.requireClass(String moduleTarget, String className): Class", "read", "Load a class through a module's class loader; throw when the class is missing. Module failures are reported as in loadClass."),
         Entry("global", "help", "help(Object subject = null): String", "none", "Show this Code Mode Reference."),
     ).sortedBy { it.path }
 
@@ -95,6 +97,7 @@ object CodeCatalog {
             is MopsTesting -> listOf("mops.testing")
             is MopsSearch -> listOf("mops.search")
             is MopsLookup -> listOf("mops.lookup")
+            is MopsRuntime -> listOf("mops.runtime")
             is JavaSnippetParser -> listOf("mops.parsing.java")
             is Class<*> -> typeNames(subject)
             else -> typeNames(subject.javaClass)
@@ -112,7 +115,7 @@ object CodeCatalog {
         val type = when (subject) {
             is Class<*> -> subject
             is String -> CodeMemberInspector.resolveType(if (subject == "project") "Project" else subject)
-            else -> if (subject is Mops || subject is MopsEditing || subject is MopsEditingBuild || subject is MopsParsing || subject is MopsTesting || subject is MopsSearch || subject is MopsLookup || subject is JavaSnippetParser) null else subject.javaClass
+            else -> if (subject is Mops || subject is MopsEditing || subject is MopsEditingBuild || subject is MopsParsing || subject is MopsTesting || subject is MopsSearch || subject is MopsLookup || subject is MopsRuntime || subject is JavaSnippetParser) null else subject.javaClass
         }
         val native = type?.let { nativeDocument(CodeMemberInspector.inspect(it), selected) }
         require(selected.isNotEmpty() || results.isNotEmpty() || native != null) {

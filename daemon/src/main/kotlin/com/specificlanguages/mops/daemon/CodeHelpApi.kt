@@ -26,6 +26,7 @@ internal object CodeHelpApi {
         "MopsParsing" -> "mops.parsing"
         "MopsSearch" -> "mops.search"
         "MopsLookup" -> "mops.lookup"
+        "MopsRuntime" -> "mops.runtime"
         "MopsTesting" -> "mops.testing"
         else -> name
     }
