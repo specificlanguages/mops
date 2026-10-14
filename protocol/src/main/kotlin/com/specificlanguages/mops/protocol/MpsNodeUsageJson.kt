@@ -24,7 +24,7 @@ data class MpsNodeSummaryJson(
     // The immediate containing node, or null when this node is a Root Node. Nested further up only when the summary
     // was requested with a full ancestry chain.
     val parent: MpsNodeParentJson? = null,
-    // Number of children per containment Role, in the order the roles first occur among the children. Present only
+    // Number of children per Containment Role, in the order the roles first occur among the children. Present only
     // on a `get node --summary` result; `find` and `check` summaries leave it out.
     val children: Map<String, Int>? = null,
 )

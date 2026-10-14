@@ -37,8 +37,8 @@ data class ModelGetNodeRequest(
 ) : DaemonRequest
 
 /**
- * Request for the summary of one node: its name, concept, reference, parent, and the number of children per Role,
- * without serializing the Node Subtree.
+ * Request for the summary of one node: its name, concept, reference, parent, and the number of children per
+ * Containment Role, without serializing the Node Subtree.
  */
 @Serializable
 @SerialName("model-get-node-summary")

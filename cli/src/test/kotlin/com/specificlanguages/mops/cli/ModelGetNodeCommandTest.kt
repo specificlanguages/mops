@@ -102,7 +102,7 @@ class ModelGetNodeCommandTest {
     }
 
     @Test
-    fun `model get-node passes the depth to the daemon and prints the truncation marker early`() {
+    fun `model get-node passes the depth to the daemon and prints the truncation marker before the children`() {
         val client = mock<DaemonClient>()
         val target = NodeTarget.NodeReference(JSON_FILE_REFERENCE)
         whenever(client.getNode(target, false, 1)).thenReturn(
@@ -125,8 +125,25 @@ class ModelGetNodeCommandTest {
 
         assertEquals(0, exitCode)
         verify(client).getNode(target, false, 1)
-        assertEquals("\"truncatedAt\": 1,", stdout.lines()[4].trim())
-        assertContains(stdout, "\"childCount\": 0")
+        assertEquals(
+            """
+            {
+              "model": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
+              "concept": "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+              "id": "2110045694544566904",
+              "truncatedAt": 1,
+              "children": [
+                {
+                  "role": "implements",
+                  "concept": "c.InterfaceConceptReference",
+                  "reference": "$JSON_FILE_REFERENCE/1",
+                  "childCount": 0
+                }
+              ]
+            }
+            """.trimIndent() + System.lineSeparator(),
+            stdout,
+        )
     }
 
     @Test
