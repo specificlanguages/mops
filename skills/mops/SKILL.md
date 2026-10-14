@@ -12,6 +12,8 @@ description:
 Use the project’s `mopsw` wrapper when available. Start with `mops examples` for task recipes and `mops --help` for
 commands. Use `list`, `find`, `get node`, and `render node` to inspect models and obtain stable references before
 editing. Copy serialized references whole; names can be ambiguous. Prefer a direct CLI command when it handles the task.
+Use `get module <name-or-ref>` to find a module's descriptor, jars, class output, and model sources instead of searching
+the disk.
 
 Read `mops examples editing` to choose JSON edit batches, Java insertion, or Code Mode. JSON batches report containment
 constraint violations; Code Mode supports custom traversal and logic. Check edited models with `check model`, build with

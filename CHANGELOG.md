@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added `mops get module <name-or-ref>`, reporting where MPS locates a module's files: its descriptor, the deployed jar
+  and sources jar of a packaged module (as named by its deployment descriptor, not guessed from a sibling file), a
+  source module's directory and `classes_gen`, the Java facet's classpath, and the model root directories. Text output
+  is one `key<TAB>value` row per reported location; `--json` carries the same fields. Library modules anywhere in the
+  repository are addressable; an unknown module fails with `MODULE_NOT_FOUND` and an ambiguous name lists the candidate
+  references.
 - Added offline `mops examples` task recipes, including an editing guide and focused topics for creation, node edits,
   references, Java insertion, and JSON batches. The recipes are also bundled as references in the mops skill.
 - Broadened the bundled `mops-code` skill into `mops`, covering CLI workflows as well as Code Mode. Use
