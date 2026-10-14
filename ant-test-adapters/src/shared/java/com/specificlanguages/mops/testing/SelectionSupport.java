@@ -55,6 +55,12 @@ public final class SelectionSupport {
 
   public boolean accept(Class<?> type) { return !filter || selected.contains(type); }
 
+  /** Reports a selection that matched no test classes as a finished run of zero discovered tests. */
+  public void nothingDiscovered() {
+    Properties discovered = new Properties(); discovered.setProperty("discovered", "0"); publish(discovered);
+    Properties finished = new Properties(); finished.setProperty("finished", "true"); publish(finished);
+  }
+
   private String source(String klass, String method) {
     TestDescriptor descriptor = sources.get(klass);
     if (descriptor == null) return null;

@@ -15,7 +15,10 @@ public class ModelLauncher extends ScriptJUnit5Launcher {
     SelectionSupport support = new SelectionSupport(myEnvironment);
     List<Class<?>> filtered = new ArrayList<>(classes);
     filtered.removeIf(c -> !support.accept(c));
-    if (filtered.isEmpty()) throw new IllegalArgumentException("No tests discovered for the selection");
+    if (filtered.isEmpty()) {
+      support.nothingDiscovered();
+      throw new IllegalArgumentException("No tests discovered for the selection");
+    }
     super.launchTestsWithSession(filtered, support.listener(listener));
   }
 }

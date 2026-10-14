@@ -16,7 +16,7 @@ class AntTestExecution(
 ) {
     fun run(project: Path, selection: AntTestSelection) {
         report.beginTiming("antStartupAndDiscovery")
-        val (modules, moduleIds, libraries, model, node) = selection
+        val (modules, moduleIds, libraries, model, node, description) = selection
         val javaHome = Path.of(System.getProperty("java.home"))
         val adapters = directory.resolve("adapters").createDirectories()
         for (name in listOf("boot", "legacy", "current")) {
@@ -107,6 +107,6 @@ class AntTestExecution(
             else -> "DISCOVERY_FAILED"
         }
         report.finish(outcome, finished || snapshot.phase != "EXECUTION",
-            if (finished && snapshot.discovered == 0) "No tests discovered for the selection" else if (!finished || ant.exitValue() != 0 && snapshot.results.none { it.status == "FAILED" }) "Ant test worker exited ${ant.exitValue()}; see ${directory.resolve("ant.log")}\n${directory.resolve("ant.log").readText().takeLast(16000)}" else null)
+            if (finished && snapshot.discovered == 0) "No tests discovered for selection: $description" else if (!finished || ant.exitValue() != 0 && snapshot.results.none { it.status == "FAILED" }) "Ant test worker exited ${ant.exitValue()}; see ${directory.resolve("ant.log")}\n${directory.resolve("ant.log").readText().takeLast(16000)}" else null)
     }
 }
