@@ -169,6 +169,10 @@ fresh identities and internal **References** directed to the copied nodes. _Rela
 **Node Subtree**: An **MPS Node** together with all nodes reachable from it through **Containment Links**. Copying a
 node "with descendants" copies its **Node Subtree**. _Avoid_: node tree, branch _Related_: Containment Link, Child
 
+**Node Stub**: A placeholder for an **MPS Node** below the requested depth of a bounded export: its **Role**, **MPS
+Concept**, name, **Node Reference**, and child count, without properties, references, or children. _Avoid_: truncated
+node, leaf _Related_: Node Subtree, Node Reference
+
 **Code Mode**: An environment in which users and agents compose operations against an open **MPS Project** using native
 MPS objects and **Code Mode Extensions** within one program. _Avoid_: Edit Script, eval mode _Related_: MPS Project,
 Access Block, Edit Operation, Code Mode Extension

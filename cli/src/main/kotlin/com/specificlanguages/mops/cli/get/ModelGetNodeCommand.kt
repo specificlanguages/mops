@@ -5,6 +5,7 @@ import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
 import com.specificlanguages.mops.cli.output.renderJson
 import com.specificlanguages.mops.daemoncomms.DaemonClient
+import com.specificlanguages.mops.protocol.MpsNodeJson
 import com.specificlanguages.mops.protocol.NodeTarget
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
@@ -79,16 +80,18 @@ class ModelGetNodeCommand(private val environment: CommandEnvironment) : CliComm
         }
 
         val node = client.getNode(target, ancestry, depth).node
-        val compactJson = renderJson(node)
-        if (depth == null) {
-            val size = compactJson.toByteArray(Charsets.UTF_8).size
-            if (size > SIZE_HINT_THRESHOLD_BYTES) {
-                System.err.println(
-                    "mops: get node output is ${size / 1024} KB of JSON; pass --depth N or --summary for a bounded view",
-                )
-            }
+        if (depth == null) hintWhenLarge(node)
+        println(renderJson(node, pretty = !compact))
+    }
+
+    // The size threshold is defined on the compact encoding, so that is what gets measured whichever form is printed.
+    private fun hintWhenLarge(node: MpsNodeJson) {
+        val size = renderJson(node).toByteArray(Charsets.UTF_8).size
+        if (size > SIZE_HINT_THRESHOLD_BYTES) {
+            System.err.println(
+                "mops: this node is ${size / 1024} KB of compact JSON; pass --depth N or --summary for a bounded view",
+            )
         }
-        println(if (compact) compactJson else renderJson(node, pretty = true))
     }
 
     private companion object {
