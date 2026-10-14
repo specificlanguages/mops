@@ -355,8 +355,10 @@ arrive. Text output prints the action report on stdout: an `<outcome>: <N> passe
 `Report: <path>` line. Diagnostics such as a failed discovery or a crashed test worker go to stderr, one line each.
 `--json` prints the report, with the diagnostics in its `diagnostics` field. Tests, containers, skips, assumption
 aborts, failures, and source node references are retained. No discovered tests, preparation failures, test or container
-failures, and incomplete runs exit 1. Skips and assumption aborts alone do not fail a run. Worker output is saved next
-to the report in `worker.log` (preparation) and `ant.log` (test execution); XML reports are in `xml-reports/`.
+failures, and incomplete runs exit 1; a run that discovers no tests reports which selection resolved to nothing (the
+project, or the module, model, or root test case named by the target). Skips and assumption aborts alone do not fail a
+run. Worker output is saved next to the report in `worker.log` (preparation) and `ant.log` (test execution); XML reports
+are in `xml-reports/`.
 
 Code Mode provides the same operation outside model-access blocks:
 
