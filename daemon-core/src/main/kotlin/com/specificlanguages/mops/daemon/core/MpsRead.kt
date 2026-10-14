@@ -8,6 +8,7 @@ import com.specificlanguages.mops.protocol.NodeFilter
 import com.specificlanguages.mops.protocol.ModuleDiagnosticResponse
 import com.specificlanguages.mops.protocol.ModulesDiagnosticsResponse
 import com.specificlanguages.mops.protocol.ModelCheckResponse
+import com.specificlanguages.mops.protocol.ModuleLocationsJson
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import com.specificlanguages.mops.protocol.MpsNodeJson
 import com.specificlanguages.mops.protocol.NodeTarget
@@ -32,6 +33,13 @@ interface MpsRead {
     ): MpsListEntryJson
 
     fun getNode(target: NodeTarget, ancestry: Boolean = false): MpsNodeJson
+
+    /**
+     * Reports where MPS says the files of the module addressed by [target] (a module name or serialized module
+     * reference, matched anywhere in the repository) are. Fails with [MpsErrorCode.MODULE_NOT_FOUND] when nothing
+     * matches, or [MpsErrorCode.AMBIGUOUS_TARGET], listing the candidate references, when more than one module does.
+     */
+    fun getModule(target: String): ModuleLocationsJson
 
     /**
      * Runs MPS's full **Model Check** (typesystem and checking rules) over the model addressed by [target] (the same

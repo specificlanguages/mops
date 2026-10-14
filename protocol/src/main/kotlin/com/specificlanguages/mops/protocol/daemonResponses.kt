@@ -49,6 +49,13 @@ class StoppedResponse : DaemonResponse {
 data class ModelGetNodeResponse(val node: MpsNodeJson) : DaemonResponse
 
 /**
+ * Successful response carrying the file locations of one resolved module.
+ */
+@Serializable
+@SerialName("module-locations")
+data class GetModuleResponse(val module: ModuleLocationsJson) : DaemonResponse
+
+/**
  * Successful response carrying the plain-text rendering of one node's default editor. The [text] preserves the editor's
  * line breaks and indentation; it rides the single-line protocol as an escaped JSON string.
  */
