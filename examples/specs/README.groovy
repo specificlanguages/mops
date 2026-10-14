@@ -16,6 +16,10 @@
             kind: 'cli',
             code: '''mops examples editing''',
         ],
+        'runtime': [
+            kind: 'cli',
+            code: '''mops examples runtime''',
+        ],
         'validation': [
             kind: 'cli',
             code: '''mops examples validation''',

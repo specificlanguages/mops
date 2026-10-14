@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added the Code Mode namespace `mops.runtime` with `loadClass(moduleTarget, className)` and
+  `requireClass(moduleTarget, className)`, which load a compiled class through an MPS module's class loader (the
+  module's own classes plus its dependencies'). The module resolves like `mops.lookup.module`; `loadClass` returns null
+  only for a missing class, while an unknown or ambiguous module, a module without a class loader, and a module whose
+  runtime is not loaded (naming `mops make module <module>` when a make fixes it) are errors. Both require read access.
+  See `mops code help mops.runtime` and the new `mops examples runtime` topic.
 - Added offline `mops examples` task recipes, including an editing guide and focused topics for creation, node edits,
   references, Java insertion, and JSON batches. The recipes are also bundled as references in the mops skill.
 - Broadened the bundled `mops-code` skill into `mops`, covering CLI workflows as well as Code Mode. Use
