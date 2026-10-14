@@ -18,7 +18,7 @@ import picocli.CommandLine
 @ResourceLock("system-streams")
 class DiagnoseModulesCommandTest {
     @Test
-    fun `diagnose modules prints the summary, failed rows with flattened root causes, and a # note line`() {
+    fun `diagnose modules prints the summary, failed rows with flattened root causes, and a # metadata line`() {
         val client = mock<DaemonClient>()
         whenever(client.diagnoseModules()).thenReturn(sampleResponse())
 
