@@ -185,11 +185,11 @@ In Code Mode, use native concepts inside a read block:
 ```groovy
 return project.read {
     def concept = mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.Expression')
-    mops.lookup.subConceptsOf(concept, true, false).collect { it.qualifiedName }
+    mops.search.subConceptsOf(concept, true, false).collect { it.qualifiedName }
 }
 ```
 
-`mops.lookup.subConceptsOf(concept, concreteOnly = false, direct = false)` returns a sorted list of native
+`mops.search.subConceptsOf(concept, concreteOnly = false, direct = false)` returns a sorted list of native
 `SAbstractConcept` objects with the same hierarchy filters as the CLI. Pass booleans positionally in Groovy.
 
 ```sh

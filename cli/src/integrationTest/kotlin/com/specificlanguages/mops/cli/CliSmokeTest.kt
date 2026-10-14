@@ -52,6 +52,28 @@ class CliSmokeTest {
             val directResponse = ProtocolJson.decodeResponse(direct.stdout) as FindSubconceptsResponse
             assertContains(directResponse.concepts, "jetbrains.mps.baseLanguage.structure.BinaryOperation")
             assertTrue("jetbrains.mps.baseLanguage.structure.IntegerConstant" !in directResponse.concepts)
+            val program = tempDir.resolve("subconcepts.groovy").also {
+                it.writeText("""
+                    project.read {
+                        def expression = mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.Expression')
+                        assert help(mops.search).contains('mops.search.subConceptsOf')
+                        assert !help(mops.lookup).contains('subConceptsOf')
+                        def all = mops.search.subConceptsOf(expression)
+                        assert all.any { it.qualifiedName == 'jetbrains.mps.baseLanguage.structure.IntegerConstant' }
+                        assert !all.contains(expression)
+                        def direct = mops.search.subConceptsOf(expression, true, true)
+                        assert direct.every { !it.abstract }
+                        assert !direct.any { it.qualifiedName == 'jetbrains.mps.baseLanguage.structure.IntegerConstant' }
+                    }
+                    return 'ok'
+                """.trimIndent())
+            }
+            val code = runCommandLine(
+                project, "--daemon-home", daemonHome.pathString, *javaAndMpsHomeArgs(),
+                "code", "run", program.pathString,
+            )
+            assertEquals(0, code.exitCode, code.output)
+            assertEquals("ok", code.stdout.trim())
             val missing = runCommandLine(
                 project, "--daemon-home", daemonHome.pathString, *javaAndMpsHomeArgs(),
                 "find", "subconcepts", "jetbrains.mps.baseLanguage.NoSuchMopsConcept",
