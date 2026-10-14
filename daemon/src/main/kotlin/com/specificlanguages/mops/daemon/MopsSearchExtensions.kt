@@ -9,6 +9,20 @@ import org.jetbrains.mps.openapi.module.FindUsagesFacade
 import org.jetbrains.mps.openapi.module.SearchScope
 
 object MopsSearchExtensions {
+    /** Finds descendants in loaded languages, excluding the queried concept. Access: read. */
+    @CodeModeExtension(MpsAccessLevel.READ)
+    @JvmStatic
+    @JvmOverloads
+    fun subConceptsOf(
+        search: MopsSearch,
+        concept: SAbstractConcept,
+        concreteOnly: Boolean = false,
+        direct: Boolean = false,
+    ): List<SAbstractConcept> {
+        requireRead(search.mops, "mops.search.subConceptsOf")
+        return ConceptHierarchy.subConceptsOf(concept, concreteOnly, direct)
+    }
+
     /** Streams native references to the supplied node. Access: read. */
     @CodeModeExtension(MpsAccessLevel.READ)
     @JvmStatic
