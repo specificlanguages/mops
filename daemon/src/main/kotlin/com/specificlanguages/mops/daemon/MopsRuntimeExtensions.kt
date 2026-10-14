@@ -25,9 +25,11 @@ object MopsRuntimeExtensions {
     /** Loads a class through a module's class loader, throwing when the class is missing. Access: read. */
     @CodeModeExtension(MpsAccessLevel.READ)
     @JvmStatic
-    fun requireClass(runtime: MopsRuntime, moduleTarget: String, className: String): Class<*> =
-        loadClass(runtime, moduleTarget, className)
+    fun requireClass(runtime: MopsRuntime, moduleTarget: String, className: String): Class<*> {
+        requireRead(runtime.mops, "mops.runtime.requireClass")
+        return loadClass(runtime, moduleTarget, className)
             ?: throw IllegalArgumentException("class not found in module $moduleTarget: $className")
+    }
 
     // ClassLoaderManager hands out a system-delegating class loader for a module it does not manage or has not
     // loaded, which would turn every lookup there into "class not found"; classify the module first so the failure

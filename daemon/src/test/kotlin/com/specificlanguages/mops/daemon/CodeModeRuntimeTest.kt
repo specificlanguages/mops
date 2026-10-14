@@ -19,8 +19,8 @@ class CodeModeRuntimeTest {
 
             assertEquals("ok", run("""
                 $FAILS
-                fails(IllegalStateException, 'requires a project.read') { mops.runtime.loadClass('exprs', 'exprs.structure.StructureAspectDescriptor') }
-                fails(IllegalStateException, 'requires a project.read') { mops.runtime.requireClass('exprs', 'exprs.structure.StructureAspectDescriptor') }
+                fails(IllegalStateException, 'mops.runtime.loadClass requires a project.read') { mops.runtime.loadClass('exprs', 'exprs.structure.StructureAspectDescriptor') }
+                fails(IllegalStateException, 'mops.runtime.requireClass requires a project.read') { mops.runtime.requireClass('exprs', 'exprs.structure.StructureAspectDescriptor') }
                 project.read {
                     assert help(mops.runtime).contains('mops.runtime.loadClass')
                     assert help(mops.runtime).contains('mops.runtime.requireClass')
@@ -45,7 +45,7 @@ class CodeModeRuntimeTest {
                     def module = mops.lookup.requireModule('exprs')
                     def descriptor = mops.runtime.requireClass('exprs', 'exprs.structure.StructureAspectDescriptor')
                     assert descriptor.name == 'exprs.structure.StructureAspectDescriptor'
-                    assert descriptor.classLoader.toString().contains('exprs')
+                    assert descriptor.classLoader.loadOwnClass('exprs.structure.StructureAspectDescriptor').is(descriptor)
                     assert mops.runtime.loadClass(module.moduleReference.toString(), 'exprs.structure.StructureAspectDescriptor').is(descriptor)
                     assert mops.runtime.loadClass('exprs', 'exprs.structure.NoSuchClass') == null
                     fails(IllegalArgumentException, 'class not found in module exprs: exprs.structure.NoSuchClass') {

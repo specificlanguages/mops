@@ -1,6 +1,6 @@
 # Load runtime and plugin classes
 
-`mops.runtime` loads compiled classes through an **MPS Module**'s class loader: the module's own generated classes plus
+`mops.runtime` loads compiled classes through a module's class loader: the module's own generated classes plus
 those of its dependencies. Use it to reach language runtime singletons, generated behavior or constraint descriptors,
 and plugin solution code without touching MPS's classloading internals. Name the module as for `mops.lookup.module`:
 its name or serialized reference, resolved uniquely.
@@ -11,13 +11,14 @@ Both operations need `project.read` or `project.command`. `loadClass` returns nu
 the class is missing; `requireClass` throws instead. Module problems are errors with a named case: unknown module,
 ambiguous module, module without a class loader (a devkit), and module whose runtime is not loaded. A source module
 whose compiled output is absent reports "not compiled" and names the `mops make module <module>` command to run first.
-Making a module inside the daemon reloads its classes; the reloaded class loader serves the next access block.
+Making a module inside the daemon reloads its classes, and programs run afterwards load from the new class loader.
 
 {{table:commands|Command}}
 
 ## Language runtime singletons
 
-Runtime solutions compile with the language that uses them, so load their classes through either module:
+A language's class loader delegates to its runtime solutions, so a runtime class loads through the language or
+through the runtime solution itself:
 
 ```groovy
 {{singleton}}
@@ -38,8 +39,7 @@ the parameter type and accept any node:
 
 ## Plugin solutions
 
-A plugin solution's classes load the same way once the solution is compiled. For a solution whose classes are
-contributed by an installed IDE plugin, the module's class loader is that plugin's:
+A plugin solution's classes load the same way once the solution is compiled:
 
 ```groovy
 {{plugin}}

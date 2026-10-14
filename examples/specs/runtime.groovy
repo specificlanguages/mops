@@ -11,7 +11,7 @@
                 output: 'text',
             ],
             [
-                title: 'Check whether a module has a class',
+                title: 'Detect a missing class without an exception',
                 kind: 'groovy',
                 code: '''project.read { mops.runtime.loadClass('jetbrains.mps.baseLanguage', 'jetbrains.mps.baseLanguage.behavior.NoSuchClass') == null }''',
                 verify: '''
