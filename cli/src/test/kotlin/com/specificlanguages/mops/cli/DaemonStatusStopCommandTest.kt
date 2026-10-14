@@ -217,7 +217,7 @@ class DaemonStatusStopCommandTest {
     }
 
     @Test
-    fun `daemon status with no records prints a metadata note and exits 0`() {
+    fun `daemon status with no records prints a # metadata line and exits 0`() {
         val project = tempDir.mpsProject()
         val daemonHome = tempDir.resolve("daemon-home")
         var exitCode = Int.MIN_VALUE
@@ -234,7 +234,7 @@ class DaemonStatusStopCommandTest {
     }
 
     @Test
-    fun `daemon stop with no records prints a metadata note and exits 0`() {
+    fun `daemon stop with no records prints a # metadata line and exits 0`() {
         val project = tempDir.mpsProject()
         val daemonHome = tempDir.resolve("daemon-home")
         var exitCode = Int.MIN_VALUE
