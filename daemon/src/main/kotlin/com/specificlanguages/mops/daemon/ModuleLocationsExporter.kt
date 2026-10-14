@@ -4,11 +4,7 @@ import com.specificlanguages.mops.protocol.ModuleLocationsJson
 import jetbrains.mps.extapi.persistence.FileBasedModelRoot
 import jetbrains.mps.library.ModulesMiner
 import jetbrains.mps.project.AbstractModule
-import jetbrains.mps.project.DevKit
-import jetbrains.mps.project.Solution
 import jetbrains.mps.project.facets.JavaModuleFacet
-import jetbrains.mps.smodel.Generator
-import jetbrains.mps.smodel.Language
 import org.jetbrains.mps.openapi.module.SModule
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 
@@ -30,10 +26,10 @@ class ModuleLocationsExporter(
 ) {
     fun export(module: SModule): ModuleLocationsJson {
         val base = ModuleLocationsJson(
-            kind = kindOf(module),
+            kind = module.moduleKind(),
             name = module.moduleName ?: module.moduleReference.toString(),
             reference = persistence.asString(module.moduleReference),
-            packaged = (module as? AbstractModule)?.isPackaged ?: false,
+            packaged = (module as? AbstractModule)?.isPackaged,
         )
         if (module !is AbstractModule) return base
 
@@ -59,14 +55,6 @@ class ModuleLocationsExporter(
 
     // A jar entry's path is `<jar path>!/<entry>`; a path without the separator is not inside an archive.
     private fun String.archivePath(): String? = if (contains(ARCHIVE_SEPARATOR)) substringBefore(ARCHIVE_SEPARATOR) else null
-
-    private fun kindOf(module: SModule): String = when (module) {
-        is Language -> "language"
-        is Generator -> "generator"
-        is DevKit -> "devkit"
-        is Solution -> "solution"
-        else -> "other"
-    }
 
     private companion object {
         const val ARCHIVE_SEPARATOR = "!/"

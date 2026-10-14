@@ -121,8 +121,9 @@ the sources archive its deployment descriptor names), `sourceDescriptor` (the so
 `sourceDirectory` (a source module's descriptor directory), `classesGen` (a source module's compiled-class output, when
 its Java facet declares one), `classPath` (one row per entry of the Java facet's runtime classpath) and `modelRoots`
 (one row per file-based model root). A location MPS does not record for the module is omitted rather than guessed from a
-naming convention. `--json` prints the same fields as one object. An unknown module fails with `MODULE_NOT_FOUND`; a
-name shared by several modules fails and lists their serialized references, so a reference disambiguates it.
+naming convention. `--json` prints the daemon response, with the same fields under `module`. An unknown module fails
+with `MODULE_NOT_FOUND`; a name shared by several modules fails and lists their serialized references, so a reference
+disambiguates it.
 
 ```sh
 mops --mps-home <path> list [--depth N] [--limit N] [--summary] [--role ROLE] [--full-concept] [--json] [TARGET_SEGMENT...]

@@ -44,7 +44,7 @@ class GetModuleCommand(private val environment: CommandEnvironment) : CliCommand
         add("kind" to locations.kind)
         add("name" to locations.name)
         add("reference" to locations.reference)
-        add("packaged" to locations.packaged.toString())
+        locations.packaged?.let { add("packaged" to it.toString()) }
         locations.descriptor?.let { add("descriptor" to it) }
         locations.jar?.let { add("jar" to it) }
         locations.sourceDescriptor?.let { add("sourceDescriptor" to it) }

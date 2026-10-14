@@ -53,7 +53,7 @@ class GetModuleSemanticsTest {
         assertEquals("language", locations.kind)
         assertEquals(CORE_LANGUAGE, locations.name)
         assertEquals(CORE_LANGUAGE_REFERENCE, locations.reference)
-        assertTrue(locations.packaged)
+        assertEquals(true, locations.packaged)
         val descriptor = assertNotNull(locations.descriptor)
         assertTrue(descriptor.endsWith("/$CORE_LANGUAGE.jar!/META-INF/module.xml"), descriptor)
         assertEquals(descriptor.substringBefore("!/"), locations.jar)

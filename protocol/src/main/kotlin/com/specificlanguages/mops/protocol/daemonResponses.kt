@@ -52,7 +52,7 @@ data class ModelGetNodeResponse(val node: MpsNodeJson) : DaemonResponse
  * Successful response carrying the file locations of one resolved module.
  */
 @Serializable
-@SerialName("module-locations")
+@SerialName("get-module")
 data class GetModuleResponse(val module: ModuleLocationsJson) : DaemonResponse
 
 /**
