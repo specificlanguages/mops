@@ -5,6 +5,7 @@ import com.specificlanguages.mops.protocol.FindByNameResponse
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindNodeByIdResponse
 import com.specificlanguages.mops.protocol.FindUsagesResponse
+import com.specificlanguages.mops.protocol.GetModuleResponse
 import com.specificlanguages.mops.protocol.MakeResponse
 import com.specificlanguages.mops.protocol.ModelCheckResponse
 import com.specificlanguages.mops.protocol.ModuleDiagnosticResponse
@@ -34,6 +35,9 @@ interface DaemonClient {
     ): TestRunResponse
     fun ping(): PongResponse
     fun getNode(target: NodeTarget, ancestry: Boolean = false): ModelGetNodeResponse
+
+    /** Reports where MPS locates the files of the module named by [module] (a name or serialized module reference). */
+    fun getModule(module: String): GetModuleResponse
     fun renderNode(target: NodeTarget, allowReflective: Boolean = false): ModelRenderNodeResponse
 
     /**

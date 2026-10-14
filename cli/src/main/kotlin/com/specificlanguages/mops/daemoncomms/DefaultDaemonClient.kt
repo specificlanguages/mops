@@ -17,6 +17,8 @@ import com.specificlanguages.mops.protocol.FindInstancesRequest
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindUsagesRequest
 import com.specificlanguages.mops.protocol.FindUsagesResponse
+import com.specificlanguages.mops.protocol.GetModuleRequest
+import com.specificlanguages.mops.protocol.GetModuleResponse
 import com.specificlanguages.mops.protocol.MakeModulesRequest
 import com.specificlanguages.mops.protocol.MakeProjectRequest
 import com.specificlanguages.mops.protocol.MakeResponse
@@ -95,6 +97,9 @@ class DefaultDaemonClient(
             ModelGetNodeRequest(token = token, target = target, ancestry = ancestry),
             ModelGetNodeResponse::class.java
         )
+
+    override fun getModule(module: String): GetModuleResponse =
+        exchange(GetModuleRequest(token = token, module = module), GetModuleResponse::class.java)
 
     override fun renderNode(target: NodeTarget, allowReflective: Boolean): ModelRenderNodeResponse =
         exchange(

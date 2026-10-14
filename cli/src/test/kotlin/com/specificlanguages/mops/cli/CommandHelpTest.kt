@@ -56,7 +56,9 @@ class CommandHelpTest {
 
     @Test
     fun `verb help lists object subcommands`() {
-        assertContains(runHelp("get", "--help"), "node")
+        val getHelp = runHelp("get", "--help")
+        assertContains(getHelp, "node")
+        assertContains(getHelp, "module")
         assertContains(runHelp("render", "--help"), "node")
         assertContains(runHelp("edit", "--help"), "model")
         val checkHelp = runHelp("check", "--help")
