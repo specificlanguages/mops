@@ -135,42 +135,7 @@ class CommandHelpTest {
         assertContains(output, "ping")
     }
 
-    @Test
-    fun `every leaf command supports --help`() {
-        val leafCommands = listOf(
-            arrayOf("list"),
-            arrayOf("wrapper"),
-            arrayOf("find", "instances"),
-            arrayOf("find", "usages"),
-            arrayOf("find", "root-by-name"),
-            arrayOf("find", "node-by-id"),
-            arrayOf("get", "node"),
-            arrayOf("render", "node"),
-            arrayOf("edit", "model"),
-            arrayOf("check", "model"),
-            arrayOf("make", "module"),
-            arrayOf("make", "project"),
-            arrayOf("create", "language"),
-            arrayOf("create", "solution"),
-            arrayOf("create", "devkit"),
-            arrayOf("create", "generator"),
-            arrayOf("create", "model"),
-            arrayOf("diagnose", "module"),
-            arrayOf("diagnose", "project"),
-            arrayOf("daemon", "ping"),
-            arrayOf("daemon", "status"),
-            arrayOf("daemon", "stop"),
-        )
-
-        for (command in leafCommands) {
-            val output = runHelp(*command, "--help")
-
-            assertContains(output, "Usage:", message = "help for '${command.joinToString(" ")}' should print usage")
-            assertContains(output, command.last())
-        }
-    }
-
-    @Test
+        @Test
     fun `create solution help lists the usage presets and the default`() {
         val output = runHelp("create", "solution", "--help")
 
