@@ -28,7 +28,12 @@ SEGMENTS
     /                        The whole MPS repository (replaces the old --all).
     <module>                 A module, by name or serialized module reference.
     <module> <model>         A model within a module. A `.suffix` model segment
-                             expands against the module name.
+                             expands against the module name; a model segment
+                             matching none of the module's models fails with
+                             the module's models listed.
+    <module> .               The model whose name equals the module name. A
+                             module and its main model often share a name, so
+                             that bare name alone is ambiguous.
     <model-name>             A model, by its full name (a single segment). A name
                              that is also a module name, or names two models,
                              is ambiguous (see RESOLUTION).
@@ -51,6 +56,7 @@ RESOLUTION
 EXAMPLE
   mops find instances ConceptDeclaration in com.specificlanguages.json
   mops find instances LinkDeclaration in com.specificlanguages.json .structure JsonObject
+  mops find instances BuildProject in com.specificlanguages.json.build .
   mops find usages r:fd75...(com.specificlanguages.json.structure)/2110... in /
 
 SEE ALSO

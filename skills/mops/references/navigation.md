@@ -1,7 +1,8 @@
 # Navigate and read
 
 Navigation uses separate space-delimited segments. Model names include stereotypes; a `.suffix` segment is relative to
-the preceding module. Use references to disambiguate names. `list` follows containment, not reference links.
+the preceding module, and a bare `.` segment names the model whose name equals the module name. Use references to
+disambiguate names. `list` follows containment, not reference links.
 
 | Task                                      | Command                                             |
 | ----------------------------------------- | --------------------------------------------------- |
@@ -9,6 +10,7 @@ the preceding module. Use references to disambiguate names. `list` follows conta
 | Include platform/library modules          | `mops list /`                                       |
 | List a module's models                    | `mops list sample.solution`                         |
 | List model roots                          | `mops list sample.solution .main`                   |
+| List roots of the same-named model        | `mops list sample.solution .`                       |
 | Inspect a root and its children           | `mops list sample.solution .main Example --depth 2` |
 | Inspect a node using its stable reference | `mops list 'NODE_REF' --depth 2`                    |
 | Show all children without truncation      | `mops list 'NODE_REF' --limit 0`                    |

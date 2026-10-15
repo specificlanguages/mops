@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- A bare `.` navigation segment after a module names the model whose name equals the module name, in `mops list`, `find`
+  scope clauses, and test selections. A model segment that matches none of the module's models fails with the module's
+  models listed.
 - Fixed the `mops explain` examples for `edit.setReference`, `edit.copyAsChild`, `edit.moveAsChild`, and `edit.unwrap`,
   whose `{"model": ..., "nodeId": ...}` targets named a `.mps` file path where the target notation takes a model name or
   reference.
