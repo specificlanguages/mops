@@ -78,9 +78,9 @@ class JetBrainsMpsAccess(
                             code = MpsErrorCode.AMBIGUOUS_TARGET,
                             message = resolution.message,
                         )
-                        ListTargetResolution.Missing -> throw MpsRequestException(
+                        is ListTargetResolution.Missing -> throw MpsRequestException(
                             code = MpsErrorCode.TARGET_NOT_FOUND,
-                            message = "target not found: ${target.joinToString(" ")}",
+                            message = "target not found: ${target.joinToString(" ")}" + resolution.detailLine(),
                         )
                     }
                     when (root) {
@@ -335,9 +335,10 @@ class JetBrainsMpsAccess(
                         code = MpsErrorCode.AMBIGUOUS_TARGET,
                         message = "${resolution.message}\nsee: mops explain scope",
                     )
-                    ListTargetResolution.Missing -> throw MpsRequestException(
+                    is ListTargetResolution.Missing -> throw MpsRequestException(
                         code = MpsErrorCode.TARGET_NOT_FOUND,
-                        message = "scope not found: ${segments.joinToString(" ")} — see: mops explain scope",
+                        message = "scope not found: ${segments.joinToString(" ")}" + resolution.detailLine() +
+                            "\nsee: mops explain scope",
                     )
                 }
             }
@@ -434,13 +435,15 @@ class JetBrainsMpsAccess(
                 is ListTarget.Node -> selected.node
             }
             is ListTargetResolution.Ambiguous -> throw IllegalArgumentException(resolution.message)
-            ListTargetResolution.Missing -> throw IllegalArgumentException("test selection not found: ${target.joinToString(" ")}")
+            is ListTargetResolution.Missing -> throw IllegalArgumentException(
+                "test selection not found: ${target.joinToString(" ")}" + resolution.detailLine(),
+            )
         }
     }
 
     private fun resolveListTarget(target: List<String>): ListTargetResolution {
         if (target.isEmpty()) {
-            return ListTargetResolution.Missing
+            return ListTargetResolution.Missing()
         }
 
         if (target.size == 1) {
@@ -453,15 +456,14 @@ class JetBrainsMpsAccess(
 
         val module = when (val resolution = resolveProjectModuleTarget(target[0])) {
             is ListTargetResolution.Found -> (resolution.target as ListTarget.Module).module
-            is ListTargetResolution.Ambiguous -> return resolution
-            ListTargetResolution.Missing -> return ListTargetResolution.Missing
+            is ListTargetResolution.Ambiguous, is ListTargetResolution.Missing -> return resolution
         }
         val modelName = modelName(module, target[1])
         val models = module.models
             .filter { it.name.value == modelName }
             .toList()
         val model = when (models.size) {
-            0 -> return ListTargetResolution.Missing
+            0 -> return missingModuleModel(module, modelName)
             1 -> models.single()
             else -> return ambiguousModelTarget(modelName, models)
         }
@@ -478,7 +480,7 @@ class JetBrainsMpsAccess(
             .filter { nodeMatches(it, target[0], rootSegmentId) }
             .toList()
         val rootNode = when (rootNodes.size) {
-            0 -> return ListTargetResolution.Missing
+            0 -> return ListTargetResolution.Missing()
             1 -> rootNodes.single()
             else -> return ambiguousRootNodeTarget(target[0], rootNodes)
         }
@@ -494,7 +496,7 @@ class JetBrainsMpsAccess(
                 .filter { nodeMatches(it, segment, segmentId) }
                 .toList()
             node = when (childNodes.size) {
-                0 -> return ListTargetResolution.Missing
+                0 -> return ListTargetResolution.Missing()
                 1 -> childNodes.single()
                 else -> return ambiguousChildNodeTarget(segment, childNodes)
             }
@@ -525,7 +527,7 @@ class JetBrainsMpsAccess(
 
         val targets = candidates.values.toList()
         return when (targets.size) {
-            0 -> ListTargetResolution.Missing
+            0 -> ListTargetResolution.Missing()
             1 -> ListTargetResolution.Found(targets.single())
             else -> ambiguousSingleSegment(segment, targets)
         }
@@ -607,7 +609,7 @@ class JetBrainsMpsAccess(
     private fun resolveProjectModuleTarget(target: String): ListTargetResolution {
         val modules = matchingProjectModules(target)
         return when (modules.size) {
-            0 -> ListTargetResolution.Missing
+            0 -> ListTargetResolution.Missing()
             1 -> ListTargetResolution.Found(ListTarget.Module(modules.single()))
             else -> ambiguousModuleTarget(target, modules)
         }
@@ -618,12 +620,22 @@ class JetBrainsMpsAccess(
             it.moduleName == target || persistence.asString(it.moduleReference) == target
         }
 
+    // The model segment after a module: a bare `.` names the model whose name equals the module name, a `.suffix`
+    // segment appends to the module name, and any other segment is a full model name.
     private fun modelName(module: SModule, segment: String): String =
-        if (segment.startsWith(".") && segment.length > 1) {
-            module.moduleName + segment
-        } else {
-            segment
+        when {
+            segment == "." -> module.moduleName.orEmpty()
+            segment.startsWith(".") -> module.moduleName + segment
+            else -> segment
         }
+
+    // A model segment that matches no model of an already resolved module lists that module's models, so the caller
+    // can correct the segment without listing the module first.
+    private fun missingModuleModel(module: SModule, modelName: String): ListTargetResolution.Missing =
+        ListTargetResolution.Missing(
+            "module ${module.moduleName} has no model $modelName; its models:\n" +
+                module.models.joinToString("\n", transform = ::modelRow),
+        )
 
     private fun nodeName(node: SNode): String? =
         SNodeAccessUtil.getPropertyValue(node, SNodeUtil.property_INamedConcept_name) as String?
@@ -707,6 +719,8 @@ class JetBrainsMpsAccess(
     private sealed interface ListTargetResolution {
         data class Found(val target: ListTarget) : ListTargetResolution
         data class Ambiguous(val message: String) : ListTargetResolution
-        data object Missing : ListTargetResolution
+        data class Missing(val detail: String? = null) : ListTargetResolution {
+            fun detailLine(): String = detail?.let { "\n$it" }.orEmpty()
+        }
     }
 }
