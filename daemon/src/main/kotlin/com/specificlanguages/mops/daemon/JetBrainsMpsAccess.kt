@@ -463,7 +463,7 @@ class JetBrainsMpsAccess(
             .filter { it.name.value == modelName }
             .toList()
         val model = when (models.size) {
-            0 -> return missingModuleModel(module, modelName)
+            0 -> return missingModelInModule(module, modelName)
             1 -> models.single()
             else -> return ambiguousModelTarget(modelName, models)
         }
@@ -625,13 +625,13 @@ class JetBrainsMpsAccess(
     private fun modelName(module: SModule, segment: String): String =
         when {
             segment == "." -> module.moduleName.orEmpty()
-            segment.startsWith(".") -> module.moduleName + segment
+            segment.startsWith(".") -> module.moduleName.orEmpty() + segment
             else -> segment
         }
 
     // A model segment that matches no model of an already resolved module lists that module's models, so the caller
     // can correct the segment without listing the module first.
-    private fun missingModuleModel(module: SModule, modelName: String): ListTargetResolution.Missing =
+    private fun missingModelInModule(module: SModule, modelName: String): ListTargetResolution.Missing =
         ListTargetResolution.Missing(
             "module ${module.moduleName} has no model $modelName; its models:\n" +
                 module.models.joinToString("\n", transform = ::modelRow),

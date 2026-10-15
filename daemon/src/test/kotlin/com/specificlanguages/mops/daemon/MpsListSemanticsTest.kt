@@ -138,9 +138,10 @@ class MpsListSemanticsTest {
     fun `lists the model named like its module through a bare dot segment`() {
         val model = SharedMpsEnvironment.sharedMpsAccess.read { list(listOf(BUILD_MODULE, "."), depth = 1) }
 
-        assertEquals("model", model.type)
-        assertEquals(BUILD_MODULE, model.name)
-        assertEquals(BUILD_MODEL_REFERENCE, model.reference)
+        assertEquals(
+            MpsListEntryJson(type = "model", name = BUILD_MODULE, reference = BUILD_MODEL_REFERENCE),
+            model.copy(children = null),
+        )
         assertNotNull(model.children?.singleOrNull { it.name == "com.specificlanguages.json" })
     }
 
