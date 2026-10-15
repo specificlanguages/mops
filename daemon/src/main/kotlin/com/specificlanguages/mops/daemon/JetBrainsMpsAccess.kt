@@ -21,6 +21,9 @@ import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 
+// Rows shown when a model segment misses and the module's models are listed to help correct it.
+private const val MISSING_MODEL_LISTING_LIMIT = 20
+
 class JetBrainsMpsAccess(
     internal val project: MPSProject,
     logger: DaemonLogger,
@@ -622,20 +625,31 @@ class JetBrainsMpsAccess(
 
     // The model segment after a module: a bare `.` names the model whose name equals the module name, a `.suffix`
     // segment appends to the module name, and any other segment is a full model name.
-    private fun modelName(module: SModule, segment: String): String =
-        when {
-            segment == "." -> module.moduleName.orEmpty()
-            segment.startsWith(".") -> module.moduleName.orEmpty() + segment
+    private fun modelName(module: SModule, segment: String): String {
+        val moduleName = module.moduleName.orEmpty()
+        return when {
+            segment == "." -> moduleName
+            segment.startsWith(".") -> moduleName + segment
             else -> segment
         }
+    }
 
     // A model segment that matches no model of an already resolved module lists that module's models, so the caller
-    // can correct the segment without listing the module first.
-    private fun missingModelInModule(module: SModule, modelName: String): ListTargetResolution.Missing =
-        ListTargetResolution.Missing(
-            "module ${module.moduleName} has no model $modelName; its models:\n" +
-                module.models.joinToString("\n", transform = ::modelRow),
+    // can correct the segment without listing the module first. The listing is capped so a module with many models
+    // still yields bounded output.
+    private fun missingModelInModule(module: SModule, modelName: String): ListTargetResolution.Missing {
+        val moduleName = module.moduleName.orEmpty()
+        val models = module.models.toList()
+        if (models.isEmpty()) {
+            return ListTargetResolution.Missing("module $moduleName has no models")
+        }
+        val rows = models.take(MISSING_MODEL_LISTING_LIMIT).map(::modelRow)
+        val omitted = models.size - rows.size
+        val listing = rows + if (omitted > 0) listOf("$omitted more models not shown (module has ${models.size})") else emptyList()
+        return ListTargetResolution.Missing(
+            "module $moduleName has no model $modelName; its models:\n" + listing.joinToString("\n"),
         )
+    }
 
     private fun nodeName(node: SNode): String? =
         SNodeAccessUtil.getPropertyValue(node, SNodeUtil.property_INamedConcept_name) as String?

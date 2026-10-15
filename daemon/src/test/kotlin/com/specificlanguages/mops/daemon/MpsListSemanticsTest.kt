@@ -4,6 +4,7 @@ import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteExisting
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 import kotlin.test.Test
@@ -178,6 +179,49 @@ class MpsListSemanticsTest {
                 "model\t$BUILD_MODULE\t$BUILD_MODEL_REFERENCE",
             exception.message,
         )
+    }
+
+    @Test
+    fun `caps the module's models listed for a missing model segment`() {
+        val extraCount = 24
+
+        SharedMpsEnvironment.withProjectCopy(
+            prepare = { project ->
+                val model = project.resolve(BUILD_MODEL_PATH)
+                for (index in 1..extraCount) {
+                    val reference = "r:22222222-3333-4444-8555-%012d($BUILD_MODULE.extra$index)".format(index)
+                    model.resolveSibling("$BUILD_MODULE.extra$index.mps").writeText(
+                        model.readText().replace(BUILD_MODEL_REFERENCE, reference),
+                    )
+                }
+            },
+        ) { mpsAccess, _ ->
+            val exception = assertFailsWith<MpsRequestException> {
+                mpsAccess.read { list(listOf(BUILD_MODULE, ".missing"), depth = 1) }
+            }
+
+            val lines = exception.message.lines()
+            val rows = lines.filter { it.startsWith("model\t") }
+            assertEquals(20, rows.size)
+            assertEquals("${extraCount + 1 - 20} more models not shown (module has ${extraCount + 1})", lines.last())
+        }
+    }
+
+    @Test
+    fun `reports a missing model segment in a module without models`() {
+        SharedMpsEnvironment.withProjectCopy(
+            prepare = { project -> project.resolve(BUILD_MODEL_PATH).deleteExisting() },
+        ) { mpsAccess, _ ->
+            val exception = assertFailsWith<MpsRequestException> {
+                mpsAccess.read { list(listOf(BUILD_MODULE, "."), depth = 1) }
+            }
+
+            assertEquals(MpsErrorCode.TARGET_NOT_FOUND, exception.code)
+            assertEquals(
+                "target not found: $BUILD_MODULE .\nmodule $BUILD_MODULE has no models",
+                exception.message,
+            )
+        }
     }
 
     @Test

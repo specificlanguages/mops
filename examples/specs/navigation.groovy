@@ -22,9 +22,9 @@
                 code: '''mops list sample.solution .main''',
             ],
             [
-                title: 'List roots of the same-named model',
+                title: 'List roots of the model named like its module',
                 kind: 'cli',
-                code: '''mops list sample.solution .''',
+                code: '''mops list sample.app .''',
             ],
             [
                 title: 'Inspect a root and its children',

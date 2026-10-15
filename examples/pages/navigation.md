@@ -1,8 +1,9 @@
 # Navigate and read
 
 Navigation uses separate space-delimited segments. Model names include stereotypes; a `.suffix` segment is relative to
-the preceding module, and a bare `.` segment names the model whose name equals the module name. Use references to
-disambiguate names. `list` follows containment, not reference links.
+the preceding module, and a bare `.` segment names the model whose name equals the module name (`sample.app .` is the
+model `sample.app` of module `sample.app`). Use references to disambiguate names. `list` follows containment, not
+reference links.
 
 {{table:commands|Command}}
 
