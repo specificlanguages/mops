@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `mops wrapper` prints the absolute path of the Gradle build it inspects, and no longer follows it with a full stop, so
+  the default path `.` is not misread as `..`.
 - Fixed the `mops explain` examples for `edit.setReference`, `edit.copyAsChild`, `edit.moveAsChild`, and `edit.unwrap`,
   whose `{"model": ..., "nodeId": ...}` targets named a `.mps` file path where the target notation takes a model name or
   reference.
