@@ -2,8 +2,10 @@
 
 ## Unreleased
 
-- `diagnose module` exits with code 1 when the module is not loaded (`loaded=false`, including an absent module) and 0
-  when it is loaded, in text and `--json` modes. Output is unchanged; `diagnose project` still exits 0.
+- `diagnose module` exits with code 1 when the module failed to load (`loaded=false`, a blocking problem, including an
+  absent module) and 0 when it is loaded, in text and `--json` modes. An informational problem such as a missing Java
+  facet on a non-language module is still reported but reads as `loaded=true`. Output format is unchanged;
+  `diagnose project` still exits 0.
 - Fixed the `mops explain` examples for `edit.setReference`, `edit.copyAsChild`, `edit.moveAsChild`, and `edit.unwrap`,
   whose `{"model": ..., "nodeId": ...}` targets named a `.mps` file path where the target notation takes a model name or
   reference.

@@ -8,6 +8,7 @@ import com.specificlanguages.mops.protocol.ModuleLoadDiagnosticJson
 import com.specificlanguages.mops.protocol.ModuleLoadProblemJson
 import com.specificlanguages.mops.protocol.ProtocolJson
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.parallel.ResourceLock
 import org.mockito.kotlin.mock
@@ -99,6 +100,31 @@ class DiagnoseModuleCommandTest {
         val stdout = tapSystemOut { assertEquals(0, run(client, MODULE)) }
 
         assertEquals("org.iets3.core.expr.base\tlanguage\tpresent=true\tloaded=true" + nl, stdout)
+    }
+
+    @Test
+    fun `diagnose module exits 0 for a loaded module with a non-blocking problem`() {
+        val client = mock<DaemonClient>()
+        whenever(client.diagnoseModule("my.solution")).thenReturn(
+            ModuleDiagnosticResponse(
+                module = ModuleLoadDiagnosticJson(
+                    module = "my.solution",
+                    kind = "solution",
+                    present = true,
+                    loaded = true,
+                    problem = ModuleLoadProblemJson(
+                        module = "my.solution",
+                        reason = "NO_JAVA_FACET",
+                        detail = "the module has no Java module facet, so it loads no Java classes",
+                    ),
+                ),
+            ),
+        )
+
+        val stdout = tapSystemOut { assertEquals(0, run(client, "my.solution")) }
+
+        assertContains(stdout, "my.solution\tsolution\tpresent=true\tloaded=true")
+        assertContains(stdout, "NO_JAVA_FACET")
     }
 
     @Test

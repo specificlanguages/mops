@@ -15,7 +15,8 @@ import picocli.CommandLine.Parameters
     name = "module",
     description = [
         "Diagnose the load state of one module, addressed by name or serialized module reference.",
-        "Exits 1 when the module is not loaded (including when it is absent), 0 when it is loaded.",
+        "Exits 1 when the module failed to load (a blocking problem, including an absent module), 0 when it is loaded.",
+        "An informational problem, such as a missing Java facet on a non-language module, does not fail.",
     ],
 )
 class DiagnoseModuleCommand(private val environment: CommandEnvironment) : CliCommand(), IExitCodeGenerator {
