@@ -7,14 +7,18 @@ import com.specificlanguages.mops.cli.output.renderJson
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.ModuleLoadProblemJson
 import picocli.CommandLine.Command
+import picocli.CommandLine.IExitCodeGenerator
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 
 @Command(
     name = "module",
-    description = ["Diagnose the load state of one module, addressed by name or serialized module reference."],
+    description = [
+        "Diagnose the load state of one module, addressed by name or serialized module reference.",
+        "Exits 1 when the module is not loaded (including when it is absent), 0 when it is loaded.",
+    ],
 )
-class DiagnoseModuleCommand(private val environment: CommandEnvironment) : CliCommand() {
+class DiagnoseModuleCommand(private val environment: CommandEnvironment) : CliCommand(), IExitCodeGenerator {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
 
     @Option(names = ["--json"], description = ["Print the full diagnosis as JSON."])
@@ -28,9 +32,14 @@ class DiagnoseModuleCommand(private val environment: CommandEnvironment) : CliCo
     )
     lateinit var module: String
 
+    private var exitCode: Int = 0
+
+    override fun getExitCode(): Int = exitCode
+
     override fun run() {
         val client = environment.daemon()
         val response = client.diagnoseModule(module)
+        exitCode = if (response.module.loaded) 0 else 1
 
         if (json) {
             println(renderJson(response))
