@@ -36,8 +36,8 @@ editing. Copy serialized references whole; names can be ambiguous. Prefer a dire
 
 Pitfalls when navigating and searching:
 
-- `list` shows at most 50 children per level. Pass `--limit 0` when listing project modules or any node whose children
-  may exceed that.
+- `list` shows at most 50 children per level and ends a cut level with a `# truncated: ...` line. Pass `--limit 0` when
+  listing project modules or any node whose children may exceed that.
 - A `.suffix` segment is only the part after the module name: `.main` after `sample.solution` means the model
   `sample.solution.main`. A model named exactly like its module has no suffix form; give its full name as the second
   segment, or use its reference.

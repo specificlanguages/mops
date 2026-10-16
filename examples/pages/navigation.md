@@ -8,8 +8,8 @@ and a model share that name. `list` follows containment, not reference links.
 
 {{table:commands|Command}}
 
-`list --depth` ranges from 0 to 8; the default is 1. `list` shows at most 50 children per level; `--limit 0` lifts the
-cap, which matters when listing project modules. `--summary` cannot be combined with `--depth`. `get node --ancestry`
-adds the containment chain from the node up to its root. Rendering is a reading aid, not a serialization that can be
-edited and imported back; the default editor can leave information out, so inspect the subtree with `list --depth` or
-`get node` when a rendered view is not enough.
+`list --depth` ranges from 0 to 8; the default is 1. Each level shows up to 50 children and ends in an indented
+`# truncated: ...` metadata line when more exist; `--limit 0` lifts the cap, which matters when listing project modules.
+`--summary` cannot be combined with `--depth`. `get node --ancestry` adds the containment chain from the node up to its
+root. Rendering is a reading aid, not a serialization that can be edited and imported back; the default editor can
+leave information out, so inspect the subtree with `list --depth` or `get node` when a rendered view is not enough.

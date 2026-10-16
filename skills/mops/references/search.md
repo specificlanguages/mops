@@ -20,7 +20,9 @@ prints decimal IDs, and the command accepts both.
 | Return every match as a reference               | `mops find root-by-name --refs-only --limit 0 '*Builder*'`                                                             |
 | Render every matching root                      | `mops find root-by-name --refs-only --limit 0 '*Builder*' \| while IFS= read -r ref; do mops render node "$ref"; done` |
 
-`find` defaults to 100 matches; `--limit 0` removes the cap. `--refs-only` cannot be combined with `--json`. Use
+`find` defaults to 100 matches and ends its text output in a `# truncated: ...` metadata line when more exist;
+`--limit 0` removes the cap. Lines starting with `#` are metadata, not results. `--refs-only` cannot be combined with
+`--json`. Use
 `mops explain name-pattern` for pattern matching rules.
 
 ## Code Mode: concepts and instances

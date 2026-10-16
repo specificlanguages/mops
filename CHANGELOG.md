@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Breaking:** `find` and `list` text output report truncation as a `#` metadata line instead of a `truncated` row.
+  `find` prints `# truncated: showing <shown>; pass --limit 0 for all`; `list` prints
+  `# truncated: showing <shown> of <total> children; pass --limit 0 for all` indented under the level it describes.
+  Lines starting with `#` are metadata, so `grep -v '^#'` leaves only result rows. `--refs-only` still reports
+  truncation on stderr and `--json` is unchanged.
 - Extended the bundled `mops` skill and its references with project preparation (wrapper location, build, and
   `diagnose project` output), navigation and search pitfalls, and native test authoring.
 - Fixed the `mops explain` examples for `edit.setReference`, `edit.copyAsChild`, `edit.moveAsChild`, and `edit.unwrap`,
