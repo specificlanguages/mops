@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Breaking:** `find` and `list` text output report truncation as a `#` metadata line instead of a `truncated` row.
+  `find` prints `# truncated: showing <shown>; pass --limit 0 for all`; `list` prints
+  `# truncated: showing <shown> of <total> children; pass --limit 0 for all` indented under the level it describes.
+  Lines starting with `#` are metadata, so `grep -v '^#'` leaves only result rows. `--refs-only` still reports
+  truncation on stderr and `--json` is unchanged.
 - Fixed the `mops explain` examples for `edit.setReference`, `edit.copyAsChild`, `edit.moveAsChild`, and `edit.unwrap`,
   whose `{"model": ..., "nodeId": ...}` targets named a `.mps` file path where the target notation takes a model name or
   reference.
