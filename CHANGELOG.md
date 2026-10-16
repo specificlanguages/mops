@@ -7,6 +7,9 @@
   `# truncated: showing <shown> of <total> children; pass --limit 0 for all` indented under the level it describes.
   Lines starting with `#` are metadata, so `grep -v '^#'` leaves only result rows. `--refs-only` still reports
   truncation on stderr and `--json` is unchanged.
+- Fixed the `mops explain` examples for `edit.setReference`, `edit.copyAsChild`, `edit.moveAsChild`, and `edit.unwrap`,
+  whose `{"model": ..., "nodeId": ...}` targets named a `.mps` file path where the target notation takes a model name or
+  reference.
 - Added offline `mops examples` task recipes, including an editing guide and focused topics for creation, node edits,
   references, Java insertion, and JSON batches. The recipes are also bundled as references in the mops skill.
 - Broadened the bundled `mops-code` skill into `mops`, covering CLI workflows as well as Code Mode. Use
@@ -17,6 +20,9 @@
   access.
 
 - Daemons detach from the launching session on Unix and console on Windows to survive process-group and console cleanup.
+- `daemon stop` exits with code 1 when a daemon acknowledged the stop but its process survived the force-kill; the
+  diagnostic moves to stderr and the record is kept for the next `daemon stop`. Removing a stale record still exits 0,
+  and its message now states that the stop request got no response and the recorded process was not signalled.
 - `daemon status` probes recorded daemons and reports `unreachable` when an authenticated ping fails, retaining the
   record.
 

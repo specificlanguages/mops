@@ -151,16 +151,20 @@ roles rather than the language's own notation), which the command prints as-is.
 mops --mps-home <path> find instances [--exact] [--limit N] [--full-concept] [--refs-only] [--json] <concept>
 ```
 
-Searches **editable project sources** for nodes that are instances of a fully qualified MPS concept
-(`<language>.structure.<ConceptName>`), including subconcepts and MPS interface matches by default. `--exact` restricts
-results to nodes whose direct concept is the queried one. An existing concept with no matches succeeds with no rows.
+Searches **editable project sources** for nodes that are instances of an MPS concept, including subconcepts and MPS
+interface matches by default. The concept may be named three ways: its qualified name
+(`<language>.structure.<ConceptName>`), the same name with `.structure.` dropped, or a bare short name that is unique
+across loaded languages. `--exact` restricts results to nodes whose direct concept is the queried one. An existing
+concept with no matches succeeds with no rows.
 
 A concept that does not resolve fails with `CONCEPT_NOT_FOUND`, and the error explains which of the causes applies: the
 name is not well formed; the owning language is unknown to the project; the owning language is present but not loaded
 (in which case it reports that language's load diagnosis and points at `diagnose module`, since only loaded languages
 contribute concepts to name lookup); or the language is loaded but has no such concept (in which case it suggests
-similarly named concepts from that language). A dropped `.structure.` infix is forgiven: `<language>.<ConceptName>`
-resolves as if written in full when the language is loaded.
+similarly named concepts from that language). A bare short name is resolved by counting matches across loaded languages:
+one that names concepts in several languages fails with `AMBIGUOUS_TARGET` and lists the qualified candidates, and one
+offered while a project language is unbuilt fails with `LANGUAGE_NOT_LOADED` rather than guessing, since the unbuilt
+language could define it too.
 
 Text output is tab-separated rows of `root` or `node`, the node name (or `<unnamed>`), the node's actual concept, and
 its serialized node reference; a non-root node appends its immediate parent as trailing `parent`, parent name (or
@@ -295,6 +299,12 @@ working directory. With `--all`, it reads every known daemon record. Status send
 two-second connection/read timeout and reports `running` or `unreachable`. It does not start daemons or remove
 unreachable records. A daemon can be unreachable because it is stopped, unresponsive, or unable to authenticate the
 request. Pings remain responsive during normal long operations.
+
+Stop sends a stop request to each selected daemon and waits for its process to exit, force-killing it if necessary. A
+stopped daemon's record is removed and reported as `stopped`. If the stop request gets no response, the record is
+removed as stale and reported as `removed stale daemon record ...; process not signalled`; the recorded process is not
+killed. If the daemon acknowledges the stop but its process survives the force-kill, the record is kept so the next
+`daemon stop` retries it, the PID is reported on stderr, and the command exits non-zero.
 
 ## Daemon State
 

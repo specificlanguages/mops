@@ -56,9 +56,10 @@ interrupt that work.
 
 1. Stop launching requests for the project. Capture the PID and workspace from `daemon status` or the workspace's
    `daemon.json` before calling `stop`. Inspect `WORKSPACE/logs/daemon.log` and the original command's error.
-2. Try project-scoped `daemon stop`. An acknowledged stop waits for process exit and force-kills it if necessary. If the
-   stop request gets no response, the command removes the record without killing the process. The message
-   `removed stale daemon record` does not prove that the process has exited.
+2. Try project-scoped `daemon stop`. An acknowledged stop waits for process exit and force-kills it if necessary; if the
+   process survives even that, the command keeps the record, reports the PID on stderr, and exits non-zero. If the stop
+   request gets no response, the command removes the record and reports `process not signalled`: the process was not
+   killed and may still be alive.
 3. If the recorded PID is still alive, inspect its command line and confirm that it is the mops daemon for this
    workspace before terminating it. On macOS/Linux, use `ps -p PID -o pid=,command=`, then `kill PID`; use
    `kill -KILL PID` only if it remains stuck. Check that the process has exited before starting a replacement. Avoid
