@@ -7,6 +7,11 @@
                 code: '''mops list''',
             ],
             [
+                title: 'List all project modules without truncation',
+                kind: 'cli',
+                code: '''mops list --limit 0''',
+            ],
+            [
                 title: 'Include platform/library modules',
                 kind: 'cli',
                 code: '''mops list /''',
@@ -20,6 +25,11 @@
                 title: 'List model roots',
                 kind: 'cli',
                 code: '''mops list sample.solution .main''',
+            ],
+            [
+                title: 'List roots of a model named like its module',
+                kind: 'cli',
+                code: '''mops list sample.solution sample.solution''',
             ],
             [
                 title: 'Inspect a root and its children',
@@ -52,7 +62,7 @@
                 code: '''mops get node 'NODE_REF'''',
             ],
             [
-                title: 'Include its ancestry',
+                title: 'Include its containment chain up to the root',
                 kind: 'cli',
                 code: '''mops get node --ancestry 'NODE_REF'''',
             ],

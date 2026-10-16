@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Extended the bundled `mops` skill and its references with project preparation (wrapper location, build, and
+  `diagnose project` output), navigation and search pitfalls, and native test authoring.
 - Fixed the `mops explain` examples for `edit.setReference`, `edit.copyAsChild`, `edit.moveAsChild`, and `edit.unwrap`,
   whose `{"model": ..., "nodeId": ...}` targets named a `.mps` file path where the target notation takes a model name or
   reference.

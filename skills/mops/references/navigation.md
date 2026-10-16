@@ -1,25 +1,33 @@
 # Navigate and read
 
-Navigation uses separate space-delimited segments. Model names include stereotypes; a `.suffix` segment is relative to
-the preceding module. Use references to disambiguate names. `list` follows containment, not reference links.
+Navigation uses separate space-delimited segments. Model names include stereotypes. A `.suffix` segment is relative to
+the preceding module and is only the part after the module name: `.main` after `sample.solution` means
+`sample.solution.main`. A model named exactly like its module has no suffix form; give its full name as the second
+segment, or use its reference. Use references to disambiguate names; a lone `sample.solution` is ambiguous when a module
+and a model share that name. `list` follows containment, not reference links.
 
-| Task                                      | Command                                             |
-| ----------------------------------------- | --------------------------------------------------- |
-| List project modules                      | `mops list`                                         |
-| Include platform/library modules          | `mops list /`                                       |
-| List a module's models                    | `mops list sample.solution`                         |
-| List model roots                          | `mops list sample.solution .main`                   |
-| Inspect a root and its children           | `mops list sample.solution .main Example --depth 2` |
-| Inspect a node using its stable reference | `mops list 'NODE_REF' --depth 2`                    |
-| Show all children without truncation      | `mops list 'NODE_REF' --limit 0`                    |
-| Count child roles/concepts                | `mops list 'NODE_REF' --summary`                    |
-| List one containment role                 | `mops list 'NODE_REF' --role member`                |
-| Export a node subtree as JSON             | `mops get node 'NODE_REF'`                          |
-| Include its ancestry                      | `mops get node --ancestry 'NODE_REF'`               |
-| Resolve an ID within a model              | `mops get node sample.model 123456789`              |
-| Read the default editor's text            | `mops render node 'NODE_REF'`                       |
-| Render with unloaded languages            | `mops render node --allow-reflective 'NODE_REF'`    |
-| Emit clickable MPS URLs in text output    | `mops --refs-as-urls list sample.solution .main`    |
+| Task                                         | Command                                             |
+| -------------------------------------------- | --------------------------------------------------- |
+| List project modules                         | `mops list`                                         |
+| List all project modules without truncation  | `mops list --limit 0`                               |
+| Include platform/library modules             | `mops list /`                                       |
+| List a module's models                       | `mops list sample.solution`                         |
+| List model roots                             | `mops list sample.solution .main`                   |
+| List roots of a model named like its module  | `mops list sample.solution sample.solution`         |
+| Inspect a root and its children              | `mops list sample.solution .main Example --depth 2` |
+| Inspect a node using its stable reference    | `mops list 'NODE_REF' --depth 2`                    |
+| Show all children without truncation         | `mops list 'NODE_REF' --limit 0`                    |
+| Count child roles/concepts                   | `mops list 'NODE_REF' --summary`                    |
+| List one containment role                    | `mops list 'NODE_REF' --role member`                |
+| Export a node subtree as JSON                | `mops get node 'NODE_REF'`                          |
+| Include its containment chain up to the root | `mops get node --ancestry 'NODE_REF'`               |
+| Resolve an ID within a model                 | `mops get node sample.model 123456789`              |
+| Read the default editor's text               | `mops render node 'NODE_REF'`                       |
+| Render with unloaded languages               | `mops render node --allow-reflective 'NODE_REF'`    |
+| Emit clickable MPS URLs in text output       | `mops --refs-as-urls list sample.solution .main`    |
 
-`list --depth` ranges from 0 to 8; the default is 1. `--summary` cannot be combined with `--depth`. Rendering is a
-reading aid, not a serialization that can be edited and imported back.
+`list --depth` ranges from 0 to 8; the default is 1. `list` shows at most 50 children per level; `--limit 0` lifts the
+cap, which matters when listing project modules. `--summary` cannot be combined with `--depth`. `get node --ancestry`
+adds the containment chain from the node up to its root. Rendering is a reading aid, not a serialization that can be
+edited and imported back; the default editor can leave information out, so inspect the subtree with `list --depth` or
+`get node` when a rendered view is not enough.
