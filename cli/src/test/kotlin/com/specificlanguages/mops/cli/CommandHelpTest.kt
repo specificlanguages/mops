@@ -103,6 +103,16 @@ class CommandHelpTest {
     }
 
     @Test
+    fun `find instances help names every accepted concept spelling`() {
+        // Picocli wraps the description, so compare against a single-spaced copy.
+        val output = runHelp("find", "instances", "--help").replace(Regex("\\s+"), " ")
+
+        assertContains(output, "<language>.structure.<ConceptName>")
+        assertContains(output, "with .structure. dropped")
+        assertContains(output, "bare short name")
+    }
+
+    @Test
     fun `code run has no run-wide constraints option`() {
         assertFalse(runHelp("code", "run", "--help").contains("--constraints"))
     }

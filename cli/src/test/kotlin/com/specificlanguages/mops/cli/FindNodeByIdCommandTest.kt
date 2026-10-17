@@ -137,7 +137,7 @@ class FindNodeByIdCommandTest {
     }
 
     @Test
-    fun `find node-by-id appends a truncation row when more results exist`() {
+    fun `find node-by-id appends a metadata line naming --limit when more results exist`() {
         val client = mock<DaemonClient>()
         whenever(client.findNodeById(ID, limit = 1)).thenReturn(
             sampleResponse(limit = 1).copy(truncated = true),
@@ -153,7 +153,7 @@ class FindNodeByIdCommandTest {
         assertEquals(0, exitCode)
         assertEquals(
             "root\tJsonObject\tConceptDeclaration\t$REFERENCE" + System.lineSeparator() +
-                "truncated\t1\tmore results not shown" + System.lineSeparator(),
+                "# truncated: showing 1; pass --limit 0 for all" + System.lineSeparator(),
             stdout,
         )
     }
