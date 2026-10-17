@@ -242,6 +242,24 @@ or serialized module reference) and their transitive dependency closure, so an u
 prints the make result as JSON.
 
 ```sh
+mops --mps-home <path> check model [--format human|jsonl] [--limit N] <model>
+mops --mps-home <path> check module [--format human|jsonl] [--limit N] <module>...
+mops --mps-home <path> check project [--format human|jsonl] [--limit N]
+```
+
+Runs MPS's full model check (typesystem, model, module, and checking rules) over one model, the named project modules,
+or every project module, through the daemon. Findings print most severe first, capped at `--limit` (default 20; `0` is
+unlimited). Text output is one tab-separated row per finding (`severity`, message, and for a node-level finding the
+node's name, concept, and reference) followed by `#` metadata lines: `# <errors>, <warnings>, <infos>` (or
+`# no findings`) and, when the cap cut the list,
+`# truncated: showing <shown> of <total> findings; pass --limit 0 for all`. Lines starting with `#` are metadata, never
+findings, so `grep -v '^#'` leaves only rows. `--format jsonl` prints one finding object per line and ends with a
+`{"type":"summary",...}` record carrying `shown`, `total`, `errors`, `warnings`, `infos`, `limit`, `truncated`, and,
+when truncated, a `hint` naming `--limit 0`; findings have no `type` field, so a reader tells the two apart. Totals
+count every finding, not only the shown ones, and all three commands exit `1` when the totals include an error, in both
+formats.
+
+```sh
 mops test                            # all project tests, with an incremental build
 mops test my.module .tests MyCase    # navigation target: module, model, test case
 mops test '<test-node-reference>' --no-build --json

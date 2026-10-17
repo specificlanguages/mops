@@ -1,40 +1,23 @@
 package com.specificlanguages.mops.cli.check
 
-import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
 import com.specificlanguages.mops.daemoncomms.DaemonClient
+import com.specificlanguages.mops.protocol.ModelCheckResponse
 import picocli.CommandLine.Command
-import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 
 @Command(
     name = "module",
-    description = ["Run MPS's full check over one or more Project Modules and their models."],
+    description = [
+        "Run MPS's full check over one or more project modules and their models. Exits 1 when any finding is an error.",
+    ],
 )
-class ModuleCheckCommand(private val environment: CommandEnvironment) : CliCommand() {
+class ModuleCheckCommand(environment: CommandEnvironment) : CheckCommand(environment) {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
 
-    @Option(
-        names = ["--format"],
-        paramLabel = "FORMAT",
-        converter = [CheckOutputFormat.Converter::class],
-        description = ["Output format: human or jsonl."],
-    )
-    var format: CheckOutputFormat = CheckOutputFormat.HUMAN
-
-    @Option(names = ["--limit"], paramLabel = "N", description = ["Maximum findings to report; 0 means unlimited."])
-    var limit: Int = 20
-
-    @Parameters(arity = "1..*", paramLabel = "MODULE", description = ["Project Module name or serialized reference."])
+    @Parameters(arity = "1..*", paramLabel = "MODULE", description = ["Project module name or serialized reference."])
     lateinit var modules: List<String>
 
-    override fun run() {
-        require(limit >= 0) { "limit must not be negative" }
-        renderCheckResponse(
-            environment.daemon().checkModules(modules, limit),
-            format,
-            environment.nodeReferenceFormat,
-        )
-    }
+    override fun check(client: DaemonClient): ModelCheckResponse = client.checkModules(modules, limit)
 }

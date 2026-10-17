@@ -1,5 +1,8 @@
 package com.specificlanguages.mops.cli.output
 
+/** The phrase that tells a caller how to lift the `--limit` cap, worded the same in every format. */
+internal const val LIMIT_LIFTING_HINT = "pass --limit 0 for all"
+
 /**
  * Renders one metadata line for row-shaped text output. Metadata is what mops understood and what it left out
  * (truncation, the scope searched, zero matches). It travels with the results on stdout but is `#`-prefixed so a
@@ -14,5 +17,5 @@ internal fun metadataLine(text: String): String = "# $text"
  */
 internal fun truncationLine(shown: Int, total: Int? = null, unit: String? = null): String {
     val count = listOfNotNull(shown.toString(), total?.let { "of $it" }, unit).joinToString(" ")
-    return metadataLine("truncated: showing $count; pass --limit 0 for all")
+    return metadataLine("truncated: showing $count; $LIMIT_LIFTING_HINT")
 }
