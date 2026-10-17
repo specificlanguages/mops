@@ -3,6 +3,7 @@ package com.specificlanguages.mops.cli.diagnose
 import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
+import com.specificlanguages.mops.cli.output.metadataLine
 import com.specificlanguages.mops.cli.output.renderJson
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.ModuleLoadDiagnosticJson
@@ -38,7 +39,7 @@ class DiagnoseModulesCommand(private val environment: CommandEnvironment) : CliC
         val rows = if (all) response.modules else response.modules.filterNot { it.loaded }
         rows.forEach(::renderModule)
 
-        println("note\tmodules without a Java facet are not listed; diagnose one with: mops diagnose module <module>")
+        println(metadataLine("modules without a Java facet are not listed; diagnose one with: mops diagnose module <module>"))
     }
 
     private fun renderModule(module: ModuleLoadDiagnosticJson) {

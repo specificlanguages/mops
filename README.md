@@ -209,11 +209,13 @@ mops --mps-home <path> diagnose project [--all] [--json]
 
 Reports the load state of the project's languages and every other project module that has a Java facet, so a
 `CONCEPT_NOT_FOUND` from `find instances` can be traced to its cause: a concept resolves by name only if its owning
-language's runtime is loaded. Text output starts with a `modules\t<loaded>/<total> loaded\t<failed> failed` summary,
-then one tab-separated row per failed module — its name, `kind`, and a reason code — followed, when the reason is
-`BROKEN_DEPENDENCIES`, by indented rows naming the root-cause modules to fix. It ends with a `note` line: modules
-without a Java facet are not listed and can be inspected individually with `diagnose module`. `--all` also lists the
-modules that loaded; `--json` prints the full structured diagnosis.
+language's runtime is loaded. Text output starts with a `modules\t<loaded>/<total> loaded\t<failed> failed` summary row
+(the summary is part of the report, so it is a result row, not metadata), then one tab-separated row per failed module —
+its name, `kind`, and a reason code — followed, when the reason is `BROKEN_DEPENDENCIES`, by indented rows naming the
+root-cause modules to fix. It ends with a `#` metadata line saying what the listing left out: modules without a Java
+facet are not listed and can be inspected individually with `diagnose module`. Lines starting with `#` are metadata,
+never results, so `grep -v '^#'` leaves only rows. `--all` also lists the modules that loaded; `--json` prints the full
+structured diagnosis.
 
 ```sh
 mops --mps-home <path> diagnose module [--json] <module>
@@ -238,8 +240,28 @@ mops --mps-home <path> make project [--json]
 
 Runs the MPS make (generation and compilation) through the daemon. `make module` makes the named modules (by module name
 or serialized module reference) and their transitive dependency closure, so an un-made dependency is made too;
-`make project` makes every generatable module in the project. Both exit non-zero when the make reports errors; `--json`
-prints the make result as JSON.
+`make project` makes every generatable module in the project. Text output prints the make messages as `<kind>\t<text>`
+lines on stderr (they are diagnostics) and the one-line action report — `made <N> module(s): success`,
+`made <N> module(s): FAILED (<N> error(s))`, or `nothing to generate` — on stdout. Both exit non-zero when the make
+reports errors; `--json` prints the make result as JSON.
+
+```sh
+mops --mps-home <path> check model [--format human|jsonl] [--limit N] <model>
+mops --mps-home <path> check module [--format human|jsonl] [--limit N] <module>...
+mops --mps-home <path> check project [--format human|jsonl] [--limit N]
+```
+
+Runs MPS's full model check (typesystem, model, module, and checking rules) over one model, the named project modules,
+or every project module, through the daemon. Findings print most severe first, capped at `--limit` (default 20; `0` is
+unlimited). Text output is one tab-separated row per finding (`severity`, message, and for a node-level finding the
+node's name, concept, and reference) followed by `#` metadata lines: `# <errors>, <warnings>, <infos>` (or
+`# no findings`) and, when the cap cut the list,
+`# truncated: showing <shown> of <total> findings; pass --limit 0 for all`. Lines starting with `#` are metadata, never
+findings, so `grep -v '^#'` leaves only rows. `--format jsonl` prints one finding object per line and ends with a
+`{"type":"summary",...}` record carrying `shown`, `total`, `errors`, `warnings`, `infos`, `limit`, `truncated`, and,
+when truncated, a `hint` naming `--limit 0`; findings have no `type` field, so a reader tells the two apart. Totals
+count every finding, not only the shown ones, and all three commands exit `1` when the totals include an error, in both
+formats.
 
 ```sh
 mops --mps-home <path> check model [--format human|jsonl] [--limit N] <model>
@@ -279,11 +301,12 @@ unselected classes can also fail a run, particularly with `--no-build`. A matchi
 compile the version-specific adapter.
 
 Every run saves `report.json` under the daemon workspace's `test-runs/<run-id>/` directory and updates it as results
-arrive. Text output prints a summary and the report path; `--json` prints the report. Tests, containers, skips,
-assumption aborts, failures, and source node references are retained. No discovered tests, preparation failures, test or
-container failures, and incomplete runs exit 1. Skips and assumption aborts alone do not fail a run. Worker output is
-saved next to the report in `worker.log` (preparation) and `ant.log` (test execution); XML reports are in
-`xml-reports/`.
+arrive. Text output prints the action report on stdout: an `<outcome>: <N> passed, <N> failed, ...` summary line and a
+`Report: <path>` line. Diagnostics such as a failed discovery or a crashed test worker go to stderr, one line each.
+`--json` prints the report, with the diagnostics in its `diagnostics` field. Tests, containers, skips, assumption
+aborts, failures, and source node references are retained. No discovered tests, preparation failures, test or container
+failures, and incomplete runs exit 1. Skips and assumption aborts alone do not fail a run. Worker output is saved next
+to the report in `worker.log` (preparation) and `ant.log` (test execution); XML reports are in `xml-reports/`.
 
 Code Mode provides the same operation outside model-access blocks:
 
@@ -316,7 +339,9 @@ Inspect or stop known per-project daemon processes. Without `--all`, the command
 working directory. With `--all`, it reads every known daemon record. Status sends an authenticated ping with a
 two-second connection/read timeout and reports `running` or `unreachable`. It does not start daemons or remove
 unreachable records. A daemon can be unreachable because it is stopped, unresponsive, or unable to authenticate the
-request. Pings remain responsive during normal long operations.
+request. Pings remain responsive during normal long operations. Stop prints one action report line per record
+(`stopped ...` or `removed stale daemon record ...`). When no record matches, both commands print the metadata line
+`# no mops daemons` and exit 0: a selection with nothing to list or stop is not a failure.
 
 Stop sends a stop request to each selected daemon and waits for its process to exit, force-killing it if necessary. A
 stopped daemon's record is removed and reported as `stopped`. If the stop request gets no response, the record is
