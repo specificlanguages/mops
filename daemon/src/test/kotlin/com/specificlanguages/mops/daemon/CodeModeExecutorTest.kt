@@ -1,6 +1,6 @@
 package com.specificlanguages.mops.daemon
 
-import com.specificlanguages.mops.daemon.core.MpsAccess
+import com.specificlanguages.mops.daemon.core.MpsWrite
 import com.specificlanguages.mops.protocol.CodeRunRequest
 import com.specificlanguages.mops.protocol.MakeMessageJson
 import com.specificlanguages.mops.protocol.MakeMessageKind
@@ -18,7 +18,7 @@ import kotlin.test.assertTrue
 import org.mockito.kotlin.mock
 
 class CodeModeExecutorTest {
-    private val executor = CodeModeExecutor(mock<MpsAccess>(), mock<MPSProject>(), mock<Platform>())
+    private val executor = CodeModeExecutor(mpsAccessOver(mock<MpsWrite>()), mock<MPSProject>(), mock<Platform>())
 
     @Test
     fun `adapts strings structured values primitives and null`() {

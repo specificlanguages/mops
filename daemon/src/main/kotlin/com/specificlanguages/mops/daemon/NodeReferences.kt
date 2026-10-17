@@ -5,8 +5,16 @@ import org.jetbrains.mps.openapi.model.SNodeAccessUtil
 import org.jetbrains.mps.openapi.model.SNodeReference
 import org.jetbrains.mps.openapi.model.SReference
 
-/** Live indexed access to native references by role, including inherited links. */
-class NodeReferences(private val node: SNode) {
+/**
+ * Live indexed access to native references by role, including inherited links. Iterates all set references like
+ * native `SNode.getReferences()`, which it shadows in Groovy.
+ */
+class NodeReferences(private val node: SNode) : NodeAccessor<SReference>("references", "role", "SNodeOperations.getReferences(node)") {
+    override fun iterator(): Iterator<SReference> {
+        requireRead("SNode.references")
+        return node.references.iterator()
+    }
+
     fun getAt(role: String): SReference? {
         requireRead("SNode.references[]")
         val link = node.concept.referenceLinks.firstOrNull { it.name == role } ?: return null

@@ -3,6 +3,7 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.protocol.CodeRunRequest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class CodeModeLinksTest {
     @Test
@@ -112,6 +113,72 @@ class CodeModeLinksTest {
                 """.trimIndent(), "indexed-links.groovy"),
             )
             assertEquals("ok", response.output)
+        }
+    }
+
+    @Test
+    fun `children and references accessors iterate like the native collections`() {
+        SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
+            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
+                CodeRunRequest("", """
+                    import jetbrains.mps.lang.smodel.generator.smodelAdapter.SNodeOperations
+                    import org.jetbrains.mps.openapi.model.SReference
+                    def fails = { Class type, String fragment, Closure action ->
+                        try { action(); assert false: 'Expected ' + type.name }
+                        catch (Exception failure) {
+                            assert type.isInstance(failure): failure
+                            assert failure.message.contains(fragment): failure.message
+                        }
+                    }
+                    def root = project.read {
+                        mops.lookup.requireModel('com.specificlanguages.json.structure').rootNodes.find {
+                            it.properties['name'] == 'JsonFile'
+                        }
+                    }
+                    fails(IllegalStateException, 'SNode.children') { root.children.toList() }
+                    fails(IllegalStateException, 'SNode.references') { root.getReferences().toList() }
+                    project.read {
+                        assert root.getChildren().toList() == SNodeOperations.getChildren(root)
+                        assert root.children.collect { it.concept.name } == SNodeOperations.getChildren(root).collect { it.concept.name }
+                        assert root.children.size() == SNodeOperations.getChildren(root).size()
+                        assert root.children.size() > 1
+                        def visited = []
+                        root.children.each { visited << it }
+                        assert visited == SNodeOperations.getChildren(root)
+                        assert root.children.findAll { it.containmentLink.name == 'propertyDeclaration' }.isEmpty()
+                        assert root.getReferences().toList() == SNodeOperations.getReferences(root)
+                        def resolved = root.getReferences().findAll { it.targetSModelReference != null }
+                        assert resolved.size() == 1
+                        assert resolved.every { it instanceof SReference }
+                        assert root.references.collect { it.link.name } == ['extends']
+                        fails(IllegalArgumentException, 'SNodeOperations.getReferences(node)') { root.references.foo }
+                        fails(IllegalArgumentException, 'SNodeOperations.getReferences(node)') { root.references.foo() }
+                        fails(IllegalArgumentException, 'SNodeOperations.getReferences(node)') { root.references.foo = null }
+                        fails(IllegalArgumentException, 'getChildren(containmentLink)') { root.children.foo }
+                        fails(IllegalArgumentException, 'getChildren(containmentLink)') { root.children.foo() }
+                    }
+                    return 'ok'
+                """.trimIndent(), "iterable-links.groovy"),
+            )
+            assertEquals("ok", response.output)
+        }
+    }
+
+    @Test
+    fun `a returned children accessor renders as node references`() {
+        SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
+            val executor = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform)
+            fun run(program: String) = executor.execute(CodeRunRequest("", """
+                def root = project.read {
+                    mops.lookup.requireModel('com.specificlanguages.json.structure').rootNodes.find {
+                        it.properties['name'] == 'JsonFile'
+                    }
+                }
+                $program
+            """.trimIndent(), "returned-children.groovy")).output
+            val expected = run("project.read { jetbrains.mps.lang.smodel.generator.smodelAdapter.SNodeOperations.getChildren(root) }")
+            assertTrue(expected!!.startsWith("[\""), expected)
+            assertEquals(expected, run("project.read { root.children }"))
         }
     }
 }
