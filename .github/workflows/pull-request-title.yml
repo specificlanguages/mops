@@ -1,0 +1,32 @@
+name: Pull request title
+
+# Pull requests are squash-merged with the title as the commit message, so the title must follow Conventional Commits.
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  conventional-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Write the squash commit message
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$PR_TITLE" > "$RUNNER_TEMP/pull-request-title.txt"
+      - uses: j178/prek-action@1382ad72dea72f9d53832f2bcb65b3e87a947204 # v3.0.1
+        with:
+          prek-version: v0.5.5
+          extra-args: >-
+            conventional-pre-commit --stage commit-msg
+            --commit-msg-filename ${{ runner.temp }}/pull-request-title.txt

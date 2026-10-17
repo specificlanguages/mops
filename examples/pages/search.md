@@ -5,7 +5,9 @@ Default searches cover editable project sources. An explicit `in` scope can incl
 
 {{table:commands|Command}}
 
-`find` defaults to 100 matches; `--limit 0` removes the cap. `--refs-only` cannot be combined with `--json`. Use
+`find` defaults to 100 matches and ends its text output in a `# truncated: ...` metadata line when more exist;
+`--limit 0` removes the cap. Lines starting with `#` are metadata, not results. `--refs-only` cannot be combined with
+`--json`. Use
 `{{name-pattern-help}}` for pattern matching rules.
 
 ## Code Mode: concepts and instances
@@ -26,8 +28,9 @@ Return null when a concept name is missing:
 ```
 
 `requireConceptByName` throws on a missing concept; `conceptByName` returns null. Both reject ambiguous names and
-untrusted language runtimes. Fully qualified names include the structure model, such as
-`jetbrains.mps.baseLanguage.structure.ClassConcept`.
+untrusted language runtimes. Both accept the same spellings as `find instances`: the qualified name
+(`jetbrains.mps.baseLanguage.structure.ClassConcept`), the same name with `.structure.` dropped
+(`jetbrains.mps.baseLanguage.ClassConcept`), or a bare short name that is unique across loaded languages.
 
 Get a serialized concept ID:
 
