@@ -64,8 +64,9 @@ examples are executed directly from the skill file by daemon unit tests.
 
 For short task-oriented examples, run `mops examples` or read the
 [bundled topic index](skills/mops/references/README.md). Start with `mops examples editing` to choose an editing
-approach, then read a focused topic such as `mops examples editing.java`. `mops examples all` prints the full
-collection. Examples work offline without a daemon.
+approach, then read a focused topic such as `mops examples editing.java`. `mops examples runtime` shows how Code Mode
+loads compiled language runtime and plugin classes through a module's class loader (`mops.runtime.loadClass` and
+`requireClass`). `mops examples all` prints the full collection. Examples work offline without a daemon.
 
 ## Commands
 

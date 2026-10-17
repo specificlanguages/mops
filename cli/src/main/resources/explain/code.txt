@@ -62,6 +62,11 @@ SReference values), and node.properties (SProperty descriptors of set properties
 a message naming the native alternative. Property and link descriptors remain available through node.concept; native
 getChildren(containmentLink), getReference(referenceLink), and SNodeOperations.getReferences(node) still work.
 
+Compiled classes of a module — language runtime singletons, generated descriptors, plugin code — load through its class
+loader with mops.runtime.loadClass(module, className) (null for a missing class) or requireClass (throws), inside
+project.read or project.command. Module failures are named: unknown or ambiguous module, module without a class loader,
+or runtime not loaded (run `mops make module <module>` for an uncompiled source module). See `mops examples runtime`.
+
 The code is not sandboxed and runs with full access to the filesystem, network, process, reflection, and MPS.
 
 Groovy dependency injection (`@Grab` and related transforms) is disabled to avoid classpath issues. A fresh environment

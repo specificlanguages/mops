@@ -73,7 +73,8 @@ diagnostics and outcomes; a returned failure report does not itself make `code r
 
 Start with `mops examples` for the topic index, or read [the bundled index](references/README.md).
 `mops examples editing` helps choose creation, node editing, references/imports, Java insertion, or JSON batches. Read
-only the topic relevant to the task; `mops examples all` prints the full collection.
+only the topic relevant to the task; `mops examples all` prints the full collection. To call compiled language runtime
+or plugin code, read `mops examples runtime` or the [bundled runtime recipes](references/runtime.md).
 
 ## Examples
 

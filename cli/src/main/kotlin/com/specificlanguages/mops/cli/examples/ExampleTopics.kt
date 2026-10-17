@@ -3,7 +3,7 @@ package com.specificlanguages.mops.cli.examples
 object ExampleTopics {
     val topics = listOf(
         "setup", "navigation", "search", "editing", "editing.creation", "editing.nodes",
-        "editing.references", "editing.java", "editing.json", "validation",
+        "editing.references", "editing.java", "editing.json", "runtime", "validation",
     )
 
     fun index(): String = pageResource("README") + "\nTopics: ${topics.joinToString(", ")}\n"
