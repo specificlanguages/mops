@@ -151,16 +151,20 @@ roles rather than the language's own notation), which the command prints as-is.
 mops --mps-home <path> find instances [--exact] [--limit N] [--full-concept] [--refs-only] [--json] <concept>
 ```
 
-Searches **editable project sources** for nodes that are instances of a fully qualified MPS concept
-(`<language>.structure.<ConceptName>`), including subconcepts and MPS interface matches by default. `--exact` restricts
-results to nodes whose direct concept is the queried one. An existing concept with no matches succeeds with no rows.
+Searches **editable project sources** for nodes that are instances of an MPS concept, including subconcepts and MPS
+interface matches by default. The concept may be named three ways: its qualified name
+(`<language>.structure.<ConceptName>`), the same name with `.structure.` dropped, or a bare short name that is unique
+across loaded languages. `--exact` restricts results to nodes whose direct concept is the queried one. An existing
+concept with no matches succeeds with no rows.
 
 A concept that does not resolve fails with `CONCEPT_NOT_FOUND`, and the error explains which of the causes applies: the
 name is not well formed; the owning language is unknown to the project; the owning language is present but not loaded
 (in which case it reports that language's load diagnosis and points at `diagnose module`, since only loaded languages
 contribute concepts to name lookup); or the language is loaded but has no such concept (in which case it suggests
-similarly named concepts from that language). A dropped `.structure.` infix is forgiven: `<language>.<ConceptName>`
-resolves as if written in full when the language is loaded.
+similarly named concepts from that language). A bare short name is resolved by counting matches across loaded languages:
+one that names concepts in several languages fails with `AMBIGUOUS_TARGET` and lists the qualified candidates, and one
+offered while a project language is unbuilt fails with `LANGUAGE_NOT_LOADED` rather than guessing, since the unbuilt
+language could define it too.
 
 Text output is tab-separated rows of `root` or `node`, the node name (or `<unnamed>`), the node's actual concept, and
 its serialized node reference; a non-root node appends its immediate parent as trailing `parent`, parent name (or
@@ -314,6 +318,12 @@ two-second connection/read timeout and reports `running` or `unreachable`. It do
 unreachable records. A daemon can be unreachable because it is stopped, unresponsive, or unable to authenticate the
 request. Pings remain responsive during normal long operations.
 
+Stop sends a stop request to each selected daemon and waits for its process to exit, force-killing it if necessary. A
+stopped daemon's record is removed and reported as `stopped`. If the stop request gets no response, the record is
+removed as stale and reported as `removed stale daemon record ...; process not signalled`; the recorded process is not
+killed. If the daemon acknowledges the stop but its process survives the force-kill, the record is kept so the next
+`daemon stop` retries it, the PID is reported on stderr, and the command exits non-zero.
+
 ## Daemon State
 
 Daemons detach from the launching command's session on Unix and from its console on Windows. Their stdout and stderr are
@@ -352,14 +362,14 @@ See the [developer documentation](docs/development.md) for building, running, an
 
 Releases are published from explicit release commits on `main`:
 
-1. Change `version` in `gradle.properties` from the development snapshot to the exact release version.
-2. Replace `Unreleased` in the corresponding `CHANGELOG.md` heading with the release date and merge the release commit.
-3. Run the **Release mops** workflow from `main`, entering the version without the `v` prefix.
-4. After publication, change `gradle.properties` to the next development `-SNAPSHOT` version.
+1. Change `version` in `gradle.properties` from the development snapshot to the exact release version and merge the
+   release commit.
+2. Run the **Release mops** workflow from `main`, entering the version without the `v` prefix.
+3. After publication, change `gradle.properties` to the next development `-SNAPSHOT` version.
 
 The workflow verifies the version, runs all checks, smoke-tests the ZIP distribution, generates its SHA-256 checksum,
-and publishes both files in a GitHub Release. It creates the `v<version>` tag at the tested release commit; release tags
-must not be created manually.
+and publishes both files in a GitHub Release with notes generated from the merged pull requests. It creates the
+`v<version>` tag at the tested release commit; release tags must not be created manually.
 
 ## Code-mode runtime
 
