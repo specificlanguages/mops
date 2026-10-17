@@ -4,6 +4,7 @@ import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteExisting
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 import kotlin.test.Test
@@ -132,6 +133,107 @@ class MpsListSemanticsTest {
             assertEquals(JSON_FILE_NODE_ID, root.id)
             assertNotNull(root.children)
         }
+    }
+
+    @Test
+    fun `lists the model named like its module through a bare dot segment`() {
+        val model = SharedMpsEnvironment.sharedMpsAccess.read { list(listOf(BUILD_MODULE, "."), depth = 1) }
+
+        assertEquals(
+            MpsListEntryJson(type = "model", name = BUILD_MODULE, reference = BUILD_MODEL_REFERENCE),
+            model.copy(children = null),
+        )
+        assertNotNull(model.children?.singleOrNull { it.name == "com.specificlanguages.json" })
+    }
+
+    @Test
+    fun `resolves model segments after a module whose name is also a model name`() {
+        val extraReference = "r:22222222-3333-4444-8555-666666666666($BUILD_MODULE.extra)"
+
+        SharedMpsEnvironment.withProjectCopy(
+            prepare = { project ->
+                val model = project.resolve(BUILD_MODEL_PATH)
+                model.resolveSibling("$BUILD_MODULE.extra.mps").writeText(
+                    model.readText().replace(BUILD_MODEL_REFERENCE, extraReference),
+                )
+            },
+        ) { mpsAccess, _ ->
+            val bySuffix = mpsAccess.read { list(listOf(BUILD_MODULE, ".extra"), depth = 0) }
+            val byDot = mpsAccess.read { list(listOf(BUILD_MODULE, "."), depth = 0) }
+
+            assertEquals(MpsListEntryJson(type = "model", name = "$BUILD_MODULE.extra", reference = extraReference), bySuffix)
+            assertEquals(MpsListEntryJson(type = "model", name = BUILD_MODULE, reference = BUILD_MODEL_REFERENCE), byDot)
+        }
+    }
+
+    @Test
+    fun `reports a model segment that matches no model of the module with the module's models`() {
+        val exception = assertFailsWith<MpsRequestException> {
+            SharedMpsEnvironment.sharedMpsAccess.read { list(listOf(BUILD_MODULE, ".missing"), depth = 1) }
+        }
+
+        assertEquals(MpsErrorCode.TARGET_NOT_FOUND, exception.code)
+        assertEquals(
+            "target not found: $BUILD_MODULE .missing\n" +
+                "module $BUILD_MODULE has no model $BUILD_MODULE.missing; its models:\n" +
+                "model\t$BUILD_MODULE\t$BUILD_MODEL_REFERENCE",
+            exception.message,
+        )
+    }
+
+    @Test
+    fun `caps the module's models listed for a missing model segment`() {
+        val extraCount = 24
+
+        SharedMpsEnvironment.withProjectCopy(
+            prepare = { project ->
+                val model = project.resolve(BUILD_MODEL_PATH)
+                for (index in 1..extraCount) {
+                    val reference = "r:22222222-3333-4444-8555-%012d($BUILD_MODULE.extra$index)".format(index)
+                    model.resolveSibling("$BUILD_MODULE.extra$index.mps").writeText(
+                        model.readText().replace(BUILD_MODEL_REFERENCE, reference),
+                    )
+                }
+            },
+        ) { mpsAccess, _ ->
+            val exception = assertFailsWith<MpsRequestException> {
+                mpsAccess.read { list(listOf(BUILD_MODULE, ".missing"), depth = 1) }
+            }
+
+            val lines = exception.message.lines()
+            val rows = lines.filter { it.startsWith("model\t") }
+            assertEquals(20, rows.size)
+            assertEquals("${extraCount + 1 - 20} more models not shown (module has ${extraCount + 1})", lines.last())
+        }
+    }
+
+    @Test
+    fun `reports a missing model segment in a module without models`() {
+        SharedMpsEnvironment.withProjectCopy(
+            prepare = { project -> project.resolve(BUILD_MODEL_PATH).deleteExisting() },
+        ) { mpsAccess, _ ->
+            val exception = assertFailsWith<MpsRequestException> {
+                mpsAccess.read { list(listOf(BUILD_MODULE, "."), depth = 1) }
+            }
+
+            assertEquals(MpsErrorCode.TARGET_NOT_FOUND, exception.code)
+            assertEquals(
+                "target not found: $BUILD_MODULE .\nmodule $BUILD_MODULE has no models",
+                exception.message,
+            )
+        }
+    }
+
+    @Test
+    fun `reports a module and its same-named model as an ambiguous single segment`() {
+        val exception = assertFailsWith<MpsRequestException> {
+            SharedMpsEnvironment.sharedMpsAccess.read { list(listOf(BUILD_MODULE), depth = 1) }
+        }
+
+        assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, exception.code)
+        assertContains(exception.message, "ambiguous target $BUILD_MODULE")
+        assertContains(exception.message, BUILD_MODULE_REFERENCE)
+        assertContains(exception.message, BUILD_MODEL_REFERENCE)
     }
 
     @Test
@@ -529,6 +631,7 @@ class MpsListSemanticsTest {
 
     private companion object {
         const val LANGUAGE_MODULE_REFERENCE = "f3f42ddf-d692-4c29-90fb-7360196f01ab(com.specificlanguages.json)"
+        const val BUILD_MODULE = "com.specificlanguages.json.build"
         const val BUILD_MODULE_REFERENCE = "84f0ad52-c7ca-45dd-99c5-9605c96bf808(com.specificlanguages.json.build)"
         const val SANDBOX_MODULE_REFERENCE = "84cf8fb2-5a00-4f48-8747-6b797fc155f2(json.sandbox)"
         const val STRUCTURE_MODEL_REFERENCE = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
@@ -536,5 +639,6 @@ class MpsListSemanticsTest {
         const val JSON_FILE_NODE_ID = "2110045694544566904"
         const val JSON_FILE_NODE_REFERENCE = "$STRUCTURE_MODEL_REFERENCE/$JSON_FILE_NODE_ID"
         const val STRUCTURE_MODEL_PATH = "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps"
+        const val BUILD_MODEL_PATH = "solutions/com.specificlanguages.json.build/models/com.specificlanguages.json.build.mps"
     }
 }

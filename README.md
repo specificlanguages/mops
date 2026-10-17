@@ -115,9 +115,11 @@ mops --mps-home <path> ls   [--depth N] [--limit N] [--summary] [--role ROLE] [-
 ```
 
 Lists an MPS navigation target as a bounded tree. Space-separated target segments address a module, model, or node; omit
-them for the project root, or pass `/` for the repository root. `--depth` bounds the descendant depth from 0 to 8
-(default 1). Text output is one indented tab-separated row per entry, tagged by kind (`project`, `repository`, `module`,
-`model`, `root`, or `node`); `--json` prints the semantic tree.
+them for the project root, or pass `/` for the repository root. After a module, a `.suffix` model segment expands
+against the module name, and a bare `.` names the model whose name equals the module name; that name alone is ambiguous
+between the module and the model. `--depth` bounds the descendant depth from 0 to 8 (default 1). Text output is one
+indented tab-separated row per entry, tagged by kind (`project`, `repository`, `module`, `model`, `root`, or `node`);
+`--json` prints the semantic tree.
 
 `--limit N` caps how many children each level shows (default 50; `0` is unlimited). A level wider than the cap is
 truncated and ends in an indented `# truncated: showing <shown> of <total> children; pass --limit 0 for all` line, so
