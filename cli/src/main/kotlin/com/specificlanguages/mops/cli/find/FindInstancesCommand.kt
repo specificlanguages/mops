@@ -86,7 +86,10 @@ class FindInstancesCommand(private val environment: CommandEnvironment) : CliCom
         index = "0",
         arity = "1",
         paramLabel = "CONCEPT",
-        description = ["Fully qualified MPS concept name."],
+        description = [
+            "The MPS concept to search for: its qualified name (<language>.structure.<ConceptName>), the same name with " +
+                ".structure. dropped, or a bare short name that is unique across loaded languages.",
+        ],
     )
     lateinit var concept: String
 

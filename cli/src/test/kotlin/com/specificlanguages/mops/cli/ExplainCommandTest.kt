@@ -12,6 +12,7 @@ import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.parallel.ResourceLock
@@ -44,6 +45,8 @@ class ExplainCommandTest {
 
         assertContains(output, "SHAPE")
         assertContains(output, "DRILL DOWN")
+        assertContains(output, "--constraints")
+        assertFalse(output.contains("--no-constraints"))
     }
 
     @Test
@@ -181,7 +184,7 @@ class ExplainCommandTest {
         assertEquals(setOf("First", "Last", "Only", "Index"), positionForms)
     }
 
-    private fun targetsOf(op: EditOperation): List<EditTarget> = when (op) {
+        private fun targetsOf(op: EditOperation): List<EditTarget> = when (op) {
         is EditOperation.SetProperty -> listOf(op.target)
         is EditOperation.Delete -> listOf(op.target)
         is EditOperation.DeleteChild -> listOf(op.target)
