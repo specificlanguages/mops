@@ -1,7 +1,15 @@
 package com.specificlanguages.mops.daemon
 
 import com.intellij.ide.GeneralSettings
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.project.RootsChangeRescanningInfo
+import com.intellij.openapi.roots.ex.ProjectRootManagerEx
+import com.intellij.openapi.util.EmptyRunnable
+import com.intellij.openapi.vfs.VfsUtilCore
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.testFramework.IndexingTestUtil
+import com.intellij.util.indexing.IndexableSetContributor
 import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.launcher.MpsLaunchArgs
 import de.itemis.mps.gradle.project.loader.EnvironmentKind
@@ -34,6 +42,7 @@ object SharedMpsEnvironment {
 
     private const val FIXTURE_PROJECT_NAME = "mps-json"
     private const val SHUTDOWN_TIMEOUT_MILLIS = 10_000L
+    private const val INDEX_ROOTS_TIMEOUT_MILLIS = 60_000L
 
     private val shutdown = CountDownLatch(1)
 
@@ -121,16 +130,52 @@ object SharedMpsEnvironment {
     // Mirrors ProjectLoader.withOpenProject, which the daemon boots through: pending platform events must be
     // flushed before the project's models become visible. Find operations are index-backed, so the project must
     // additionally finish indexing before they return results; the daemon gets that time for free while it sets up
-    // its socket, but tests query immediately after opening. waitForSmartMode is not enough — the unindexed-files
-    // scan is scheduled asynchronously, so a freshly opened project can be momentarily "smart" before the scan is
-    // even queued, and an index-backed find then sees an empty index. waitUntilIndexesAreReady forces the initial
-    // scan to be submitted and blocks until it completes. It must run off any read/write action (it is here).
+    // its socket, but tests query immediately after opening.
     private fun openProject(projectPath: Path): MPSProject {
         val project = environment.openProject(projectPath.toFile()) as MPSProject
         environment.flushAllEvents()
-        IndexingTestUtil.waitUntilIndexesAreReady(project.project)
+        awaitProjectIndexed(project, projectPath)
         return project
     }
+
+    // Waiting for smart mode or for the scheduled scans alone is not enough. The unindexed-files scan is scheduled
+    // asynchronously, and it only covers what the index roots cover at the time. MPS adds a project's model files to
+    // those roots late: IndexableRootCalculator recomputes the roots on a background thread after each module is added
+    // and only then asks the platform to rescan. While that recomputation is pending, a scan that already ran or is
+    // running skipped the project's files, no further scan is queued yet, and the index is not in dumb mode, so an
+    // index-backed find in that window raises no error: MPSModelsFastFindSupport claims the project's models as
+    // searched with no matches and the find returns nothing. So: wait until the contributed roots cover the project,
+    // queue the rescan here instead of relying on the calculator's asynchronously posted one, and wait for that scan.
+    // Both waits must run off any read/write action (they do here). A project without modules contributes no roots,
+    // so there is nothing to wait for.
+    private fun awaitProjectIndexed(project: MPSProject, projectPath: Path) {
+        var hasModules = false
+        project.modelAccess.runReadAction { hasModules = project.projectModules.isNotEmpty() }
+        if (!hasModules) return
+        val ideaProject = project.project
+        val projectDirectory = VirtualFileManager.getInstance().refreshAndFindFileByNioPath(projectPath)
+            ?: error("project directory is missing from the VFS: $projectPath")
+        val deadline = System.currentTimeMillis() + INDEX_ROOTS_TIMEOUT_MILLIS
+        while (!indexableRootsCover(ideaProject, projectDirectory)) {
+            check(System.currentTimeMillis() < deadline) { "index roots never covered $projectPath" }
+            Thread.sleep(10)
+        }
+        val application = ApplicationManager.getApplication()
+        application.invokeAndWait {
+            application.runWriteAction {
+                ProjectRootManagerEx.getInstanceEx(ideaProject)
+                    .makeRootsChange(EmptyRunnable.getInstance(), RootsChangeRescanningInfo.TOTAL_RESCAN)
+            }
+        }
+        environment.flushAllEvents()
+        IndexingTestUtil.waitUntilIndexesAreReady(ideaProject)
+    }
+
+    private fun indexableRootsCover(project: com.intellij.openapi.project.Project, directory: VirtualFile): Boolean =
+        IndexableSetContributor.EP_NAME.extensionList.any { contributor ->
+            IndexableSetContributor.getProjectRootsToIndex(contributor, project)
+                .any { VfsUtilCore.isAncestor(directory, it, false) }
+        }
 
     private fun boot(): IdeaEnvironment {
         val mpsHome = requiredPathProperty("test.mpsHome")

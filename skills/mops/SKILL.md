@@ -51,6 +51,12 @@ Put lookup and model reads inside `project.read { ... }`, and mutations inside `
 these access blocks. A command saves after successful completion, but is non-transactional: an exception does not roll
 back mutations. Resolve and validate targets before changing them.
 
+The program runs on the daemon request thread, outside any model access. `project.read` and `project.command` open
+access for the calling thread only, so a worker thread started by the program may open its own `project.read`. Join
+every thread the program starts before returning: the `mops` context is cleared when the run ends, so a leaked thread
+fails on `mops.*` and on access blocks, and it outlives the request inside the daemon. `code run --timeout SECONDS` sets
+the hard deadline (default 900; 0 disables it); expiry terminates the daemon.
+
 Use `mops.lookup.requireModel`, `requireNode`, and `requireConceptByName` to fail clearly when a target is missing.
 Model names must resolve uniquely; serialized references also work for model and node lookup. Properties use
 `node.properties['name']`; children use `node.child['role']` or `node.children['role']`; references use
@@ -64,7 +70,6 @@ other JVM objects to supported data while still inside the access block.
 
 Run rendering, make, and test operations outside access blocks, as specified by `code help`. Check their returned
 diagnostics and outcomes; a returned failure report does not itself make `code run` exit nonzero.
-`code run --timeout SECONDS` sets the hard deadline (default 900; 0 disables it); expiry terminates the daemon.
 
 ## Task recipes
 
