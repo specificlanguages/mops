@@ -27,10 +27,13 @@ interface DaemonPool {
         /** A live daemon acknowledged the stop request and its process is now gone. */
         STOPPED,
 
-        /** The recorded daemon was not running; its stale record was removed. */
+        /**
+         * The stop request got no response, so the record was removed as stale. The recorded process was not signalled
+         * and may still be alive.
+         */
         ALREADY_GONE,
 
-        /** The daemon acknowledged the stop but its process could not be terminated, even by force. */
+        /** The daemon acknowledged the stop but its process could not be terminated, even by force. Its record is kept. */
         NOT_TERMINATED,
     }
 }
@@ -108,10 +111,6 @@ class DefaultDaemonPool(
         // directory lock and blocks the next start. Force-killing only ever targets a pid we just confirmed answered
         // as our daemon, so there is no risk of killing an unrelated process that reused the pid.
         if (!awaitExitOrKill(record.record)) {
-            System.err.println(
-                "mops: daemon pid=${record.record.pid} did not exit even after a force-kill; leaving its record " +
-                    "in place",
-            )
             return DaemonPool.StopOutcome.NOT_TERMINATED
         }
 
