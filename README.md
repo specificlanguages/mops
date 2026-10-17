@@ -344,14 +344,14 @@ See the [developer documentation](docs/development.md) for building, running, an
 
 Releases are published from explicit release commits on `main`:
 
-1. Change `version` in `gradle.properties` from the development snapshot to the exact release version.
-2. Replace `Unreleased` in the corresponding `CHANGELOG.md` heading with the release date and merge the release commit.
-3. Run the **Release mops** workflow from `main`, entering the version without the `v` prefix.
-4. After publication, change `gradle.properties` to the next development `-SNAPSHOT` version.
+1. Change `version` in `gradle.properties` from the development snapshot to the exact release version and merge the
+   release commit.
+2. Run the **Release mops** workflow from `main`, entering the version without the `v` prefix.
+3. After publication, change `gradle.properties` to the next development `-SNAPSHOT` version.
 
 The workflow verifies the version, runs all checks, smoke-tests the ZIP distribution, generates its SHA-256 checksum,
-and publishes both files in a GitHub Release. It creates the `v<version>` tag at the tested release commit; release tags
-must not be created manually.
+and publishes both files in a GitHub Release with notes generated from the merged pull requests. It creates the
+`v<version>` tag at the tested release commit; release tags must not be created manually.
 
 ## Code-mode runtime
 
