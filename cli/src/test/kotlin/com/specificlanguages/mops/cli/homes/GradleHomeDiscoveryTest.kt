@@ -308,7 +308,7 @@ class GradleHomeDiscoveryTest {
         assertEquals(0, exit, output)
         assertContains(output, "MPS home from mpsSettings extension")
         assertContains(output, "Java home from jbrToolchain extension (com.specificlanguages.jbr-toolchain)")
-        assertContains(output, "Inspecting Gradle build at .")
+        assertContains(output, "Inspecting Gradle build at $root (this may cause Gradle to download or extract files)")
         assertContains(output, " in .")
         assertContains(output, "MPS home: split MPS")
         assertContains(output, "Project root: .")
