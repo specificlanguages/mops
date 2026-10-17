@@ -22,6 +22,11 @@
                 code: '''mops list sample.solution .main''',
             ],
             [
+                title: 'List roots of the model named like its module',
+                kind: 'cli',
+                code: '''mops list sample.app .''',
+            ],
+            [
                 title: 'Inspect a root and its children',
                 kind: 'cli',
                 code: '''mops list sample.solution .main Example --depth 2''',

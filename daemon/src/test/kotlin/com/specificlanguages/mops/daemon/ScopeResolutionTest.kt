@@ -106,6 +106,30 @@ class ScopeResolutionTest {
     }
 
     @Test
+    fun `resolves a bare dot after a module to the model named like the module`() {
+        assertEquals(
+            ResolvedScope.Model(BUILD_MODEL_REFERENCE),
+            SharedMpsEnvironment.sharedMpsAccess.read { resolveScope(listOf(BUILD_MODULE, ".")) },
+        )
+    }
+
+    @Test
+    fun `reports a model segment that matches no model of the module with the module's models`() {
+        val exception = assertFailsWith<MpsRequestException> {
+            SharedMpsEnvironment.sharedMpsAccess.read { resolveScope(listOf(BUILD_MODULE, ".missing")) }
+        }
+
+        assertEquals(MpsErrorCode.TARGET_NOT_FOUND, exception.code)
+        assertEquals(
+            "scope not found: $BUILD_MODULE .missing\n" +
+                "module $BUILD_MODULE has no model $BUILD_MODULE.missing; its models:\n" +
+                "model\t$BUILD_MODULE\t$BUILD_MODEL_REFERENCE\n" +
+                "see: mops explain scope",
+            exception.message,
+        )
+    }
+
+    @Test
     fun `reports two same-named models as an ambiguous single segment`() {
         val duplicateReference = "r:11111111-2222-4333-8444-555555555555(com.specificlanguages.json.structure)"
 
