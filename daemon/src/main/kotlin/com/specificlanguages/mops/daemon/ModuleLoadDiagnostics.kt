@@ -246,11 +246,12 @@ class ModuleLoadDiagnostics(private val project: Project) {
     // inconsistent result into later modules.
     private fun describe(module: SModule): ModuleLoadDiagnosticJson {
         val problem = analyze(module, hashMapOf(), hashSetOf())
+        // An informational (non-blocking) problem is reported but does not make the module count as not loaded.
         return ModuleLoadDiagnosticJson(
             module = nameOf(module),
             kind = kindOf(module),
             present = true,
-            loaded = problem == null,
+            loaded = problem == null || !problem.blocking,
             problem = problem?.toJson(),
         )
     }

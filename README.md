@@ -222,7 +222,11 @@ mops --mps-home <path> diagnose module [--json] <module>
 Diagnoses one module, addressed by module name or serialized module reference, including modules not shown by
 `diagnose project` (those without a Java facet, or absent from the repository). Text output is a header row (`module`,
 `kind`, `present=<bool>`, `loaded=<bool>`) followed by the module's load-problem tree, indented by depth so a dependency
-chain reads from the module down to its root causes; `--json` prints the structured diagnosis.
+chain reads from the module down to its root causes; `--json` prints the structured diagnosis. The command exits 1 when
+the module failed to load (`loaded=false`, a blocking problem, which includes an absent module) and 0 when it is loaded,
+in text and `--json` modes alike; the output is the same either way. An informational problem, such as a missing Java
+facet on a non-language module, is still reported but does not fail the command. `diagnose project` is a listing and
+exits 0 regardless of failed modules.
 
 Both commands classify an unloaded module with a reason code: `ABSENT` (not in the repository), `NOT_A_MODULE` (resolves
 to something that does not load classes), `NO_JAVA_FACET` (no Java facet — a defect for a language, informational for

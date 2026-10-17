@@ -1,5 +1,8 @@
 package com.specificlanguages.mops.daemon
 
+import java.nio.file.Path
+import kotlin.io.path.readText
+import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -73,7 +76,25 @@ class ModuleLoadDiagnosticsSemanticsTest {
         assertEquals("ABSENT", diagnostic.problem?.reason)
     }
 
+    @Test
+    fun `diagnose module reports a non-language module without a Java facet as loaded with an informational problem`() {
+        SharedMpsEnvironment.withProjectCopy(prepare = ::removeSandboxJavaFacet) { access, _ ->
+            val diagnostic = access.read { diagnoseModule(SANDBOX_MODULE) }.module
+
+            assertTrue(diagnostic.present, "diagnosis: $diagnostic")
+            assertEquals("solution", diagnostic.kind, "diagnosis: $diagnostic")
+            assertEquals("NO_JAVA_FACET", diagnostic.problem?.reason, "diagnosis: $diagnostic")
+            assertTrue(diagnostic.loaded, "a missing Java facet on a non-language module is not a load failure: $diagnostic")
+        }
+    }
+
+    private fun removeSandboxJavaFacet(project: Path) {
+        val descriptor = project.resolve("solutions/json.sandbox/json.sandbox.msd")
+        descriptor.writeText(descriptor.readText().replace(Regex("(?s)\\s*<facets>.*?</facets>"), ""))
+    }
+
     private companion object {
+        const val SANDBOX_MODULE = "json.sandbox"
         const val STRUCTURE_LANGUAGE = "jetbrains.mps.lang.structure"
         const val JSON_LANGUAGE = "com.specificlanguages.json"
     }
