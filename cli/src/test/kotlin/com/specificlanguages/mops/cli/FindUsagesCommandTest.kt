@@ -218,7 +218,7 @@ class FindUsagesCommandTest {
     }
 
     @Test
-    fun `find usages appends a truncation row when more results exist`() {
+    fun `find usages appends a metadata line naming --limit when more results exist`() {
         val client = mock<DaemonClient>()
         val nodeReference =
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
@@ -238,7 +238,7 @@ class FindUsagesCommandTest {
             "usage\tconcept\tJsonObject\tConceptDeclaration\t" +
                 "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
                 System.lineSeparator() +
-                "truncated\t1\tmore results not shown" + System.lineSeparator(),
+                "# truncated: showing 1; pass --limit 0 for all" + System.lineSeparator(),
             stdout,
         )
     }
