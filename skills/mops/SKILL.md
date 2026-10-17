@@ -39,8 +39,7 @@ Pitfalls when navigating and searching:
 - `list` shows at most 50 children per level and ends a cut level with a `# truncated: ...` line. Pass `--limit 0` when
   listing project modules or any node whose children may exceed that.
 - A `.suffix` segment is only the part after the module name: `.main` after `sample.solution` means the model
-  `sample.solution.main`. A model named exactly like its module has no suffix form; give its full name as the second
-  segment, or use its reference.
+  `sample.solution.main`. A bare `.` names the model named exactly like its module: `sample.app .`.
 - `render node` shows the default editor's presentation, which can leave information out. Use `list --depth N` or
   `get node` for the subtree, and `get node --ancestry` for the containment chain up to the root, then render the nodes
   of interest.
