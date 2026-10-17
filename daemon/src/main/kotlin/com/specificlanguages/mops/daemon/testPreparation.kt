@@ -72,7 +72,7 @@ fun main(args: Array<String>) {
                 val build = ProjectMake(project).makeModules(names)
                 report.update { it.copy(build = build) }
                 if (build.outcome == MakeOutcome.FAILED) {
-                    report.finish("BUILD_FAILED", true, "Build failed for selection ${request.target.ifEmpty { listOf("project") }}")
+                    report.finish("BUILD_FAILED", true, "Build failed for selection: ${access.read { AntTestSelection.describe(selection) }}")
                     return@executeWithProject
                 }
                 access.extra { saveProject() }

@@ -55,6 +55,12 @@ public final class SelectionSupport {
 
   public boolean accept(Class<?> type) { return !filter || selected.contains(type); }
 
+  /** Reports a selection that matched no test classes as a finished run of zero discovered tests. */
+  public void nothingDiscovered() {
+    publish("discovered", "0");
+    publish("finished", "true");
+  }
+
   private String source(String klass, String method) {
     TestDescriptor descriptor = sources.get(klass);
     if (descriptor == null) return null;
@@ -82,6 +88,10 @@ public final class SelectionSupport {
     publish(event);
   }
 
+  private static void publish(String key, String value) {
+    Properties event = new Properties(); event.setProperty(key, value); publish(event);
+  }
+
   private static synchronized void publish(Properties event) {
     try {
       Path directory = Paths.get(System.getProperty("mops.test.events"));
@@ -95,14 +105,12 @@ public final class SelectionSupport {
     return new TestExecutionListener() {
       @Override public void testPlanExecutionStarted(TestPlan plan) {
         long count = plan.countTestIdentifiers(id -> id.isTest() || id.getSource().orElse(null) instanceof MethodSource);
-        Properties event = new Properties();
-        event.setProperty("discovered", Long.toString(count));
-        publish(event);
+        publish("discovered", Long.toString(count));
         stock.testPlanExecutionStarted(plan);
       }
       @Override public void testPlanExecutionFinished(TestPlan plan) {
         stock.testPlanExecutionFinished(plan);
-        Properties event = new Properties(); event.setProperty("finished", "true"); publish(event);
+        publish("finished", "true");
       }
       @Override public void dynamicTestRegistered(TestIdentifier id) { stock.dynamicTestRegistered(id); }
       @Override public void executionStarted(TestIdentifier id) { event(id, "RUNNING", null); stock.executionStarted(id); }
