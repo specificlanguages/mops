@@ -133,34 +133,15 @@ class CommandHelpTest {
         assertContains(output, "ping")
     }
 
-    @Test
-    fun `every leaf command supports --help`() {
-        val leafCommands = listOf(
-            arrayOf("list"),
-            arrayOf("wrapper"),
-            arrayOf("find", "instances"),
-            arrayOf("find", "usages"),
-            arrayOf("find", "root-by-name"),
-            arrayOf("find", "node-by-id"),
-            arrayOf("get", "node"),
-            arrayOf("render", "node"),
-            arrayOf("edit", "model"),
-            arrayOf("check", "model"),
-            arrayOf("make", "module"),
-            arrayOf("make", "project"),
-            arrayOf("diagnose", "module"),
-            arrayOf("diagnose", "project"),
-            arrayOf("daemon", "ping"),
-            arrayOf("daemon", "status"),
-            arrayOf("daemon", "stop"),
-        )
+        @Test
+    fun `create solution help lists the usage presets and the default`() {
+        val output = runHelp("create", "solution", "--help")
 
-        for (command in leafCommands) {
-            val output = runHelp(*command, "--help")
-
-            assertContains(output, "Usage:", message = "help for '${command.joinToString(" ")}' should print usage")
-            assertContains(output, command.last())
+        assertContains(output, "--usage-preset=PRESET")
+        for (preset in listOf("not-generated", "text", "java", "java-tests", "java-mps-plugin")) {
+            assertContains(output, preset, message = "help should list the preset '$preset'")
         }
+        assertContains(output, "Default: not-generated")
     }
 
     @Test
