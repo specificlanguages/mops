@@ -14,6 +14,16 @@ The repository is a Gradle-rooted Kotlin prototype with two application subproje
 command requires an MPS project root containing `.mps/`. `--java-home` can be omitted when the MPS distribution bundles
 Java.
 
+## Commits and pull requests
+
+Commit messages and pull request titles follow [Conventional Commits](https://www.conventionalcommits.org/).
+`prek install` installs a `commit-msg` hook that checks each local commit and lists the allowed types when it rejects a
+message.
+
+Pull requests are squash-merged. The pull request title and description become the commit message on `main`, so the
+**Pull request message** workflow checks them with the same hook. GitHub release notes list the merged pull requests by
+title.
+
 ## Integration tests
 
 `./gradlew :cli:integrationTest` runs the full CLI integration suite against every version listed in
