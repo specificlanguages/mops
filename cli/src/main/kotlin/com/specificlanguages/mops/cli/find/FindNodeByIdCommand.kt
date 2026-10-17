@@ -5,6 +5,7 @@ import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
 import com.specificlanguages.mops.cli.output.renderJson
 import com.specificlanguages.mops.cli.output.renderNodeReference
+import com.specificlanguages.mops.cli.output.truncationLine
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
@@ -84,9 +85,7 @@ class FindNodeByIdCommand(private val environment: CommandEnvironment) : CliComm
             }
             else -> {
                 response.nodes.forEach { println(renderText(it, fullConcept, environment.nodeReferenceFormat)) }
-                if (response.truncated) {
-                    println(listOf("truncated", response.nodes.size, "more results not shown").joinToString("\t"))
-                }
+                if (response.truncated) println(truncationLine(shown = response.nodes.size))
             }
         }
     }

@@ -6,6 +6,7 @@ import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
 import com.specificlanguages.mops.cli.output.renderJson
 import com.specificlanguages.mops.cli.output.renderNodeReference
 import com.specificlanguages.mops.cli.output.NodeReferenceFormat
+import com.specificlanguages.mops.cli.output.truncationLine
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.DaemonResponse
 import com.specificlanguages.mops.protocol.NodeFilter
@@ -86,7 +87,10 @@ class FindInstancesCommand(private val environment: CommandEnvironment) : CliCom
         index = "0",
         arity = "1",
         paramLabel = "CONCEPT",
-        description = ["Fully qualified MPS concept name."],
+        description = [
+            "The MPS concept to search for: its qualified name (<language>.structure.<ConceptName>), the same name with " +
+                ".structure. dropped, or a bare short name that is unique across loaded languages.",
+        ],
     )
     lateinit var concept: String
 
@@ -123,9 +127,7 @@ class FindInstancesCommand(private val environment: CommandEnvironment) : CliCom
             }
             else -> {
                 response.nodes.forEach { println(renderText(it, fullConcept, environment.nodeReferenceFormat)) }
-                if (response.truncated) {
-                    println(listOf("truncated", response.nodes.size, "more results not shown").joinToString("\t"))
-                }
+                if (response.truncated) println(truncationLine(shown = response.nodes.size))
             }
         }
     }
