@@ -20,9 +20,8 @@ Commit messages and pull request titles follow [Conventional Commits](https://ww
 `prek install` installs a `commit-msg` hook that checks each local commit and lists the allowed types when it rejects a
 message.
 
-Pull requests are squash-merged. The pull request title and description become the commit message on `main`, so the
-**Pull request message** workflow checks them with the same hook. GitHub release notes list the merged pull requests by
-title.
+Pull requests are squash-merged. The pull request title becomes the commit message on `main`, so the **Pull request
+title** workflow checks it with the same hook. GitHub release notes list the merged pull requests by title.
 
 ## Integration tests
 
