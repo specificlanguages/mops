@@ -6,9 +6,7 @@ import com.specificlanguages.mops.protocol.ModuleLoadProblemJson
 import com.specificlanguages.mops.protocol.ModuleLoadSummary
 import com.specificlanguages.mops.protocol.ModulesDiagnosticsResponse
 import jetbrains.mps.project.AbstractModule
-import jetbrains.mps.project.DevKit
 import jetbrains.mps.project.Project
-import jetbrains.mps.project.Solution
 import jetbrains.mps.generator.ModelGenerationStatusManager
 import jetbrains.mps.extapi.model.GeneratableSModel
 import jetbrains.mps.persistence.ModelDigestHelper
@@ -16,7 +14,6 @@ import jetbrains.mps.generator.impl.dependencies.GenerationDependenciesCache
 import org.jetbrains.mps.openapi.model.EditableSModel
 import org.jetbrains.mps.openapi.model.SModel
 import jetbrains.mps.project.facets.JavaModuleFacet
-import jetbrains.mps.smodel.Generator
 import jetbrains.mps.smodel.Language
 import jetbrains.mps.smodel.adapter.structure.MetaAdapterFactory
 import jetbrains.mps.smodel.language.LanguageRegistry
@@ -244,13 +241,14 @@ class ModuleLoadDiagnostics(private val project: Project) {
     // Each module is analysed with its own memo: loaded dependencies short-circuit before recursion, so sharing a memo
     // across the scan buys little, and a memo left in a tentative state by a dependency cycle would otherwise leak an
     // inconsistent result into later modules.
-    private fun describe(module: SModule): ModuleLoadDiagnosticJson {
+    fun describe(module: SModule): ModuleLoadDiagnosticJson {
         val problem = analyze(module, hashMapOf(), hashSetOf())
+        // An informational (non-blocking) problem is reported but does not make the module count as not loaded.
         return ModuleLoadDiagnosticJson(
             module = nameOf(module),
-            kind = kindOf(module),
+            kind = module.moduleKind(),
             present = true,
-            loaded = problem == null,
+            loaded = problem == null || !problem.blocking,
             problem = problem?.toJson(),
         )
     }
@@ -373,14 +371,6 @@ class ModuleLoadDiagnostics(private val project: Project) {
     private fun resolveModule(reference: String): SModule? {
         runCatching { persistence.createModuleReference(reference).resolve(repository) }.getOrNull()?.let { return it }
         return repository.modules.firstOrNull { it.moduleName == reference }
-    }
-
-    private fun kindOf(module: SModule): String = when (module) {
-        is Language -> "language"
-        is Generator -> "generator"
-        is DevKit -> "devkit"
-        is Solution -> "solution"
-        else -> "other"
     }
 
     private fun absentDiagnostic(name: String, kind: String): ModuleLoadDiagnosticJson =

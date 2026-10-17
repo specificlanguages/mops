@@ -752,6 +752,33 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `the check summary record is typed and names the lifting option only when truncated`() {
+        val truncated = ModelCheckSummaryJson(
+            shown = 1,
+            total = 10,
+            errors = 3,
+            warnings = 2,
+            infos = 5,
+            limit = 1,
+            truncated = true,
+            hint = "pass --limit 0 for all",
+        )
+        val encoded = ProtocolJson.encodeCheckSummary(truncated)
+
+        assertEquals(
+            """{"type":"summary","shown":1,"total":10,"errors":3,"warnings":2,"infos":5,"limit":1,"truncated":true,"hint":"pass --limit 0 for all"}""",
+            encoded,
+        )
+        assertEquals(truncated, ProtocolJson.decodeCheckSummary(encoded))
+
+        val complete = truncated.copy(shown = 10, limit = 0, truncated = false, hint = null)
+        assertEquals(
+            """{"type":"summary","shown":10,"total":10,"errors":3,"warnings":2,"infos":5,"limit":0,"truncated":false}""",
+            ProtocolJson.encodeCheckSummary(complete),
+        )
+    }
+
+    @Test
     fun `list request JSON carries the limit summary and role shaping fields`() {
         val serialized = ProtocolJson.encodeRequest(
             MpsListRequest(token = "secret", target = listOf("JsonFile"), depth = 1, limit = 10, summary = true, role = "member"),

@@ -107,4 +107,42 @@ class CodeModePropertiesTest {
             assertEquals("ok", response.output)
         }
     }
+
+    @Test
+    fun `properties accessor iterates set property descriptors like the native collection`() {
+        SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
+            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
+                CodeRunRequest("", """
+                    import org.jetbrains.mps.openapi.language.SProperty
+                    def fails = { Class type, String fragment, Closure action ->
+                        try { action(); assert false: 'Expected ' + type.name }
+                        catch (Exception failure) {
+                            assert type.isInstance(failure): failure
+                            assert failure.message.contains(fragment): failure.message
+                        }
+                    }
+                    def node = project.read {
+                        mops.lookup.requireModel('com.specificlanguages.json.structure').rootNodes.find {
+                            it.properties['name'] == 'JsonFile'
+                        }
+                    }
+                    fails(IllegalStateException, 'SNode.properties') { node.properties.size() }
+                    project.read {
+                        def declared = node.concept.properties.collect { it.name }
+                        assert node.properties.size() > 0
+                        assert node.properties.size() <= declared.size()
+                        assert node.properties.every { it instanceof SProperty }
+                        assert node.getProperties().collect { it.name }.containsAll(['name', 'conceptId'])
+                        assert node.properties.collect { node.properties[it.name] }.every { it != null }
+                        assert declared.containsAll(node.properties.collect { it.name })
+                        fails(IllegalArgumentException, 'node.concept.properties') { node.properties.name }
+                        fails(IllegalArgumentException, 'node.concept.properties') { node.properties.name() }
+                        fails(IllegalArgumentException, 'node.concept.properties') { node.properties.name = 'x' }
+                    }
+                    return 'ok'
+                """.trimIndent(), "iterable-properties.groovy"),
+            )
+            assertEquals("ok", response.output)
+        }
+    }
 }

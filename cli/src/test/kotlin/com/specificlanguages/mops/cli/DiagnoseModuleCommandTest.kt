@@ -8,6 +8,7 @@ import com.specificlanguages.mops.protocol.ModuleLoadDiagnosticJson
 import com.specificlanguages.mops.protocol.ModuleLoadProblemJson
 import com.specificlanguages.mops.protocol.ProtocolJson
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.parallel.ResourceLock
 import org.mockito.kotlin.mock
@@ -51,7 +52,7 @@ class DiagnoseModuleCommandTest {
         )
 
         val stdout = tapSystemOut {
-            assertEquals(0, run(client, MODULE))
+            assertEquals(1, run(client, MODULE))
         }
 
         assertEquals(
@@ -78,13 +79,71 @@ class DiagnoseModuleCommandTest {
             ),
         )
 
-        val stdout = tapSystemOut { assertEquals(0, run(client, "no.such.module")) }
+        val stdout = tapSystemOut { assertEquals(1, run(client, "no.such.module")) }
 
         assertEquals(
             "no.such.module\tunknown\tpresent=false\tloaded=false" + nl +
                 "\tno.such.module\tABSENT\tnot present in the repository" + nl,
             stdout,
         )
+    }
+
+    @Test
+    fun `diagnose module exits 0 and prints the header for a loaded module`() {
+        val client = mock<DaemonClient>()
+        whenever(client.diagnoseModule(MODULE)).thenReturn(
+            ModuleDiagnosticResponse(
+                module = ModuleLoadDiagnosticJson(module = MODULE, kind = "language", present = true, loaded = true),
+            ),
+        )
+
+        val stdout = tapSystemOut { assertEquals(0, run(client, MODULE)) }
+
+        assertEquals("org.iets3.core.expr.base\tlanguage\tpresent=true\tloaded=true" + nl, stdout)
+    }
+
+    @Test
+    fun `diagnose module exits 0 for a loaded module with a non-blocking problem`() {
+        val client = mock<DaemonClient>()
+        whenever(client.diagnoseModule("my.solution")).thenReturn(
+            ModuleDiagnosticResponse(
+                module = ModuleLoadDiagnosticJson(
+                    module = "my.solution",
+                    kind = "solution",
+                    present = true,
+                    loaded = true,
+                    problem = ModuleLoadProblemJson(
+                        module = "my.solution",
+                        reason = "NO_JAVA_FACET",
+                        detail = "the module has no Java module facet, so it loads no Java classes",
+                    ),
+                ),
+            ),
+        )
+
+        val stdout = tapSystemOut { assertEquals(0, run(client, "my.solution")) }
+
+        assertContains(stdout, "my.solution\tsolution\tpresent=true\tloaded=true")
+        assertContains(stdout, "NO_JAVA_FACET")
+    }
+
+    @Test
+    fun `diagnose module exits 1 and still prints json for an unloaded module`() {
+        val client = mock<DaemonClient>()
+        val response = ModuleDiagnosticResponse(
+            module = ModuleLoadDiagnosticJson(
+                module = MODULE,
+                kind = "language",
+                present = true,
+                loaded = false,
+                problem = ModuleLoadProblemJson(module = MODULE, reason = "NOT_BUILT", detail = "not built"),
+            ),
+        )
+        whenever(client.diagnoseModule(MODULE)).thenReturn(response)
+
+        val stdout = tapSystemOut { assertEquals(1, run(client, "--json", MODULE)) }
+
+        assertEquals(response, ProtocolJson.decodeResponse(stdout))
     }
 
     @Test

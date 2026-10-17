@@ -8,6 +8,7 @@ import com.specificlanguages.mops.protocol.FindingSeverity
 import com.specificlanguages.mops.protocol.ModelCheckFindingCounts
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
 import com.specificlanguages.mops.protocol.ModelCheckResponse
+import com.specificlanguages.mops.protocol.ModelCheckSummaryJson
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import com.specificlanguages.mops.protocol.ProtocolJson
 import kotlin.test.Test
@@ -54,7 +55,7 @@ class ModelCheckCommandTest {
                 .execute(MODEL)
         }
 
-        assertEquals(0, exitCode)
+        assertEquals(1, exitCode, "an error finding fails the check")
         verify(client).checkModel(MODEL, 20)
         assertContains(stdout, "error\tUnresolved reference\tb\tjetbrains.mps.baseLanguage.structure.VariableReference\t$MODEL/ref")
         assertContains(stdout, "warning\tmodel-level note")
@@ -63,7 +64,7 @@ class ModelCheckCommandTest {
     }
 
     @Test
-    fun `model check ends human output with a severity summary line`() {
+    fun `model check ends human output with a severity summary metadata line`() {
         val client = mock<DaemonClient>()
         whenever(client.checkModel(MODEL, 20)).thenReturn(
             ModelCheckResponse(
@@ -80,11 +81,11 @@ class ModelCheckCommandTest {
                 .execute(MODEL)
         }
 
-        assertEquals("1 error, 1 warning, 0 infos", stdout.trim().lines().last())
+        assertEquals("# 1 error, 1 warning, 0 infos", stdout.trim().lines().last())
     }
 
     @Test
-    fun `a model with findings but no errors reads zero errors in the summary`() {
+    fun `a model with findings but no errors reads zero errors in the summary and passes`() {
         val client = mock<DaemonClient>()
         whenever(client.checkModel(MODEL, 20)).thenReturn(
             ModelCheckResponse(
@@ -95,13 +96,16 @@ class ModelCheckCommandTest {
             ),
         )
 
+        var exitCode = Int.MIN_VALUE
+
         val stdout = tapSystemOut {
-            CommandLine(ModelCheckCommand(client))
+            exitCode = CommandLine(ModelCheckCommand(client))
                 .setExecutionExceptionHandler(PrintErrorAndExit)
                 .execute(MODEL)
         }
 
-        assertEquals("0 errors, 3 warnings, 12 infos", stdout.trim().lines().last())
+        assertEquals(0, exitCode, "warnings and infos alone do not fail the check")
+        assertEquals("# 0 errors, 3 warnings, 12 infos", stdout.trim().lines().last())
     }
 
     @Test
@@ -122,11 +126,11 @@ class ModelCheckCommandTest {
                 .execute(MODEL)
         }
 
-        assertEquals("no findings", stdout.trim())
+        assertEquals("# no findings", stdout.trim())
     }
 
     @Test
-    fun `model check prints one finding object per line as jsonl`() {
+    fun `jsonl output is one finding per line followed by a summary record`() {
         val client = mock<DaemonClient>()
         whenever(client.checkModel(MODEL, 20)).thenReturn(
             ModelCheckResponse(
@@ -144,18 +148,66 @@ class ModelCheckCommandTest {
                 .execute("--format", "JsOnL", MODEL)
         }
 
-        assertEquals(0, exitCode)
+        assertEquals(1, exitCode)
         val lines = stdout.trim().lines()
-        assertEquals(2, lines.size, "each finding prints on its own line: $stdout")
+        assertEquals(3, lines.size, "each finding prints on its own line, then the summary: $stdout")
         assertEquals(ERROR_FINDING, ProtocolJson.decodeFinding(lines[0]))
         assertEquals(WARNING_FINDING, ProtocolJson.decodeFinding(lines[1]))
-        // The payload is only the findings, not the daemon response wrapper.
+        assertEquals(
+            ModelCheckSummaryJson(
+                shown = 2,
+                total = 2,
+                errors = 1,
+                warnings = 1,
+                infos = 0,
+                limit = 20,
+                truncated = false,
+            ),
+            ProtocolJson.decodeCheckSummary(lines[2]),
+        )
+        // The payload is the findings and the summary, not the daemon response wrapper.
         assertFalse(stdout.contains("\"findings\""), "jsonl must print bare findings, not wrapped responses: $stdout")
-        assertFalse(stdout.contains("\"truncated\""), "jsonl must not leak wrapper fields: $stdout")
     }
 
     @Test
-    fun `the summary folds in how many findings were shown when truncated`() {
+    fun `a truncated jsonl summary names the option that lifts the limit`() {
+        val client = mock<DaemonClient>()
+        whenever(client.checkModel(MODEL, 1)).thenReturn(
+            ModelCheckResponse(
+                limit = 1,
+                truncated = true,
+                totals = ModelCheckFindingCounts(errors = 0, warnings = 2, infos = 5),
+                findings = listOf(WARNING_FINDING),
+            ),
+        )
+        var exitCode = Int.MIN_VALUE
+
+        val stdout = tapSystemOut {
+            exitCode = CommandLine(ModelCheckCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("--format", "jsonl", "--limit", "1", MODEL)
+        }
+
+        assertEquals(0, exitCode)
+        val lines = stdout.trim().lines()
+        assertEquals(2, lines.size, stdout)
+        assertEquals(
+            ModelCheckSummaryJson(
+                shown = 1,
+                total = 7,
+                errors = 0,
+                warnings = 2,
+                infos = 5,
+                limit = 1,
+                truncated = true,
+                hint = "pass --limit 0 for all",
+            ),
+            ProtocolJson.decodeCheckSummary(lines[1]),
+        )
+    }
+
+    @Test
+    fun `a truncated human summary is followed by a truncation metadata line`() {
         val client = mock<DaemonClient>()
         whenever(client.checkModel(MODEL, 1)).thenReturn(
             ModelCheckResponse(
@@ -173,10 +225,17 @@ class ModelCheckCommandTest {
                 .execute("--limit", "1", MODEL)
         }
 
-        assertEquals(0, exitCode)
+        // Totals and the exit decision are over the full set, not the shown slice.
+        assertEquals(1, exitCode)
         verify(client).checkModel(MODEL, 1)
-        // Total counts are over the full set; the shown count folds into the same line.
-        assertEquals("3 errors, 2 warnings, 5 infos (showing 1)", stdout.trim().lines().last())
+        assertEquals(
+            listOf(
+                "error\tUnresolved reference\tb\tjetbrains.mps.baseLanguage.structure.VariableReference\t$MODEL/ref",
+                "# 3 errors, 2 warnings, 5 infos",
+                "# truncated: showing 1 of 10 findings; pass --limit 0 for all",
+            ),
+            stdout.trim().lines(),
+        )
     }
 
     @Test

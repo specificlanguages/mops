@@ -16,8 +16,10 @@ serialized references.
 {{table:nodes|Groovy program}}
 
 `child[role]` rejects multiple children; use `children[role]` for lists. Newly attached children must be detached.
-Indexed accessors shadow native Groovy getter properties. Use concept descriptors and native methods when necessary;
-consult `{{node-api}}` for signatures. Code Mode child assignments do not check containment constraints.
+The indexed accessors shadow the native no-argument getters: `getChildren()`, `getReferences()`, and `getProperties()`
+return the accessors as well. Each accessor iterates like the native collection, so Groovy's `collect`, `findAll`,
+`each`, and `size()` work on it. Use concept descriptors and native methods when necessary; consult
+`{{node-api}}` for signatures. Code Mode child assignments do not check containment constraints.
 
 For streaming searches with custom result data:
 

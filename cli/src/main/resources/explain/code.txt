@@ -55,8 +55,17 @@ SNodeAccessUtil.setReferenceTarget, which invokes MPS reference setter hooks. An
 clearing the existing reference; only explicit null requests clearing. Assigning an SReference uses its resolved
 target, not its dynamic resolution information.
 
-These Groovy accessors shadow native getProperties(), getChildren(), and getReferences(). Property and link descriptors
-remain available through node.concept; native getChildren(containmentLink) and getReference(referenceLink) still work.
+These Groovy accessors shadow native getProperties(), getChildren(), and getReferences(): explicit calls of those
+no-argument getters return the accessors as well. Each accessor iterates like the native collection it shadows, so
+Groovy's collect, findAll, each, and size() work on node.children (all children across roles), node.references (set
+SReference values), and node.properties (SProperty descriptors of set properties). Accessing any other member fails with
+a message naming the native alternative. Property and link descriptors remain available through node.concept; native
+getChildren(containmentLink), getReference(referenceLink), and SNodeOperations.getReferences(node) still work.
+
+Compiled classes of a module — language runtime singletons, generated descriptors, plugin code — load through its class
+loader with mops.runtime.loadClass(module, className) (null for a missing class) or requireClass (throws), inside
+project.read or project.command. Module failures are named: unknown or ambiguous module, module without a class loader,
+or runtime not loaded (run `mops make module <module>` for an uncompiled source module). See `mops examples runtime`.
 
 The code is not sandboxed and runs with full access to the filesystem, network, process, reflection, and MPS.
 

@@ -1,10 +1,19 @@
 package com.specificlanguages.mops.daemon
 
+import org.jetbrains.mps.openapi.language.SProperty
 import org.jetbrains.mps.openapi.model.SNode
 import org.jetbrains.mps.openapi.model.SNodeAccessUtil
 
-/** Live access to native property values by name, including inherited properties. */
-class NodeProperties(private val node: SNode) {
+/**
+ * Live access to native property values by name, including inherited properties. Iterates the descriptors of set
+ * properties like native `SNode.getProperties()`, which it shadows in Groovy.
+ */
+class NodeProperties(private val node: SNode) : NodeAccessor<SProperty>("properties", "name", "node.concept.properties") {
+    override fun iterator(): Iterator<SProperty> {
+        requireRead("SNode.properties")
+        return node.properties.iterator()
+    }
+
     @Suppress("DEPRECATION")
     fun getAt(name: String): String? {
         requireRead("SNode.properties[]")

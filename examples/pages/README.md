@@ -4,8 +4,9 @@ Examples use `mops`; substitute the project’s generated `mopsw` when available
 reference placeholders with actual project targets. Copy serialized references whole and quote shell metacharacters.
 
 Start with `{{setup}}`, then `{{navigation}}` and `{{search}}` to find targets. For
-changes, read `{{editing}}`; for verification, read `{{validation}}`. `{{all-topics}}` prints
-every topic. These commands work without MPS, Java runtime discovery, or a daemon.
+changes, read `{{editing}}`; for verification, read `{{validation}}`. For compiled runtime
+and plugin classes, read `{{runtime}}`. `{{all-topics}}` prints every topic. These commands
+work without MPS, Java runtime discovery, or a daemon.
 
 - [Setup and API discovery](setup.md)
 - [Navigation](navigation.md)
@@ -16,4 +17,5 @@ every topic. These commands work without MPS, Java runtime discovery, or a daemo
 - [References and imports](editing.references.md)
 - [Java insertion](editing.java.md)
 - [JSON edit batches](editing.json.md)
+- [Load runtime and plugin classes](runtime.md)
 - [Builds, checks, tests, and daemon recovery](validation.md)

@@ -35,6 +35,13 @@ class CodeMemberInspectorTest {
     }
 
     @Test
+    fun `accessor members hide Groovy dispatch hooks and show iteration`() {
+        val result = CodeMemberInspector.inspect(NodeReferences::class.java)
+        assertTrue(result.methods.none { it.name == "propertyMissing" || it.name == "methodMissing" })
+        assertTrue(result.methods.any { it.name == "iterator" })
+    }
+
+    @Test
     fun `native node accessors remain available for extension shadowing`() {
         val result = CodeMemberInspector.inspect(org.jetbrains.mps.openapi.model.SNode::class.java)
         for (name in listOf("children", "properties", "references")) {
