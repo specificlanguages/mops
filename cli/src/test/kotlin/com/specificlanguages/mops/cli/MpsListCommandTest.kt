@@ -225,7 +225,7 @@ class MpsListCommandTest {
     }
 
     @Test
-    fun `list appends a truncation footer carrying shown and total counts`() {
+    fun `list appends an indented metadata line with shown and total counts naming --limit`() {
         val client = mock<DaemonClient>()
         whenever(client.list(isNull(), eq(1), eq(2), eq(false), isNull())).thenReturn(
             MpsListResponse(
@@ -250,7 +250,13 @@ class MpsListCommandTest {
         }
 
         assertEquals(0, exitCode)
-        assertContains(stdout, "  truncated\t2\t5")
+        assertEquals(
+            "model\tm\tr:model" + System.lineSeparator() +
+                "  root\tA\tc\tr:model/1" + System.lineSeparator() +
+                "  root\tB\tc\tr:model/2" + System.lineSeparator() +
+                "  # truncated: showing 2 of 5 children; pass --limit 0 for all" + System.lineSeparator(),
+            stdout,
+        )
     }
 
     @Test

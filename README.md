@@ -136,10 +136,11 @@ them for the project root, or pass `/` for the repository root. `--depth` bounds
 `model`, `root`, or `node`); `--json` prints the semantic tree.
 
 `--limit N` caps how many children each level shows (default 50; `0` is unlimited). A level wider than the cap is
-truncated and gains a final `truncated <shown> <total>` row so the omission is explicit. `--summary` replaces the
-target's children with grouped counts — per **role** (with the dominant concepts) for a node, per concept for a model's
-roots, per model for a module, per kind for the project or repository — and cannot be combined with `--depth`.
-`--role ROLE` lists only the target node's children in one containment role and is valid only for a node target.
+truncated and ends in an indented `# truncated: showing <shown> of <total> children; pass --limit 0 for all` line, so
+the omission is explicit and the line is told apart from a row by its `#`. `--summary` replaces the target's children
+with grouped counts — per **role** (with the dominant concepts) for a node, per concept for a model's roots, per model
+for a module, per kind for the project or repository — and cannot be combined with `--depth`. `--role ROLE` lists only
+the target node's children in one containment role and is valid only for a node target.
 
 Text output shows short concept names; `--full-concept` restores the fully qualified names. JSON output keeps qualified
 concept names regardless.
@@ -166,16 +167,20 @@ roles rather than the language's own notation), which the command prints as-is.
 mops --mps-home <path> find instances [--exact] [--limit N] [--full-concept] [--refs-only] [--json] <concept>
 ```
 
-Searches **editable project sources** for nodes that are instances of a fully qualified MPS concept
-(`<language>.structure.<ConceptName>`), including subconcepts and MPS interface matches by default. `--exact` restricts
-results to nodes whose direct concept is the queried one. An existing concept with no matches succeeds with no rows.
+Searches **editable project sources** for nodes that are instances of an MPS concept, including subconcepts and MPS
+interface matches by default. The concept may be named three ways: its qualified name
+(`<language>.structure.<ConceptName>`), the same name with `.structure.` dropped, or a bare short name that is unique
+across loaded languages. `--exact` restricts results to nodes whose direct concept is the queried one. An existing
+concept with no matches succeeds with no rows.
 
 A concept that does not resolve fails with `CONCEPT_NOT_FOUND`, and the error explains which of the causes applies: the
 name is not well formed; the owning language is unknown to the project; the owning language is present but not loaded
 (in which case it reports that language's load diagnosis and points at `diagnose module`, since only loaded languages
 contribute concepts to name lookup); or the language is loaded but has no such concept (in which case it suggests
-similarly named concepts from that language). A dropped `.structure.` infix is forgiven: `<language>.<ConceptName>`
-resolves as if written in full when the language is loaded.
+similarly named concepts from that language). A bare short name is resolved by counting matches across loaded languages:
+one that names concepts in several languages fails with `AMBIGUOUS_TARGET` and lists the qualified candidates, and one
+offered while a project language is unbuilt fails with `LANGUAGE_NOT_LOADED` rather than guessing, since the unbuilt
+language could define it too.
 
 Text output is tab-separated rows of `root` or `node`, the node name (or `<unnamed>`), the node's actual concept, and
 its serialized node reference; a non-root node appends its immediate parent as trailing `parent`, parent name (or
@@ -198,8 +203,10 @@ concept, and parent reference columns. `--json` prints an object with `limit`, `
 entries carry the reference `role` and a nested `owner` node summary, itself carrying a nested `parent` summary for a
 non-root owner. Concept columns follow the same short-name default, `--full-concept`, and JSON-keeps-qualified rules as
 `find instances`; `--refs-only` prints one serialized reference per referencing node. Both `find` modes default to
-`--limit 100`, treat `--limit 0` as unlimited, reject negative limits, and append a `truncated` row (in text) or set
-`truncated` (in JSON) only when more matches exist than were returned.
+`--limit 100`, treat `--limit 0` as unlimited, reject negative limits, and append a
+`# truncated: showing <shown>; pass --limit 0 for all` line (in text) or set `truncated` (in JSON) only when more
+matches exist than were returned. Lines starting with `#` are metadata, never results, so `grep -v '^#'` leaves only
+rows.
 
 ```sh
 mops --mps-home <path> find root-by-name [--limit N] [--full-concept] [--refs-only] [--json] <pattern> [in <scope-segment>...]
@@ -309,6 +316,12 @@ two-second connection/read timeout and reports `running` or `unreachable`. It do
 unreachable records. A daemon can be unreachable because it is stopped, unresponsive, or unable to authenticate the
 request. Pings remain responsive during normal long operations.
 
+Stop sends a stop request to each selected daemon and waits for its process to exit, force-killing it if necessary. A
+stopped daemon's record is removed and reported as `stopped`. If the stop request gets no response, the record is
+removed as stale and reported as `removed stale daemon record ...; process not signalled`; the recorded process is not
+killed. If the daemon acknowledges the stop but its process survives the force-kill, the record is kept so the next
+`daemon stop` retries it, the PID is reported on stderr, and the command exits non-zero.
+
 ## Daemon State
 
 Daemons detach from the launching command's session on Unix and from its console on Windows. Their stdout and stderr are
@@ -347,14 +360,14 @@ See the [developer documentation](docs/development.md) for building, running, an
 
 Releases are published from explicit release commits on `main`:
 
-1. Change `version` in `gradle.properties` from the development snapshot to the exact release version.
-2. Replace `Unreleased` in the corresponding `CHANGELOG.md` heading with the release date and merge the release commit.
-3. Run the **Release mops** workflow from `main`, entering the version without the `v` prefix.
-4. After publication, change `gradle.properties` to the next development `-SNAPSHOT` version.
+1. Change `version` in `gradle.properties` from the development snapshot to the exact release version and merge the
+   release commit.
+2. Run the **Release mops** workflow from `main`, entering the version without the `v` prefix.
+3. After publication, change `gradle.properties` to the next development `-SNAPSHOT` version.
 
 The workflow verifies the version, runs all checks, smoke-tests the ZIP distribution, generates its SHA-256 checksum,
-and publishes both files in a GitHub Release. It creates the `v<version>` tag at the tested release commit; release tags
-must not be created manually.
+and publishes both files in a GitHub Release with notes generated from the merged pull requests. It creates the
+`v<version>` tag at the tested release commit; release tags must not be created manually.
 
 ## Code-mode runtime
 
