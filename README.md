@@ -99,8 +99,8 @@ language, unloaded language, or a "did you mean" among a loaded language's conce
 - `strict` - like `best-effort` for violations, but a concept that cannot be checked aborts the batch.
 
 ```sh
-mops --mps-home <path> get node [--ancestry] <node-reference>
-mops --mps-home <path> get node [--ancestry] <model-target> <node-id>
+mops --mps-home <path> get node [--ancestry] [--depth N | --summary] [--compact] <node-reference>
+mops --mps-home <path> get node [--ancestry] [--depth N | --summary] [--compact] <model-target> <node-id>
 ```
 
 Exports one resolved node as a JSON tree through the daemon, addressed by a serialized node reference or by a model
@@ -109,6 +109,16 @@ id, properties, references, and child subtree, plus a `parent` object describing
 containment `role` by which the node sits in it, a `type` of `root` or `node`, and the parent's name, concept, and
 reference. A root node has no `parent`. `--ancestry` nests `parent` recursively up to the root node instead of carrying
 only the immediate parent.
+
+Output is pretty-printed, with `concept`, `id`, and `parent` ahead of `properties`, `references`, and `children`, so
+`head` shows the identifying part first; `--compact` prints the same object as a single line.
+
+`--depth N` bounds the export: N containment levels below the node are exported in full, and the nodes at level N are
+emitted as stubs carrying only `role`, `concept`, `name` (when the node has one), `reference`, and `childCount`. The
+top-level object gains `truncatedAt: N` so a stub (`childCount` present) is never mistaken for a leaf; `--depth 0`
+leaves `children` out entirely. `--summary` prints the same summary object `find` emits (`type`, `name`, `concept`,
+`reference`, `parent`) plus `children` as a role-to-count map, without serializing the subtree; it cannot be combined
+with `--depth`. When neither is given and the export exceeds about 16 KB, a hint on stderr points at both options.
 
 ```sh
 mops --mps-home <path> get module [--json] <module>

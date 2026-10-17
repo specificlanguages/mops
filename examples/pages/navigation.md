@@ -9,4 +9,6 @@ reference links.
 
 `list --depth` ranges from 0 to 8; the default is 1. Each level shows up to 50 children and ends in an indented
 `# truncated: ...` metadata line when more exist; `--limit 0` lifts the cap. `--summary` cannot be combined with
-`--depth`. Rendering is a reading aid, not a serialization that can be edited and imported back.
+`--depth`. `get node` prints the whole subtree unless `--depth N` or `--summary` bounds it; a `truncatedAt` field marks
+a bounded export, and stubs below the depth carry a `reference` to fetch next. Pass `--compact` for single-line JSON.
+Rendering is a reading aid, not a serialization that can be edited and imported back.
