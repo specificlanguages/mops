@@ -122,10 +122,11 @@ indented tab-separated row per entry, tagged by kind (`project`, `repository`, `
 `--json` prints the semantic tree.
 
 `--limit N` caps how many children each level shows (default 50; `0` is unlimited). A level wider than the cap is
-truncated and gains a final `truncated <shown> <total>` row so the omission is explicit. `--summary` replaces the
-target's children with grouped counts — per **role** (with the dominant concepts) for a node, per concept for a model's
-roots, per model for a module, per kind for the project or repository — and cannot be combined with `--depth`.
-`--role ROLE` lists only the target node's children in one containment role and is valid only for a node target.
+truncated and ends in an indented `# truncated: showing <shown> of <total> children; pass --limit 0 for all` line, so
+the omission is explicit and the line is told apart from a row by its `#`. `--summary` replaces the target's children
+with grouped counts — per **role** (with the dominant concepts) for a node, per concept for a model's roots, per model
+for a module, per kind for the project or repository — and cannot be combined with `--depth`. `--role ROLE` lists only
+the target node's children in one containment role and is valid only for a node target.
 
 Text output shows short concept names; `--full-concept` restores the fully qualified names. JSON output keeps qualified
 concept names regardless.
@@ -188,8 +189,10 @@ concept, and parent reference columns. `--json` prints an object with `limit`, `
 entries carry the reference `role` and a nested `owner` node summary, itself carrying a nested `parent` summary for a
 non-root owner. Concept columns follow the same short-name default, `--full-concept`, and JSON-keeps-qualified rules as
 `find instances`; `--refs-only` prints one serialized reference per referencing node. Both `find` modes default to
-`--limit 100`, treat `--limit 0` as unlimited, reject negative limits, and append a `truncated` row (in text) or set
-`truncated` (in JSON) only when more matches exist than were returned.
+`--limit 100`, treat `--limit 0` as unlimited, reject negative limits, and append a
+`# truncated: showing <shown>; pass --limit 0 for all` line (in text) or set `truncated` (in JSON) only when more
+matches exist than were returned. Lines starting with `#` are metadata, never results, so `grep -v '^#'` leaves only
+rows.
 
 ```sh
 mops --mps-home <path> find root-by-name [--limit N] [--full-concept] [--refs-only] [--json] <pattern> [in <scope-segment>...]
@@ -343,14 +346,14 @@ See the [developer documentation](docs/development.md) for building, running, an
 
 Releases are published from explicit release commits on `main`:
 
-1. Change `version` in `gradle.properties` from the development snapshot to the exact release version.
-2. Replace `Unreleased` in the corresponding `CHANGELOG.md` heading with the release date and merge the release commit.
-3. Run the **Release mops** workflow from `main`, entering the version without the `v` prefix.
-4. After publication, change `gradle.properties` to the next development `-SNAPSHOT` version.
+1. Change `version` in `gradle.properties` from the development snapshot to the exact release version and merge the
+   release commit.
+2. Run the **Release mops** workflow from `main`, entering the version without the `v` prefix.
+3. After publication, change `gradle.properties` to the next development `-SNAPSHOT` version.
 
 The workflow verifies the version, runs all checks, smoke-tests the ZIP distribution, generates its SHA-256 checksum,
-and publishes both files in a GitHub Release. It creates the `v<version>` tag at the tested release commit; release tags
-must not be created manually.
+and publishes both files in a GitHub Release with notes generated from the merged pull requests. It creates the
+`v<version>` tag at the tested release commit; release tags must not be created manually.
 
 ## Code-mode runtime
 

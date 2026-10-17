@@ -5,7 +5,9 @@ Default searches cover editable project sources. An explicit `in` scope can incl
 
 {{table:commands|Command}}
 
-`find` defaults to 100 matches; `--limit 0` removes the cap. `--refs-only` cannot be combined with `--json`. Use
+`find` defaults to 100 matches and ends its text output in a `# truncated: ...` metadata line when more exist;
+`--limit 0` removes the cap. Lines starting with `#` are metadata, not results. `--refs-only` cannot be combined with
+`--json`. Use
 `{{name-pattern-help}}` for pattern matching rules.
 
 ## Code Mode: concepts and instances
