@@ -107,6 +107,10 @@ object ProtocolJson {
 
     fun decodeFinding(text: String): ModelCheckFindingJson = json.decodeFromString(text)
 
+    fun encodeCheckSummary(summary: ModelCheckSummaryJson): String = json.encodeToString(summary)
+
+    fun decodeCheckSummary(text: String): ModelCheckSummaryJson = json.decodeFromString(text)
+
     fun encodeListEntry(entry: MpsListEntryJson): String = json.encodeToString(entry)
 
     fun decodeListEntry(text: String): MpsListEntryJson = json.decodeFromString(text)

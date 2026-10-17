@@ -60,6 +60,18 @@ class CodeCatalogTest {
     }
 
     @Test
+    fun `runtime class loading is discoverable with read access and its failure cases`() {
+        val runtime = CodeCatalog.text("mops.runtime")
+        assertContains(runtime, "mops.runtime.loadClass(String moduleTarget, String className): Class?")
+        assertContains(runtime, "mops.runtime.requireClass(String moduleTarget, String className): Class")
+        assertContains(CodeCatalog.text("mops.runtime.loadClass"), "[read]")
+        assertContains(CodeCatalog.text("mops.runtime.loadClass"), "mops make module")
+        assertContains(CodeCatalog.text("mops.runtime.requireClass"), "[read]")
+        assertContains(CodeCatalog.text("mops"), "mops.runtime.requireClass")
+        assertContains(CodeCatalog.document(null).index, "mops.runtime")
+    }
+
+    @Test
     fun `root is a compact index and aliases select the same operation`() {
         val root = CodeCatalog.document(null)
         assertTrue(root.entries.isEmpty())

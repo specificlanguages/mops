@@ -8,6 +8,7 @@
 | Check selected modules                             | `mops check module sample.language sample.solution`      |
 | Check the project                                  | `mops check project`                                     |
 | Emit all model findings as JSON lines              | `mops check model sample.model --format jsonl --limit 0` |
+| Show check findings without the # metadata lines   | `mops check model sample.model \| grep -v '^#'`          |
 | Diagnose unloaded project modules                  | `mops diagnose project`                                  |
 | Include loaded modules in diagnosis                | `mops diagnose project --all`                            |
 | Inspect a module's load/dependency problem         | `mops diagnose module sample.language`                   |
@@ -30,6 +31,16 @@ To refresh existing module entries in an MPS build-language project from descrip
 ```groovy
 project.command { def r = mops.editing.build.reloadModulesFromDisk(mops.lookup.requireNode('BUILD_PROJECT_REF')); [succeeded: r.succeeded, messages: r.messages.collect { [kind: it.kind, text: it.text, node: it.node] }] }
 ```
+
+## Inspect check results
+
+`check` prints findings most severe first, capped at `--limit` (default 20; `0` is unlimited). In text output, lines
+starting with `#` are metadata, not findings: the summary (`# 1 error, 2 warnings, 0 infos` or `# no findings`) and,
+when the cap cut the list, `# truncated: showing <shown> of <total> findings; pass --limit 0 for all`. Filter them with
+`grep -v '^#'`. With `--format jsonl`, every line is a JSON object; the last one is a `{"type":"summary",...}` record
+with `shown`, `total`, `errors`, `warnings`, `infos`, `limit`, `truncated`, and a `hint` when truncated. Findings have
+no `type` field. The totals and the exit code cover every finding, not only the shown ones: `check` exits `1` when an
+error-severity finding exists and `0` for warnings and infos alone.
 
 ## Run tests
 

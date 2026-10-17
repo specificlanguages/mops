@@ -17,6 +17,16 @@ To refresh existing module entries in an MPS build-language project from descrip
 {{reload-build}}
 ```
 
+## Inspect check results
+
+`check` prints findings most severe first, capped at `--limit` (default 20; `0` is unlimited). In text output, lines
+starting with `#` are metadata, not findings: the summary (`# 1 error, 2 warnings, 0 infos` or `# no findings`) and,
+when the cap cut the list, `# truncated: showing <shown> of <total> findings; pass --limit 0 for all`. Filter them with
+`grep -v '^#'`. With `--format jsonl`, every line is a JSON object; the last one is a `{"type":"summary",...}` record
+with `shown`, `total`, `errors`, `warnings`, `infos`, `limit`, `truncated`, and a `hint` when truncated. Findings have
+no `type` field. The totals and the exit code cover every finding, not only the shown ones: `check` exits `1` when an
+error-severity finding exists and `0` for warnings and infos alone.
+
 ## Run tests
 
 {{table:tests|Command}}

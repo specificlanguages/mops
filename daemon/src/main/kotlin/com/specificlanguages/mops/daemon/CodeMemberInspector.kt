@@ -45,10 +45,13 @@ object CodeMemberInspector {
         visit(type)
     }
 
+    /** Groovy calls these for unknown members; they are not part of a type's callable API. */
+    private val groovyDispatchHooks = setOf("propertyMissing", "methodMissing")
+
     fun inspect(type: Class<*>): CodeTypeMembers {
         val methods = type.methods.filter {
             !it.isSynthetic && !it.isBridge && it.declaringClass != Any::class.java &&
-                '$' !in it.name && !it.name.matches(Regex("component\\d+"))
+                '$' !in it.name && !it.name.matches(Regex("component\\d+")) && it.name !in groovyDispatchHooks
         }.sortedWith(compareBy({ it.name }, { it.toGenericString() }))
         val getters = methods.mapNotNull { method -> propertyName(method)?.let { it to method } }.toMap()
         val setters = methods.filter {

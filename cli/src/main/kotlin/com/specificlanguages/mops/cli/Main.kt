@@ -29,6 +29,7 @@ import com.specificlanguages.mops.cli.find.FindNodeByIdCommand
 import com.specificlanguages.mops.cli.find.FindOperations
 import com.specificlanguages.mops.cli.find.FindRootByNameCommand
 import com.specificlanguages.mops.cli.find.FindUsagesCommand
+import com.specificlanguages.mops.cli.get.GetModuleCommand
 import com.specificlanguages.mops.cli.get.GetOperations
 import com.specificlanguages.mops.cli.get.ModelGetNodeCommand
 import com.specificlanguages.mops.cli.help.RecursiveHelpCommand
@@ -68,6 +69,7 @@ fun newCommandLine(
     }
     root.addGroup("get", GetOperations()) {
         addLeaf("node", ModelGetNodeCommand(rootCommand))
+        addLeaf("module", GetModuleCommand(rootCommand))
     }
     root.addGroup("render", RenderOperations()) {
         addLeaf("node", ModelRenderNodeCommand(rootCommand))

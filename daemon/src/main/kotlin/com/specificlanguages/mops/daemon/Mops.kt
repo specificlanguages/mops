@@ -15,4 +15,5 @@ class Mops(
     val parsing = MopsParsing(this)
     val lookup = MopsLookup(this)
     val search = MopsSearch(this)
+    val runtime = MopsRuntime(this)
 }

@@ -29,6 +29,7 @@ class JetBrainsMpsAccess(
     logger: DaemonLogger,
     private val mpsListExporter: MpsListExporter = MpsListExporter(),
     private val jsonNodeExporter: JsonNodeExporter = JsonNodeExporter(),
+    private val moduleLocationsExporter: ModuleLocationsExporter = ModuleLocationsExporter(),
     private val editorNodeRenderer: EditorNodeRenderer = EditorNodeRenderer(),
     private val modelNodeResolver: ModelNodeResolver = ModelNodeResolver(logger),
     private val modelChecker: ModelChecker = ModelChecker(),
@@ -116,6 +117,19 @@ class JetBrainsMpsAccess(
 
         override fun getNode(target: NodeTarget, ancestry: Boolean): MpsNodeJson =
             jsonNodeExporter.export(resolveNode(target), ancestry)
+
+        override fun getModule(target: String): ModuleLocationsJson {
+            val matches = project.repository.modulesMatching(target)
+            val module = when (matches.size) {
+                0 -> throw MpsRequestException(MpsErrorCode.MODULE_NOT_FOUND, "module not found: $target")
+                1 -> matches.single()
+                else -> throw MpsRequestException(
+                    MpsErrorCode.AMBIGUOUS_TARGET,
+                    "ambiguous module: $target; candidates: ${matches.joinToString { persistence.asString(it.moduleReference) }}",
+                )
+            }
+            return moduleLocationsExporter.export(module)
+        }
 
         override fun checkModel(target: String, limit: Int): ModelCheckResponse {
             val model = modelNodeResolver.findModelUnique(project, target)

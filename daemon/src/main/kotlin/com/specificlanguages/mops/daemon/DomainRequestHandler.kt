@@ -29,6 +29,8 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess, pr
             is ModelGetNodeRequest ->
                 ModelGetNodeResponse(node = mpsAccess.read { getNode(request.target, request.ancestry) })
 
+            is GetModuleRequest -> GetModuleResponse(module = mpsAccess.read { getModule(request.module) })
+
             is ModelRenderNodeRequest -> ModelRenderNodeResponse(
                 text = mpsAccess.extra { renderNode(request.target, request.allowReflective) },
             )

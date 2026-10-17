@@ -33,6 +33,8 @@ loaded project are incomplete.
 Use the project’s `mopsw` wrapper when available. Start with `mops examples` for task recipes and `mops --help` for
 commands. Use `list`, `find`, `get node`, and `render node` to inspect models and obtain stable references before
 editing. Copy serialized references whole; names can be ambiguous. Prefer a direct CLI command when it handles the task.
+Use `get module <name-or-ref>` to find a module's descriptor, jars, class output, and model sources instead of searching
+the disk.
 
 Pitfalls when navigating and searching:
 
@@ -92,8 +94,11 @@ Use `mops.lookup.requireModel`, `requireNode`, and `requireConceptByName` to fai
 Model names must resolve uniquely; serialized references also work for model and node lookup. Properties use
 `node.properties['name']`; children use `node.child['role']` or `node.children['role']`; references use
 `node.references['role']`, whose `targetNode` resolves the target. These accessors require model access and their
-assignments require command access. Children and references shadow Groovy's native getter properties; consult
-`code help` for native iteration alternatives.
+assignments require command access. They shadow the native no-argument getters, so `node.getChildren()`,
+`node.getReferences()`, and `node.getProperties()` return the accessors too. Each accessor iterates like the native
+collection it shadows (`node.children.collect { ... }`, `node.references.findAll { ... }`, `node.properties.size()`);
+native `getChildren(containmentLink)`, `getReference(referenceLink)`, and `SNodeOperations.getReferences(node)` remain
+available.
 
 Return the final expression instead of relying on `println`. Strings print as text; MPS nodes, models, and modules
 become serialized references. Maps and collections become JSON, including references for contained MPS objects. Convert
@@ -121,7 +126,8 @@ versions and the preparation commands.
 
 Start with `mops examples` for the topic index, or read [the bundled index](references/README.md).
 `mops examples editing` helps choose creation, node editing, references/imports, Java insertion, or JSON batches. Read
-only the topic relevant to the task; `mops examples all` prints the full collection.
+only the topic relevant to the task; `mops examples all` prints the full collection. To call compiled language runtime
+or plugin code, read `mops examples runtime` or the [bundled runtime recipes](references/runtime.md).
 
 ## Examples
 

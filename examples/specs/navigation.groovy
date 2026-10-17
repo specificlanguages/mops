@@ -72,6 +72,11 @@
                 code: '''mops get node sample.model 123456789''',
             ],
             [
+                title: 'Locate a module\'s descriptor, jars, and sources',
+                kind: 'cli',
+                code: '''mops get module sample.solution''',
+            ],
+            [
                 title: 'Read the default editor\'s text',
                 kind: 'cli',
                 code: '''mops render node 'NODE_REF'''',

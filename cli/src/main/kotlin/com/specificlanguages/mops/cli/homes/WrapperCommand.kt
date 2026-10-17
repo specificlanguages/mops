@@ -45,7 +45,7 @@ class WrapperCommand(
     override fun call(): Int {
         val start = root.workingDirectory.resolve(path ?: root.projectRoot ?: ".").toRealPath()
         val discovery = GradleHomeDiscovery()
-        val guesses = discovery.discover(start, root.workingDirectory, spec.commandLine().err)
+        val guesses = discovery.discover(start, spec.commandLine().err)
         val selectedProjectRoot = root.projectRoot?.let { root.resolveProjectPath(start) }
         val targets = if (selectedProjectRoot == null) {
             guesses.flatMap { guess -> guess.mpsProjectRoots.map { guess to it } }

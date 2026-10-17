@@ -3,11 +3,7 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import com.specificlanguages.mops.protocol.MpsListSummaryGroupJson
 import com.specificlanguages.mops.protocol.MpsListSummaryJson
-import jetbrains.mps.project.DevKit
 import jetbrains.mps.project.Project
-import jetbrains.mps.project.Solution
-import jetbrains.mps.smodel.Generator
-import jetbrains.mps.smodel.Language
 import jetbrains.mps.smodel.SNodeUtil
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SNode
@@ -227,13 +223,4 @@ class MpsListExporter(
 
     private fun nodeName(node: SNode): String? =
         SNodeAccessUtil.getPropertyValue(node, SNodeUtil.property_INamedConcept_name) as String?
-
-    private fun SModule.moduleKind(): String =
-        when (this) {
-            is Language -> "language"
-            is Generator -> "generator"
-            is Solution -> "solution"
-            is DevKit -> "devkit"
-            else -> "other"
-        }
 }

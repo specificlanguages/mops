@@ -64,8 +64,9 @@ Mode. Its Groovy examples are executed directly from the skill file by daemon un
 
 For short task-oriented examples, run `mops examples` or read the
 [bundled topic index](skills/mops/references/README.md). Start with `mops examples editing` to choose an editing
-approach, then read a focused topic such as `mops examples editing.java`. `mops examples all` prints the full
-collection. Examples work offline without a daemon.
+approach, then read a focused topic such as `mops examples editing.java`. `mops examples runtime` shows how Code Mode
+loads compiled language runtime and plugin classes through a module's class loader (`mops.runtime.loadClass` and
+`requireClass`). `mops examples all` prints the full collection. Examples work offline without a daemon.
 
 ## Commands
 
@@ -108,6 +109,22 @@ id, properties, references, and child subtree, plus a `parent` object describing
 containment `role` by which the node sits in it, a `type` of `root` or `node`, and the parent's name, concept, and
 reference. A root node has no `parent`. `--ancestry` nests `parent` recursively up to the root node instead of carrying
 only the immediate parent.
+
+```sh
+mops --mps-home <path> get module [--json] <module>
+```
+
+Reports where MPS locates one module's files, addressed by module name or serialized module reference and found anywhere
+in the repository, library modules included. Text output is one `key<TAB>value` row per location MPS reports, keyed by
+the JSON field name: `kind`, `name`, `reference`, `packaged`, then `descriptor` (the `.mpl`/`.msd`/`.devkit` of a source
+module, or `name.jar!/META-INF/module.xml` of a deployed one), `jar` and `sourcesJar` (the deployed module's archive and
+the sources archive its deployment descriptor names), `sourceDescriptor` (the source descriptor inside that archive),
+`sourceDirectory` (a source module's descriptor directory), `classesGen` (a source module's compiled-class output, when
+its Java facet declares one), `classPath` (one row per entry of the Java facet's runtime classpath) and `modelRoots`
+(one row per file-based model root). A location MPS does not record for the module is omitted rather than guessed from a
+naming convention. `--json` prints the daemon response, with the same fields under `module`. An unknown module fails
+with `MODULE_NOT_FOUND`; a name shared by several modules fails and lists their serialized references, so a reference
+disambiguates it.
 
 ```sh
 mops --mps-home <path> list [--depth N] [--limit N] [--summary] [--role ROLE] [--full-concept] [--json] [TARGET_SEGMENT...]
@@ -224,7 +241,11 @@ mops --mps-home <path> diagnose module [--json] <module>
 Diagnoses one module, addressed by module name or serialized module reference, including modules not shown by
 `diagnose project` (those without a Java facet, or absent from the repository). Text output is a header row (`module`,
 `kind`, `present=<bool>`, `loaded=<bool>`) followed by the module's load-problem tree, indented by depth so a dependency
-chain reads from the module down to its root causes; `--json` prints the structured diagnosis.
+chain reads from the module down to its root causes; `--json` prints the structured diagnosis. The command exits 1 when
+the module failed to load (`loaded=false`, a blocking problem, which includes an absent module) and 0 when it is loaded,
+in text and `--json` modes alike; the output is the same either way. An informational problem, such as a missing Java
+facet on a non-language module, is still reported but does not fail the command. `diagnose project` is a listing and
+exits 0 regardless of failed modules.
 
 Both commands classify an unloaded module with a reason code: `ABSENT` (not in the repository), `NOT_A_MODULE` (resolves
 to something that does not load classes), `NO_JAVA_FACET` (no Java facet — a defect for a language, informational for
@@ -242,6 +263,24 @@ Runs the MPS make (generation and compilation) through the daemon. `make module`
 or serialized module reference) and their transitive dependency closure, so an un-made dependency is made too;
 `make project` makes every generatable module in the project. Both exit non-zero when the make reports errors; `--json`
 prints the make result as JSON.
+
+```sh
+mops --mps-home <path> check model [--format human|jsonl] [--limit N] <model>
+mops --mps-home <path> check module [--format human|jsonl] [--limit N] <module>...
+mops --mps-home <path> check project [--format human|jsonl] [--limit N]
+```
+
+Runs MPS's full model check (typesystem, model, module, and checking rules) over one model, the named project modules,
+or every project module, through the daemon. Findings print most severe first, capped at `--limit` (default 20; `0` is
+unlimited). Text output is one tab-separated row per finding (`severity`, message, and for a node-level finding the
+node's name, concept, and reference) followed by `#` metadata lines: `# <errors>, <warnings>, <infos>` (or
+`# no findings`) and, when the cap cut the list,
+`# truncated: showing <shown> of <total> findings; pass --limit 0 for all`. Lines starting with `#` are metadata, never
+findings, so `grep -v '^#'` leaves only rows. `--format jsonl` prints one finding object per line and ends with a
+`{"type":"summary",...}` record carrying `shown`, `total`, `errors`, `warnings`, `infos`, `limit`, `truncated`, and,
+when truncated, a `hint` naming `--limit 0`; findings have no `type` field, so a reader tells the two apart. Totals
+count every finding, not only the shown ones, and all three commands exit `1` when the totals include an error, in both
+formats.
 
 ```sh
 mops test                            # all project tests, with an incremental build

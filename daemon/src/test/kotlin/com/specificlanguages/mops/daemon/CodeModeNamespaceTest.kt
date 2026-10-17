@@ -14,6 +14,8 @@ class CodeModeNamespaceTest {
                     assert mops.parsing.is(mops.parsing)
                     assert mops.search.is(mops.search)
                     assert mops.lookup.is(mops.lookup)
+                    assert mops.runtime.is(mops.runtime)
+                    assert mops.runtime.class.name == 'com.specificlanguages.mops.daemon.MopsRuntime'
                     assert mops.editing.is(mops.editing)
                     assert mops.editing.build.class.name == 'com.specificlanguages.mops.daemon.MopsEditingBuild'
                     assert mops.project.is(project)
