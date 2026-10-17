@@ -34,6 +34,17 @@ data class ModelGetNodeRequest(
 ) : DaemonRequest
 
 /**
+ * Request to report where MPS says the files of one **MPS Module** are, addressed by [module] (a module name or
+ * serialized module reference) anywhere in the repository, library modules included.
+ */
+@Serializable
+@SerialName("get-module")
+data class GetModuleRequest(
+    override val token: String,
+    val module: String,
+) : DaemonRequest
+
+/**
  * Request to render one node as the plain text of its default editor, the way it would appear in the MPS editor.
  *
  * When the node's concept has no real editor — its language has not been made, so MPS would fall back to the generic

@@ -111,6 +111,22 @@ reference. A root node has no `parent`. `--ancestry` nests `parent` recursively 
 only the immediate parent.
 
 ```sh
+mops --mps-home <path> get module [--json] <module>
+```
+
+Reports where MPS locates one module's files, addressed by module name or serialized module reference and found anywhere
+in the repository, library modules included. Text output is one `key<TAB>value` row per location MPS reports, keyed by
+the JSON field name: `kind`, `name`, `reference`, `packaged`, then `descriptor` (the `.mpl`/`.msd`/`.devkit` of a source
+module, or `name.jar!/META-INF/module.xml` of a deployed one), `jar` and `sourcesJar` (the deployed module's archive and
+the sources archive its deployment descriptor names), `sourceDescriptor` (the source descriptor inside that archive),
+`sourceDirectory` (a source module's descriptor directory), `classesGen` (a source module's compiled-class output, when
+its Java facet declares one), `classPath` (one row per entry of the Java facet's runtime classpath) and `modelRoots`
+(one row per file-based model root). A location MPS does not record for the module is omitted rather than guessed from a
+naming convention. `--json` prints the daemon response, with the same fields under `module`. An unknown module fails
+with `MODULE_NOT_FOUND`; a name shared by several modules fails and lists their serialized references, so a reference
+disambiguates it.
+
+```sh
 mops --mps-home <path> list [--depth N] [--limit N] [--summary] [--role ROLE] [--full-concept] [--json] [TARGET_SEGMENT...]
 mops --mps-home <path> ls   [--depth N] [--limit N] [--summary] [--role ROLE] [--full-concept] [--json] [TARGET_SEGMENT...]
 ```
