@@ -43,6 +43,10 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess, pr
                 findUsages(request.target, resolveScope(request.scope), request.limit)
             }
 
+            is FindSubconceptsRequest -> mpsAccess.read {
+                findSubconcepts(request.concept, request.concreteOnly, request.direct)
+            }
+
             is FindInstancesRequest -> mpsAccess.read {
                 findInstances(
                     request.concept,

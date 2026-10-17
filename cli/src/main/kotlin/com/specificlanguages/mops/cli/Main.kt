@@ -24,6 +24,7 @@ import com.specificlanguages.mops.cli.edit.EditOperations
 import com.specificlanguages.mops.cli.edit.ModelEditCommand
 import com.specificlanguages.mops.cli.examples.ExamplesCommand
 import com.specificlanguages.mops.cli.explain.ExplainCommand
+import com.specificlanguages.mops.cli.find.FindSubconceptsCommand
 import com.specificlanguages.mops.cli.find.FindInstancesCommand
 import com.specificlanguages.mops.cli.find.FindNodeByIdCommand
 import com.specificlanguages.mops.cli.find.FindOperations
@@ -61,6 +62,7 @@ fun newCommandLine(
     root.commandSpec.parser().allowSubcommandsAsOptionParameters(true)
 
     root.addGroup("find", FindOperations()) {
+        addLeaf("subconcepts", FindSubconceptsCommand(rootCommand))
         addLeaf("instances", FindInstancesCommand(rootCommand))
         addLeaf("usages", FindUsagesCommand(rootCommand))
         addLeaf("root-by-name", FindRootByNameCommand(rootCommand))
