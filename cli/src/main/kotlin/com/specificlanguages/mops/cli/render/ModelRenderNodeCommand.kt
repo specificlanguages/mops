@@ -3,15 +3,19 @@ package com.specificlanguages.mops.cli.render
 import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
+import com.specificlanguages.mops.cli.common.NodeTargetParameters
 import com.specificlanguages.mops.daemoncomms.DaemonClient
-import com.specificlanguages.mops.protocol.NodeTarget
 import picocli.CommandLine.Command
+import picocli.CommandLine.Mixin
 import picocli.CommandLine.Option
-import picocli.CommandLine.Parameters
 
 @Command(
     name = "node",
     description = ["Render one MPS node as the plain text of its default editor."],
+    customSynopsis = [
+        "mops render node [OPTIONS] NODE_REFERENCE",
+        "   or: mops render node [OPTIONS] MODEL_TARGET NODE_ID",
+    ],
 )
 class ModelRenderNodeCommand(private val environment: CommandEnvironment) : CliCommand() {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
@@ -24,21 +28,12 @@ class ModelRenderNodeCommand(private val environment: CommandEnvironment) : CliC
     )
     var allowReflective: Boolean = false
 
-    @Parameters(
-        index = "0..1",
-        arity = "1..2",
-        paramLabel = "NODE_REFERENCE | MODEL_TARGET NODE_ID",
-        description = ["Serialized node reference, or model target followed by node ID."],
-    )
-    lateinit var nodeTarget: Array<String>
+    @Mixin
+    val nodeTarget = NodeTargetParameters()
 
     override fun run() {
         val client = environment.daemon()
-        val response = when (nodeTarget.size) {
-            1 -> client.renderNode(NodeTarget.NodeReference(nodeTarget[0]), allowReflective)
-            2 -> client.renderNode(NodeTarget.InModel(modelTarget = nodeTarget[0], nodeId = nodeTarget[1]), allowReflective)
-            else -> error("expected one node reference or model target plus node ID")
-        }
+        val response = client.renderNode(nodeTarget.target(), allowReflective)
 
         println(response.text)
     }

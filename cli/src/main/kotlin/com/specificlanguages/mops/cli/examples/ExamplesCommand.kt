@@ -4,7 +4,11 @@ import com.specificlanguages.mops.cli.common.CliCommand
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 
-@Command(name = "examples", description = ["Read bundled task recipes without starting MPS. Omit the topic to find where to start."])
+@Command(
+    name = "examples",
+    header = ["Read bundled task recipes without starting MPS."],
+    description = ["Read bundled task recipes without starting MPS. Omit the topic to find where to start."],
+)
 class ExamplesCommand : CliCommand() {
     @Parameters(index = "0", arity = "0..1", paramLabel = "TOPIC", description = ["Topic such as editing, editing.java, or all."])
     var topic: String? = null

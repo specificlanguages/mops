@@ -13,6 +13,7 @@ import picocli.CommandLine.Parameters
 
 @Command(
     name = "node-by-id",
+    header = ["Find every node with a given node ID."],
     description = [
         "Find every node with a given node ID. A node ID is unique only within its model, so this reports one match " +
             "per model that holds it, each with its full node reference — never guessing one over another. The ID " +

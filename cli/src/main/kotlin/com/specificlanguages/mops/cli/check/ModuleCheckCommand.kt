@@ -10,6 +10,7 @@ import picocli.CommandLine.Parameters
 
 @Command(
     name = "module",
+    header = ["Run MPS's full check over one or more Project Modules."],
     description = ["Run MPS's full check over one or more Project Modules and their models."],
 )
 class ModuleCheckCommand(private val environment: CommandEnvironment) : CliCommand() {

@@ -11,6 +11,7 @@ import picocli.CommandLine.Parameters
 
 @Command(
     name = "run",
+    header = ["Run a trusted Groovy program from FILE or stdin."],
     description = ["Run a trusted Groovy program. FILE and - both mean stdin when omitted or set to -."],
 )
 class CodeRunCommand(private val environment: CommandEnvironment) : CliCommand() {

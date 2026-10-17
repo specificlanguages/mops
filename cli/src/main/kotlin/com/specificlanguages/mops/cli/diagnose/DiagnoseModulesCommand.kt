@@ -12,6 +12,7 @@ import picocli.CommandLine.Option
 
 @Command(
     name = "project",
+    header = ["Report which project languages and Java-bearing modules loaded."],
     description = ["Report which project languages and Java-bearing modules loaded, and why each unloaded one failed."],
 )
 class DiagnoseModulesCommand(private val environment: CommandEnvironment) : CliCommand() {

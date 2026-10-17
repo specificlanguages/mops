@@ -6,7 +6,9 @@ object ExampleTopics {
         "editing.references", "editing.java", "editing.json", "validation",
     )
 
-    fun index(): String = pageResource("README") + "\nTopics: ${topics.joinToString(", ")}\n"
+    fun index(): String = pageResource("README") + "\n" + topicList()
+
+    fun topicList(): String = "Topics: ${topics.joinToString(", ")}\n"
 
     fun page(topic: String): String {
         if (topic == "all") return index() + topics.joinToString("\n", transform = ::pageResource)
