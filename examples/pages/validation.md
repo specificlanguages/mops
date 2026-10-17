@@ -2,6 +2,9 @@
 
 {{table:commands|Command}}
 
+`diagnose project` prints `modules <loaded>/<total> loaded <failed> failed` first and exits 0 even when modules failed
+to load. Read the rows for the modules the task needs; instance and usage searches need every project language loaded.
+
 Run make, render, and testing helpers outside access blocks:
 
 ```groovy
@@ -46,7 +49,8 @@ CI build; check that build's test configuration separately.
 when available). Read container failures too: fixture setup can fail before any individual test runs. Distinguish
 assertion failures from build, discovery, startup, timeout, and worker failures. Partial results after an interrupted
 worker are not evidence of a successful run. Use `reportPath` to retain the report. Inspect the adjacent `worker.log`
-for preparation failures and `ant.log` for test execution failures.
+for preparation failures and `ant.log` for test execution failures. When the run is evidence for a bug report, record
+the mops version (`mops --version`) together with the MPS and Java versions and the preparation commands.
 
 ### Run from Code Mode
 

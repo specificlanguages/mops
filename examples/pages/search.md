@@ -1,7 +1,11 @@
 # Search
 
-Default searches cover editable project sources. An explicit `in` scope can include library/platform content.
-`find instances` includes subconcepts by default; `--exact` restricts it to the direct concept.
+Default searches cover editable project sources and skip models MPS marks read-only, even when their files are local.
+An explicit `in` scope can include library/platform content; `in /` searches the whole repository. `find instances`
+includes subconcepts by default; `--exact` restricts it to the direct concept. `find usages` follows exact reference
+targets, so searching for a class root does not find references to its constructors. `find node-by-id` turns a node ID
+from a `.mps` file into full references; those files spell default numeric IDs in an encoded base64 form, while mops
+prints decimal IDs, and the command accepts both.
 
 {{table:commands|Command}}
 

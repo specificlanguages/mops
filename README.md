@@ -59,8 +59,8 @@ without an MPS project or daemon.
 
 Use `mops skill path daemon` for daemon coordination, restart, and recovery guidance.
 
-The mops skill covers command selection, model navigation, editing, builds, checks, tests, and Code Mode. Its Groovy
-examples are executed directly from the skill file by daemon unit tests.
+The mops skill covers project preparation, command selection, model navigation, editing, builds, checks, tests, and Code
+Mode. Its Groovy examples are executed directly from the skill file by daemon unit tests.
 
 For short task-oriented examples, run `mops examples` or read the
 [bundled topic index](skills/mops/references/README.md). Start with `mops examples editing` to choose an editing

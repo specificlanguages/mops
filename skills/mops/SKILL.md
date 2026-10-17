@@ -1,11 +1,32 @@
 ---
 name: mops
 description:
-  Inspect, create, edit, build, check, and test JetBrains MPS projects with the mops CLI and Groovy Code Mode. Use when
-  working with MPS models through mops, choosing commands, or discovering its APIs and task recipes.
+  Prepare, inspect, create, edit, build, check, and test JetBrains MPS projects with the mops CLI and Groovy Code Mode.
+  Use when setting up mops for a project, working with MPS models through mops, choosing commands, or discovering its
+  APIs and task recipes.
 ---
 
 # Working with MPS through mops
+
+## Prepare the project
+
+Run `mops wrapper` in the project checkout. It detects the project's MPS and Java runtime from the Gradle build and
+writes a `mopsw` wrapper script that passes both homes to mops. The command prints each wrapper's path on a `Wrapper:`
+line. The wrapper goes into the Gradle project's build directory, so its location depends on the project layout:
+MPS-extensions, for example, gets `code/extensions/build/mopsw` on current branches and `build/mopsw` on older ones.
+Call the wrapper in place of `mops`; the examples in this skill write `mops`.
+
+Writing the wrapper can download MPS and the Java runtime, but it builds nothing. Build the project with its own build
+tool first; most mops operations need at least all project languages built.
+
+Then run `mops diagnose project`. Its first line has the shape `modules <loaded>/<total> loaded <failed> failed`, and
+the command exits 0 even when modules failed to load, so read the rows for the modules the task needs instead of relying
+on the exit code. A build often leaves out sandbox or test languages; build them with `mops make module <module>...`,
+and look into one failure with `mops diagnose module <module>`.
+
+Instance and usage searches need every project language loaded. If mops does not work, or a language the task needs
+cannot be loaded, stop and report the blocker together with what the build already showed. Search results from a partly
+loaded project are incomplete.
 
 ## Choose commands and find targets
 
@@ -14,6 +35,22 @@ commands. Use `list`, `find`, `get node`, and `render node` to inspect models an
 editing. Copy serialized references whole; names can be ambiguous. Prefer a direct CLI command when it handles the task.
 Use `get module <name-or-ref>` to find a module's descriptor, jars, class output, and model sources instead of searching
 the disk.
+
+Pitfalls when navigating and searching:
+
+- `list` shows at most 50 children per level and ends a cut level with a `# truncated: ...` line. Pass `--limit 0` when
+  listing project modules or any node whose children may exceed that.
+- A `.suffix` segment is only the part after the module name: `.main` after `sample.solution` means the model
+  `sample.solution.main`. A bare `.` names the model named exactly like its module: `sample.app .`.
+- `render node` shows the default editor's presentation, which can leave information out. Use `list --depth N` or
+  `get node` for the subtree, and `get node --ancestry` for the containment chain up to the root, then render the nodes
+  of interest.
+- Default searches cover editable project sources and skip models MPS marks read-only, even when their files are local.
+  When a result is missing, search an explicit model scope or `in /` for the whole repository.
+- `find usages` follows exact reference targets: searching for a class root does not find references to its
+  constructors.
+- `find node-by-id` turns a node ID from a `.mps` file into full references. Those files spell default numeric IDs in an
+  encoded base64 form, while mops prints decimal IDs; the command accepts both.
 
 Read `mops examples editing` to choose JSON edit batches, Java insertion, or Code Mode. JSON batches report containment
 constraint violations; Code Mode supports custom traversal and logic. Check edited models with `check model`, build with
@@ -70,6 +107,20 @@ other JVM objects to supported data while still inside the access block.
 Run rendering, make, and test operations outside access blocks, as specified by `code help`. Check their returned
 diagnostics and outcomes; a returned failure report does not itself make `code run` exit nonzero.
 `code run --timeout SECONDS` sets the hard deadline (default 900; 0 disables it); expiry terminates the daemon.
+
+## Author and run native tests
+
+Native MPS tests are model nodes, not Java source. Navigate and render an existing test in the project to learn its
+shape, inspect the concept roles with `list --summary` and `get node`, and create the nodes with mops. Use Java parsing
+for ordinary BaseLanguage code, then insert the test-language expressions and annotations as native nodes and repair
+references. The Java parser does not understand test-language expressions and cannot resolve inherited framework calls
+in a helper parsed on its own. Fixture choice and registration in the project's test build are MPS workflow questions;
+follow the project's testing conventions.
+
+Check the authored models, then run the selected test with `mops test --json 'TARGET'`; the runner builds by default.
+Keep the test report and worker logs, and tell a runner startup or discovery failure apart from a behavioral failure.
+When the run is evidence for a bug report, record the mops version (`mops --version`) together with the MPS and Java
+versions and the preparation commands.
 
 ## Task recipes
 
