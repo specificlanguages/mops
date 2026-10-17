@@ -36,20 +36,22 @@ title** workflow checks it with the same hook. GitHub release notes list the mer
 
 Each task resolves its MPS distribution and matching host-specific JBR through mps-platform-cache. Distributions are
 cached and reused. Reports are written separately under `cli/build/reports/tests/<task-name>/`; JUnit XML results are
-under `cli/build/test-results/<task-name>/`. CI reads the supported versions from `gradle.properties` and runs each
-version in a separate Ubuntu matrix job, with independent test JVMs and MPS daemons. Each job uploads its test reports
-even on success, and test start/completion events appear in the job log to help identify slow or stalled tests. Apply
-`--tests` to a version-specific task to select tests:
+under `cli/build/test-results/<task-name>/`. Each task runs test classes in two parallel test JVMs, and every test
+starts its own MPS daemon with its own daemon home. CI runs each version in a separate Ubuntu matrix job. The matrix
+lists the versions in `.github/workflows/ci.yml`, and the verification job fails if that list differs from
+`supportedMpsVersions`. Each job uploads its test reports even on success, and test start/completion events appear in
+the job log to help identify slow or stalled tests. Apply `--tests` to a version-specific task to select tests:
 
 ```sh
 ./gradlew :cli:integrationTestMps2024.1.6 --tests '*CodeModeIntegrationTest'
 ```
 
-PRs, pushes to `main`, and manual workflow dispatch run the full integration matrix, the CLI smoke suite on Linux,
-macOS, and Windows, and an Ubuntu verification job. The verification job runs `check -x :cli:integrationTest`, covering
-all subprojects' unit tests, daemon tests, Gradle discovery tests, and packaging checks. The separate integration matrix
-covers the excluded CLI integration suite. The `CI passed` job requires every job to succeed. Release validation runs
-the complete `check`, including the full integration matrix.
+PRs, pushes to `main`, and manual workflow dispatch run the full integration matrix, the CLI smoke suite on macOS and
+Windows, and an Ubuntu verification job. Linux has no separate smoke job: the integration job for the last supported
+version runs every smoke test on Ubuntu. The verification job runs `check -x :cli:integrationTest`, covering all
+subprojects' unit tests, daemon tests, Gradle discovery tests, and packaging checks, and then runs the `prek` hooks on
+all files. The separate integration matrix covers the excluded CLI integration suite. The `CI passed` job requires every
+job to succeed. Release validation runs the complete `check`, including the full integration matrix.
 
 To test an already extracted distribution, use the separate local task:
 

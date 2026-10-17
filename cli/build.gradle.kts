@@ -200,6 +200,9 @@ fun Test.configureIntegrationTest(mpsHome: Provider<File>, jbrHome: Provider<Fil
 
     testClassesDirs = integrationTest.output.classesDirs
     classpath = integrationTest.runtimeClasspath
+    // Tests capture System.out and System.err, so they run one at a time inside a JVM. Each test uses its own daemon home,
+    // so separate JVMs can run test classes side by side.
+    maxParallelForks = 2
     testLogging {
         events("started", "passed", "skipped", "failed")
         exceptionFormat = TestExceptionFormat.FULL
