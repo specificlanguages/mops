@@ -15,6 +15,12 @@ import javax.tools.ToolProvider
 import kotlin.io.path.*
 import kotlin.test.*
 
+/**
+ * Each scenario adds its own pair of solutions, `reload.<scenario>.dependency` and `reload.<scenario>.consumer`, to the
+ * shared `mps-json` copy from [SharedDaemons], and keeps the class files and libraries they load in a directory of the
+ * copy. The daemon may already be running when a scenario adds its solutions. That is safe because the daemon loads
+ * the "before" value first, and only then does the scenario replace the dependency and expect the "after!" value.
+ */
 @ResourceLock("system-streams")
 class ExternalDependencyReloadIntegrationTest {
     @TempDir(cleanup = CleanupMode.ON_SUCCESS)
@@ -22,35 +28,44 @@ class ExternalDependencyReloadIntegrationTest {
 
     @Test
     fun `unchanged consumer uses externally replaced dependency solution in same daemon`() {
-        exerciseReplacement(library = false)
+        exerciseReplacement("solution", library = false)
     }
 
     @Test
     fun `unchanged consumer uses externally replaced Java library directory in same daemon`() {
-        exerciseReplacement(library = true)
+        exerciseReplacement("directory", library = true)
     }
 
     @Test
     fun `unchanged consumer uses externally replaced Java library jar in same daemon`() {
-        exerciseReplacement(library = true, archive = true)
+        exerciseReplacement("jar", library = true, archive = true)
     }
 
     @Test
     fun `unchanged consumer uses externally replaced Java library through a directory symlink`() {
-        exerciseReplacement(library = true, symbolicLink = true)
+        exerciseReplacement("symlink", library = true, symbolicLink = true)
     }
 
-    private fun exerciseReplacement(library: Boolean, archive: Boolean = false, symbolicLink: Boolean = false) {
-        val project = copyTestProject("mps-json", tempDir.resolve("project"))
-        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+    private fun exerciseReplacement(
+        scenario: String,
+        library: Boolean,
+        archive: Boolean = false,
+        symbolicLink: Boolean = false,
+    ) {
+        val shared = SharedDaemons.project("mps-json")
+        val project = shared.root
+        // The daemon outlives this test's temporary directory, so files that modules load stay inside the copy.
+        val external = project.resolve("reload-$scenario").createDirectories()
+        val dependencyName = "reload.$scenario.dependency"
+        val consumerName = "reload.$scenario.consumer"
         val dependencyId = UUID.randomUUID().toString()
-        val dependency = project.resolve("solutions/reload.dependency").createDirectories()
-        val consumer = project.resolve("solutions/reload.consumer").createDirectories()
-        val dependencyOutput = if (library) tempDir.resolve("external-classes") else dependency.resolve("classes_gen")
+        val dependency = project.resolve("solutions/$dependencyName").createDirectories()
+        val consumer = project.resolve("solutions/$consumerName").createDirectories()
+        val dependencyOutput = if (library) external.resolve("external-classes") else dependency.resolve("classes_gen")
         compile(dependencyOutput, "Value", "public static String value() { return \"before\"; }")
         val libraryPath = when {
-            archive -> tempDir.resolve("external.jar")
-            symbolicLink -> Files.createSymbolicLink(tempDir.resolve("external-link"), dependencyOutput)
+            archive -> external.resolve("external.jar")
+            symbolicLink -> Files.createSymbolicLink(external.resolve("external-link"), dependencyOutput)
             else -> dependencyOutput
         }
         fun packLibrary() {
@@ -79,47 +94,42 @@ class ExternalDependencyReloadIntegrationTest {
               $dependencies
             </solution>
         """.trimIndent()
-        dependency.resolve("reload.dependency.msd").writeText(descriptor("reload.dependency", dependencyId,
+        dependency.resolve("$dependencyName.msd").writeText(descriptor(dependencyName, dependencyId,
             libraries = if (library) "<library location=\"$libraryPath\" />" else ""))
-        consumer.resolve("reload.consumer.msd").writeText(descriptor("reload.consumer", UUID.randomUUID().toString(),
-            "<dependencies><dependency reexport=\"false\">$dependencyId(reload.dependency)</dependency></dependencies>"))
+        consumer.resolve("$consumerName.msd").writeText(descriptor(consumerName, UUID.randomUUID().toString(),
+            "<dependencies><dependency reexport=\"false\">$dependencyId($dependencyName)</dependency></dependencies>"))
         val modules = project.resolve(".mps/modules.xml")
         modules.writeText(modules.readText().replace("</projectModules>", """
-            <modulePath path="${'$'}PROJECT_DIR${'$'}/solutions/reload.dependency/reload.dependency.msd" />
-            <modulePath path="${'$'}PROJECT_DIR${'$'}/solutions/reload.consumer/reload.consumer.msd" />
+            <modulePath path="${'$'}PROJECT_DIR${'$'}/solutions/$dependencyName/$dependencyName.msd" />
+            <modulePath path="${'$'}PROJECT_DIR${'$'}/solutions/$consumerName/$consumerName.msd" />
             </projectModules>
         """.trimIndent()))
         val program = tempDir.resolve("value.groovy").also { it.writeText("""
             project.read {
-                def module = project.repository.modules.find { it.moduleName == 'reload.consumer' }
+                def module = project.repository.modules.find { it.moduleName == '$consumerName' }
                 project.getComponent(jetbrains.mps.classloading.ClassLoaderManager.class)
                     .getClassLoader(module).loadClass('Consumer').getMethod('value').invoke(null)
             }
         """.trimIndent()) }
         fun value(): String {
-            val result = runCommandLine(project, "--daemon-home", daemonHome.pathString,
-                *javaAndMpsHomeArgs(), "code", "run", program.pathString)
+            val result = shared.run("code", "run", program.pathString)
             assertEquals(0, result.exitCode, result.output)
             return result.stdout
         }
-        try {
-            assertContains(value(), "before")
-            val store = DaemonRecordStore.forDaemonHome(daemonHome)
-            val pid = assertNotNull(store.read(project)).record.pid
-            val consumerBytes = consumer.resolve("classes_gen/Consumer.class").readBytes()
-            val artifact = if (archive) libraryPath else dependencyOutput.resolve("Value.class")
-            val stamp = Files.getLastModifiedTime(artifact)
-            val size = Files.size(artifact)
-            compile(dependencyOutput, "Value", "public static String value() { return \"after!\"; }")
-            packLibrary()
-            assertEquals(size, Files.size(artifact))
-            Files.setLastModifiedTime(artifact, stamp)
-            assertContains(value(), "after!")
-            assertContentEquals(consumerBytes, consumer.resolve("classes_gen/Consumer.class").readBytes())
-            assertEquals(pid, assertNotNull(store.read(project)).record.pid)
-        } finally {
-            stopDaemons(project, daemonHome)
-        }
+        assertContains(value(), "before")
+        val store = DaemonRecordStore.forDaemonHome(shared.daemonHome)
+        val pid = assertNotNull(store.read(project)).record.pid
+        val consumerBytes = consumer.resolve("classes_gen/Consumer.class").readBytes()
+        val artifact = if (archive) libraryPath else dependencyOutput.resolve("Value.class")
+        val stamp = Files.getLastModifiedTime(artifact)
+        val size = Files.size(artifact)
+        compile(dependencyOutput, "Value", "public static String value() { return \"after!\"; }")
+        packLibrary()
+        assertEquals(size, Files.size(artifact))
+        Files.setLastModifiedTime(artifact, stamp)
+        assertContains(value(), "after!")
+        assertContentEquals(consumerBytes, consumer.resolve("classes_gen/Consumer.class").readBytes())
+        assertEquals(pid, assertNotNull(store.read(project)).record.pid)
     }
 
     private fun compile(output: Path, name: String, body: String, dependency: Path? = null) {
