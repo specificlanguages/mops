@@ -23,6 +23,15 @@ message.
 Pull requests are squash-merged. The pull request title becomes the commit message on `main`, so the **Pull request
 title** workflow checks it with the same hook. GitHub release notes list the merged pull requests by title.
 
+## Daemon tests on each MPS version
+
+`./gradlew :daemon:test` runs the daemon tests against the MPS version pinned as `mps` in `gradle/libs.versions.toml`.
+`./gradlew :daemon:testMps<version>` (for example `testMps2024.1.6`) runs the same test classes against each version in
+`supportedMpsVersions`, with that version's distribution on the classpath and its matching JBR, both resolved through
+mps-platform-cache. `./gradlew :daemon:testAllMpsVersions` runs all of them. Each task keeps its MPS state under
+`daemon/build/mps-test-<version>/` and its reports under `daemon/build/reports/tests/<task-name>/`, so the tasks can run
+side by side. These tasks are not part of `check`.
+
 ## Integration tests
 
 `./gradlew :cli:integrationTest` runs the full CLI integration suite against every version listed in

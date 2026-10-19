@@ -1,3 +1,7 @@
+import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.internal.provider.PropertyFactory
+import org.gradle.jvm.toolchain.internal.SpecificInstallationToolchainSpec
+import org.gradle.kotlin.dsl.support.serviceOf
 import java.util.zip.ZipFile
 
 buildscript {
@@ -150,15 +154,16 @@ val mpsAddOpens = listOf(
     "java.management/sun.management",
 ).map { "--add-opens=$it=ALL-UNNAMED" }
 
-tasks.test {
-    javaLauncher = jbrToolchain.javaLauncher
+// Configures a daemon test task to run against the given unpacked MPS distribution, with MPS state under
+// build/<workDirName> so test tasks for different MPS versions can run side by side.
+fun Test.configureMpsTest(mpsRoot: Provider<File>, workDirName: String) {
     // A full MPS environment with the distribution's bundled plugins needs more than Gradle's default 512m test heap.
     // The production daemon runs on the JVM's (much larger) default heap, so this ceiling only bounds the test JVM.
     maxHeapSize = "4g"
     // The MPS runtime jars come from the unpacked distribution, like the production daemon's classpath, so the
     // IntelliJ platform detects the MPS home from the jar locations and loads bundled plugins and languages from it.
     classpath += files(
-        testMpsRoot.map { root ->
+        mpsRoot.map { root ->
             fileTree(root) {
                 include("lib/*.jar")
                 // Exercise the bundled code-mode runtime in daemon tests.
@@ -170,23 +175,23 @@ tasks.test {
     )
     inputs.files(mpsPlugin).withPropertyName("mpsPlugin")
     jvmArgs(mpsAddOpens)
-    val mpsTestWorkDir = layout.buildDirectory.dir("mps-test")
+    val mpsTestWorkDir = layout.buildDirectory.dir(workDirName)
     jvmArgumentProviders.add {
         // The IntelliJ platform's single-instance DirectoryLock is keyed on idea.config.path / idea.system.path, and
         // PathManager caches those on first access. So they must be launch-time -D arguments, not runtime
         // System.setProperty calls: a runtime set can lose the race against PathManager's caching and fall back to the
         // shared per-product default directory, at which point two test JVMs in different worktrees collide on one lock
         // ("Only one instance of MPS can be run at a time"). Rooting them under this module's build/ makes them
-        // per-worktree, and stable across runs the way the production daemon's per-project dirs are.
+        // per-worktree and per-task, and stable across runs the way the production daemon's per-project dirs are.
         val work = mpsTestWorkDir.get().asFile
         val configDir = work.resolve("idea-config").apply { mkdirs() }
         val systemDir = work.resolve("idea-system").apply { mkdirs() }
         listOf(
-            "-Dtest.mpsHome=${testMpsRoot.get()}",
+            "-Dtest.mpsHome=${mpsRoot.get()}",
             "-Dtest.projectsDir=${rootDir.resolve("test-projects")}",
             "-Dtest.mpsPlugin=${mpsPlugin.get().singleFile}",
             "-Djava.awt.headless=true",
-            "-Didea.home.path=${testMpsRoot.get()}",
+            "-Didea.home.path=${mpsRoot.get()}",
             "-Didea.config.path=$configDir",
             "-Didea.system.path=$systemDir",
             // Log synchronously instead of through the platform's AsyncLog. AsyncLog dispatches records to a coroutine
@@ -200,6 +205,68 @@ tasks.test {
             "-Dintellij.platform.log.sync=true",
         )
     }
+}
+
+tasks.test {
+    javaLauncher = jbrToolchain.javaLauncher
+    configureMpsTest(testMpsRoot, "mps-test")
+}
+
+val jbrOs = when {
+    System.getProperty("os.name").startsWith("Windows") -> "windows"
+    System.getProperty("os.name").startsWith("Mac") -> "osx"
+    System.getProperty("os.name").startsWith("Linux") -> "linux"
+    else -> error("Unsupported JBR operating system: ${System.getProperty("os.name")}")
+}
+val jbrArch = when (System.getProperty("os.arch")) {
+    "aarch64", "arm64" -> "aarch64"
+    "amd64", "x86_64" -> "x64"
+    else -> error("Unsupported JBR architecture: ${System.getProperty("os.arch")}")
+}
+
+// The daemon compiles against the pinned MPS version but runs on every supported one. These tasks run the same test
+// classes on each supported version's distribution and matching JBR.
+val supportedMpsVersions = providers.gradleProperty("supportedMpsVersions").get().split(',').map(String::trim)
+val mpsVersionTests = supportedMpsVersions.map { mpsVersion ->
+    val mps = configurations.register("testMps$mpsVersion") {
+        isCanBeConsumed = false
+    }
+    val jbr = configurations.register("testJbr$mpsVersion") {
+        isCanBeConsumed = false
+        resolutionStrategy.dependencySubstitution {
+            all {
+                val selector = requested
+                // The MPS marker selects the JBR version; only the actual JBR archive needs a host classifier.
+                if (selector is ModuleComponentSelector && selector.group == "com.jetbrains.jdk") {
+                    artifactSelection { selectArtifact("tgz", null, "$jbrOs-$jbrArch") }
+                }
+            }
+        }
+    }
+    dependencies.add(mps.name, "com.jetbrains:mps:$mpsVersion")
+    dependencies.add(jbr.name, "com.jetbrains.mps:mps-jbr:$mpsVersion")
+    val mpsRoot = mpsPlatformCache.getMpsRoot(mps)
+    val jbrHome = mpsPlatformCache.getJbrRoot(jbr).map {
+        if (jbrOs == "osx") it.resolve("Contents/Home") else it
+    }
+    tasks.register<Test>("testMps$mpsVersion") {
+        group = LifecycleBasePlugin.VERIFICATION_GROUP
+        description = "Runs daemon tests against MPS $mpsVersion and its matching JBR."
+        testClassesDirs = sourceSets.test.get().output.classesDirs
+        classpath = sourceSets.test.get().runtimeClasspath
+        configureMpsTest(mpsRoot, "mps-test-$mpsVersion")
+        // Gradle has no public API for a toolchain at a given Java home; the jbr-toolchain plugin uses the same
+        // internal spec for the pinned JBR.
+        javaLauncher = jbrHome.flatMap {
+            javaToolchains.launcherFor(SpecificInstallationToolchainSpec.fromJavaHome(serviceOf<PropertyFactory>(), it))
+        }
+    }
+}
+
+tasks.register("testAllMpsVersions") {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = "Runs daemon tests against every supported MPS version."
+    dependsOn(mpsVersionTests)
 }
 
 val dist = configurations.consumable("dist") {
