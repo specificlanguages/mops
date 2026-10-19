@@ -1,7 +1,6 @@
 package com.specificlanguages.mops.daemon
 
 import com.intellij.ide.GeneralSettings
-import com.intellij.testFramework.IndexingTestUtil
 import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.launcher.MpsLaunchArgs
 import de.itemis.mps.gradle.project.loader.EnvironmentKind
@@ -37,6 +36,19 @@ object SharedMpsEnvironment {
 
     private val shutdown = CountDownLatch(1)
 
+    private val loader: ProjectLoader by lazy {
+        ProjectLoader.build {
+            environmentKind = EnvironmentKind.IDEA
+            environmentConfig {
+                addPluginsRecursivelyFrom(requiredPathProperty("test.mpsHome").resolve("plugins"))
+                plugins += Plugin(
+                    JavaSnippetParser.PLUGIN_ID,
+                    requiredPathProperty("test.mpsPlugin").toAbsolutePath().normalize().toString(),
+                )
+            }
+        }
+    }
+
     private val environment: IdeaEnvironment by lazy { boot() }
 
     val sharedProjectPath: Path by lazy {
@@ -49,7 +61,6 @@ object SharedMpsEnvironment {
         get() {
             val project = ensureSharedProject()
             environment.flushAllEvents()
-            IndexingTestUtil.waitUntilIndexesAreReady(project.project)
             return JetBrainsMpsAccess(project, DaemonLogger())
         }
 
@@ -89,7 +100,7 @@ object SharedMpsEnvironment {
         try {
             return block(project, projectPath)
         } finally {
-            environment.closeProject(project)
+            loader.closeProject(environment, project)
             unloadOrphanedLanguageRuntimes()
         }
     }
@@ -113,45 +124,26 @@ object SharedMpsEnvironment {
 
     private fun closeSharedProject() {
         openSharedProject?.let { project ->
-            environment.closeProject(project)
+            loader.closeProject(environment, project)
             openSharedProject = null
         }
     }
 
-    // Mirrors ProjectLoader.withOpenProject, which the daemon boots through: pending platform events must be
-    // flushed before the project's models become visible. Find operations are index-backed, so the project must
-    // additionally finish indexing before they return results; the daemon gets that time for free while it sets up
-    // its socket, but tests query immediately after opening. waitForSmartMode is not enough — the unindexed-files
-    // scan is scheduled asynchronously, so a freshly opened project can be momentarily "smart" before the scan is
-    // even queued, and an index-backed find then sees an empty index. waitUntilIndexesAreReady forces the initial
-    // scan to be submitted and blocks until it completes. It must run off any read/write action (it is here).
-    private fun openProject(projectPath: Path): MPSProject {
-        val project = environment.openProject(projectPath.toFile()) as MPSProject
-        environment.flushAllEvents()
-        IndexingTestUtil.waitUntilIndexesAreReady(project.project)
-        return project
-    }
+    // ProjectLoader.openProject waits until the project is indexed, so index-backed finds see the project's models
+    // right after opening. It must run off any read/write action (it is here).
+    private fun openProject(projectPath: Path): MPSProject =
+        loader.openProject(environment, projectPath.toFile()) as MPSProject
 
     private fun boot(): IdeaEnvironment {
-        val mpsHome = requiredPathProperty("test.mpsHome")
-        val mpsPlugin = requiredPathProperty("test.mpsPlugin")
         applyMpsSystemProperties()
 
         val handoff = SynchronousQueue<Any>()
         val environmentThread = Thread({
             try {
-                ProjectLoader
-                    .build {
-                        environmentKind = EnvironmentKind.IDEA
-                        environmentConfig {
-                            addPluginsRecursivelyFrom(mpsHome.resolve("plugins"))
-                            plugins += Plugin(JavaSnippetParser.PLUGIN_ID, mpsPlugin.toAbsolutePath().normalize().toString())
-                        }
-                    }
-                    .execute { environment ->
-                        handoff.put(environment)
-                        shutdown.await()
-                    }
+                loader.execute { environment ->
+                    handoff.put(environment)
+                    shutdown.await()
+                }
             } catch (throwable: Throwable) {
                 handoff.put(throwable)
             }
