@@ -73,6 +73,46 @@ class CodeModeExecutorTest {
         assertEquals("{\"tests\":[$rendered]}", CodeResultAdapter.render(mapOf("tests" to listOf(report))))
     }
 
+    @Test
+    fun `a worker thread holds its own read access alongside the request thread`() {
+        SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
+            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
+                CodeRunRequest("", """
+                    import java.util.concurrent.CyclicBarrier
+                    import java.util.concurrent.TimeUnit
+
+                    def rootNames = {
+                        mops.lookup.requireModel('com.specificlanguages.json.structure').rootNodes.collect { it.properties['name'] }
+                    }
+                    // Both threads wait inside their read blocks, so the reads are held at the same time.
+                    def barrier = new CyclicBarrier(2)
+                    def workerNames = null
+                    def workerFailure = null
+                    def worker = new Thread({
+                        try {
+                            workerNames = project.read {
+                                barrier.await(30, TimeUnit.SECONDS)
+                                rootNames()
+                            }
+                        } catch (Throwable failure) {
+                            workerFailure = failure
+                        }
+                    })
+                    worker.start()
+                    def requestNames = project.read {
+                        barrier.await(30, TimeUnit.SECONDS)
+                        rootNames()
+                    }
+                    worker.join()
+                    if (workerFailure != null) throw workerFailure
+                    return [request: requestNames, worker: workerNames]
+                """.trimIndent(), "worker-thread-read.groovy"),
+            )
+            val names = """["JsonFile","IJsonValue","JsonObject","KeyValuePair","JsonString","JsonArray","JsonNumber","JsonNumberDatatype","JsonBoolean","JsonNull"]"""
+            assertEquals("""{"request":$names,"worker":$names}""", response.output)
+        }
+    }
+
     private fun run(source: String): String? = executor.execute(
         CodeRunRequest("token", source, "test.groovy"),
     ).output
