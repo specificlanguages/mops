@@ -2,6 +2,7 @@ package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 
+import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.api.parallel.ResourceLock
@@ -16,9 +17,9 @@ import kotlin.io.path.*
 import kotlin.test.*
 
 /**
- * Each scenario adds its own pair of solutions, `reload.<scenario>.dependency` and `reload.<scenario>.consumer`, to the
- * shared `mps-json` copy from [SharedDaemons], and keeps the class files and libraries they load in a directory of the
- * copy. The daemon may already be running when a scenario adds its solutions. That is safe because the daemon loads
+ * The scenarios share one `mps-json` copy and its daemon through [SharedDaemons]. Each scenario adds its own pair of
+ * solutions, `reload.<scenario>.dependency` and `reload.<scenario>.consumer`, and keeps the class files and libraries
+ * they load in a directory of the copy. The daemon may already be running when a scenario adds its solutions. That is safe because the daemon loads
  * the "before" value first, and only then does the scenario replace the dependency and expect the "after!" value.
  */
 @ResourceLock("system-streams")
@@ -52,7 +53,7 @@ class ExternalDependencyReloadIntegrationTest {
         archive: Boolean = false,
         symbolicLink: Boolean = false,
     ) {
-        val shared = SharedDaemons.project("mps-json")
+        val shared = daemons.project("mps-json")
         val project = shared.root
         // The daemon outlives this test's temporary directory, so files that modules load stay inside the copy.
         val external = project.resolve("reload-$scenario").createDirectories()
@@ -130,6 +131,12 @@ class ExternalDependencyReloadIntegrationTest {
         assertContains(value(), "after!")
         assertContentEquals(consumerBytes, consumer.resolve("classes_gen/Consumer.class").readBytes())
         assertEquals(pid, assertNotNull(store.read(project)).record.pid)
+    }
+
+    companion object {
+        @JvmField
+        @RegisterExtension
+        val daemons = SharedDaemons()
     }
 
     private fun compile(output: Path, name: String, body: String, dependency: Path? = null) {

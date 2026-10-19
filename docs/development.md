@@ -56,13 +56,13 @@ version-specific task to select tests:
 ./gradlew :cli:integrationTestMps2024.1.6 --tests '*CodeModeIntegrationTest'
 ```
 
-Starting an MPS daemon takes most of an integration test's time, so tests share daemons where they can. A daemon serves
-one project root, so tests share a daemon by sharing a project copy: `SharedDaemons.project(name)` returns one copy of a
-test project per test JVM, all copies use one daemon home, and the daemons are stopped when the JVM exits. Tests that
-share a copy must pass whatever changes other tests make to it. A test that must not see such changes passes its own
-`copy` key and gets a fresh copy and daemon. Tests that stop, kill, or fail to start a daemon, run a separate builder
-daemon or a modified MPS distribution, or run MPS tests in worker processes, create a private daemon home in their own
-`@TempDir` and stop it with `stopDaemons`.
+Starting an MPS daemon takes most of an integration test's time, so the tests of one class may share daemons. A daemon
+serves one project root, so tests share a daemon by sharing a project copy. A class registers `SharedDaemons` with
+`@RegisterExtension`, and `project(name)` returns one copy of a test project for the whole class. The copies share one
+daemon home, and their daemons stop after the class. Tests that share a copy must pass whatever changes other tests make
+to it. A test that must not see such changes passes its own `copy` key. Tests that stop, kill, or fail to start a
+daemon, run a separate builder daemon or a modified MPS distribution, or run MPS tests in worker processes, create a
+private daemon home in their own `@TempDir` and stop it with `stopDaemons`.
 
 PRs, pushes to `main`, and manual workflow dispatch run the full integration matrix, the CLI smoke suite on macOS and
 Windows, and an Ubuntu verification job. Linux has no separate smoke job: the integration job for the last supported

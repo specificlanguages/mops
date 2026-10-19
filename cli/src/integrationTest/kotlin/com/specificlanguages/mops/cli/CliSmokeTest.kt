@@ -5,6 +5,7 @@ import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.ProtocolJson
+import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.api.parallel.ResourceLock
@@ -23,8 +24,8 @@ import kotlin.test.assertTrue
  * MPS semantics are covered by the daemon test tier (`daemon/src/test`); these tests only assert
  * that one read, one write-with-rollback, and one failure path survive the full process boundary.
  *
- * The tests use [SharedDaemons] copies. None of them leaves a change behind (the edit is rolled back), and their
- * assertions hold whatever modules or models other tests add to the shared copies.
+ * The tests share project copies through [SharedDaemons]. None of them leaves a change behind (the edit is rolled
+ * back), so they pass in any order.
  */
 @ResourceLock("system-streams")
 class CliSmokeTest {
@@ -33,7 +34,7 @@ class CliSmokeTest {
 
     @Test
     fun `read command round-trips through the daemon`() {
-        val result = SharedDaemons.project("base-language-sandbox").run("find", "instances", "--json", CLASS_CONCEPT)
+        val result = daemons.project("base-language-sandbox").run("find", "instances", "--json", CLASS_CONCEPT)
 
         assertEquals(0, result.exitCode, result.output)
         val response = ProtocolJson.decodeResponse(result.stdout) as FindInstancesResponse
@@ -42,7 +43,7 @@ class CliSmokeTest {
 
     @Test
     fun `failed edit operation reports the violation and leaves the model untouched`() {
-        val project = SharedDaemons.project("mps-json")
+        val project = daemons.project("mps-json")
         val model = project.root.resolve(
             "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps",
         )
@@ -78,7 +79,7 @@ class CliSmokeTest {
 
     @Test
     fun `failing command exits nonzero with the daemon error`() {
-        val result = SharedDaemons.project("mps-json")
+        val result = daemons.project("mps-json")
             .run("find", "instances", "com.specificlanguages.json.structure.DoesNotExist")
 
         assertTrue(result.exitCode != 0, result.output)
@@ -88,7 +89,11 @@ class CliSmokeTest {
         assertContains(result.output, "diagnose module com.specificlanguages.json")
     }
 
-    private companion object {
-        const val CLASS_CONCEPT = "jetbrains.mps.baseLanguage.structure.ClassConcept"
+    companion object {
+        @JvmField
+        @RegisterExtension
+        val daemons = SharedDaemons()
+
+        private const val CLASS_CONCEPT = "jetbrains.mps.baseLanguage.structure.ClassConcept"
     }
 }

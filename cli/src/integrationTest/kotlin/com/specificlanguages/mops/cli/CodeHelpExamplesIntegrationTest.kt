@@ -11,10 +11,6 @@ import java.nio.file.Path
 import kotlin.io.path.*
 import kotlin.test.*
 
-/**
- * Runs the `code help` examples against the shared `base-language-sandbox` copy from [SharedDaemons]. The examples
- * only add modules and models named `sample.*` or a class named `Example`, which no other user of that copy looks for.
- */
 @ResourceLock("system-streams")
 class CodeHelpExamplesIntegrationTest {
     @TempDir(cleanup = CleanupMode.ON_SUCCESS)
@@ -22,9 +18,10 @@ class CodeHelpExamplesIntegrationTest {
 
     @Test
     fun `documented examples execute with fixture names and native references`() {
-        val project = SharedDaemons.project("base-language-sandbox")
+        val project = copyTestProject("base-language-sandbox", tempDir.resolve("project"))
+        val home = tempDir.resolve("daemon-home").createDirectories()
         val program = tempDir.resolve("example.groovy")
-        val installed = InstalledCli(project.root, project.daemonHome, tempDir)
+        val installed = InstalledCli(project, home, tempDir)
         fun cli(vararg args: String): CliResult = installed.run(*args)
         fun execute(path: String, substitutions: Map<String, String> = emptyMap()): String {
             val help = cli("code", "help", path, "--json")
@@ -38,34 +35,38 @@ class CodeHelpExamplesIntegrationTest {
             assertEquals(0, result.exitCode, "$path example:\n$source\n${result.output}")
             return result.stdout.trim()
         }
-        Json.parseToJsonElement(execute("Project.read")).jsonArray
-        val build = Json.parseToJsonElement(execute("Project.make")).jsonObject
-        assertTrue(build.getValue("outcome").jsonPrimitive.content in setOf("SUCCESS", "FAILED", "NOTHING_TO_GENERATE"))
-        assertTrue(build.getValue("moduleCount").jsonPrimitive.content.toInt() >= 0)
-        build.getValue("messages").jsonArray
+        try {
+            Json.parseToJsonElement(execute("Project.read")).jsonArray
+            val build = Json.parseToJsonElement(execute("Project.make")).jsonObject
+            assertTrue(build.getValue("outcome").jsonPrimitive.content in setOf("SUCCESS", "FAILED", "NOTHING_TO_GENERATE"))
+            assertTrue(build.getValue("moduleCount").jsonPrimitive.content.toInt() >= 0)
+            build.getValue("messages").jsonArray
 
-        assertEquals("sample.solution", execute("Project.createSolution"))
-        assertEquals("sample.language", execute("Project.createLanguage"))
-        assertEquals("sample.devkit", execute("Project.createDevkit"))
-        assertTrue(execute("Language.createGenerator").isNotBlank())
-        assertEquals("sample.model", execute("SModule.createModel"))
-        assertContains(execute("global.help"), "usagePreset")
-        assertEquals("jetbrains.mps.baseLanguage.structure.ClassConcept", execute("mops.lookup.conceptByName"))
-        assertEquals("jetbrains.mps.baseLanguage.structure.ClassConcept", execute("mops.lookup.requireConceptByName"))
-        assertContains(execute("mops.parsing.java"), "addJavaClassesFromString")
+            assertEquals("sample.solution", execute("Project.createSolution"))
+            assertEquals("sample.language", execute("Project.createLanguage"))
+            assertEquals("sample.devkit", execute("Project.createDevkit"))
+            assertTrue(execute("Language.createGenerator").isNotBlank())
+            assertEquals("sample.model", execute("SModule.createModel"))
+            assertContains(execute("global.help"), "usagePreset")
+            assertEquals("jetbrains.mps.baseLanguage.structure.ClassConcept", execute("mops.lookup.conceptByName"))
+            assertEquals("jetbrains.mps.baseLanguage.structure.ClassConcept", execute("mops.lookup.requireConceptByName"))
+            assertContains(execute("mops.parsing.java"), "addJavaClassesFromString")
 
-        val parsed = Json.parseToJsonElement(execute(
-            "mops.parsing.java.addJavaClassesFromString", mapOf("sample.model" to "baselanguage.sandbox"),
-        )).jsonObject
-        assertEquals(1, parsed.getValue("nodes").jsonArray.size)
-        val classifier = parsed.getValue("nodes").jsonArray.single().jsonPrimitive.content
-        val members = Json.parseToJsonElement(execute(
-            "mops.parsing.java.addJavaMembersFromString", mapOf("CLASSIFIER_NODE_REFERENCE" to classifier),
-        )).jsonObject
-        assertEquals(1, members.getValue("nodes").jsonArray.size)
-        assertEquals("Example", execute("SNode.properties", mapOf("NODE_REFERENCE" to classifier)))
-        Json.parseToJsonElement(execute("SNode.children", mapOf("NODE_REFERENCE" to classifier))).jsonArray
-        Json.parseToJsonElement(execute("mops.search.eachInstanceOf")).jsonArray
-        Json.parseToJsonElement(execute("mops.search.eachUsageOf", mapOf("NODE_REFERENCE" to classifier))).jsonArray
+            val parsed = Json.parseToJsonElement(execute(
+                "mops.parsing.java.addJavaClassesFromString", mapOf("sample.model" to "baselanguage.sandbox"),
+            )).jsonObject
+            assertEquals(1, parsed.getValue("nodes").jsonArray.size)
+            val classifier = parsed.getValue("nodes").jsonArray.single().jsonPrimitive.content
+            val members = Json.parseToJsonElement(execute(
+                "mops.parsing.java.addJavaMembersFromString", mapOf("CLASSIFIER_NODE_REFERENCE" to classifier),
+            )).jsonObject
+            assertEquals(1, members.getValue("nodes").jsonArray.size)
+            assertEquals("Example", execute("SNode.properties", mapOf("NODE_REFERENCE" to classifier)))
+            Json.parseToJsonElement(execute("SNode.children", mapOf("NODE_REFERENCE" to classifier))).jsonArray
+            Json.parseToJsonElement(execute("mops.search.eachInstanceOf")).jsonArray
+            Json.parseToJsonElement(execute("mops.search.eachUsageOf", mapOf("NODE_REFERENCE" to classifier))).jsonArray
+        } finally {
+            cli("daemon", "stop")
+        }
     }
 }
