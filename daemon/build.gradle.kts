@@ -1,7 +1,4 @@
 import org.gradle.api.artifacts.component.ModuleComponentSelector
-import org.gradle.api.internal.provider.PropertyFactory
-import org.gradle.jvm.toolchain.internal.SpecificInstallationToolchainSpec
-import org.gradle.kotlin.dsl.support.serviceOf
 import java.util.zip.ZipFile
 
 buildscript {
@@ -255,11 +252,11 @@ val mpsVersionTests = supportedMpsVersions.map { mpsVersion ->
         testClassesDirs = sourceSets.test.get().output.classesDirs
         classpath = sourceSets.test.get().runtimeClasspath
         configureMpsTest(mpsRoot, "mps-test-$mpsVersion")
-        // Gradle has no public API for a toolchain at a given Java home; the jbr-toolchain plugin uses the same
-        // internal spec for the pinned JBR.
-        javaLauncher = jbrHome.flatMap {
-            javaToolchains.launcherFor(SpecificInstallationToolchainSpec.fromJavaHome(serviceOf<PropertyFactory>(), it))
-        }
+        // Test derives its default javaLauncher from a custom executable. Gradle reads the executable through
+        // toString(), so the JBR is resolved only when the task runs, not on every build that configures it.
+        setExecutable(object {
+            override fun toString() = jbrHome.get().resolve("bin/java").absolutePath
+        })
     }
 }
 
