@@ -30,7 +30,8 @@ title** workflow checks it with the same hook. GitHub release notes list the mer
 `supportedMpsVersions`, with that version's distribution on the classpath and its matching JBR, both resolved through
 mps-platform-cache. `./gradlew :daemon:testAllMpsVersions` runs all of them. Each task keeps its MPS state under
 `daemon/build/mps-test-<version>/` and its reports under `daemon/build/reports/tests/<task-name>/`, so the tasks can run
-side by side. These tasks are not part of `check`.
+side by side. `check` runs `:daemon:test` and, through `testOtherMpsVersions`, the tasks for the other supported
+versions. CI runs every version's task in its own `daemon-versions` matrix job instead.
 
 ## Integration tests
 
@@ -57,10 +58,11 @@ the job log to help identify slow or stalled tests. Apply `--tests` to a version
 
 PRs, pushes to `main`, and manual workflow dispatch run the full integration matrix, the CLI smoke suite on macOS and
 Windows, and an Ubuntu verification job. Linux has no separate smoke job: the integration job for the last supported
-version runs every smoke test on Ubuntu. The verification job runs `check -x :cli:integrationTest`, covering all
-subprojects' unit tests, daemon tests, Gradle discovery tests, and packaging checks, and then runs the `prek` hooks on
-all files. The separate integration matrix covers the excluded CLI integration suite. The `CI passed` job requires every
-job to succeed. Release validation runs the complete `check`, including the full integration matrix.
+version runs every smoke test on Ubuntu. The verification job runs
+`check -x :cli:integrationTest -x :daemon:test -x :daemon:testOtherMpsVersions`, covering all subprojects' unit tests,
+daemon checks, Gradle discovery tests, and packaging checks, and then runs the `prek` hooks on all files. The separate
+`daemon-versions` and integration matrices cover the excluded daemon tests and CLI integration suite. The `CI passed`
+job requires every job to succeed. Release validation runs the complete `check`, including the full integration matrix.
 
 To test an already extracted distribution, use the separate local task:
 
