@@ -18,7 +18,13 @@ import com.specificlanguages.mops.protocol.MpsNodeJson
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import com.specificlanguages.mops.protocol.MpsNodeUsageJson
 import com.specificlanguages.mops.protocol.NodeTarget
+import java.net.InetAddress
+import java.net.ServerSocket
+import java.time.Duration
+import java.util.concurrent.TimeUnit
 import kotlin.test.Test
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 
@@ -274,5 +280,25 @@ class DefaultDaemonClientTest {
         assertContains(daemon.requestsReceived.single(), "\"op\":\"setProperty\"")
         assertContains(daemon.requestsReceived.single(), "\"name\":\"name\"")
         assertContains(daemon.requestsReceived.single(), "\"value\":\"RenamedConcept\"")
+    }
+
+    @Test
+    fun `an expired code run timeout kills the daemon process`() {
+        val daemon = ProcessBuilder("sleep", "60").start()
+        try {
+            // Accepts the request and never answers, like a daemon stuck in a long Code Mode script.
+            ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { server ->
+                val client = DefaultDaemonClient(server.localPort, "secret", daemonPid = daemon.pid())
+
+                val failure = assertFailsWith<IllegalStateException> {
+                    client.runCode("return 1", "script.groovy", Duration.ofMillis(500))
+                }
+
+                assertContains(failure.message!!, "the project daemon was terminated")
+                assertTrue(daemon.waitFor(10, TimeUnit.SECONDS), "the daemon process must be killed")
+            }
+        } finally {
+            daemon.destroyForcibly()
+        }
     }
 }
