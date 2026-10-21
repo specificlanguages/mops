@@ -99,7 +99,7 @@
                 code: '''mops test 'NODE_REF' --no-build --json''',
             ],
             [
-                title: 'Set the overall test deadline (seconds)',
+                title: 'Limit test execution time (seconds)',
                 kind: 'cli',
                 code: '''mops test --timeout 60''',
             ],

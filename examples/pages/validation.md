@@ -65,7 +65,8 @@ Check the returned outcome of Code Mode make/testing operations: returned failur
 
 ## Deadlines and recovery
 
-`test --timeout SECONDS` covers the overall request, including preparation; its default is 900 and 0 disables it.
+`test --timeout SECONDS` limits test execution, counted after build and discovery; its default is 900 and 0 disables it.
+The `timeout` option of `mops.testing.run` works the same way.
 Code Mode has a 900-second hard deadline; `{{disable-deadline}}` disables it. Expiry terminates the
 daemon. Test worker timeouts leave the daemon usable.
 

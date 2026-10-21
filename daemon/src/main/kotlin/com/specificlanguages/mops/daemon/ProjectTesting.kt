@@ -5,20 +5,15 @@ import java.lang.management.ManagementFactory
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 
 class ProjectTesting(private val access: JetBrainsMpsAccess, private val workspace: Path) {
-    fun run(target: List<String>, build: Boolean, deadlineMillis: Long, cancellationPath: String?): TestRunReport {
+    fun run(target: List<String>, build: Boolean, timeoutMillis: Long, cancellationPath: String?): TestRunReport {
         require(!access.project.modelAccess.canRead()) { "testing.run must be called outside a model-access block" }
         val directory = workspace.resolve("test-runs").resolve(UUID.randomUUID().toString())
         Files.createDirectories(directory)
         val reportPath = directory.resolve("report.json")
         val report = TestReportStore(reportPath)
         report.update { it }
-        if (deadlineMillis != 0L && System.currentTimeMillis() >= deadlineMillis) {
-            report.finish("TIMED_OUT", false)
-            return report.snapshot()
-        }
         access.extra { saveProject() }
         report.phase("DISCOVERY")
         val selectionPath = directory.resolve("selection.properties")
@@ -29,7 +24,7 @@ class ProjectTesting(private val access: JetBrainsMpsAccess, private val workspa
             return report.snapshot()
         }
         val requestPath = directory.resolve("request.json")
-        Files.writeString(requestPath, ProtocolJson.encodeRequest(TestRunRequest("", target, build, deadlineMillis, cancellationPath)))
+        Files.writeString(requestPath, ProtocolJson.encodeRequest(TestRunRequest("", target, build, timeoutMillis, cancellationPath)))
         val classpathFile = directory.resolve("classpath.args")
         val classpath = System.getProperty("java.class.path").replace("\\", "\\\\").replace("\"", "\\\"")
         Files.writeString(classpathFile, "-cp\n\"$classpath\"\n")
@@ -52,20 +47,14 @@ class ProjectTesting(private val access: JetBrainsMpsAccess, private val workspa
             report.finish("WORKER_FAILED", false, failure.toString())
             return report.snapshot()
         }
-        var interruption: String? = null
-        try {
-            while (!worker.waitFor(100, TimeUnit.MILLISECONDS)) {
-                interruption = when {
-                    cancellationPath != null && Files.exists(Path.of(cancellationPath)) -> "CANCELLED"
-                    deadlineMillis != 0L && System.currentTimeMillis() >= deadlineMillis -> "TIMED_OUT"
-                    else -> null
-                }
-                if (interruption != null) break
-            }
+        // Only the worker knows when test execution starts, so it enforces the time limit; the daemon handles
+        // cancellation and a worker that exits without a final report.
+        val limits = TestRunLimits(cancellationPath?.let(Path::of), 0)
+        val interruption = try {
+            limits.watch(running = worker::isAlive)
         } finally {
             if (worker.isAlive) {
-                worker.descendants().toList().asReversed().forEach { it.destroyForcibly() }
-                worker.destroyForcibly()
+                destroyProcessTree(worker.toHandle())
                 worker.waitFor()
             }
             worker.outputStream.close()

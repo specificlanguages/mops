@@ -80,7 +80,7 @@ class TestRunningIntegrationTest {
     }
 
     @Test
-    fun `timeouts cancellation and enclosing Code Mode deadline retain completed results`() {
+    fun `timeouts cancellation and a terminated daemon retain completed results`() {
         val project = copyTestingProject(tempDir.resolve("project"))
         val home = tempDir.resolve("daemon-home").createDirectories()
         fun cli(vararg args: String) = runCommandLine(project, "--daemon-home", home.pathString, *javaAndMpsHomeArgs(), *args)
@@ -109,10 +109,8 @@ class TestRunningIntegrationTest {
                 assertContains(disabled.readText(), "com.intellij.platform.images")
             else assertFalse(disabled.exists(), "Images must remain available outside 2025.1")
             assertFalse(workerLog.contains("Language with ID 'SVG' is already registered"), "SVG language conflict; see ${warmReport.reportPath}")
-            // The budget must cover worker startup and discovery before aCompleted runs. On CI runners shared by two
-            // integration-test JVMs that alone can take about 90 seconds. zSlow sleeps 600 seconds, so the run still
-            // times out.
-            val timed = cli("test", "mops.tests", ".slow", "SlowTest", "--no-build", "--json", "--timeout", "180")
+            // The limit counts from the start of test execution: aCompleted passes within it, zSlow sleeps 600 seconds.
+            val timed = cli("test", "mops.tests", ".slow", "SlowTest", "--no-build", "--json", "--timeout", "15")
             assertEquals(1, timed.exitCode, timed.output)
             val report = ProtocolJson.decodeTestReport(timed.stdout)
             assertEquals("TIMED_OUT", report.outcome, timed.output)
@@ -159,9 +157,6 @@ class TestRunningIntegrationTest {
                 assertTrue(partial.results.any { it.kind == "TEST" && it.status == "PASSED" })
             } finally { if (code.isAlive) code.destroyForcibly() }
             assertEquals(0, cli("daemon", "ping").exitCode)
-            val startup = cli("test", "--timeout", "1", "--json")
-            assertEquals(1, startup.exitCode, startup.output)
-            assertEquals("TIMED_OUT", ProtocolJson.decodeTestReport(startup.stdout).outcome, startup.output)
         } finally { stopDaemons(project, home) }
     }
 

@@ -19,30 +19,23 @@ fun main(args: Array<String>) {
     thread(name = "test-worker-parent", isDaemon = true) {
         while (System.`in`.read() != -1) { }
         report.finish("PARENT_TERMINATED", false)
-        ProcessHandle.current().descendants().toList().asReversed().forEach { it.destroyForcibly() }
+        destroyProcessTree(ProcessHandle.current())
         Runtime.getRuntime().halt(1)
     }
+    val limits = TestRunLimits(request.cancellationPath?.let(Path::of), request.timeoutMillis)
     thread(name = "test-worker-watchdog", isDaemon = true) {
-        while (true) {
-            val reason = when {
-                request.cancellationPath?.let { Files.exists(Path.of(it)) } == true -> "CANCELLED"
-                request.deadlineMillis != 0L && System.currentTimeMillis() >= request.deadlineMillis -> "TIMED_OUT"
-                else -> null
-            }
-            if (reason != null) {
-                report.finish(reason, false)
-                ProcessHandle.current().descendants().toList().asReversed().forEach { it.destroyForcibly() }
-                Runtime.getRuntime().halt(1)
-            }
-            Thread.sleep(100)
-        }
+        val reason = requireNotNull(limits.watch(running = { true }))
+        // Record the interruption before killing the Ant JVM, so the execution thread cannot finish the run first.
+        report.finish(reason, false)
+        destroyProcessTree(ProcessHandle.current())
+        Runtime.getRuntime().halt(1)
     }
     try {
         if (!request.build) {
             report.endTiming()
             report.phase("DISCOVERY")
             val selection = AntTestSelection.load(Path.of(args[4]))
-            AntTestExecution(Path.of(args[3]), Path.of(args[1]).parent, report).run(Path.of(args[2]), selection)
+            AntTestExecution(Path.of(args[3]), Path.of(args[1]).parent, report, limits).run(Path.of(args[2]), selection)
             Runtime.getRuntime().halt(if (report.snapshot().successful) 0 else 1)
         }
         ProjectLoader.build {
@@ -79,7 +72,7 @@ fun main(args: Array<String>) {
                 report.endTiming()
             }
             report.phase("DISCOVERY")
-            AntTestExecution(Path.of(args[3]), Path.of(args[1]).parent, report)
+            AntTestExecution(Path.of(args[3]), Path.of(args[1]).parent, report, limits)
                 .run(Path.of(args[2]), AntTestSelection.resolve(access, request.target))
         }
     } catch (failure: Throwable) {

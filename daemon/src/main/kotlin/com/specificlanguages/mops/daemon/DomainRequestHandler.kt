@@ -87,7 +87,7 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess, pr
 
             is TestRunRequest -> TestRunResponse(
                 ProjectTesting(mpsAccess as JetBrainsMpsAccess, workspacePath).run(
-                    request.target, request.build, request.deadlineMillis, request.cancellationPath))
+                    request.target, request.build, request.timeoutMillis, request.cancellationPath))
 
             is CodeRunRequest -> {
                 val access = mpsAccess as? JetBrainsMpsAccess

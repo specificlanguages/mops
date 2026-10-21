@@ -8,7 +8,12 @@ import java.util.concurrent.TimeUnit
 import kotlin.io.path.*
 
 /** Uses the selected distribution's Ant task to construct and start the test-mode JVM. */
-class AntTestExecution(private val mps: Path, private val directory: Path, private val report: TestReportStore) {
+class AntTestExecution(
+    private val mps: Path,
+    private val directory: Path,
+    private val report: TestReportStore,
+    private val limits: TestRunLimits,
+) {
     fun run(project: Path, selection: AntTestSelection) {
         report.beginTiming("antStartupAndDiscovery")
         val (modules, moduleIds, libraries, model, node) = selection
@@ -77,7 +82,10 @@ class AntTestExecution(private val mps: Path, private val directory: Path, priva
                     event.containsKey("discovered") -> {
                         report.event(mapOf("discovered" to event.getProperty("discovered").toInt()))
                         report.beginTiming("execution")
-                        if (event.getProperty("discovered").toInt() > 0) report.phase("EXECUTION")
+                        if (event.getProperty("discovered").toInt() > 0) {
+                            report.phase("EXECUTION")
+                            limits.executionStarted()
+                        }
                     }
                     else -> report.event(event.stringPropertyNames().associateWith { event.getProperty(it) })
                 }
@@ -87,10 +95,7 @@ class AntTestExecution(private val mps: Path, private val directory: Path, priva
             while (!ant.waitFor(50, TimeUnit.MILLISECONDS)) collect()
             collect()
         } finally {
-            if (ant.isAlive) {
-                ant.descendants().toList().asReversed().forEach { it.destroyForcibly() }
-                ant.destroyForcibly()
-            }
+            if (ant.isAlive) destroyProcessTree(ant.toHandle())
         }
         val snapshot = report.snapshot()
         val outcome = when {

@@ -14,19 +14,18 @@ class TestCommand(private val environment: CommandEnvironment) : CliCommand(), I
     var noBuild = false
     @Option(names = ["--json"], description = ["Print the structured test report."])
     var json = false
-    @Option(names = ["--timeout"], paramLabel = "SECONDS", description = ["Overall deadline; default 900, 0 disables it."])
+    @Option(names = ["--timeout"], paramLabel = "SECONDS", description = ["Time limit for test execution, counted after build and discovery; default 900, 0 disables it."])
     var timeout: Long = 900
     private var resultCode = 1
 
     override fun run() {
-        require(timeout >= 0 && timeout <= Long.MAX_VALUE / 1000 - System.currentTimeMillis()) { "invalid timeout" }
-        val deadline = if (timeout == 0L) 0 else System.currentTimeMillis() + timeout * 1000
+        require(timeout in 0..Long.MAX_VALUE / 1_000_000) { "invalid timeout" }
         val cancelDir = Files.createTempDirectory("mops-test-cancel-")
         val cancel = cancelDir.resolve("cancel")
         val hook = Thread { Files.writeString(cancel, "cancel") }
         Runtime.getRuntime().addShutdownHook(hook)
         try {
-            val report = environment.daemon().runTests(target, !noBuild, deadline, cancel.toString()).report
+            val report = environment.daemon().runTests(target, !noBuild, timeout * 1000, cancel.toString()).report
             if (json) println(ProtocolJson.encodeTestReport(report)) else {
                 val counts = report.results.filter { it.kind == "TEST" }.groupingBy { it.status }.eachCount()
                 println("${report.outcome}: ${counts.entries.joinToString { "${it.value} ${it.key.lowercase()}" }}")

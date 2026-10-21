@@ -22,7 +22,7 @@ object CodeCatalog {
         }
     }
     private val entries = listOf(
-        Entry("mops.testing", "run", "mops.testing.run(Object selection = project, Map options = [:]): TestRunReport", "extra", "Build and run project/module/model/test-node tests in an isolated process. Options: build (true), timeout (900 seconds; 0 disables). Returns failures and partial results in a saved report."),
+        Entry("mops.testing", "run", "mops.testing.run(Object selection = project, Map options = [:]): TestRunReport", "extra", "Build and run project/module/model/test-node tests in an isolated process. Options: build (true), timeout (900 seconds of test execution, after build and discovery; 0 disables). Returns failures and partial results in a saved report."),
         Entry("mops.editing", "build", "mops.editing.build: MopsEditingBuild", "none", "Editing operations for MPS build projects."),
         Entry("mops.editing.build", "reloadModulesFromDisk", "mops.editing.build.reloadModulesFromDisk(SNode node): BuildModuleReloadResult", "command", "Reload the nearest BuildProject's existing module entries from their descriptor files. Returns ordered warnings and errors; successful partial updates are retained."),
         Entry("mops.parsing", "java", "mops.parsing.java: JavaSnippetParser", "none", "Java 8 snippet parser. Its insertion methods require command access and return nodes plus unresolved native nodes; this is not a full model check."),

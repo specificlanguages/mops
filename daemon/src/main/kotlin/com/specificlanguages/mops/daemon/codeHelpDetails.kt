@@ -9,7 +9,7 @@ internal fun options(path: String): List<CodeHelpOption> {
         "Project.createSolution" -> listOf(descriptor, CodeHelpOption("usagePreset", "String", "NOT_GENERATED", "Case-insensitive; hyphens are normalized to underscores", SolutionUsagePreset.entries.map { it.name }))
         "Project.createDevkit" -> listOf(descriptor)
         "Language.createGenerator" -> listOf(descriptor, CodeHelpOption("standalone", "boolean", "false", "Persist the generator as a standalone module"))
-        "mops.testing.run" -> listOf(CodeHelpOption("build", "boolean", "true", "Build before running tests"), CodeHelpOption("timeout", "integer", "900", "Timeout in seconds; 0 disables; nonnegative"))
+        "mops.testing.run" -> listOf(CodeHelpOption("build", "boolean", "true", "Build before running tests"), CodeHelpOption("timeout", "integer", "900", "Time limit in seconds for test execution, counted after build and discovery; 0 disables; nonnegative"))
         else -> emptyList()
     }
 }
