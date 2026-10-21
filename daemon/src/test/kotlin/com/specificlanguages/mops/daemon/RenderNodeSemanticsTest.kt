@@ -42,23 +42,25 @@ class RenderNodeSemanticsTest {
     @Test
     fun `renders the reflective editor of a root node when reflective is allowed`() {
         // The same unresolved subtree renders under --allow-reflective: the guard is bypassed and MPS falls back to its
-        // reflective editor, showing concept names and roles with placeholder property values.
+        // reflective editor. Its layout differs between MPS versions (concept name or alias, placeholder or actual
+        // property value), so only the structure is checked.
         val text = render(NodeTarget.InModel(SANDBOX_MODEL_REFERENCE, SANDBOX_FILE_NODE_ID), allowReflective = true)
 
-        assertContains(text, "JsonObject")
-        assertContains(text, "KeyValuePair string")
-        assertContains(text, "value : <no value>")
+        assertMatches(reflective("^json ?file sandbox \\{"), text)
+        assertMatches(reflective("json ?object \\{"), text)
+        assertMatches(reflective("key ?value ?pair string \\{"), text)
+        assertMatches(reflective("json ?string \\{\\s*(properties:\\s*)?value : (<no value>|foo)\\s"), text)
     }
 
     @Test
     fun `renders a non-root node scoped to its own subtree`() {
         val text = render(NodeTarget.InModel(SANDBOX_MODEL_REFERENCE, ARRAY_NODE_ID), allowReflective = true)
 
-        assertTrue(text.startsWith("JsonArray"), "expected the array subtree, got: $text")
-        assertContains(text, "JsonNumber")
-        assertContains(text, "JsonString")
-        assertFalse(text.contains("JsonObject"), "expected only the array subtree, got: $text")
-        assertFalse(text.contains("KeyValuePair"), "expected only the array subtree, got: $text")
+        assertMatches(reflective("^json ?array \\{"), text)
+        assertMatches(reflective("json ?number \\{"), text)
+        assertMatches(reflective("json ?string \\{"), text)
+        assertFalse(reflective("json ?object").containsMatchIn(text), "expected only the array subtree, got: $text")
+        assertFalse(reflective("key ?value ?pair").containsMatchIn(text), "expected only the array subtree, got: $text")
     }
 
     @Test
@@ -68,6 +70,13 @@ class RenderNodeSemanticsTest {
         }
         assertEquals(MpsErrorCode.NODE_NOT_FOUND, exception.code)
     }
+
+    // The reflective editor shows a concept by its name (`JsonArray`) or its alias (`json array`), depending on the MPS
+    // version, so patterns write concept words separated by optional spaces and match case-insensitively.
+    private fun reflective(pattern: String) = Regex(pattern, RegexOption.IGNORE_CASE)
+
+    private fun assertMatches(regex: Regex, text: String) =
+        assertTrue(regex.containsMatchIn(text), "expected a match for /$regex/, got: $text")
 
     private fun render(target: NodeTarget, allowReflective: Boolean = false): String =
         SharedMpsEnvironment.sharedMpsAccess.extra { renderNode(target, allowReflective) }
