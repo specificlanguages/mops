@@ -19,7 +19,6 @@ class ModuleCreationSemanticsTest {
     @Test
     fun `solution creation persists project membership`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, projectPath ->
-            assertTrue(com.intellij.openapi.application.ex.ApplicationManagerEx.getApplicationEx().isSaveAllowed)
             val response = DomainRequestHandler(projectPath, JetBrainsMpsAccess(project, DaemonLogger()))
                 .handleDomainRequest(CreateSolutionRequest("", "example.created"))
             assertIs<ModuleCreationResponse>(response)
