@@ -362,6 +362,10 @@ export MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS=600
 This setting controls the wait for the daemon's readiness record. It does not change command execution timeouts. If
 startup times out, the CLI terminates the daemon and reports the timeout and daemon log path.
 
+`MOPS_DAEMON_JAVA_OPTIONS` adds whitespace-separated JVM options to a newly started daemon, for example
+`MOPS_DAEMON_JAVA_OPTIONS=-Xmx8g`. Test workers started by the daemon inherit them. Without it, the JVM picks its
+default maximum heap, a quarter of physical memory.
+
 Daemon records, logs, working files, and isolated IDEA config and system directories live outside the MPS project. By
 default the CLI stores them under `$XDG_CACHE_HOME/mops/daemon`, falling back to `~/.cache/mops/daemon` when
 `XDG_CACHE_HOME` is unset; pass `--daemon-home <path>` to use another directory. Each project gets a stable hashed

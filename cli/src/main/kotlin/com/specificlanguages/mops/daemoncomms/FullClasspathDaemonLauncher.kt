@@ -29,6 +29,7 @@ import kotlin.io.path.readText
 class FullClasspathDaemonLauncher(
     private val records: DaemonRecordStore,
     private val startupTimeout: Duration = startupTimeoutFromEnvironment(System.getenv(STARTUP_TIMEOUT_ENV)),
+    private val javaOptions: List<String> = javaOptionsFromEnvironment(System.getenv(JAVA_OPTIONS_ENV)),
     private val applicationHome: Path? = discoverApplicationHome(),
 ) : DaemonLauncher {
 
@@ -74,6 +75,7 @@ class FullClasspathDaemonLauncher(
                     add("-Didea.force.use.core.classloader=false")
                     add("-Didea.config.path=${workspace.ideaConfigDir()}")
                     add("-Didea.system.path=${workspace.ideaSystemDir()}")
+                    addAll(javaOptions)
                     add("@${classpathArgFile.pathString}")
                     add("com.specificlanguages.mops.daemon.MainKt")
                     add("--project-path")
@@ -211,6 +213,7 @@ class FullClasspathDaemonLauncher(
         private const val DAEMON_MPS_PLUGIN_FILE = "mops-daemon-plugin.jar"
         internal const val DAEMON_MPS_PLUGIN_PROPERTY = "mops.daemon.mps.plugin"
         private const val STARTUP_TIMEOUT_ENV = "MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS"
+        private const val JAVA_OPTIONS_ENV = "MOPS_DAEMON_JAVA_OPTIONS"
         private val REQUEST_TIMEOUT = Duration.ofMinutes(2)
 
         internal fun mpsRuntimeClasspath(
@@ -374,6 +377,10 @@ class FullClasspathDaemonLauncher(
             }
             return Duration.ofSeconds(seconds)
         }
+
+        /** Splits [value] on whitespace into extra daemon JVM options; quoting is not supported. */
+        internal fun javaOptionsFromEnvironment(value: String?): List<String> =
+            value?.trim()?.split(Regex("\\s+"))?.filter { it.isNotEmpty() }.orEmpty()
 
         /**
          * Builds a diagnostic when the IntelliJ workspace lock in [configDir] is held by a live process other than

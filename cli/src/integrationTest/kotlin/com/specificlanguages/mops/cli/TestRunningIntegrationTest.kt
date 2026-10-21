@@ -108,7 +108,10 @@ class TestRunningIntegrationTest {
                 assertContains(disabled.readText(), "com.intellij.platform.images")
             else assertFalse(disabled.exists(), "Images must remain available outside 2025.1")
             assertFalse(workerLog.contains("Language with ID 'SVG' is already registered"), "SVG language conflict; see ${warmReport.reportPath}")
-            val timed = cli("test", "mops.tests", ".slow", "SlowTest", "--no-build", "--json", "--timeout", "90")
+            // The budget must cover worker startup and discovery before aCompleted runs. On CI runners shared by two
+            // integration-test JVMs that alone can take about 90 seconds. zSlow sleeps 600 seconds, so the run still
+            // times out.
+            val timed = cli("test", "mops.tests", ".slow", "SlowTest", "--no-build", "--json", "--timeout", "180")
             assertEquals(1, timed.exitCode, timed.output)
             val report = ProtocolJson.decodeTestReport(timed.stdout)
             assertEquals("TIMED_OUT", report.outcome, timed.output)
@@ -150,7 +153,8 @@ class TestRunningIntegrationTest {
                 def model = project.read { mops.lookup.requireModel('mops.tests.slow') }
                 return mops.testing.run(model, [build:false, timeout:0])
             """.trimIndent())
-            val code = cli("code", "run", script.pathString, "--timeout", "90")
+            // Same budget as the timed run above: the Code Mode deadline must outlast worker startup and discovery.
+            val code = cli("code", "run", script.pathString, "--timeout", "180")
             assertEquals(1, code.exitCode, code.output)
             assertContains(code.stderr, "daemon was terminated")
             awaitCondition { reports().any { it.reportPath !in beforeCode && it.outcome == "PARENT_TERMINATED" } }

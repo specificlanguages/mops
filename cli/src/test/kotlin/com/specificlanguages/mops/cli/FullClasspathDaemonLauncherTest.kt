@@ -174,6 +174,16 @@ class FullClasspathDaemonLauncherTest {
     }
 
     @Test
+    fun `daemon Java options split on whitespace`() {
+        assertEquals(emptyList(), FullClasspathDaemonLauncher.javaOptionsFromEnvironment(null))
+        assertEquals(emptyList(), FullClasspathDaemonLauncher.javaOptionsFromEnvironment("  "))
+        assertEquals(
+            listOf("-Xmx2g", "-XX:+UseSerialGC"),
+            FullClasspathDaemonLauncher.javaOptionsFromEnvironment(" -Xmx2g\t -XX:+UseSerialGC\n"),
+        )
+    }
+
+    @Test
     fun `startup timeout rejects invalid values including millisecond overflow`() {
         for (value in listOf("", "0", "-1", "1.5", "abc", Long.MAX_VALUE.toString(), "99999999999999999999")) {
             val exception = assertFailsWith<IllegalArgumentException>(value) {
