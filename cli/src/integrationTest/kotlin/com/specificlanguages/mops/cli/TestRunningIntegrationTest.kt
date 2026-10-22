@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.cli
 
+import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.ProtocolJson
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
@@ -119,22 +120,12 @@ class TestRunningIntegrationTest {
             assertTrue(report.results.any { it.kind == "TEST" && it.status == "PASSED" }, timed.output)
             assertEquals(0, cli("daemon", "ping").exitCode)
             val prior = reports().map { it.reportPath }.toSet()
-            val stdout = tempDir.resolve("cancel-stdout.txt")
-            val stderr = tempDir.resolve("cancel-stderr.txt")
-            val install = Path.of(System.getProperty("test.cliInstall"))
-            val process = ProcessBuilder(
-                Path.of(System.getProperty("java.home"), "bin", "java").pathString,
-                "-cp", install.resolve("lib/*").pathString, "com.specificlanguages.mops.cli.MainKt",
-                "--project-root", project.pathString, "--daemon-home", home.pathString, *javaAndMpsHomeArgs(),
-                "test", "mops.tests", ".slow", "SlowTest", "--no-build", "--timeout", "0", "--json",
-            ).redirectOutput(stdout.toFile()).redirectError(stderr.toFile()).start()
+            val process = startCli(project, home, "cancel", "test", "mops.tests", ".slow", "SlowTest", "--no-build", "--timeout", "0", "--json")
             try {
                 awaitCondition { reports().any { it.reportPath !in prior && it.results.any { result -> result.kind == "TEST" && result.status == "PASSED" } } }
                 process.destroy()
-                val finished = process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)
-                val result = CliResult(if (finished) process.exitValue() else -1, stdout.readText(), stderr.readText())
-                if (result.stderr.isNotEmpty()) System.err.print(result.stderr)
-                assertTrue(finished, result.output)
+                val result = awaitExit(process, "cancel")
+                assertNotEquals(-1, result.exitCode, result.output)
                 awaitCondition { reports().any { it.reportPath !in prior && it.outcome == "CANCELLED" } }
                 val cancelled = reports().single { it.reportPath !in prior }
                 assertFalse(cancelled.complete)
@@ -153,14 +144,20 @@ class TestRunningIntegrationTest {
                 def model = project.read { mops.lookup.requireModel('mops.tests.slow') }
                 return mops.testing.run(model, [build:false, timeout:0])
             """.trimIndent())
-            // Same budget as the timed run above: the Code Mode deadline must outlast worker startup and discovery.
-            val code = cli("code", "run", script.pathString, "--timeout", "180")
-            assertEquals(1, code.exitCode, code.output)
-            assertContains(code.stderr, "daemon was terminated")
-            awaitCondition { reports().any { it.reportPath !in beforeCode && it.outcome == "PARENT_TERMINATED" } }
-            val partial = reports().single { it.reportPath !in beforeCode }
-            assertFalse(partial.complete)
-            assertTrue(partial.results.any { it.kind == "TEST" && it.status == "PASSED" })
+            // Kill the daemon once a test has passed, the way an expired `code run --timeout` does
+            // (DefaultDaemonClientTest covers that the client kills it). The worker must record what completed.
+            val daemonPid = requireNotNull(DaemonRecordStore.forDaemonHome(home).read(project)).record.pid
+            val code = startCli(project, home, "code", "code", "run", script.pathString, "--timeout", "0")
+            try {
+                awaitCondition { reports().any { it.reportPath !in beforeCode && it.results.any { result -> result.kind == "TEST" && result.status == "PASSED" } } }
+                ProcessHandle.of(daemonPid).ifPresent(ProcessHandle::destroyForcibly)
+                val result = awaitExit(code, "code")
+                assertEquals(1, result.exitCode, result.output)
+                awaitCondition { reports().any { it.reportPath !in beforeCode && it.outcome == "PARENT_TERMINATED" } }
+                val partial = reports().single { it.reportPath !in beforeCode }
+                assertFalse(partial.complete)
+                assertTrue(partial.results.any { it.kind == "TEST" && it.status == "PASSED" })
+            } finally { if (code.isAlive) code.destroyForcibly() }
             assertEquals(0, cli("daemon", "ping").exitCode)
             val startup = cli("test", "--timeout", "1", "--json")
             assertEquals(1, startup.exitCode, startup.output)
@@ -201,8 +198,33 @@ class TestRunningIntegrationTest {
         } finally { stopDaemons(project, home) }
     }
 
+    // Starts the installed CLI without waiting for it, so a test can interrupt the command while it runs.
+    private fun startCli(project: Path, home: Path, name: String, vararg args: String): Process {
+        val install = Path.of(System.getProperty("test.cliInstall"))
+        return ProcessBuilder(
+            Path.of(System.getProperty("java.home"), "bin", "java").pathString,
+            "-cp", install.resolve("lib/*").pathString, "com.specificlanguages.mops.cli.MainKt",
+            "--project-root", project.pathString, "--daemon-home", home.pathString, *javaAndMpsHomeArgs(), *args,
+        ).redirectOutput(tempDir.resolve("$name-stdout.txt").toFile())
+            .redirectError(tempDir.resolve("$name-stderr.txt").toFile())
+            .start()
+    }
+
+    // Exit code -1 means the CLI did not exit within 10 seconds.
+    private fun awaitExit(process: Process, name: String): CliResult {
+        val finished = process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)
+        val result = CliResult(
+            if (finished) process.exitValue() else -1,
+            tempDir.resolve("$name-stdout.txt").readText(),
+            tempDir.resolve("$name-stderr.txt").readText(),
+        )
+        if (result.stderr.isNotEmpty()) System.err.print(result.stderr)
+        return result
+    }
+
+    // Worker startup and discovery alone can take about 90 seconds on CI runners shared by two integration-test JVMs.
     private fun awaitCondition(condition: () -> Boolean) {
-        val deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(120)
+        val deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(300)
         while (!condition()) {
             check(System.nanoTime() < deadline) { "Timed out waiting for a test report update" }
             Thread.sleep(100)
