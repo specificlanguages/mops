@@ -200,8 +200,8 @@ fun Test.configureIntegrationTest(mpsHome: Provider<File>, jbrHome: Provider<Fil
 
     testClassesDirs = integrationTest.output.classesDirs
     classpath = integrationTest.runtimeClasspath
-    // Tests capture System.out and System.err, so they run one at a time inside a JVM. Each test uses its own daemon home,
-    // so separate JVMs can run test classes side by side.
+    // Tests capture System.out and System.err, so they run one at a time inside a JVM. No two JVMs use the same daemon
+    // home, so separate JVMs can run test classes side by side.
     maxParallelForks = 2
     // Each test run starts a daemon and a test worker, and without a limit each JVM may grow to a quarter of physical
     // memory. Two test JVMs side by side could then reserve more heap than a 16 GB CI runner has.

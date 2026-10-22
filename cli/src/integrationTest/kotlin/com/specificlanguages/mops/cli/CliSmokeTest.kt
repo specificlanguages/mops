@@ -5,11 +5,11 @@ import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.ProtocolJson
+import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.api.parallel.ResourceLock
 import java.nio.file.Path
-import kotlin.io.path.createDirectories
 import kotlin.io.path.pathString
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
@@ -23,6 +23,9 @@ import kotlin.test.assertTrue
  *
  * MPS semantics are covered by the daemon test tier (`daemon/src/test`); these tests only assert
  * that one read, one write-with-rollback, and one failure path survive the full process boundary.
+ *
+ * The tests share project copies through [SharedDaemons]. None of them leaves a change behind (the edit is rolled
+ * back), so they pass in any order.
  */
 @ResourceLock("system-streams")
 class CliSmokeTest {
@@ -31,37 +34,20 @@ class CliSmokeTest {
 
     @Test
     fun `read command round-trips through the daemon`() {
-        val project = copyTestProject("base-language-sandbox", tempDir.resolve("base-language-sandbox"))
-        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+        val result = daemons.project("base-language-sandbox").run("find", "instances", "--json", CLASS_CONCEPT)
 
-        try {
-            val result = runCommandLine(
-                project,
-                "--daemon-home",
-                daemonHome.pathString,
-                *javaAndMpsHomeArgs(),
-                "find",
-                "instances",
-                "--json",
-                CLASS_CONCEPT,
-            )
-
-            assertEquals(0, result.exitCode, result.output)
-            val response = ProtocolJson.decodeResponse(result.stdout) as FindInstancesResponse
-            assertTrue(response.nodes.isNotEmpty(), result.output)
-        } finally {
-            stopDaemons(project, daemonHome)
-        }
+        assertEquals(0, result.exitCode, result.output)
+        val response = ProtocolJson.decodeResponse(result.stdout) as FindInstancesResponse
+        assertTrue(response.nodes.isNotEmpty(), result.output)
     }
 
     @Test
     fun `failed edit operation reports the violation and leaves the model untouched`() {
-        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
-        val model = project.resolve(
+        val project = daemons.project("mps-json")
+        val model = project.root.resolve(
             "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps",
         )
         val original = model.readText()
-        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
         val targetReference =
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
         val batchFile = tempDir.resolve("batch.json")
@@ -84,53 +70,30 @@ class CliSmokeTest {
             ),
         )
 
-        try {
-            val result = runCommandLine(
-                project,
-                "--daemon-home",
-                daemonHome.pathString,
-                *javaAndMpsHomeArgs(),
-                "edit",
-                "model",
-                "--file",
-                batchFile.pathString,
-            )
+        val result = project.run("edit", "model", "--file", batchFile.pathString)
 
-            assertEquals(1, result.exitCode, result.output)
-            assertContains(result.stderr, "property not found: doesNotExist")
-            assertEquals(original, model.readText())
-        } finally {
-            stopDaemons(project, daemonHome)
-        }
+        assertEquals(1, result.exitCode, result.output)
+        assertContains(result.stderr, "property not found: doesNotExist")
+        assertEquals(original, model.readText())
     }
 
     @Test
     fun `failing command exits nonzero with the daemon error`() {
-        val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
-        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+        val result = daemons.project("mps-json")
+            .run("find", "instances", "com.specificlanguages.json.structure.DoesNotExist")
 
-        try {
-            val result = runCommandLine(
-                project,
-                "--daemon-home",
-                daemonHome.pathString,
-                *javaAndMpsHomeArgs(),
-                "find",
-                "instances",
-                "com.specificlanguages.json.structure.DoesNotExist",
-            )
-
-            assertTrue(result.exitCode != 0, result.output)
-            // The fixture language is present but not compiled, so the failure explains the unloaded language rather
-            // than reporting a bare "not found".
-            assertContains(result.output, "its language \"com.specificlanguages.json\" is not loaded")
-            assertContains(result.output, "diagnose module com.specificlanguages.json")
-        } finally {
-            stopDaemons(project, daemonHome)
-        }
+        assertTrue(result.exitCode != 0, result.output)
+        // The fixture language is present but not compiled, so the failure explains the unloaded language rather
+        // than reporting a bare "not found".
+        assertContains(result.output, "its language \"com.specificlanguages.json\" is not loaded")
+        assertContains(result.output, "diagnose module com.specificlanguages.json")
     }
 
-    private companion object {
-        const val CLASS_CONCEPT = "jetbrains.mps.baseLanguage.structure.ClassConcept"
+    companion object {
+        @JvmField
+        @RegisterExtension
+        val daemons = SharedDaemons()
+
+        private const val CLASS_CONCEPT = "jetbrains.mps.baseLanguage.structure.ClassConcept"
     }
 }

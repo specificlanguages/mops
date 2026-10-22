@@ -46,15 +46,23 @@ versions. CI runs every version's task in its own `daemon-versions` matrix job i
 
 Each task resolves its MPS distribution and matching host-specific JBR through mps-platform-cache. Distributions are
 cached and reused. Reports are written separately under `cli/build/reports/tests/<task-name>/`; JUnit XML results are
-under `cli/build/test-results/<task-name>/`. Each task runs test classes in two parallel test JVMs, and every test
-starts its own MPS daemon with its own daemon home. CI runs each version in a separate Ubuntu matrix job. The matrix
-lists the versions in `.github/workflows/ci.yml`, and the verification job fails if that list differs from
-`supportedMpsVersions`. Each job uploads its test reports even on success, and test start/completion events appear in
-the job log to help identify slow or stalled tests. Apply `--tests` to a version-specific task to select tests:
+under `cli/build/test-results/<task-name>/`. Each task runs test classes in two parallel test JVMs. CI runs each version
+in a separate Ubuntu matrix job. The matrix lists the versions in `.github/workflows/ci.yml`, and the verification job
+fails if that list differs from `supportedMpsVersions`. Each job uploads its test reports even on success, and test
+start/completion events appear in the job log to help identify slow or stalled tests. Apply `--tests` to a
+version-specific task to select tests:
 
 ```sh
 ./gradlew :cli:integrationTestMps2024.1.6 --tests '*CodeModeIntegrationTest'
 ```
+
+Starting an MPS daemon takes most of an integration test's time, so the tests of one class may share daemons. A daemon
+serves one project root, so tests share a daemon by sharing a project copy. A class registers `SharedDaemons` with
+`@RegisterExtension`, and `project(name)` returns one copy of a test project for the whole class. The copies share one
+daemon home, and their daemons stop after the class. Tests that share a copy must pass whatever changes other tests make
+to it. A test that must not see such changes passes its own `copy` key. Tests that stop, kill, or fail to start a
+daemon, run a separate builder daemon or a modified MPS distribution, or run MPS tests in worker processes, create a
+private daemon home in their own `@TempDir` and stop it with `stopDaemons`.
 
 PRs, pushes to `main`, and manual workflow dispatch run the full integration matrix, the CLI smoke suite on macOS and
 Windows, and an Ubuntu verification job. Linux has no separate smoke job: the integration job for the last supported
