@@ -11,6 +11,7 @@ import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.api.parallel.ResourceLock
 import java.nio.file.Path
+import kotlin.io.path.createDirectories
 import kotlin.io.path.pathString
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
