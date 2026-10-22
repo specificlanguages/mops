@@ -300,3 +300,13 @@ data class TestRunRequest(
     val timeoutMillis: Long = 0,
     val cancellationPath: String? = null,
 ) : DaemonRequest
+
+/** Request for concept descendants in loaded language runtimes. */
+@Serializable
+@SerialName("find-subconcepts")
+data class FindSubconceptsRequest(
+    override val token: String,
+    val concept: String,
+    val concreteOnly: Boolean = false,
+    val direct: Boolean = false,
+) : DaemonRequest

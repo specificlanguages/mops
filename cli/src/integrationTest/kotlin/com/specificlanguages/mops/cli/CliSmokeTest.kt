@@ -3,6 +3,7 @@ package com.specificlanguages.mops.cli
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
+import com.specificlanguages.mops.protocol.FindSubconceptsResponse
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.ProtocolJson
 import org.junit.jupiter.api.extension.RegisterExtension
@@ -31,6 +32,61 @@ import kotlin.test.assertTrue
 class CliSmokeTest {
     @TempDir(cleanup = CleanupMode.ON_SUCCESS)
     lateinit var tempDir: Path
+
+    @Test
+    fun `concept hierarchy command round-trips through the daemon`() {
+        val project = copyTestProject("base-language-sandbox", tempDir.resolve("base-language-sandbox"))
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+        try {
+            val result = runCommandLine(
+                project, "--daemon-home", daemonHome.pathString, *javaAndMpsHomeArgs(),
+                "find", "subconcepts", "jetbrains.mps.baseLanguage.Expression", "--concrete", "--json",
+            )
+            assertEquals(0, result.exitCode, result.output)
+            val response = ProtocolJson.decodeResponse(result.stdout) as FindSubconceptsResponse
+            assertContains(response.concepts, "jetbrains.mps.baseLanguage.structure.IntegerConstant")
+            assertTrue("jetbrains.mps.baseLanguage.structure.Expression" !in response.concepts)
+            assertEquals(response.concepts.sorted().distinct(), response.concepts)
+            val direct = runCommandLine(
+                project, "--daemon-home", daemonHome.pathString, *javaAndMpsHomeArgs(),
+                "find", "subconcepts", "jetbrains.mps.baseLanguage.Expression", "--direct", "--json",
+            )
+            assertEquals(0, direct.exitCode, direct.output)
+            val directResponse = ProtocolJson.decodeResponse(direct.stdout) as FindSubconceptsResponse
+            assertContains(directResponse.concepts, "jetbrains.mps.baseLanguage.structure.BinaryOperation")
+            assertTrue("jetbrains.mps.baseLanguage.structure.IntegerConstant" !in directResponse.concepts)
+            val program = tempDir.resolve("subconcepts.groovy").also {
+                it.writeText("""
+                    project.read {
+                        def expression = mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.Expression')
+                        assert help(mops.search).contains('mops.search.subConceptsOf')
+                        assert !help(mops.lookup).contains('subConceptsOf')
+                        def all = mops.search.subConceptsOf(expression)
+                        assert all.any { it.qualifiedName == 'jetbrains.mps.baseLanguage.structure.IntegerConstant' }
+                        assert !all.contains(expression)
+                        def direct = mops.search.subConceptsOf(expression, true, true)
+                        assert direct.every { !it.abstract }
+                        assert !direct.any { it.qualifiedName == 'jetbrains.mps.baseLanguage.structure.IntegerConstant' }
+                    }
+                    return 'ok'
+                """.trimIndent())
+            }
+            val code = runCommandLine(
+                project, "--daemon-home", daemonHome.pathString, *javaAndMpsHomeArgs(),
+                "code", "run", program.pathString,
+            )
+            assertEquals(0, code.exitCode, code.output)
+            assertEquals("ok", code.stdout.trim())
+            val missing = runCommandLine(
+                project, "--daemon-home", daemonHome.pathString, *javaAndMpsHomeArgs(),
+                "find", "subconcepts", "jetbrains.mps.baseLanguage.NoSuchMopsConcept",
+            )
+            assertTrue(missing.exitCode != 0, missing.output)
+            assertContains(missing.output, "concept \"NoSuchMopsConcept\" was not found")
+        } finally {
+            stopDaemons(project, daemonHome)
+        }
+    }
 
     @Test
     fun `read command round-trips through the daemon`() {

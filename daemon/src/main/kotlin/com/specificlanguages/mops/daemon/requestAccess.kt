@@ -6,7 +6,7 @@ import com.specificlanguages.mops.protocol.*
 internal val DaemonRequest.parallelRead: Boolean
     get() = when (this) {
         is ModelGetNodeRequest, is GetModuleRequest, is MpsListRequest,
-        is FindUsagesRequest, is FindInstancesRequest, is FindByNameRequest, is FindNodeByIdRequest,
+        is FindSubconceptsRequest, is FindUsagesRequest, is FindInstancesRequest, is FindByNameRequest, is FindNodeByIdRequest,
         is DiagnoseModulesRequest, is DiagnoseModuleRequest, is CodeCatalogRequest -> true
         else -> false
     }
@@ -15,7 +15,7 @@ internal val DaemonRequest.savesProject: Boolean
     get() = when (this) {
         is ModelGetNodeRequest, is GetModuleRequest, is MpsListRequest, is ModelRenderNodeRequest,
         is ModelCheckRequest, is ProjectCheckRequest, is ModuleCheckRequest,
-        is FindUsagesRequest, is FindInstancesRequest, is FindByNameRequest, is FindNodeByIdRequest,
+        is FindSubconceptsRequest, is FindUsagesRequest, is FindInstancesRequest, is FindByNameRequest, is FindNodeByIdRequest,
         is DiagnoseModulesRequest, is DiagnoseModuleRequest, is CodeCatalogRequest -> false
         else -> true
     }

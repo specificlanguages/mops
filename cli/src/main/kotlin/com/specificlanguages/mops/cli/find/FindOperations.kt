@@ -5,6 +5,6 @@ import picocli.CommandLine.Command
 
 @Command(
     name = "find",
-    description = ["Search editable MPS project sources."],
+    description = ["Search editable MPS project sources or loaded concept hierarchies."],
 )
 class FindOperations : CommandGroup()
