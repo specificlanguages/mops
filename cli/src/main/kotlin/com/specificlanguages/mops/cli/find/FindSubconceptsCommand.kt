@@ -11,6 +11,7 @@ import picocli.CommandLine.Parameters
 
 @Command(
     name = "subconcepts",
+    header = ["Find subconcepts of one MPS concept."],
     description = [
         "Find extending concepts and interface implementors in all loaded language runtimes, including libraries. " +
             "Excludes the queried concept; prints qualified names in sorted order. Unloaded languages contribute no results.",

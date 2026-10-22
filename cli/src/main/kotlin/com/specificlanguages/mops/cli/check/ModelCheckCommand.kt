@@ -9,6 +9,7 @@ import picocli.CommandLine.Parameters
 
 @Command(
     name = "model",
+    header = ["Run MPS's full model check over one model."],
     description = [
         "Run MPS's full model check over one model and report the findings. Exits 1 when any finding is an error.",
     ],
