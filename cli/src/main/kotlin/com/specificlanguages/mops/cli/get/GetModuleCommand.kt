@@ -12,6 +12,7 @@ import picocli.CommandLine.Parameters
 
 @Command(
     name = "module",
+    header = ["Report where MPS locates one module's files."],
     description = ["Report where MPS locates one module's descriptor, jars, class output, and model sources."],
 )
 class GetModuleCommand(private val environment: CommandEnvironment) : CliCommand() {

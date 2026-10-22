@@ -11,6 +11,7 @@ import java.util.concurrent.Callable
 
 @Command(
     name = "wrapper",
+    header = ["Write a project-local mops wrapper using Gradle-discovered paths."],
     mixinStandardHelpOptions = true,
     description = [
         "Write a project-local mops wrapper using runtime paths discovered from Gradle.",

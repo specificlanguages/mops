@@ -22,8 +22,10 @@ import com.specificlanguages.mops.cli.diagnose.DiagnoseModulesCommand
 import com.specificlanguages.mops.cli.diagnose.DiagnoseOperations
 import com.specificlanguages.mops.cli.edit.EditOperations
 import com.specificlanguages.mops.cli.edit.ModelEditCommand
+import com.specificlanguages.mops.cli.examples.ExampleTopics
 import com.specificlanguages.mops.cli.examples.ExamplesCommand
 import com.specificlanguages.mops.cli.explain.ExplainCommand
+import com.specificlanguages.mops.cli.explain.ExplainTopics
 import com.specificlanguages.mops.cli.find.FindSubconceptsCommand
 import com.specificlanguages.mops.cli.find.FindInstancesCommand
 import com.specificlanguages.mops.cli.find.FindNodeByIdCommand
@@ -33,6 +35,7 @@ import com.specificlanguages.mops.cli.find.FindUsagesCommand
 import com.specificlanguages.mops.cli.get.GetModuleCommand
 import com.specificlanguages.mops.cli.get.GetOperations
 import com.specificlanguages.mops.cli.get.ModelGetNodeCommand
+import com.specificlanguages.mops.cli.help.HelpLayout
 import com.specificlanguages.mops.cli.help.RecursiveHelpCommand
 import com.specificlanguages.mops.cli.homes.WrapperCommand
 import com.specificlanguages.mops.cli.homes.mopsExecutablePath
@@ -114,9 +117,10 @@ fun newCommandLine(
     root.addGroup("skill", SkillOperations()) {
         addLeaf("path", SkillPathCommand())
     }
-    root.addLeaf("explain", ExplainCommand())
-    root.addLeaf("examples", ExamplesCommand())
+    root.addLeaf("explain", ExplainCommand()).appendDescription(ExplainTopics.topicList())
+    root.addLeaf("examples", ExamplesCommand()).appendDescription(ExampleTopics.topicList())
     root.addLeaf("help", RecursiveHelpCommand())
+    HelpLayout.apply(root)
 
     return root.setExecutionExceptionHandler(PrintErrorAndExit)
 }
@@ -128,8 +132,16 @@ private fun CommandLine.addGroup(name: String, command: Any, configure: CommandL
     addSubcommand(name, group)
 }
 
-private fun CommandLine.addLeaf(name: String, command: Any) {
-    addSubcommand(name, command)
+private fun CommandLine.addLeaf(name: String, command: Any): CommandLine {
+    val leaf = CommandLine(command)
+    addSubcommand(name, leaf)
+    return leaf
+}
+
+/** Appends [text] to the command's description, separated from it by a blank line, so it precedes the option sections. */
+private fun CommandLine.appendDescription(text: String) {
+    val usage = commandSpec.usageMessage()
+    usage.description(*usage.description(), "", *text.trimEnd().lines().toTypedArray())
 }
 
 object PrintErrorAndExit : CommandLine.IExecutionExceptionHandler {

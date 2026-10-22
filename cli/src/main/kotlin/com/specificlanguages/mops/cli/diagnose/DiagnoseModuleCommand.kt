@@ -13,6 +13,7 @@ import picocli.CommandLine.Parameters
 
 @Command(
     name = "module",
+    header = ["Diagnose the load state of one module."],
     description = [
         "Diagnose the load state of one module, addressed by name or serialized module reference.",
         "Exits 1 when the module failed to load (a blocking problem, including an absent module), 0 when it is loaded.",
