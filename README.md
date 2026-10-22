@@ -309,6 +309,25 @@ count every finding, not only the shown ones, and all three commands exit `1` wh
 formats.
 
 ```sh
+mops create language [--descriptor FILE] [--with-generator] [--dry-run] [--json] <module-name>
+mops create solution [--descriptor FILE] [--usage-preset PRESET] [--dry-run] [--json] <module-name>
+mops create devkit [--descriptor FILE] [--dry-run] [--json] <module-name>
+mops create generator --language <lang> --alias <alias> [--standalone] [--descriptor FILE] [--dry-run] [--json]
+mops create model --module <module> [--file-per-root] [--dry-run] [--json] <model-name>
+```
+
+Creates project modules and models through the daemon and registers them with the project. Each module lands under the
+conventional directory for its kind (`languages/<name>/<name>.mpl`, `solutions/<name>/<name>.msd`, and so on) unless
+`--descriptor` names the descriptor file. `--dry-run` validates and prints what would be created without changing the
+project; `--json` prints the plan or report as JSON.
+
+A solution's generation-target facets come from `--usage-preset` (default `not-generated`): `not-generated` adds no
+facets, `text` generates plain text, `java` generates Java compiled and loaded by MPS, `java-tests` adds the tests facet
+to `java`, and `java-mps-plugin` lets the Java classes extend MPS as a plugin. The preset configures facets only;
+dependencies, used languages, devkits, and model contents are separate steps. Both the plan and the report name the
+preset applied and list every facet it produced, so the default is visible in the output.
+
+```sh
 mops test                            # all project tests, with an incremental build
 mops test my.module .tests MyCase    # navigation target: module, model, test case
 mops test '<test-node-reference>' --no-build --json

@@ -18,7 +18,7 @@ class ModuleCreationCliAdapter(private val creator: ModuleCreator) {
 
     fun createSolution(request: CreateSolutionRequest): ModuleCreationResponse =
         if (request.dryRun) ModuleCreationResponse(plan = creator.planSolution(request.moduleName, request.descriptor, request.usagePreset))
-        else response(creator.createSolution(request.moduleName, request.descriptor, request.usagePreset))
+        else response(creator.createSolution(request.moduleName, request.descriptor, request.usagePreset), request.usagePreset)
 
     fun createDevkit(request: CreateDevkitRequest): ModuleCreationResponse =
         if (request.dryRun) ModuleCreationResponse(plan = creator.planDevkit(request.moduleName, request.descriptor))
@@ -28,16 +28,17 @@ class ModuleCreationCliAdapter(private val creator: ModuleCreator) {
         if (request.dryRun) ModuleCreationResponse(plan = creator.planGenerator(request.language, request.alias, request.standalone, request.descriptor))
         else response(creator.createGenerator(request.language, request.alias, request.standalone, request.descriptor))
 
-    private fun response(created: CreatedModules): ModuleCreationResponse = ModuleCreationResponse(
-        report = ModuleCreationReport(reportEntry(created.primary), created.companions.map(::reportEntry)),
+    private fun response(created: CreatedModules, usagePreset: SolutionUsagePreset? = null): ModuleCreationResponse = ModuleCreationResponse(
+        report = ModuleCreationReport(reportEntry(created.primary, usagePreset), created.companions.map { reportEntry(it) }),
     )
 
-    private fun reportEntry(module: SModule) = ModuleCreationEntry(
+    private fun reportEntry(module: SModule, usagePreset: SolutionUsagePreset? = null) = ModuleCreationEntry(
         persistence.asString(module.moduleReference), requireNotNull(module.moduleName), kind(module),
         requireNotNull((module as? AbstractModule)?.descriptorFile).path,
         (module as? Generator)?.moduleDescriptor?.sourceLanguage?.let(persistence::asString),
         (module as? Generator)?.moduleDescriptor?.alias,
         (module as? Generator)?.moduleDescriptor?.let { if (it.isStandaloneModule) GeneratorPersistence.STANDALONE else GeneratorPersistence.EMBEDDED },
+        usagePreset,
         module.moduleDescriptor?.moduleFacetDescriptors?.map { facet ->
             FacetMementoJson(facet.type, facet.memento.keys.associateWith { requireNotNull(facet.memento.get(it)) }, facet.memento.text, facet.memento.children.map(::mementoJson))
         } ?: emptyList(),
