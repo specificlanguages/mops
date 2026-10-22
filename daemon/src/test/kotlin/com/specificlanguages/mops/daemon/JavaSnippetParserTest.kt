@@ -1,23 +1,22 @@
 package com.specificlanguages.mops.daemon
 
-import com.intellij.ide.plugins.PluginManager
-import com.intellij.openapi.extensions.PluginId
+import com.intellij.ide.plugins.cl.PluginAwareClassLoader
 import com.specificlanguages.mops.protocol.CodeRunRequest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
-import kotlin.test.assertSame
 
 class JavaSnippetParserTest {
     @Test
     fun `Java parser bridge is loaded by the MOPS IDEA plugin classloader`() {
         SharedMpsEnvironment.platform
-        val descriptor = requireNotNull(
-            PluginManager.getInstance().findEnabledPlugin(PluginId.getId(JavaSnippetParser.PLUGIN_ID)),
-        )
-        val bridgeClass = requireNotNull(descriptor.pluginClassLoader).loadClass(JavaSnippetParser.BRIDGE_CLASS)
+        // PluginId.getId is not called from Kotlin here: PluginId became a Kotlin class with a companion object in
+        // newer platforms, so a Kotlin call compiled against them fails with NoSuchFieldError on older MPS versions.
+        val bridgeClass = JavaParserPluginLoader.loadBridgeMethod().declaringClass
 
-        assertSame(descriptor.pluginClassLoader, bridgeClass.classLoader)
+        val pluginClassLoader = assertIs<PluginAwareClassLoader>(bridgeClass.classLoader)
+        assertEquals(JavaSnippetParser.PLUGIN_ID, pluginClassLoader.pluginId.idString)
         assertNotEquals(JavaSnippetParser::class.java.classLoader, bridgeClass.classLoader)
     }
 
