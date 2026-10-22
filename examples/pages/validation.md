@@ -47,10 +47,12 @@ CI build; check that build's test configuration separately.
 `mops test` exits zero only for a complete, successful run; otherwise it exits nonzero. Use `--json` to inspect
 `outcome`, `complete`, `diagnostics`, `build`, and per-test `results` (including `status`, `detail`, and source references
 when available). Read container failures too: fixture setup can fail before any individual test runs. Distinguish
-assertion failures from build, discovery, startup, timeout, and worker failures. Partial results after an interrupted
-worker are not evidence of a successful run. Use `reportPath` to retain the report. Inspect the adjacent `worker.log`
-for preparation failures and `ant.log` for test execution failures. When the run is evidence for a bug report, record
-the mops version (`mops --version`) together with the MPS and Java versions and the preparation commands.
+assertion failures from build, discovery, startup, timeout, and worker failures. A discovery failure with no tests names
+the selection that resolved to nothing (the project, or the module, model, or root test case), so check that it is the
+one you meant. Partial results after an interrupted worker are not evidence of a successful run. Use `reportPath` to
+retain the report. Inspect the adjacent `worker.log` for preparation failures and `ant.log` for test execution failures.
+When the run is evidence for a bug report, record the mops version (`mops --version`) together with the MPS and Java
+versions and the preparation commands.
 
 ### Run from Code Mode
 
