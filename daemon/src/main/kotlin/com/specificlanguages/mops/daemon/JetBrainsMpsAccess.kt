@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.daemon
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ex.ApplicationManagerEx
 import com.intellij.psi.codeStyle.NameUtil
 import com.specificlanguages.mops.daemon.core.*
 import com.specificlanguages.mops.protocol.*
@@ -412,9 +413,19 @@ class JetBrainsMpsAccess(
             externalProjectRefresh.refresh()
         }
 
+        // Project.save() does nothing while the application disallows saving, which is the default for a headless
+        // application. Platforms before 2024.3 (243) ignore -Dallow.save.application.headless, so saving is allowed
+        // explicitly for the duration of the save.
         override fun saveProject() {
             ApplicationManager.getApplication().invokeAndWait {
-                project.save()
+                val application = ApplicationManagerEx.getApplicationEx()
+                val saveAllowed = application.isSaveAllowed
+                application.isSaveAllowed = true
+                try {
+                    project.save()
+                } finally {
+                    application.isSaveAllowed = saveAllowed
+                }
             }
         }
 
