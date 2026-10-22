@@ -31,7 +31,7 @@ import com.specificlanguages.mops.protocol.ModelCreationResponse
  */
 interface DaemonClient {
     fun runTests(
-        target: List<String>, build: Boolean, deadlineMillis: Long, cancellationPath: String?,
+        target: List<String>, build: Boolean, timeoutMillis: Long, cancellationPath: String?,
     ): TestRunResponse
     fun ping(): PongResponse
     fun getNode(target: NodeTarget, ancestry: Boolean = false): ModelGetNodeResponse

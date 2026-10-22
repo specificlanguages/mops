@@ -80,8 +80,8 @@ class DefaultDaemonClient(
 
     private var lastPongResponse: PongResponse? = null
 
-    override fun runTests(target: List<String>, build: Boolean, deadlineMillis: Long, cancellationPath: String?) =
-        exchange(TestRunRequest(token, target, build, deadlineMillis, cancellationPath),
+    override fun runTests(target: List<String>, build: Boolean, timeoutMillis: Long, cancellationPath: String?) =
+        exchange(TestRunRequest(token, target, build, timeoutMillis, cancellationPath),
             TestRunResponse::class.java, Duration.ZERO)
 
     override fun ping(): PongResponse {

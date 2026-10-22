@@ -51,7 +51,7 @@ error-severity finding exists and `0` for warnings and infos alone.
 | Build and run all tests in a model          | `mops test 'sample.tests.tests@tests' --json` |
 | Run one root test case                      | `mops test sample.tests .tests MyCase`        |
 | Run a root test case using compiled classes | `mops test 'NODE_REF' --no-build --json`      |
-| Set the overall test deadline (seconds)     | `mops test --timeout 60`                      |
+| Limit test execution time (seconds)         | `mops test --timeout 60`                      |
 
 Use project, module, model, or root test-case targets. Individual test methods are unsupported. Obtain targets with
 `list`, `find`, or `get node`, and copy serialized references whole. With no target, `test` selects the project.
@@ -87,7 +87,8 @@ Check the returned outcome of Code Mode make/testing operations: returned failur
 
 ## Deadlines and recovery
 
-`test --timeout SECONDS` covers the overall request, including preparation; its default is 900 and 0 disables it.
+`test --timeout SECONDS` limits test execution, counted after build and discovery; its default is 900 and 0 disables it.
+The `timeout` option of `mops.testing.run` works the same way.
 Code Mode has a 900-second hard deadline; `mops code run --timeout 0 task.groovy` disables it. Expiry terminates the
 daemon. Test worker timeouts leave the daemon usable.
 

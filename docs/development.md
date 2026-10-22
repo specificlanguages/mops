@@ -153,8 +153,8 @@ indexing. Per-event report writes checkpoint the active duration, and orderly fa
 
 `TestRunningIntegrationTest` uses fresh project copies for root test-case/model/module/project selection, multiple test
 modules, preparation failures, and worker lifecycle behavior. The fixtures live in `test-projects/testing`. The
-lifecycle test deliberately waits for two 90-second deadlines; allow several minutes per version. Runtime reload and
-daemon lifecycle tests also retain their independent process boundaries.
+lifecycle test reacts to report updates instead of waiting out deadlines, apart from one 15-second test execution limit.
+Runtime reload and daemon lifecycle tests also retain their independent process boundaries.
 
 ```sh
 ./gradlew :cli:integrationTestMps2024.1.6 --tests '*TestRunningIntegrationTest' --tests '*TestFamiliesIntegrationTest' \

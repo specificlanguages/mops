@@ -296,6 +296,7 @@ data class TestRunRequest(
     override val token: String,
     val target: List<String> = emptyList(),
     val build: Boolean = true,
-    val deadlineMillis: Long = 0,
+    /** How long test execution may run, counted from its start; 0 disables the limit. */
+    val timeoutMillis: Long = 0,
     val cancellationPath: String? = null,
 ) : DaemonRequest

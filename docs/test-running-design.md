@@ -24,7 +24,8 @@ pinned development baseline.
   worker uses the existing checkout; this does not isolate external edits or roll back filesystem changes made by tests.
 - Support cancellation and timeouts. Retain results for completed tests, mark interrupted runs incomplete, and return a
   nonzero CLI exit status for them.
-- Use one overall deadline covering startup, build, discovery, and execution.
+- Limit the time tests may run. The limit counts from the start of test execution, so startup, build, and discovery do
+  not use it up. The test worker enforces it, because only the worker knows when execution starts.
 - Preparation errors stop the run before test execution instead of executing a runnable subset. Diagnostics identify the
   affected tests. Once execution starts, ordinary test failures do not stop remaining tests; framework skips retain
   their normal meaning.
@@ -35,7 +36,7 @@ pinned development baseline.
 all project tests.
 
 - `--no-build` uses existing compiled output instead of generating and compiling. Missing compiled classes are errors.
-- `--timeout SECONDS` sets the overall deadline, defaults to 900 seconds, and accepts 0 to disable it.
+- `--timeout SECONDS` limits test execution time, defaults to 900 seconds, and accepts 0 to disable it.
 - Ctrl-C cancels the worker and retains completed results.
 - `--json` emits the structured report. Text output provides a concise summary and the saved report path.
 - Successful runs exit 0; unsuccessful runs exit 1. The report distinguishes failure causes.
@@ -49,9 +50,10 @@ The operation returns a structured report for test, build, discovery, and interr
 failures that prevent obtaining a report throw. A failed test report does not automatically change the exit status of
 `mops code run`; the calling program can inspect the report and continue.
 
-The earlier of the test-run deadline and the enclosing Code Mode deadline wins. Expiration of the Code Mode deadline
-retains its existing daemon-termination behavior and must also terminate the test worker. The saved partial report
-remains accessible. A standalone `mops test` timeout terminates its worker and leaves the daemon usable.
+The `timeout` option limits test execution like `--timeout`. The enclosing Code Mode deadline still covers the whole
+script, including the run's startup, build, and discovery; whichever expires first stops the run. Expiration of the Code
+Mode deadline retains its existing daemon-termination behavior and must also terminate the test worker. The saved
+partial report remains accessible. A standalone `mops test` timeout terminates its worker and leaves the daemon usable.
 
 ## Results
 

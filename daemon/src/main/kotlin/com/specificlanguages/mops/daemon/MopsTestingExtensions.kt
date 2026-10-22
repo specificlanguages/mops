@@ -7,7 +7,7 @@ import org.jetbrains.mps.openapi.module.SModule
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 
 object MopsTestingExtensions {
-    /** Builds and runs a project, module, model, or root test case in an isolated worker. Individual test methods are unsupported. Options: build (default true), timeout in seconds (default 900; 0 disables). Returns a saved report, including failures and interruptions. Access: extra. */
+    /** Builds and runs a project, module, model, or root test case in an isolated worker. Individual test methods are unsupported. Options: build (default true), timeout in seconds for test execution, counted after build and discovery (default 900; 0 disables). Returns a saved report, including failures and interruptions. Access: extra. */
     @CodeModeExtension(MpsAccessLevel.EXTRA)
     @JvmStatic
     @JvmOverloads
@@ -19,8 +19,7 @@ object MopsTestingExtensions {
             require(it is Number && it.toDouble() == it.toLong().toDouble()) { "timeout must be an integer number of seconds" }
             it.toLong()
         } ?: 900L
-        require(seconds in 0..(Long.MAX_VALUE / 1000 - System.currentTimeMillis())) { "invalid timeout" }
-        val deadline = if (seconds == 0L) 0 else System.currentTimeMillis() + seconds * 1000
+        require(seconds in 0..Long.MAX_VALUE / 1_000_000) { "invalid timeout" }
         val mops = testing.mops
         val target = mops.access.read {
             val persistence = PersistenceFacade.getInstance()
@@ -41,6 +40,6 @@ object MopsTestingExtensions {
                 else -> throw IllegalArgumentException("selection must be the open project, a module, model, or test node")
             }
         }
-        return requireNotNull(mops.testingRunner) { "test runner unavailable" }.run(target, build, deadline, null)
+        return requireNotNull(mops.testingRunner) { "test runner unavailable" }.run(target, build, seconds * 1000, null)
     }
 }
