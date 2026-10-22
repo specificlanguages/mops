@@ -1,14 +1,14 @@
 default_install_hook_types:
   - pre-commit
-  - commit-msg
 
 repos:
+  # Manual stage: git hooks never run it. The Pull request title workflow runs it on the pull request title.
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v4.4.0
     hooks:
       - id: conventional-pre-commit
         stages:
-          - commit-msg
+          - manual
         args:
           - --verbose
 
