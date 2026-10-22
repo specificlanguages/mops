@@ -331,8 +331,16 @@ val checkDaemonRelocation by tasks.registering {
     }
 }
 
+// tasks.test already covers the pinned version.
+val testOtherMpsVersions = tasks.register("testOtherMpsVersions") {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = "Runs daemon tests against every supported MPS version except the pinned one."
+    dependsOn(supportedMpsVersions.filter { it != libs.versions.mps.asProvider().get() }.map { "testMps$it" })
+}
+
 tasks.check {
     dependsOn(checkDaemonRelocation)
+    dependsOn(testOtherMpsVersions)
 }
 
 // Nested JARs retain the separate Ant/application and MPS module classloader boundaries.
