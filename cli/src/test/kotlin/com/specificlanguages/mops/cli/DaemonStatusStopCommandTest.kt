@@ -217,6 +217,40 @@ class DaemonStatusStopCommandTest {
     }
 
     @Test
+    fun `daemon status with no records prints a # metadata line and exits 0`() {
+        val project = tempDir.mpsProject()
+        val daemonHome = tempDir.resolve("daemon-home")
+        var exitCode = Int.MIN_VALUE
+
+        val stdout = tapSystemOut {
+            exitCode = newCommandLine(workingDirectory = project).execute(
+                "--daemon-home", daemonHome.pathString,
+                "daemon", "status",
+            )
+        }
+
+        assertEquals(0, exitCode)
+        assertEquals("# no mops daemons" + System.lineSeparator(), stdout)
+    }
+
+    @Test
+    fun `daemon stop with no records prints a # metadata line and exits 0`() {
+        val project = tempDir.mpsProject()
+        val daemonHome = tempDir.resolve("daemon-home")
+        var exitCode = Int.MIN_VALUE
+
+        val stdout = tapSystemOut {
+            exitCode = newCommandLine(workingDirectory = project).execute(
+                "--daemon-home", daemonHome.pathString,
+                "daemon", "stop",
+            )
+        }
+
+        assertEquals(0, exitCode)
+        assertEquals("# no mops daemons" + System.lineSeparator(), stdout)
+    }
+
+    @Test
     fun `daemon stop all removes stale daemon records after context paths disappear`() {
         val daemonHome = tempDir.resolve("daemon-home")
         val staleRecord = writeStaleDaemonRecord(
