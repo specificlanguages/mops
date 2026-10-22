@@ -20,25 +20,6 @@ object HelpLayout {
     private const val SECTION_KEY_GLOBAL_OPTION_LIST_HEADING = "globalOptionListHeading"
     private const val SECTION_KEY_GLOBAL_OPTION_LIST = "globalOptionList"
 
-    private val sectionKeys = listOf(
-        UsageMessageSpec.SECTION_KEY_SYNOPSIS_HEADING,
-        UsageMessageSpec.SECTION_KEY_SYNOPSIS,
-        UsageMessageSpec.SECTION_KEY_DESCRIPTION_HEADING,
-        UsageMessageSpec.SECTION_KEY_DESCRIPTION,
-        UsageMessageSpec.SECTION_KEY_COMMAND_LIST_HEADING,
-        UsageMessageSpec.SECTION_KEY_COMMAND_LIST,
-        UsageMessageSpec.SECTION_KEY_PARAMETER_LIST_HEADING,
-        UsageMessageSpec.SECTION_KEY_PARAMETER_LIST,
-        UsageMessageSpec.SECTION_KEY_OPTION_LIST_HEADING,
-        UsageMessageSpec.SECTION_KEY_OPTION_LIST,
-        UsageMessageSpec.SECTION_KEY_EXIT_CODE_LIST_HEADING,
-        UsageMessageSpec.SECTION_KEY_EXIT_CODE_LIST,
-        SECTION_KEY_GLOBAL_OPTION_LIST_HEADING,
-        SECTION_KEY_GLOBAL_OPTION_LIST,
-        UsageMessageSpec.SECTION_KEY_FOOTER_HEADING,
-        UsageMessageSpec.SECTION_KEY_FOOTER,
-    )
-
     /** Applies the layout to [root] and every subcommand registered so far. */
     fun apply(root: CommandLine) {
         val sections = root.helpSectionMap.toMutableMap()
@@ -56,8 +37,26 @@ object HelpLayout {
         sections[SECTION_KEY_GLOBAL_OPTION_LIST] =
             IHelpSectionRenderer { help -> help.optionListExcludingGroups(help.globalOptions()) }
         root.setHelpSectionMap(sections)
-        root.setHelpSectionKeys(sectionKeys)
+        root.setHelpSectionKeys(sectionKeys(root.helpSectionKeys))
         root.setHelpFactory { spec, colorScheme -> SynopsisWithoutGlobalOptions(spec, colorScheme) }
+    }
+
+    /**
+     * Picocli's default order with the command list moved up after the description, the global options added before
+     * the footer, and the header left out (it only serves the parent's command list).
+     */
+    private fun sectionKeys(defaults: List<String>): List<String> {
+        val keys = defaults.toMutableList()
+        keys -= listOf(UsageMessageSpec.SECTION_KEY_HEADER_HEADING, UsageMessageSpec.SECTION_KEY_HEADER)
+        val commandList =
+            listOf(UsageMessageSpec.SECTION_KEY_COMMAND_LIST_HEADING, UsageMessageSpec.SECTION_KEY_COMMAND_LIST)
+        keys -= commandList
+        keys.addAll(keys.indexOf(UsageMessageSpec.SECTION_KEY_DESCRIPTION) + 1, commandList)
+        keys.addAll(
+            keys.indexOf(UsageMessageSpec.SECTION_KEY_FOOTER_HEADING),
+            listOf(SECTION_KEY_GLOBAL_OPTION_LIST_HEADING, SECTION_KEY_GLOBAL_OPTION_LIST),
+        )
+        return keys
     }
 
     private class SynopsisWithoutGlobalOptions(spec: CommandSpec, colorScheme: ColorScheme) : Help(spec, colorScheme) {
