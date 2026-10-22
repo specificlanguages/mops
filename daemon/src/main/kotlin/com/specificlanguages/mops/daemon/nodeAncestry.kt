@@ -8,17 +8,18 @@ import org.jetbrains.mps.openapi.model.SNodeAccessUtil
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 
 /**
- * Builds the summary vocabulary `find` and `check model` share for one node: whether it is a Root Node, its name,
- * **MPS Concept** qualified name, concept validity, serialized Node Reference, and immediate parent.
+ * Builds the summary vocabulary `find`, `check model`, and `get node --summary` share for one node: whether it is a
+ * Root Node, its name, **MPS Concept** qualified name, concept validity, serialized Node Reference, and its parent
+ * (the immediate one, or the chain up to the Root Node when [fullChain] is set).
  */
-internal fun nodeSummary(node: SNode, persistence: PersistenceFacade): MpsNodeSummaryJson =
+internal fun nodeSummary(node: SNode, persistence: PersistenceFacade, fullChain: Boolean = false): MpsNodeSummaryJson =
     MpsNodeSummaryJson(
         type = if (node.parent == null) "root" else "node",
         name = nodeName(node),
         concept = node.concept.qualifiedName,
         conceptValid = node.concept.isValid,
         reference = persistence.asString(node.reference),
-        parent = nodeParent(node, fullChain = false, persistence),
+        parent = nodeParent(node, fullChain, persistence),
     )
 
 /**
@@ -41,5 +42,6 @@ internal fun nodeParent(node: SNode, fullChain: Boolean, persistence: Persistenc
     )
 }
 
-private fun nodeName(node: SNode): String? =
+/** The Node Name as MPS computes it, including property getters; null for a node without a name. */
+internal fun nodeName(node: SNode): String? =
     SNodeAccessUtil.getPropertyValue(node, SNodeUtil.property_INamedConcept_name) as String?

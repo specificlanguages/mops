@@ -116,8 +116,11 @@ class JetBrainsMpsAccess(
             }
         }
 
-        override fun getNode(target: NodeTarget, ancestry: Boolean): MpsNodeJson =
-            jsonNodeExporter.export(resolveNode(target), ancestry)
+        override fun getNode(target: NodeTarget, ancestry: Boolean, depth: Int?): MpsNodeJson =
+            jsonNodeExporter.export(resolveNode(target), ancestry, depth)
+
+        override fun getNodeSummary(target: NodeTarget, ancestry: Boolean): MpsNodeSummaryJson =
+            jsonNodeExporter.exportSummary(resolveNode(target), ancestry)
 
         override fun getModule(target: String): ModuleLocationsJson {
             val matches = project.repository.modulesMatching(target)

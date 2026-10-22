@@ -48,6 +48,10 @@ class StoppedResponse : DaemonResponse {
 @SerialName("model-get-node")
 data class ModelGetNodeResponse(val node: MpsNodeJson) : DaemonResponse
 
+@Serializable
+@SerialName("model-get-node-summary")
+data class ModelGetNodeSummaryResponse(val node: MpsNodeSummaryJson) : DaemonResponse
+
 /**
  * Successful response carrying the file locations of one resolved module.
  */

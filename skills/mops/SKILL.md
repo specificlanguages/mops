@@ -32,9 +32,10 @@ loaded project are incomplete.
 
 Use the project’s `mopsw` wrapper when available. Start with `mops examples` for task recipes and `mops --help` for
 commands. Use `list`, `find`, `get node`, and `render node` to inspect models and obtain stable references before
-editing. Copy serialized references whole; names can be ambiguous. Prefer a direct CLI command when it handles the task.
-Use `get module <name-or-ref>` to find a module's descriptor, jars, class output, and model sources instead of searching
-the disk.
+editing. Copy serialized references whole; names can be ambiguous. `get node` exports a whole subtree; use `--summary`
+or `--depth N` first on a node that may be large. Prefer a direct CLI command when it handles the task. Use
+`get module <name-or-ref>` to find a module's descriptor, jars, class output, and model sources instead of searching the
+disk.
 
 Pitfalls when navigating and searching:
 

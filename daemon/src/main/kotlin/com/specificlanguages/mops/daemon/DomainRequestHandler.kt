@@ -27,7 +27,10 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess, pr
     private fun dispatch(request: DaemonRequest): DaemonResponse =
         when (request) {
             is ModelGetNodeRequest ->
-                ModelGetNodeResponse(node = mpsAccess.read { getNode(request.target, request.ancestry) })
+                ModelGetNodeResponse(node = mpsAccess.read { getNode(request.target, request.ancestry, request.depth) })
+
+            is ModelGetNodeSummaryRequest ->
+                ModelGetNodeSummaryResponse(node = mpsAccess.read { getNodeSummary(request.target, request.ancestry) })
 
             is GetModuleRequest -> GetModuleResponse(module = mpsAccess.read { getModule(request.module) })
 

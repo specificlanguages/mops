@@ -12,6 +12,10 @@ import picocli.CommandLine.Parameters
 @Command(
     name = "node",
     description = ["Render one MPS node as the plain text of its default editor."],
+    customSynopsis = [
+        "\${COMMAND-FULL-NAME} [OPTIONS] NODE_REFERENCE",
+        "       \${COMMAND-FULL-NAME} [OPTIONS] MODEL_TARGET NODE_ID",
+    ],
 )
 class ModelRenderNodeCommand(private val environment: CommandEnvironment) : CliCommand() {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
@@ -28,6 +32,7 @@ class ModelRenderNodeCommand(private val environment: CommandEnvironment) : CliC
         index = "0..1",
         arity = "1..2",
         paramLabel = "NODE_REFERENCE | MODEL_TARGET NODE_ID",
+        hideParamSyntax = true,
         description = ["Serialized node reference, or model target followed by node ID."],
     )
     lateinit var nodeTarget: Array<String>

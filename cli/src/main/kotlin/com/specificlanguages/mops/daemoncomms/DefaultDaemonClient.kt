@@ -36,6 +36,8 @@ import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.ModelGetNodeRequest
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
+import com.specificlanguages.mops.protocol.ModelGetNodeSummaryRequest
+import com.specificlanguages.mops.protocol.ModelGetNodeSummaryResponse
 import com.specificlanguages.mops.protocol.ModelRenderNodeRequest
 import com.specificlanguages.mops.protocol.ModelRenderNodeResponse
 import com.specificlanguages.mops.protocol.MpsListRequest
@@ -94,14 +96,20 @@ class DefaultDaemonClient(
     fun stop(): StoppedResponse =
         exchange(StopRequest(token = token), StoppedResponse::class.java)
 
-    override fun getNode(target: NodeTarget, ancestry: Boolean): ModelGetNodeResponse =
+    override fun getNode(target: NodeTarget, ancestry: Boolean, depth: Int?): ModelGetNodeResponse =
         exchange(
-            ModelGetNodeRequest(token = token, target = target, ancestry = ancestry),
+            ModelGetNodeRequest(token = token, target = target, ancestry = ancestry, depth = depth),
             ModelGetNodeResponse::class.java
         )
 
     override fun getModule(module: String): GetModuleResponse =
         exchange(GetModuleRequest(token = token, module = module), GetModuleResponse::class.java)
+
+    override fun getNodeSummary(target: NodeTarget, ancestry: Boolean): ModelGetNodeSummaryResponse =
+        exchange(
+            ModelGetNodeSummaryRequest(token = token, target = target, ancestry = ancestry),
+            ModelGetNodeSummaryResponse::class.java
+        )
 
     override fun renderNode(target: NodeTarget, allowReflective: Boolean): ModelRenderNodeResponse =
         exchange(

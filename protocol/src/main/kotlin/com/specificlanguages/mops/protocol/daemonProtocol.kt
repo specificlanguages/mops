@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.protocol
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.descriptors.PrimitiveKind
@@ -33,6 +34,13 @@ object ProtocolJson {
         ignoreUnknownKeys = true
         explicitNulls = false
         encodeDefaults = true
+    }
+
+    // Same codec, laid out for reading: one field per line, two-space indentation.
+    @OptIn(ExperimentalSerializationApi::class)
+    private val prettyJson: Json = Json(json) {
+        prettyPrint = true
+        prettyPrintIndent = "  "
     }
 
     // The set of valid request `type` discriminators, derived from the sealed serializer so it stays in sync with the
@@ -99,9 +107,13 @@ object ProtocolJson {
      */
     fun decodeBatchOrError(text: String): BatchDecodeResult = BatchNotationDecoder.decode(json, text)
 
-    fun encodeNode(node: MpsNodeJson): String = json.encodeToString(node)
+    fun encodeNode(node: MpsNodeJson, pretty: Boolean = false): String =
+        (if (pretty) prettyJson else json).encodeToString(node)
 
     fun decodeNode(text: String): MpsNodeJson = json.decodeFromString(text)
+
+    fun encodeNodeSummary(summary: MpsNodeSummaryJson, pretty: Boolean = false): String =
+        (if (pretty) prettyJson else json).encodeToString(summary)
 
     fun encodeFinding(finding: ModelCheckFindingJson): String = json.encodeToString(finding)
 

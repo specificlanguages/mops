@@ -6,6 +6,12 @@ import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 
+/**
+ * One exported node. A node is either exported in full (concept, identity, parent, properties, references, and
+ * children) or, below a requested depth, as a stub: [role], [concept], [name], [reference], and [childCount] only.
+ * The top-level node of a depth-bounded export carries [truncatedAt], the level whose nodes are stubs, so a consumer
+ * can tell a stub from a leaf.
+ */
 @Serializable
 data class MpsNodeJson(
     val model: String? = null,
@@ -15,12 +21,20 @@ data class MpsNodeJson(
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val conceptValid: Boolean = true,
     val id: String? = null,
+    // The containment level, counted from this node as 0, whose nodes are emitted as stubs. Present only on the
+    // addressed node of a depth-bounded export; a value of 0 means the children were left out entirely.
+    val truncatedAt: Int? = null,
     // The immediate containing node, or null when this is a Root Node. Nests up to the Root Node when the node was
     // exported with a full ancestry chain; otherwise carries only the immediate parent.
     val parent: MpsNodeParentJson? = null,
     val properties: List<MpsNodePropertyJson>? = null,
     val references: List<MpsNodeReferenceJson>? = null,
     val children: List<MpsNodeJson>? = null,
+    // Stub fields: the Node Name (when the node has one), the serialized Node Reference to fetch the stub with, and
+    // the number of children the stub stands in for. Null on a fully exported node.
+    val name: String? = null,
+    val reference: String? = null,
+    val childCount: Int? = null,
 )
 
 @Serializable

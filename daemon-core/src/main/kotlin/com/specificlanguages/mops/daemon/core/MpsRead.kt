@@ -12,6 +12,7 @@ import com.specificlanguages.mops.protocol.ModelCheckResponse
 import com.specificlanguages.mops.protocol.ModuleLocationsJson
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import com.specificlanguages.mops.protocol.MpsNodeJson
+import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import com.specificlanguages.mops.protocol.NodeTarget
 
 /**
@@ -33,7 +34,17 @@ interface MpsRead {
         role: String? = null,
     ): MpsListEntryJson
 
-    fun getNode(target: NodeTarget, ancestry: Boolean = false): MpsNodeJson
+    /**
+     * Exports the node addressed by [target]. [depth] bounds the export: that many containment levels below the node
+     * are exported in full and the nodes at level [depth] become stubs; null exports the whole Node Subtree.
+     */
+    fun getNode(target: NodeTarget, ancestry: Boolean = false, depth: Int? = null): MpsNodeJson
+
+    /**
+     * Summarizes the node addressed by [target] without serializing its Node Subtree: the `find` summary vocabulary
+     * plus the number of children per Containment Role.
+     */
+    fun getNodeSummary(target: NodeTarget, ancestry: Boolean = false): MpsNodeSummaryJson
 
     /**
      * Reports where MPS says the files of the module addressed by [target] (a module name or serialized module
