@@ -29,10 +29,10 @@ jobs:
       - name: Run unit tests and verification checks
         # The daemon-versions matrix runs the MPS-backed daemon tests, one job per supported MPS version.
         run: xvfb-run -a ./gradlew --continue check -x :cli:integrationTest -x :daemon:test -x :daemon:testOtherMpsVersions
-      - uses: j178/prek-action@1382ad72dea72f9d53832f2bcb65b3e87a947204 # v3.0.1
+      - uses: j178/prek-action@44924fe9ef4a6f88253c4b6b1bf11c689d3ce53d # v3.1.0
         if: ${{ !cancelled() }}
         with:
-          prek-version: v0.5.6
+          prek-version: v0.5.7
           extra-args: --all-files
       - name: Check the MPS version matrices list the supported MPS versions
         if: ${{ !cancelled() }}
