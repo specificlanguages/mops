@@ -64,6 +64,20 @@ class FullClasspathDaemonLauncherTest {
     }
 
     @Test
+    fun `bootstrap classpath resolves Windows IDE home placeholder in a path with spaces`() {
+        val mpsHome = tempDir.resolve("Program Files/JetBrains/MPS 2026.2").createDirectories()
+        mpsHome.resolve("product-info.json").writeText(
+            """{"launch":[{"os":"Windows","arch":"amd64","bootClassPathJarNames":[],
+                "additionalJvmArguments":["-Xbootclasspath/a:%IDE_HOME%/lib/nio-fs.jar"]}]}""",
+        )
+
+        assertEquals(
+            listOf("-Xbootclasspath/a:$mpsHome/lib/nio-fs.jar"),
+            FullClasspathDaemonLauncher.mpsBootstrapJvmArgs(mpsHome, "Windows 11", "amd64"),
+        )
+    }
+
+    @Test
     fun `exact host launch entry is preferred`() {
         val mpsHome = tempDir.resolve("mps").createDirectories()
         val linuxJar = emptyJar(mpsHome.resolve("lib/linux.jar"))

@@ -255,7 +255,9 @@ class FullClasspathDaemonLauncher(
                 mpsHome.resolve("Resources/product-info.json"),
             ).firstOrNull(Files::isRegularFile) ?: return emptyList()
             val launch = selectMpsLaunch(readMpsLaunches(descriptor), hostPlatform(osName, osArch, descriptor), descriptor)
-            return launch.bootstrapJvmArgs.map { it.replace("\$IDE_HOME", mpsHome.pathString) }
+            return launch.bootstrapJvmArgs.map {
+                it.replace("%IDE_HOME%", mpsHome.pathString).replace("\$IDE_HOME", mpsHome.pathString)
+            }
         }
 
         private fun readMpsLaunches(descriptor: Path): List<MpsLaunch> =
