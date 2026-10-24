@@ -16,3 +16,5 @@ include("launcher")
 include("protocol")
 
 include("ant-test-adapters")
+
+include("architecture-tests")

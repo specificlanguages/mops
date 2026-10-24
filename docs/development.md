@@ -23,6 +23,25 @@ the allowed types when it rejects one. GitHub release notes list the merged pull
 
 Commit messages on pull request branches are free-form.
 
+## Code structure checks
+
+`check` runs two kinds of structure checks on the Kotlin modules:
+
+- **detekt** (`./gradlew detekt`) runs only the complexity rule set from `config/detekt/detekt.yml`: method length,
+  cyclomatic and cognitive complexity, nesting depth, parameter count, and class and file size. Reports are written to
+  `<module>/build/reports/detekt/`.
+- **Module boundary tests** in `architecture-tests/` (`./gradlew :architecture-tests:test`) use
+  [Konsist](https://docs.konsist.lemonappdev.com/) to check which packages each module imports, for example that
+  `protocol` and `daemon-core` do not use MPS, and that CLI command packages do not depend on each other.
+
+Each module's `detekt-baseline.xml` lists the detekt findings that existed when the rules were introduced. These
+findings do not fail the build; new findings do. Fix a new finding instead of adding it to the baseline. After fixing a
+finding in the baseline, run `./gradlew :<module>:detektBaseline` to remove it.
+
+The `file-size` pre-commit hook rejects `.kt` and `.md` files larger than 20000 bytes and explains how to split them.
+Files that were already larger are listed in the hook's `exclude` pattern in `.pre-commit-config.yaml`. Remove a file
+from that list after splitting it.
+
 ## Daemon tests on each MPS version
 
 `./gradlew :daemon:test` runs the daemon tests against the MPS version pinned as `mps` in `gradle/libs.versions.toml`.

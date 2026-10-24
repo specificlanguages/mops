@@ -1,0 +1,25 @@
+# Only the complexity rule set is active. Every other rule set is turned off, so detekt reports method length,
+# complexity, nesting, parameter count, and class and file size, and nothing about style or naming.
+# See "Code structure checks" in docs/development.md for how the per-module baselines work.
+
+complexity:
+  active: true
+  CognitiveComplexMethod:
+    active: true
+
+comments:
+  active: false
+coroutines:
+  active: false
+empty-blocks:
+  active: false
+exceptions:
+  active: false
+naming:
+  active: false
+performance:
+  active: false
+potential-bugs:
+  active: false
+style:
+  active: false

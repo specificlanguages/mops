@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CognitiveComplexMethod:BatchNotationDecoder.kt:BatchNotationDecoder$private fun validateOperation: BatchDecodeResult.Failure?</ID>
+    <ID>CyclomaticComplexMethod:BatchNotationDecoder.kt:BatchNotationDecoder$private fun validateOperation: BatchDecodeResult.Failure?</ID>
+    <ID>LargeClass:DaemonProtocolJsonTest.kt:DaemonProtocolJsonTest</ID>
+    <ID>TooManyFunctions:daemonProtocol.kt:ProtocolJson</ID>
+  </CurrentIssues>
+</SmellBaseline>

@@ -1,0 +1,13 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:WrapperCommand.kt:WrapperCommand$override fun call: Int</ID>
+    <ID>LongMethod:FullClasspathDaemonLauncher.kt:FullClasspathDaemonLauncher$override fun startDaemon: DefaultDaemonClient</ID>
+    <ID>LongMethod:GradleHomeDiscoveryTest.kt:GradleHomeDiscoveryTest$@Test fun `mbeddr settings come from current project and quote paths`</ID>
+    <ID>LongMethod:Main.kt:fun newCommandLine: CommandLine</ID>
+    <ID>NestedBlockDepth:RecordingDaemon.kt:RecordingDaemon$override fun run</ID>
+    <ID>TooManyFunctions:DaemonClient.kt:DaemonClient</ID>
+    <ID>TooManyFunctions:DefaultDaemonClient.kt:DefaultDaemonClient : DaemonClient</ID>
+  </CurrentIssues>
+</SmellBaseline>
