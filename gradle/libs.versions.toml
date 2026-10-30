@@ -1,7 +1,7 @@
 [versions]
 kotlin = "2.4.21"
-mps-platform-cache = "1.0.3"
-jbr-toolchain = "1.2.1"
+mps-platform-cache = "1.0.4"
+jbr-toolchain = "1.2.2"
 shadow = "9.6.1"
 asm = "9.11.1"
 picocli = "4.7.7"
