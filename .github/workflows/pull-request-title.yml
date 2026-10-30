@@ -26,7 +26,7 @@ jobs:
         run: printf '%s\n' "$PR_TITLE" > "$RUNNER_TEMP/pull-request-title.txt"
       - uses: j178/prek-action@44924fe9ef4a6f88253c4b6b1bf11c689d3ce53d # v3.1.0
         with:
-          prek-version: v0.5.7
+          prek-version: v0.5.9
           extra-args: >-
             conventional-pre-commit --stage manual
             --files ${{ runner.temp }}/pull-request-title.txt
