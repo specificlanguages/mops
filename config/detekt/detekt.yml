@@ -6,7 +6,7 @@ complexity:
   active: true
   CognitiveComplexMethod:
     active: true
-  # Private helpers keep a class's interface small, so they do not count toward its function limit.
+  # Only non-private functions count toward a class's function limit.
   TooManyFunctions:
     ignorePrivate: true
 
