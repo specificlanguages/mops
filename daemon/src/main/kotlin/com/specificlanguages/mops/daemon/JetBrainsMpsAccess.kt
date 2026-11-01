@@ -1,7 +1,5 @@
 package com.specificlanguages.mops.daemon
 
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ex.ApplicationManagerEx
 import com.intellij.psi.codeStyle.NameUtil
 import com.specificlanguages.mops.daemon.core.*
 import com.specificlanguages.mops.protocol.*
@@ -11,7 +9,6 @@ import jetbrains.mps.progress.EmptyProgressMonitor
 import jetbrains.mps.project.EditableFilteringScope
 import jetbrains.mps.project.GlobalScope
 import jetbrains.mps.project.MPSProject
-import jetbrains.mps.smodel.SNodeUtil
 import jetbrains.mps.util.CollectConsumer
 import org.jetbrains.mps.openapi.language.SAbstractConcept
 import org.jetbrains.mps.openapi.model.*
@@ -21,9 +18,6 @@ import org.jetbrains.mps.openapi.module.SearchScope
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
-
-// Rows shown when a model segment misses and the module's models are listed to help correct it.
-private const val MISSING_MODEL_LISTING_LIMIT = 20
 
 class JetBrainsMpsAccess(
     internal val project: MPSProject,
@@ -39,6 +33,7 @@ class JetBrainsMpsAccess(
     private val writeTransaction: WriteTransaction = WriteTransaction(),
 ) : MpsAccess {
     private val externalProjectRefresh = ExternalProjectRefresh(project)
+    private val navigationTargets = NavigationTargetResolver(project, persistence)
 
     // An MpsRequestException is an expected client error, not a defect. Capture it inside the model action and rethrow
     // it on the calling thread once the action has returned: if it escaped the action directly, MPS's ActionDispatcher
@@ -77,28 +72,28 @@ class JetBrainsMpsAccess(
                     mpsListExporter.exportRepository(project.repository, depth, limit, summary)
                 }
                 else -> {
-                    val root = when (val resolution = resolveListTarget(target)) {
-                        is ListTargetResolution.Found -> resolution.target
-                        is ListTargetResolution.Ambiguous -> throw MpsRequestException(
+                    val root = when (val resolution = navigationTargets.resolve(target)) {
+                        is NavigationTargetResolution.Found -> resolution.target
+                        is NavigationTargetResolution.Ambiguous -> throw MpsRequestException(
                             code = MpsErrorCode.AMBIGUOUS_TARGET,
                             message = resolution.message,
                         )
-                        is ListTargetResolution.Missing -> throw MpsRequestException(
+                        is NavigationTargetResolution.Missing -> throw MpsRequestException(
                             code = MpsErrorCode.TARGET_NOT_FOUND,
                             message = "target not found: ${target.joinToString(" ")}" + resolution.detailLine(),
                         )
                     }
                     when (root) {
-                        is ListTarget.Module -> {
+                        is NavigationTarget.Module -> {
                             rejectRoleOnNonNode(role, "module")
                             mpsListExporter.exportModule(root.module, depth, limit, summary)
                         }
-                        is ListTarget.Model -> {
+                        is NavigationTarget.Model -> {
                             rejectRoleOnNonNode(role, "model")
                             mpsListExporter.exportModel(root.model, depth, limit, summary)
                         }
-                        is ListTarget.RootNode -> mpsListExporter.exportRoot(root.node, depth, limit, summary, role)
-                        is ListTarget.Node -> mpsListExporter.exportNode(root.node, depth, limit, summary, role)
+                        is NavigationTarget.RootNode -> mpsListExporter.exportRoot(root.node, depth, limit, summary, role)
+                        is NavigationTarget.Node -> mpsListExporter.exportNode(root.node, depth, limit, summary, role)
                     }
                 }
             }
@@ -151,7 +146,7 @@ class JetBrainsMpsAccess(
             modelChecker.check(project, modules.map(::resolveCheckModule).distinct(), limit)
 
         private fun resolveCheckModule(target: String): SModule {
-            val matches = matchingProjectModules(target)
+            val matches = navigationTargets.projectModulesMatching(target)
             return when (matches.size) {
                 0 -> throw MpsRequestException(MpsErrorCode.TARGET_NOT_FOUND, "module not found in project: $target")
                 1 -> matches.single()
@@ -356,13 +351,13 @@ class JetBrainsMpsAccess(
             when (segments) {
                 null, emptyList<String>() -> ResolvedScope.EditableProjectSources
                 listOf("/") -> ResolvedScope.Repository
-                else -> when (val resolution = resolveListTarget(segments)) {
-                    is ListTargetResolution.Found -> resolvedScopeForTarget(resolution.target)
-                    is ListTargetResolution.Ambiguous -> throw MpsRequestException(
+                else -> when (val resolution = navigationTargets.resolve(segments)) {
+                    is NavigationTargetResolution.Found -> resolvedScopeForTarget(resolution.target)
+                    is NavigationTargetResolution.Ambiguous -> throw MpsRequestException(
                         code = MpsErrorCode.AMBIGUOUS_TARGET,
                         message = "${resolution.message}\nsee: mops explain scope",
                     )
-                    is ListTargetResolution.Missing -> throw MpsRequestException(
+                    is NavigationTargetResolution.Missing -> throw MpsRequestException(
                         code = MpsErrorCode.TARGET_NOT_FOUND,
                         message = "scope not found: ${segments.joinToString(" ")}" + resolution.detailLine() +
                             "\nsee: mops explain scope",
@@ -370,12 +365,12 @@ class JetBrainsMpsAccess(
                 }
             }
 
-        private fun resolvedScopeForTarget(target: ListTarget): ResolvedScope =
+        private fun resolvedScopeForTarget(target: NavigationTarget): ResolvedScope =
             when (target) {
-                is ListTarget.Module -> ResolvedScope.Module(persistence.asString(target.module.moduleReference))
-                is ListTarget.Model -> ResolvedScope.Model(persistence.asString(target.model.reference))
-                is ListTarget.RootNode -> ResolvedScope.Subtree(persistence.asString(target.node.reference))
-                is ListTarget.Node -> ResolvedScope.Subtree(persistence.asString(target.node.reference))
+                is NavigationTarget.Module -> ResolvedScope.Module(persistence.asString(target.module.moduleReference))
+                is NavigationTarget.Model -> ResolvedScope.Model(persistence.asString(target.model.reference))
+                is NavigationTarget.RootNode -> ResolvedScope.Subtree(persistence.asString(target.node.reference))
+                is NavigationTarget.Node -> ResolvedScope.Subtree(persistence.asString(target.node.reference))
             }
 
         // Maps a resolved scope to the domain a find runs over. A repository, module, or model scope becomes an MPS
@@ -392,15 +387,15 @@ class JetBrainsMpsAccess(
             }
 
         private fun resolveModule(reference: String): SModule =
-            resolveModuleReference(reference)
+            navigationTargets.resolveModuleReference(reference)
                 ?: throw MpsRequestException(MpsErrorCode.TARGET_NOT_FOUND, "module not found: $reference")
 
         private fun resolveModel(reference: String): SModel =
-            resolveModelReference(reference)
+            navigationTargets.resolveModelReference(reference)
                 ?: throw MpsRequestException(MpsErrorCode.MODEL_NOT_FOUND, "model not found: $reference")
 
         private fun resolveSubtreeNode(reference: String): SNode =
-            resolveNodeReference(reference)
+            navigationTargets.resolveNodeReference(reference)
                 ?: throw MpsRequestException(MpsErrorCode.NODE_NOT_FOUND, "node not found: $reference")
 
         private fun resolveNode(target: NodeTarget): SNode =
@@ -422,21 +417,7 @@ class JetBrainsMpsAccess(
             externalProjectRefresh.refresh()
         }
 
-        // Project.save() does nothing while the application disallows saving, which is the default for a headless
-        // application. Platforms before 2024.3 (243) ignore -Dallow.save.application.headless, so saving is allowed
-        // explicitly for the duration of the save.
-        override fun saveProject() {
-            ApplicationManager.getApplication().invokeAndWait {
-                val application = ApplicationManagerEx.getApplicationEx()
-                val saveAllowed = application.isSaveAllowed
-                application.isSaveAllowed = true
-                try {
-                    project.save()
-                } finally {
-                    application.isSaveAllowed = saveAllowed
-                }
-            }
-        }
+        override fun saveProject() = saveProjectSettings(project)
 
         override fun makeModules(modules: List<String>): MakeResponse = projectMake.makeModules(modules)
 
@@ -462,236 +443,6 @@ class JetBrainsMpsAccess(
         }
     }
 
-    internal fun resolveTestSelection(target: List<String>): Any {
-        if (target.isEmpty()) return project
-        return when (val resolution = resolveListTarget(target)) {
-            is ListTargetResolution.Found -> when (val selected = resolution.target) {
-                is ListTarget.Module -> selected.module
-                is ListTarget.Model -> selected.model
-                is ListTarget.RootNode -> selected.node
-                is ListTarget.Node -> selected.node
-            }
-            is ListTargetResolution.Ambiguous -> throw IllegalArgumentException(resolution.message)
-            is ListTargetResolution.Missing -> throw IllegalArgumentException(
-                "test selection not found: ${target.joinToString(" ")}" + resolution.detailLine(),
-            )
-        }
-    }
-
-    private fun resolveListTarget(target: List<String>): ListTargetResolution {
-        if (target.isEmpty()) {
-            return ListTargetResolution.Missing()
-        }
-
-        if (target.size == 1) {
-            return resolveSingleSegment(target.single())
-        }
-
-        resolveModelReference(target[0])?.let {
-            return resolveModelPathTarget(it, target.drop(1))
-        }
-
-        val module = when (val resolution = resolveProjectModuleTarget(target[0])) {
-            is ListTargetResolution.Found -> (resolution.target as ListTarget.Module).module
-            is ListTargetResolution.Ambiguous, is ListTargetResolution.Missing -> return resolution
-        }
-        val modelName = modelName(module, target[1])
-        val models = module.models
-            .filter { it.name.value == modelName }
-            .toList()
-        val model = when (models.size) {
-            0 -> return missingModelInModule(module, modelName)
-            1 -> models.single()
-            else -> return ambiguousModelTarget(modelName, models)
-        }
-
-        return resolveModelPathTarget(model, target.drop(2))
-    }
-
-    private fun resolveModelPathTarget(model: SModel, target: List<String>): ListTargetResolution {
-        if (target.isEmpty()) {
-            return ListTargetResolution.Found(ListTarget.Model(model))
-        }
-        val rootSegmentId = parseNodeIdOrNull(persistence, target[0])
-        val rootNodes = model.rootNodes
-            .filter { nodeMatches(it, target[0], rootSegmentId) }
-            .toList()
-        val rootNode = when (rootNodes.size) {
-            0 -> return ListTargetResolution.Missing()
-            1 -> rootNodes.single()
-            else -> return ambiguousRootNodeTarget(target[0], rootNodes)
-        }
-
-        if (target.size == 1) {
-            return ListTargetResolution.Found(ListTarget.RootNode(rootNode))
-        }
-
-        var node = rootNode
-        for (segment in target.drop(1)) {
-            val segmentId = parseNodeIdOrNull(persistence, segment)
-            val childNodes = node.children
-                .filter { nodeMatches(it, segment, segmentId) }
-                .toList()
-            node = when (childNodes.size) {
-                0 -> return ListTargetResolution.Missing()
-                1 -> childNodes.single()
-                else -> return ambiguousChildNodeTarget(segment, childNodes)
-            }
-        }
-        return ListTargetResolution.Found(ListTarget.Node(node))
-    }
-
-    // A single navigation segment is resolved by counting every interpretation that actually matches — a serialized node
-    // reference, a serialized model reference, a project model by name, or a project module by name or reference — rather
-    // than by the segment's shape. A unique match wins; more than one (a module and a model sharing a name, or two
-    // same-named models) is reported ambiguous with one typed, serialized candidate per match, so the caller can retry
-    // with a reference. Serialized references and unique module names are unaffected: those forms match a single kind.
-    private fun resolveSingleSegment(segment: String): ListTargetResolution {
-        val candidates = LinkedHashMap<String, ListTarget>()
-
-        resolveNodeReference(segment)?.let {
-            candidates["node:${persistence.asString(it.reference)}"] = listTargetForNode(it)
-        }
-        resolveModelReference(segment)?.let {
-            candidates["model:${persistence.asString(it.reference)}"] = ListTarget.Model(it)
-        }
-        matchingProjectModels(segment).forEach {
-            candidates["model:${persistence.asString(it.reference)}"] = ListTarget.Model(it)
-        }
-        matchingProjectModules(segment).forEach {
-            candidates["module:${persistence.asString(it.moduleReference)}"] = ListTarget.Module(it)
-        }
-
-        val targets = candidates.values.toList()
-        return when (targets.size) {
-            0 -> ListTargetResolution.Missing()
-            1 -> ListTargetResolution.Found(targets.single())
-            else -> ambiguousSingleSegment(segment, targets)
-        }
-    }
-
-    private fun matchingProjectModels(segment: String): List<SModel> =
-        project.projectModulesWithGenerators
-            .asSequence()
-            .flatMap { it.models.asSequence() }
-            .filter { it.name.value == segment }
-            .distinctBy { persistence.asString(it.reference) }
-            .toList()
-
-    private fun ambiguousSingleSegment(segment: String, targets: List<ListTarget>): ListTargetResolution.Ambiguous =
-        ListTargetResolution.Ambiguous(
-            "ambiguous target $segment:\n" + targets.joinToString("\n", transform = ::candidateRow),
-        )
-
-    // One candidate line of a mixed-kind single-segment ambiguity, using the same per-kind row format each single-kind
-    // ambiguity below emits, so the "ambiguous …" listing reads the same however the candidates were counted.
-    private fun candidateRow(target: ListTarget): String =
-        when (target) {
-            is ListTarget.Module -> moduleRow(target.module)
-            is ListTarget.Model -> modelRow(target.model)
-            is ListTarget.RootNode -> rootNodeRow(target.node)
-            is ListTarget.Node -> childNodeRow(target.node)
-        }
-
-    private fun moduleRow(module: SModule): String =
-        "module\t${module.moduleName}\t${persistence.asString(module.moduleReference)}"
-
-    private fun modelRow(model: SModel): String =
-        "model\t${model.name.value}\t${persistence.asString(model.reference)}"
-
-    private fun rootNodeRow(node: SNode): String =
-        "root\t${nodeName(node) ?: "<unnamed>"}\t${persistence.asString(node.nodeId)}\t${persistence.asString(node.reference)}"
-
-    private fun childNodeRow(node: SNode): String =
-        "node\t${node.containmentLink?.role.orEmpty()}\t${nodeName(node) ?: "<unnamed>"}\t" +
-            "${persistence.asString(node.nodeId)}\t${persistence.asString(node.reference)}"
-
-    private fun ambiguousModuleTarget(target: String, modules: List<SModule>): ListTargetResolution.Ambiguous =
-        ambiguousTarget("module", target, modules, ::moduleRow)
-
-    private fun ambiguousModelTarget(modelName: String, models: List<SModel>): ListTargetResolution.Ambiguous =
-        ambiguousTarget("model", modelName, models, ::modelRow)
-
-    private fun ambiguousRootNodeTarget(target: String, nodes: List<SNode>): ListTargetResolution.Ambiguous =
-        ambiguousTarget("root node", target, nodes, ::rootNodeRow)
-
-    private fun ambiguousChildNodeTarget(target: String, nodes: List<SNode>): ListTargetResolution.Ambiguous =
-        ambiguousTarget("child node", target, nodes, ::childNodeRow)
-
-    private fun <T> ambiguousTarget(
-        kind: String,
-        target: String,
-        items: List<T>,
-        row: (T) -> String,
-    ): ListTargetResolution.Ambiguous =
-        ListTargetResolution.Ambiguous(
-            "ambiguous $kind target $target:\n" + items.joinToString("\n", transform = row),
-        )
-
-    private fun resolveNodeReference(target: String): SNode? =
-        runCatching {
-            persistence.createNodeReference(normalizeNodeReferenceSpelling(persistence, target)).resolve(project.repository)
-        }.getOrNull()
-
-    // A bare model name parses into a reference whose id is derived from the name. MPS 2024.1 resolves such an id
-    // inexactly, to any model of that name; later versions resolve it only to a model with that exact id. Requiring the
-    // ids to match gives the later behavior on every version, so a bare name is never taken as a model reference.
-    private fun resolveModelReference(target: String): SModel? =
-        runCatching {
-            val reference = persistence.createModelReference(target)
-            reference.resolve(project.repository)?.takeIf { it.reference.modelId == reference.modelId }
-        }.getOrNull()
-
-    private fun resolveModuleReference(target: String): SModule? =
-        runCatching {
-            persistence.createModuleReference(target).resolve(project.repository)
-        }.getOrNull()
-
-    private fun resolveProjectModuleTarget(target: String): ListTargetResolution {
-        val modules = matchingProjectModules(target)
-        return when (modules.size) {
-            0 -> ListTargetResolution.Missing()
-            1 -> ListTargetResolution.Found(ListTarget.Module(modules.single()))
-            else -> ambiguousModuleTarget(target, modules)
-        }
-    }
-
-    private fun matchingProjectModules(target: String): List<SModule> =
-        project.projectModulesWithGenerators.filter {
-            it.moduleName == target || persistence.asString(it.moduleReference) == target
-        }
-
-    // The model segment after a module: a bare `.` names the model whose name equals the module name, a `.suffix`
-    // segment appends to the module name, and any other segment is a full model name.
-    private fun modelName(module: SModule, segment: String): String {
-        val moduleName = module.moduleName.orEmpty()
-        return when {
-            segment == "." -> moduleName
-            segment.startsWith(".") -> moduleName + segment
-            else -> segment
-        }
-    }
-
-    // A model segment that matches no model of an already resolved module lists that module's models, so the caller
-    // can correct the segment without listing the module first. The listing is capped so a module with many models
-    // still yields bounded output.
-    private fun missingModelInModule(module: SModule, modelName: String): ListTargetResolution.Missing {
-        val moduleName = module.moduleName.orEmpty()
-        val models = module.models.toList()
-        if (models.isEmpty()) {
-            return ListTargetResolution.Missing("module $moduleName has no models")
-        }
-        val rows = models.take(MISSING_MODEL_LISTING_LIMIT).map(::modelRow)
-        val omitted = models.size - rows.size
-        val listing = rows + if (omitted > 0) listOf("$omitted more models not shown (module has ${models.size})") else emptyList()
-        return ListTargetResolution.Missing(
-            "module $moduleName has no model $modelName; its models:\n" + listing.joinToString("\n"),
-        )
-    }
-
-    private fun nodeName(node: SNode): String? =
-        SNodeAccessUtil.getPropertyValue(node, SNodeUtil.property_INamedConcept_name) as String?
-
     // Builds the Go-to-Node name matcher shared by `find root-by-name` and the `find instances --named` filter, so the
     // two searches match names by one rule. The leading '*' reproduces MPS Go-to-Node's "search in any place": the
     // pattern matches anywhere within a name, not only as a prefix. The MinusculeMatcher then supports camel-hump and
@@ -712,16 +463,6 @@ class JetBrainsMpsAccess(
                 predicate
             }
             is NodeFilter.Role -> { node: SNode -> node.containmentLink?.role == filter.role }
-        }
-
-    private fun nodeMatches(node: SNode, name: String, nodeId: SNodeId?): Boolean =
-        nodeName(node) == name || node.nodeId == nodeId
-
-    private fun listTargetForNode(node: SNode): ListTarget =
-        if (node.parent == null) {
-            ListTarget.RootNode(node)
-        } else {
-            ListTarget.Node(node)
         }
 
     private inline fun <T> captureRequestErrors(block: () -> T): RequestOutcome<T> =
@@ -760,19 +501,4 @@ class JetBrainsMpsAccess(
     // direct concept; otherwise a subconcept also matches (isSubConceptOf is reflexive, so it covers the concept itself).
     private fun isInstanceOf(node: SNode, concept: SAbstractConcept, exact: Boolean): Boolean =
         if (exact) node.concept == concept else node.concept.isSubConceptOf(concept)
-
-    private sealed interface ListTarget {
-        data class Module(val module: SModule) : ListTarget
-        data class Model(val model: SModel) : ListTarget
-        data class RootNode(val node: SNode) : ListTarget
-        data class Node(val node: SNode) : ListTarget
-    }
-
-    private sealed interface ListTargetResolution {
-        data class Found(val target: ListTarget) : ListTargetResolution
-        data class Ambiguous(val message: String) : ListTargetResolution
-        data class Missing(val detail: String? = null) : ListTargetResolution {
-            fun detailLine(): String = detail?.let { "\n$it" }.orEmpty()
-        }
-    }
 }

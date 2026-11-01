@@ -47,10 +47,9 @@ fun main(args: Array<String>) {
         }.executeWithProject(Path.of(args[2]).toFile()) { _, opened ->
             report.endTiming()
             val project = opened as MPSProject
-            val access = JetBrainsMpsAccess(project, DaemonLogger())
             report.phase("DISCOVERY")
-            val selection = access.read { access.resolveTestSelection(request.target) }
-            val modules = access.read {
+            val selection = project.modelAccess.computeReadAction { AntTestSelection.select(project, request.target) }
+            val modules = project.modelAccess.computeReadAction {
                 when (selection) {
                     is SModule -> listOf(selection)
                     is SModel -> listOf(requireNotNull(selection.module))
@@ -61,19 +60,19 @@ fun main(args: Array<String>) {
             if (request.build) {
                 report.phase("BUILD")
                 report.beginTiming("build")
-                val names = access.read { modules.map { it.moduleReference.toString() } }
+                val names = project.modelAccess.computeReadAction { modules.map { it.moduleReference.toString() } }
                 val build = ProjectMake(project).makeModules(names)
                 report.update { it.copy(build = build) }
                 if (build.outcome == MakeOutcome.FAILED) {
-                    report.finish("BUILD_FAILED", true, "Build failed for selection: ${access.read { AntTestSelection.describe(selection) }}")
+                    report.finish("BUILD_FAILED", true, "Build failed for selection: ${project.modelAccess.computeReadAction { AntTestSelection.describe(selection) }}")
                     return@executeWithProject
                 }
-                access.extra { saveProject() }
+                saveProjectSettings(project)
                 report.endTiming()
             }
             report.phase("DISCOVERY")
             AntTestExecution(Path.of(args[3]), Path.of(args[1]).parent, report, limits)
-                .run(Path.of(args[2]), AntTestSelection.resolve(access, request.target))
+                .run(Path.of(args[2]), AntTestSelection.resolve(project, request.target))
         }
     } catch (failure: Throwable) {
         failure.printStackTrace()

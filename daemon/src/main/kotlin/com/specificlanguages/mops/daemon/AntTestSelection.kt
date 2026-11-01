@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.daemon
 
 import jetbrains.mps.project.AbstractModule
+import jetbrains.mps.project.MPSProject
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SNode
 import org.jetbrains.mps.openapi.module.SModule
@@ -51,8 +52,28 @@ data class AntTestSelection(
             else -> "project (no target given)"
         }
 
-        fun resolve(access: JetBrainsMpsAccess, target: List<String>): AntTestSelection = access.read {
-            val selection = access.resolveTestSelection(target)
+        /**
+         * Resolves a **Test Selection** given as a **Navigation Target**: the project when [target] is empty, otherwise the
+         * module, model, or node the path names. Must be called inside a model read action.
+         */
+        fun select(project: MPSProject, target: List<String>): Any {
+            if (target.isEmpty()) return project
+            return when (val resolution = NavigationTargetResolver(project).resolve(target)) {
+                is NavigationTargetResolution.Found -> when (val selected = resolution.target) {
+                    is NavigationTarget.Module -> selected.module
+                    is NavigationTarget.Model -> selected.model
+                    is NavigationTarget.RootNode -> selected.node
+                    is NavigationTarget.Node -> selected.node
+                }
+                is NavigationTargetResolution.Ambiguous -> throw IllegalArgumentException(resolution.message)
+                is NavigationTargetResolution.Missing -> throw IllegalArgumentException(
+                    "test selection not found: ${target.joinToString(" ")}" + resolution.detailLine(),
+                )
+            }
+        }
+
+        fun resolve(project: MPSProject, target: List<String>): AntTestSelection = project.modelAccess.computeReadAction {
+            val selection = select(project, target)
             val modules = when (selection) {
                 is SModule -> listOf(selection)
                 is SModel -> listOf(requireNotNull(selection.module))
@@ -60,11 +81,11 @@ data class AntTestSelection(
                     require(selection.parent == null) { "Individual test methods are unsupported; select a test class, model, module, or project" }
                     listOf(requireNotNull(selection.model?.module))
                 }
-                else -> access.project.projectModulesWithGenerators.toList()
+                else -> project.projectModulesWithGenerators.toList()
             }
             fun descriptors(modules: List<SModule>) = modules.mapNotNull { (it as? AbstractModule)?.descriptorFile?.path?.let(Path::of) }.distinct()
             AntTestSelection(descriptors(modules), modules.map { it.moduleId.toString() },
-                descriptors(access.project.projectModulesWithGenerators.toList()),
+                descriptors(project.projectModulesWithGenerators.toList()),
                 when (selection) {
                     is SModel -> selection.reference.toString()
                     is SNode -> requireNotNull(selection.model).reference.toString()

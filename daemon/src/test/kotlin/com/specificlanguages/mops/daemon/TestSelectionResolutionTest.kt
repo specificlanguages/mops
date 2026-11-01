@@ -16,9 +16,7 @@ class TestSelectionResolutionTest {
     @Test
     fun `selects a module by name`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val access = JetBrainsMpsAccess(project, DaemonLogger())
-
-            val selection = access.read { access.resolveTestSelection(listOf(BUILD_MODULE_REFERENCE)) }
+            val selection = project.modelAccess.computeReadAction { AntTestSelection.select(project, listOf(BUILD_MODULE_REFERENCE)) }
 
             assertEquals(BUILD_MODULE, assertIs<SModule>(selection).moduleName)
         }
@@ -27,9 +25,7 @@ class TestSelectionResolutionTest {
     @Test
     fun `selects the model named like its module through a bare dot segment`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val access = JetBrainsMpsAccess(project, DaemonLogger())
-
-            val selection = access.read { access.resolveTestSelection(listOf(BUILD_MODULE, ".")) }
+            val selection = project.modelAccess.computeReadAction { AntTestSelection.select(project, listOf(BUILD_MODULE, ".")) }
 
             assertEquals(BUILD_MODULE, assertIs<SModel>(selection).name.value)
         }
@@ -38,10 +34,8 @@ class TestSelectionResolutionTest {
     @Test
     fun `reports a model segment that matches no model of the module with the module's models`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val access = JetBrainsMpsAccess(project, DaemonLogger())
-
             val exception = assertFailsWith<IllegalArgumentException> {
-                access.read { access.resolveTestSelection(listOf(BUILD_MODULE, ".missing")) }
+                project.modelAccess.computeReadAction { AntTestSelection.select(project, listOf(BUILD_MODULE, ".missing")) }
             }
 
             assertEquals(

@@ -13,7 +13,7 @@ class AntTestSelectionTest {
     @Test
     fun `selection describes the resolved project module model or root test case`() {
         val access = SharedMpsEnvironment.sharedMpsAccess as JetBrainsMpsAccess
-        fun description(vararg target: String) = AntTestSelection.resolve(access, target.toList()).description
+        fun description(vararg target: String) = AntTestSelection.resolve(access.project, target.toList()).description
 
         assertEquals("project (no target given)", description())
         assertEquals("module com.specificlanguages.json", description("com.specificlanguages.json"))
