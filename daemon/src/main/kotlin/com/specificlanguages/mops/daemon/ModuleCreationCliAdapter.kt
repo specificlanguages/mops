@@ -12,6 +12,13 @@ import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 class ModuleCreationCliAdapter(private val creator: ModuleCreator) {
     private val persistence = PersistenceFacade.getInstance()
 
+    fun create(request: CreateModuleRequest): ModuleCreationResponse = when (request) {
+        is CreateLanguageRequest -> createLanguage(request)
+        is CreateSolutionRequest -> createSolution(request)
+        is CreateDevkitRequest -> createDevkit(request)
+        is CreateGeneratorRequest -> createGenerator(request)
+    }
+
     fun createLanguage(request: CreateLanguageRequest): ModuleCreationResponse =
         if (request.dryRun) ModuleCreationResponse(plan = creator.planLanguage(request.moduleName, request.descriptor, request.withGenerator))
         else response(creator.createLanguage(request.moduleName, request.descriptor, request.withGenerator))

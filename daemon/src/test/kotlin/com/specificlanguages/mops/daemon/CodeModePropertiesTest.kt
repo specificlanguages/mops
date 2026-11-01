@@ -8,7 +8,7 @@ class CodeModePropertiesTest {
     @Test
     fun `property indexing invokes MPS computed getter and setter handlers`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
+            val response = CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform).execute(
                 CodeRunRequest("", """
                     project.command {
                         def model = mops.lookup.requireModel('com.specificlanguages.json.structure')
@@ -33,7 +33,7 @@ class CodeModePropertiesTest {
     @Test
     fun `Groovy property indexing reads inherited names from native nodes`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
+            val response = CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform).execute(
                 CodeRunRequest("", """
                     project.read {
                         def concept = mops.lookup.requireConceptByName('jetbrains.mps.lang.structure.ConceptDeclaration')
@@ -63,7 +63,7 @@ class CodeModePropertiesTest {
     @Test
     fun `indexed accessor stays live and enforces access on every operation`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
+            val response = CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform).execute(
                 CodeRunRequest("", """
                     def node = project.read {
                         def nodes = []
@@ -111,7 +111,7 @@ class CodeModePropertiesTest {
     @Test
     fun `properties accessor iterates set property descriptors like the native collection`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
+            val response = CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform).execute(
                 CodeRunRequest("", """
                     import org.jetbrains.mps.openapi.language.SProperty
                     def fails = { Class type, String fragment, Closure action ->

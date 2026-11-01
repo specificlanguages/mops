@@ -8,7 +8,7 @@ class CodeModeSubconceptsTest {
     @Test
     fun `search finds transitive direct and concrete subconcepts and interface implementors`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
+            val response = CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform).execute(
                 CodeRunRequest("", """
                     def expression
                     project.read {

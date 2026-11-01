@@ -12,13 +12,21 @@ sealed interface DaemonRequest {
     val token: String
 }
 
+/** A request about the daemon process itself, answered without entering project admission. */
+@Serializable
+sealed interface LifecycleRequest : DaemonRequest
+
+/** A request about the **MPS Project** the daemon serves. */
+@Serializable
+sealed interface DomainRequest : DaemonRequest
+
 @Serializable
 @SerialName("ping")
-data class PingRequest(override val token: String) : DaemonRequest
+data class PingRequest(override val token: String) : LifecycleRequest
 
 @Serializable
 @SerialName("stop")
-data class StopRequest(override val token: String) : DaemonRequest
+data class StopRequest(override val token: String) : LifecycleRequest
 
 /**
  * Request to export one node from the project daemon.
@@ -34,7 +42,7 @@ data class ModelGetNodeRequest(
     // Number of containment levels below the node to export in full; the nodes at that level are emitted as stubs.
     // Null exports the whole Node Subtree.
     val depth: Int? = null,
-) : DaemonRequest
+) : DomainRequest
 
 /**
  * Request for the summary of one node: its name, concept, reference, parent, and the number of children per
@@ -46,7 +54,7 @@ data class ModelGetNodeSummaryRequest(
     override val token: String,
     val target: NodeTarget,
     val ancestry: Boolean = false,
-) : DaemonRequest
+) : DomainRequest
 
 /**
  * Request to report where MPS says the files of one **MPS Module** are, addressed by [module] (a module name or
@@ -57,7 +65,7 @@ data class ModelGetNodeSummaryRequest(
 data class GetModuleRequest(
     override val token: String,
     val module: String,
-) : DaemonRequest
+) : DomainRequest
 
 /**
  * Request to render one node as the plain text of its default editor, the way it would appear in the MPS editor.
@@ -72,7 +80,7 @@ data class ModelRenderNodeRequest(
     override val token: String,
     val target: NodeTarget,
     val allowReflective: Boolean = false,
-) : DaemonRequest
+) : DomainRequest
 
 /**
  * Request to run MPS's full **Model Check** (typesystem and checking rules) over one **MPS Model**, addressed by the
@@ -87,14 +95,14 @@ data class ModelCheckRequest(
     override val token: String,
     val target: String,
     val limit: Int,
-) : DaemonRequest
+) : DomainRequest
 
 @Serializable
 @SerialName("project-check")
 data class ProjectCheckRequest(
     override val token: String,
     val limit: Int,
-) : DaemonRequest
+) : DomainRequest
 
 @Serializable
 @SerialName("module-check")
@@ -102,7 +110,7 @@ data class ModuleCheckRequest(
     override val token: String,
     val modules: List<String>,
     val limit: Int,
-) : DaemonRequest
+) : DomainRequest
 
 /**
  * Request to find references to one resolved MPS node. Searches editable project sources by default; an explicit
@@ -116,7 +124,7 @@ data class FindUsagesRequest(
     val target: NodeTarget,
     val scope: List<String>? = null,
     val limit: Int,
-) : DaemonRequest
+) : DomainRequest
 
 /**
  * Request to find instances of one MPS concept. Searches editable project sources by default; an explicit [scope] (the
@@ -135,7 +143,7 @@ data class FindInstancesRequest(
     val scope: List<String>? = null,
     val filters: List<NodeFilter> = emptyList(),
     val limit: Int,
-) : DaemonRequest
+) : DomainRequest
 
 /**
  * Request to find root nodes whose name matches [pattern], using MPS's Go-to-Node name-pattern matching. Searches
@@ -150,7 +158,7 @@ data class FindByNameRequest(
     val pattern: String,
     val scope: List<String>? = null,
     val limit: Int,
-) : DaemonRequest
+) : DomainRequest
 
 /**
  * Request to find every node whose **Node ID** equals [nodeId], across all models in scope. A Node ID is unique only
@@ -166,7 +174,7 @@ data class FindNodeByIdRequest(
     val nodeId: String,
     val scope: List<String>? = null,
     val limit: Int,
-) : DaemonRequest
+) : DomainRequest
 
 /**
  * Request to apply one batch of Edit Operations as a unit inside the project daemon, with best-effort atomicity.
@@ -177,7 +185,7 @@ data class ModelEditRequest(
     override val token: String,
     val batch: EditBatch,
     val constraints: ConstraintEnforcement = ConstraintEnforcement.BEST_EFFORT,
-) : DaemonRequest
+) : DomainRequest
 
 /**
  * Request to list one MPS navigation target as a bounded semantic tree.
@@ -194,7 +202,7 @@ data class MpsListRequest(
     val summary: Boolean = false,
     // When the target is a node, restrict its listed children to this Containment Role; invalid for non-node targets.
     val role: String? = null,
-) : DaemonRequest
+) : DomainRequest
 
 /**
  * Request to diagnose the load state of the project's languages and Java-bearing modules: which are loaded, and for
@@ -202,7 +210,7 @@ data class MpsListRequest(
  */
 @Serializable
 @SerialName("diagnose-modules")
-data class DiagnoseModulesRequest(override val token: String) : DaemonRequest
+data class DiagnoseModulesRequest(override val token: String) : DomainRequest
 
 /**
  * Request to diagnose the load state of one module addressed by [module] (a module name or serialized module
@@ -213,7 +221,7 @@ data class DiagnoseModulesRequest(override val token: String) : DaemonRequest
 data class DiagnoseModuleRequest(
     override val token: String,
     val module: String,
-) : DaemonRequest
+) : DomainRequest
 
 /**
  * Request to run the MPS make (generation and compilation) on the named [modules] (each a module name or serialized
@@ -224,14 +232,14 @@ data class DiagnoseModuleRequest(
 data class MakeModulesRequest(
     override val token: String,
     val modules: List<String>,
-) : DaemonRequest
+) : DomainRequest
 
 /**
  * Request to run the MPS make (generation and compilation) on every generatable module in the project.
  */
 @Serializable
 @SerialName("make-project")
-data class MakeProjectRequest(override val token: String) : DaemonRequest
+data class MakeProjectRequest(override val token: String) : DomainRequest
 
 @Serializable
 @SerialName("code-run")
@@ -240,7 +248,7 @@ data class CodeRunRequest(
     val source: String,
     val sourceName: String,
     val timeoutMillis: Long = 900_000,
-) : DaemonRequest
+) : DomainRequest
 
 @Serializable
 @SerialName("code-catalog")
@@ -248,10 +256,10 @@ data class CodeCatalogRequest(
     override val token: String,
     val path: String? = null,
     val json: Boolean = false,
-) : DaemonRequest
+) : DomainRequest
 
 @Serializable
-sealed interface CreateModuleRequest : DaemonRequest {
+sealed interface CreateModuleRequest : DomainRequest {
     val dryRun: Boolean
 }
 
@@ -303,7 +311,7 @@ data class CreateModelRequest(
     val module: String,
     val filePerRoot: Boolean = false,
     val dryRun: Boolean = false,
-) : DaemonRequest
+) : DomainRequest
 
 @Serializable
 @SerialName("testRun")
@@ -314,7 +322,7 @@ data class TestRunRequest(
     /** How long test execution may run, counted from its start; 0 disables the limit. */
     val timeoutMillis: Long = 0,
     val cancellationPath: String? = null,
-) : DaemonRequest
+) : DomainRequest
 
 /** Request for concept descendants in loaded language runtimes. */
 @Serializable
@@ -324,4 +332,4 @@ data class FindSubconceptsRequest(
     val concept: String,
     val concreteOnly: Boolean = false,
     val direct: Boolean = false,
-) : DaemonRequest
+) : DomainRequest

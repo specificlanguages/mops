@@ -5,6 +5,14 @@ import com.specificlanguages.mops.daemon.core.MpsExtra
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.daemon.core.MpsWrite
 import com.specificlanguages.mops.daemon.core.ResolvedScope
+import com.specificlanguages.mops.protocol.CodeResultResponse
+import com.specificlanguages.mops.protocol.CodeRunRequest
+import com.specificlanguages.mops.protocol.CreateModelRequest
+import com.specificlanguages.mops.protocol.ModelCreationResponse
+import com.specificlanguages.mops.protocol.TestRunReport
+import com.specificlanguages.mops.protocol.TestRunRequest
+import com.specificlanguages.mops.protocol.TestRunResponse
+import com.specificlanguages.mops.protocol.CreateSolutionRequest
 import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.MakeMessageJson
@@ -25,6 +33,7 @@ import com.specificlanguages.mops.protocol.ModelGetNodeRequest
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
 import com.specificlanguages.mops.protocol.ModelGetNodeSummaryRequest
 import com.specificlanguages.mops.protocol.ModelGetNodeSummaryResponse
+import com.specificlanguages.mops.protocol.ModuleCreationResponse
 import com.specificlanguages.mops.protocol.ModelRenderNodeRequest
 import com.specificlanguages.mops.protocol.ModelRenderNodeResponse
 import com.specificlanguages.mops.protocol.MpsListEntryJson
@@ -34,7 +43,6 @@ import com.specificlanguages.mops.protocol.MpsNodeJson
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import com.specificlanguages.mops.protocol.NodeFilter
 import com.specificlanguages.mops.protocol.NodeTarget
-import com.specificlanguages.mops.protocol.PingRequest
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.inOrder
@@ -304,11 +312,85 @@ class DomainRequestHandlerTest {
     }
 
     @Test
-    fun `unsupported request type yields an error response without touching MPS`() {
-        val response = handler.handleDomainRequest(PingRequest(TOKEN))
+    fun `a dry-run module creation plans it without saving the project`() {
+        val request = CreateSolutionRequest(TOKEN, "example.solution", dryRun = true)
+        val expected = ModuleCreationResponse()
+        whenever(operations.createModule(request)).thenReturn(expected)
 
-        assertEquals(errorResponse("UNSUPPORTED_REQUEST", "unsupported request type: PingRequest"), response)
-        verifyNoInteractions(operations)
+        val response = handler.handleDomainRequest(request)
+
+        assertEquals(expected, response)
+        verify(extra).refreshExternalChanges()
+        verify(operations).createModule(request)
+        verifyNoMoreInteractions(operations, extra)
+    }
+
+    @Test
+    fun `a module creation saves the project after creating the module`() {
+        val request = CreateSolutionRequest(TOKEN, "example.solution")
+        val expected = ModuleCreationResponse()
+        whenever(operations.createModule(request)).thenReturn(expected)
+
+        val response = handler.handleDomainRequest(request)
+
+        assertEquals(expected, response)
+        inOrder(extra, operations) {
+            verify(extra).refreshExternalChanges()
+            verify(operations).createModule(request)
+            verify(extra).saveProject()
+        }
+        verifyNoMoreInteractions(operations, extra)
+    }
+
+    @Test
+    fun `a model creation creates the model and saves the project`() {
+        val request = CreateModelRequest(TOKEN, "example.model", "example.solution")
+        val expected = ModelCreationResponse()
+        whenever(operations.createModel(request)).thenReturn(expected)
+
+        val response = handler.handleDomainRequest(request)
+
+        assertEquals(expected, response)
+        inOrder(extra, operations) {
+            verify(extra).refreshExternalChanges()
+            verify(operations).createModel(request)
+            verify(extra).saveProject()
+        }
+        verifyNoMoreInteractions(operations, extra)
+    }
+
+    @Test
+    fun `a test run reports the run and saves the project`() {
+        val request = TestRunRequest(TOKEN, listOf("example.tests"))
+        val report = TestRunReport(reportPath = "/workspace/example/test-runs/1/report.json", outcome = "SUCCESS")
+        whenever(extra.runTests(request)).thenReturn(report)
+
+        val response = handler.handleDomainRequest(request)
+
+        assertEquals(TestRunResponse(report), response)
+        inOrder(extra) {
+            verify(extra).refreshExternalChanges()
+            verify(extra).runTests(request)
+            verify(extra).saveProject()
+        }
+        verifyNoMoreInteractions(operations, extra)
+    }
+
+    @Test
+    fun `a code run returns the program result and saves the project`() {
+        val request = CodeRunRequest(TOKEN, "1 + 1", "script.groovy")
+        val expected = CodeResultResponse("2")
+        whenever(extra.runCode(request)).thenReturn(expected)
+
+        val response = handler.handleDomainRequest(request)
+
+        assertEquals(expected, response)
+        inOrder(extra) {
+            verify(extra).refreshExternalChanges()
+            verify(extra).runCode(request)
+            verify(extra).saveProject()
+        }
+        verifyNoMoreInteractions(operations, extra)
     }
 
     @Test

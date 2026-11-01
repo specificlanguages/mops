@@ -8,7 +8,7 @@ class CodeModeLookupTest {
     @Test
     fun `lookup distinguishes missing identities from required objects and invalid requests`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
+            val response = CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform).execute(
                 CodeRunRequest("", """
                     def fails = { Class type, Closure action ->
                         try { action(); assert false: 'Expected ' + type.name }

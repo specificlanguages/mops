@@ -8,7 +8,7 @@ class ModelCreationSemanticsTest {
     @Test
     fun `code mode retains a native module and returns a native model from a command block`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(CodeRunRequest(
+            val response = CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform).execute(CodeRunRequest(
                 "", """
                     def owner = project.read { mops.lookup.requireModule('com.specificlanguages.json') }
                     project.command {

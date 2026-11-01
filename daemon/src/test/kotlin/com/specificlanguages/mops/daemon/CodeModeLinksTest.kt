@@ -9,7 +9,7 @@ class CodeModeLinksTest {
     @Test
     fun `indexed children and references read and write native links`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
+            val response = CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform).execute(
                 CodeRunRequest("", """
                     import org.jetbrains.mps.openapi.model.SReference
                     import org.jetbrains.mps.openapi.model.SNodeReference
@@ -119,7 +119,7 @@ class CodeModeLinksTest {
     @Test
     fun `children and references accessors iterate like the native collections`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
+            val response = CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform).execute(
                 CodeRunRequest("", """
                     import jetbrains.mps.lang.smodel.generator.smodelAdapter.SNodeOperations
                     import org.jetbrains.mps.openapi.model.SReference
@@ -167,7 +167,7 @@ class CodeModeLinksTest {
     @Test
     fun `a returned children accessor renders as node references`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val executor = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform)
+            val executor = CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform)
             fun run(program: String) = executor.execute(CodeRunRequest("", """
                 def root = project.read {
                     mops.lookup.requireModel('com.specificlanguages.json.structure').rootNodes.find {

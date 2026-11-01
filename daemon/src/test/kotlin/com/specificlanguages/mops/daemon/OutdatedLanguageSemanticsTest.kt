@@ -25,7 +25,7 @@ class OutdatedLanguageSemanticsTest {
     @Test
     fun `unsaved model changes are distinguished from persisted hash comparisons`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val access = JetBrainsMpsAccess(project, DaemonLogger())
+            val access = SharedMpsEnvironment.mpsAccess(project)
             assertEquals(MakeOutcome.SUCCESS, access.extra { makeModules(listOf(SANDBOX_MODULE)) }.outcome)
             val model = project.modelAccess.computeReadAction {
                 project.repository.modules.flatMap { it.models }.single { it.name.value == "$JSON_LANGUAGE.structure" }
@@ -50,7 +50,7 @@ class OutdatedLanguageSemanticsTest {
     @Test
     fun `unreadable model source reports an unavailable current hash`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, path ->
-            val access = JetBrainsMpsAccess(project, DaemonLogger())
+            val access = SharedMpsEnvironment.mpsAccess(project)
             assertEquals(MakeOutcome.SUCCESS, access.extra { makeModules(listOf(SANDBOX_MODULE)) }.outcome)
             val source = project.modelAccess.computeReadAction {
                 project.repository.modules.flatMap { it.models }.single { it.name.value == "$JSON_LANGUAGE.structure" }.source

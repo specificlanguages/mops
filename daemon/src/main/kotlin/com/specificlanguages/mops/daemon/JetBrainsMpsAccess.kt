@@ -8,6 +8,7 @@ import jetbrains.mps.ide.findusages.model.scopes.ModulesScope
 import jetbrains.mps.progress.EmptyProgressMonitor
 import jetbrains.mps.project.EditableFilteringScope
 import jetbrains.mps.project.GlobalScope
+import jetbrains.mps.core.platform.Platform
 import jetbrains.mps.project.MPSProject
 import jetbrains.mps.util.CollectConsumer
 import org.jetbrains.mps.openapi.language.SAbstractConcept
@@ -16,12 +17,15 @@ import org.jetbrains.mps.openapi.module.FindUsagesFacade
 import org.jetbrains.mps.openapi.module.SModule
 import org.jetbrains.mps.openapi.module.SearchScope
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
+import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 
 class JetBrainsMpsAccess(
     internal val project: MPSProject,
     logger: DaemonLogger,
+    private val workspace: Path,
+    private val platform: Platform,
     private val mpsListExporter: MpsListExporter = MpsListExporter(),
     private val jsonNodeExporter: JsonNodeExporter = JsonNodeExporter(),
     private val moduleLocationsExporter: ModuleLocationsExporter = ModuleLocationsExporter(),
@@ -408,10 +412,25 @@ class JetBrainsMpsAccess(
     ) : JetBrainsMpsRead(), MpsWrite {
         override fun modelEdit(batch: EditBatch, constraints: ConstraintEnforcement): ModelEditResponse =
             editBatchExecutor.apply(project, batch, writeScope, constraints)
+
+        override fun createModule(request: CreateModuleRequest): ModuleCreationResponse =
+            ModuleCreationCliAdapter(ModuleCreator(project)).create(request).also {
+                if (!request.dryRun) project.repository.saveAll()
+            }
+
+        override fun createModel(request: CreateModelRequest): ModelCreationResponse = ModelCreator(project).create(request)
     }
 
     private inner class JetBrainsMpsExtra : MpsExtra {
         private val projectMake = ProjectMake(project)
+
+        override fun runTests(request: TestRunRequest): TestRunReport =
+            projectTesting().run(request.target, request.build, request.timeoutMillis, request.cancellationPath)
+
+        override fun runCode(request: CodeRunRequest): CodeResultResponse =
+            CodeModeExecutor(this@JetBrainsMpsAccess, project, platform, projectTesting()).execute(request)
+
+        private fun projectTesting() = ProjectTesting(this@JetBrainsMpsAccess, workspace)
 
         override fun refreshExternalChanges() {
             externalProjectRefresh.refresh()

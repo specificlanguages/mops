@@ -21,7 +21,7 @@ class ModuleCreationSemanticsTest {
     @Test
     fun `solution creation persists project membership`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, projectPath ->
-            val response = DomainRequestHandler(projectPath, JetBrainsMpsAccess(project, DaemonLogger()))
+            val response = DomainRequestHandler(projectPath, SharedMpsEnvironment.mpsAccess(project))
                 .handleDomainRequest(CreateSolutionRequest("", "example.created"))
             assertIs<ModuleCreationResponse>(response)
             assertTrue(projectPath.resolve("solutions/example.created/example.created.msd").exists())
@@ -71,8 +71,7 @@ class ModuleCreationSemanticsTest {
         SharedMpsEnvironment.withOpenProjectCopy { project, projectPath ->
             val response = DomainRequestHandler(
                 projectPath,
-                JetBrainsMpsAccess(project, DaemonLogger()),
-                SharedMpsEnvironment.platform,
+                SharedMpsEnvironment.mpsAccess(project),
             ).handleDomainRequest(
                 com.specificlanguages.mops.protocol.CodeRunRequest(
                     "", """
@@ -148,7 +147,7 @@ class ModuleCreationSemanticsTest {
     fun `language creation persists an exact descriptor and project membership`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, projectPath ->
             val response = assertIs<ModuleCreationResponse>(
-                DomainRequestHandler(projectPath, JetBrainsMpsAccess(project, DaemonLogger()))
+                DomainRequestHandler(projectPath, SharedMpsEnvironment.mpsAccess(project))
                     .handleDomainRequest(CreateLanguageRequest("", "example.created", "custom/modules/created.mpl")),
             )
 

@@ -8,7 +8,7 @@ class CodeModeTraversalTest {
     @Test
     fun `Groovy containment navigation preserves order excludes self and requires read access`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
+            val response = CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform).execute(
                 CodeRunRequest("", """
                     def fails = { Class type, Closure action ->
                         try { action(); assert false: 'Expected ' + type.name }

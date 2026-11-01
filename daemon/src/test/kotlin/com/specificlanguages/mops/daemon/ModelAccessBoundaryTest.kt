@@ -6,6 +6,7 @@ import jetbrains.mps.project.MPSProject
 import jetbrains.mps.project.Project
 import org.jetbrains.mps.openapi.module.ModelAccess
 import org.mockito.kotlin.any
+import java.nio.file.Files
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
@@ -76,6 +77,8 @@ class ModelAccessBoundaryTest {
         JetBrainsMpsAccess(
             project = project,
             logger = DaemonLogger(),
+            workspace = Files.createTempDirectory("mops-test-workspace"),
+            platform = mock(),
             mpsListExporter = mock(),
             jsonNodeExporter = mock(),
             modelNodeResolver = mock(),

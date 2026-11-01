@@ -1,8 +1,12 @@
 package com.specificlanguages.mops.daemon.core
 
 import com.specificlanguages.mops.protocol.ConstraintEnforcement
-import com.specificlanguages.mops.protocol.ModelEditResponse
+import com.specificlanguages.mops.protocol.CreateModelRequest
+import com.specificlanguages.mops.protocol.CreateModuleRequest
 import com.specificlanguages.mops.protocol.EditBatch
+import com.specificlanguages.mops.protocol.ModelCreationResponse
+import com.specificlanguages.mops.protocol.ModelEditResponse
+import com.specificlanguages.mops.protocol.ModuleCreationResponse
 
 /**
  * Write operations on the MPS repository. Operations throw [MpsRequestException] on failures that
@@ -19,4 +23,13 @@ interface MpsWrite : MpsRead {
      * cannot be checked because its language did not load.
      */
     fun modelEdit(batch: EditBatch, constraints: ConstraintEnforcement = ConstraintEnforcement.BEST_EFFORT): ModelEditResponse
+
+    /**
+     * Runs a **Module Creation Operation**, or only plans it when the request is a dry run. A created module and its
+     * companions are saved before this returns.
+     */
+    fun createModule(request: CreateModuleRequest): ModuleCreationResponse
+
+    /** Runs a **Model Creation Operation**. */
+    fun createModel(request: CreateModelRequest): ModelCreationResponse
 }

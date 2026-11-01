@@ -29,7 +29,7 @@ class InvalidConceptSemanticsTest {
     @Test
     fun `get-node reports an unresolved concept instead of failing`() {
         SharedMpsEnvironment.withOpenProjectCopy(prepare = ::injectUncompiledConceptNode) { project, _ ->
-            val access = JetBrainsMpsAccess(project, DaemonLogger())
+            val access = SharedMpsEnvironment.mpsAccess(project)
             val reference = uncompiledNodeReference(project)
 
             val node = access.read { getNode(NodeTarget.NodeReference(reference)) }
@@ -42,7 +42,7 @@ class InvalidConceptSemanticsTest {
     @Test
     fun `list reports an unresolved concept instead of failing`() {
         SharedMpsEnvironment.withOpenProjectCopy(prepare = ::injectUncompiledConceptNode) { project, _ ->
-            val access = JetBrainsMpsAccess(project, DaemonLogger())
+            val access = SharedMpsEnvironment.mpsAccess(project)
 
             val model = access.read {
                 list(listOf("com.specificlanguages.json", "com.specificlanguages.json.structure"), depth = 1)
@@ -56,7 +56,7 @@ class InvalidConceptSemanticsTest {
     @Test
     fun `strict edit aborts and changes nothing when the target concept did not load`() {
         SharedMpsEnvironment.withOpenProjectCopy(prepare = ::injectUncompiledConceptNode) { project, projectPath ->
-            val access = JetBrainsMpsAccess(project, DaemonLogger())
+            val access = SharedMpsEnvironment.mpsAccess(project)
             val reference = uncompiledNodeReference(project)
             val modelFile = projectPath.resolve(STRUCTURE_MODEL_PATH)
             val before = modelFile.readText()
@@ -78,7 +78,7 @@ class InvalidConceptSemanticsTest {
     @Test
     fun `best-effort edit warns about the unloaded language and applies`() {
         SharedMpsEnvironment.withOpenProjectCopy(prepare = ::injectUncompiledConceptNode) { project, projectPath ->
-            val access = JetBrainsMpsAccess(project, DaemonLogger())
+            val access = SharedMpsEnvironment.mpsAccess(project)
             val reference = uncompiledNodeReference(project)
 
             val response = access.write {

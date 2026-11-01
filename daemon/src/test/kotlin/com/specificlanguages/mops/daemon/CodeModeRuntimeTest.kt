@@ -13,7 +13,7 @@ class CodeModeRuntimeTest {
     @Test
     fun `runtime loads classes from a made module and names the failure case otherwise`() {
         SharedMpsEnvironment.withOpenProjectCopy("expression-language") { project, _ ->
-            val access = JetBrainsMpsAccess(project, DaemonLogger())
+            val access = SharedMpsEnvironment.mpsAccess(project)
             val executor = CodeModeExecutor(access, project, SharedMpsEnvironment.platform)
             fun run(program: String): String? = executor.execute(CodeRunRequest("", program, "runtime.groovy")).output
 
