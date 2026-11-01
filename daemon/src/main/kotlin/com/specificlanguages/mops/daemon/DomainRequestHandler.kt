@@ -8,7 +8,7 @@ import java.nio.file.Path
 import kotlin.io.path.pathString
 
 /**
- * Admits each **Domain Request** to the project and runs it. See docs/daemon-request-concurrency.md for how admission
+ * Admits each domain request to the project and runs it. See docs/daemon-request-concurrency.md for how admission
  * batches parallel readers between refreshes of external changes.
  */
 class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
@@ -50,7 +50,7 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
     // A dry run only plans the creation, so it leaves nothing to save.
     private fun creation(dryRun: Boolean, run: () -> DaemonResponse) = if (dryRun) exclusive(run) else exclusiveSaving(run)
 
-    // One branch per Domain Request: each states how the request is admitted and what it runs.
+    // One branch per domain request: each states how the request is admitted and what it runs.
     @Suppress("LongMethod")
     private fun route(request: DomainRequest): Route =
         when (request) {

@@ -45,7 +45,7 @@ interface MpsExtra {
     /** Saves dirty project settings with no read/write action active. */
     fun saveProject()
 
-    /** Runs the tests of a **Test Selection** in a separate process and reports the **Test Run**. */
+    /** Runs the tests of a **Test Selection** in a separate process and returns its **Test Run Report**. */
     fun runTests(request: TestRunRequest): TestRunReport
 
     /** Runs a Code Mode program; the program takes its own model access through its access blocks. */
