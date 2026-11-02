@@ -5,6 +5,7 @@ import com.specificlanguages.mops.protocol.NodeTarget
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.FileTime
 import java.time.Instant
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -20,11 +21,11 @@ class PackagedModuleRefreshSemanticsTest {
     fun `refresh picks up a replaced packaged module jar from a project library`() {
         SharedMpsEnvironment.withProjectCopy(prepare = { projectPath ->
             projectPath.resolve(".mps/libraries.xml").writeText(LIBRARIES_XML)
-            writeLibraryJar(projectPath.resolve(LIBRARY_JAR), "VersionOne", entryTime = Instant.parse("2026-09-18T12:00:00Z"))
+            writeJar(projectPath.resolve(MODULE_JAR), VERSION_ONE_TIME, singleJarEntries("VersionOne"))
         }) { access, projectPath ->
             assertEquals("VersionOne", rootName(access))
 
-            writeLibraryJar(projectPath.resolve(LIBRARY_JAR), "VersionTwoChanged", entryTime = Instant.parse("2026-10-30T12:00:00Z"))
+            writeJar(projectPath.resolve(MODULE_JAR), VERSION_TWO_TIME, singleJarEntries("VersionTwoChanged"))
 
             access.extra { refreshExternalChanges() }
 
@@ -32,25 +33,50 @@ class PackagedModuleRefreshSemanticsTest {
         }
     }
 
+    @Test
+    fun `refresh picks up a replaced source jar of a packaged module`() {
+        SharedMpsEnvironment.withProjectCopy(prepare = { projectPath ->
+            projectPath.resolve(".mps/libraries.xml").writeText(LIBRARIES_XML)
+            val deploymentEntries = mapOf("META-INF/module.xml" to moduleXml(SOURCE_JAR_NAME))
+            writeJar(projectPath.resolve(MODULE_JAR), VERSION_ONE_TIME, deploymentEntries)
+            writeJar(projectPath.resolve(SOURCE_JAR), VERSION_ONE_TIME, sourceEntries("VersionOne"))
+        }) { access, projectPath ->
+            assertEquals("VersionOne", rootName(access))
+
+            writeJar(projectPath.resolve(SOURCE_JAR), VERSION_TWO_TIME, sourceEntries("VersionTwoChanged"))
+
+            access.extra { refreshExternalChanges() }
+
+            assertEquals("VersionTwoChanged", rootName(access), "refresh reloads the model from the replaced source jar")
+        }
+    }
+
     private fun rootName(access: MpsAccess): String =
         propertyValue(access.read { getNode(NodeTarget.InModel(MODEL_NAME, ROOT_NODE_ID)) }, "name")
 
-    // MPS reloads a packaged model only when its archive entry timestamp changes, so each version gets its own.
-    private fun writeLibraryJar(jar: Path, rootName: String, entryTime: Instant) {
+    private fun singleJarEntries(rootName: String): Map<String, String> =
+        mapOf("META-INF/module.xml" to moduleXml(".")) + sourceEntries(rootName)
+
+    private fun sourceEntries(rootName: String): Map<String, String> = mapOf(
+        "module/repro.lib.msd" to SOLUTION_DESCRIPTOR,
+        "module/models/repro.lib.mps" to model(rootName),
+    )
+
+    // MPS reloads a packaged model only when its entry timestamp changes. The VFS gives every archive entry the
+    // timestamp of the archive file, so each version gets its own file timestamp.
+    private fun writeJar(jar: Path, modified: Instant, entries: Map<String, String>) {
         jar.parent.createDirectories()
         val temporary = Files.createTempFile(jar.parent, "library", ".tmp")
         ZipOutputStream(temporary.outputStream()).use { zip ->
-            fun entry(name: String, text: String) {
-                zip.putNextEntry(ZipEntry(name).apply { time = entryTime.toEpochMilli() })
+            entries.forEach { (name, text) ->
+                zip.putNextEntry(ZipEntry(name).apply { time = modified.toEpochMilli() })
                 zip.write(text.toByteArray(Charsets.UTF_8))
                 zip.closeEntry()
             }
-            entry("META-INF/module.xml", MODULE_XML)
-            entry("module/repro.lib.msd", SOLUTION_DESCRIPTOR)
-            entry("module/models/repro.lib.mps", model(rootName))
         }
         // Replaced like a Gradle Sync replaces a distribution: a new file at the same path.
         Files.move(temporary, jar, StandardCopyOption.REPLACE_EXISTING)
+        Files.setLastModifiedTime(jar, FileTime.from(modified))
     }
 
     private fun model(rootName: String) = """
@@ -77,10 +103,25 @@ class PackagedModuleRefreshSemanticsTest {
         </model>
     """.trimIndent()
 
+    private fun moduleXml(sourcesJar: String) = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <module namespace="repro.lib" type="solution" uuid="5d1c6b7e-1111-4a2b-9c3d-000000000001">
+          <dependencies />
+          <uses>
+            <language id="l:f3f42ddf-d692-4c29-90fb-7360196f01ab:com.specificlanguages.json" />
+          </uses>
+          <sources descriptor="repro.lib.msd" jar="$sourcesJar" />
+        </module>
+    """.trimIndent()
+
     private companion object {
-        const val LIBRARY_JAR = "lib/repro.lib.jar"
+        const val MODULE_JAR = "lib/repro.lib.jar"
+        const val SOURCE_JAR_NAME = "repro.lib-src.jar"
+        const val SOURCE_JAR = "lib/$SOURCE_JAR_NAME"
         const val MODEL_NAME = "repro.lib"
         const val ROOT_NODE_ID = "2"
+        val VERSION_ONE_TIME: Instant = Instant.parse("2026-09-18T12:00:00Z")
+        val VERSION_TWO_TIME: Instant = Instant.parse("2026-10-30T12:00:00Z")
 
         val LIBRARIES_XML = """
             <?xml version="1.0" encoding="UTF-8"?>
@@ -100,17 +141,6 @@ class PackagedModuleRefreshSemanticsTest {
                 </option>
               </component>
             </project>
-        """.trimIndent()
-
-        val MODULE_XML = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <module namespace="repro.lib" type="solution" uuid="5d1c6b7e-1111-4a2b-9c3d-000000000001">
-              <dependencies />
-              <uses>
-                <language id="l:f3f42ddf-d692-4c29-90fb-7360196f01ab:com.specificlanguages.json" />
-              </uses>
-              <sources descriptor="repro.lib.msd" jar="." />
-            </module>
         """.trimIndent()
 
         val SOLUTION_DESCRIPTOR = """

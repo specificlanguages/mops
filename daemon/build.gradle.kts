@@ -78,6 +78,8 @@ dependencies {
             include("lib/util_rt.jar")
             include("lib/testFramework.jar")
             include("lib/app.jar")
+            // ArchiveFileSystem and VfsUtil, to refresh replaced module archives (see ExternalProjectRefresh).
+            include("lib/intellij.platform.analysis.jar")
             include("lib/intellij.platform.core.jar")
             include("lib/intellij.platform.core.impl.jar")
             include("lib/intellij.platform.core.ui.jar")
