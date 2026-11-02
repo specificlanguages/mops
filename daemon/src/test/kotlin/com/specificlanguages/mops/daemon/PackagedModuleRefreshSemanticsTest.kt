@@ -34,15 +34,15 @@ class PackagedModuleRefreshSemanticsTest {
     }
 
     @Test
-    fun `refresh picks up a replaced source jar of a packaged module`() {
+    fun `refresh picks up replaced jars of a packaged module with a separate source jar`() {
         SharedMpsEnvironment.withProjectCopy(prepare = { projectPath ->
             projectPath.resolve(".mps/libraries.xml").writeText(LIBRARIES_XML)
-            val deploymentEntries = mapOf("META-INF/module.xml" to moduleXml(SOURCE_JAR_NAME))
-            writeJar(projectPath.resolve(MODULE_JAR), VERSION_ONE_TIME, deploymentEntries)
+            writeJar(projectPath.resolve(MODULE_JAR), VERSION_ONE_TIME, deploymentEntries())
             writeJar(projectPath.resolve(SOURCE_JAR), VERSION_ONE_TIME, sourceEntries("VersionOne"))
         }) { access, projectPath ->
             assertEquals("VersionOne", rootName(access))
 
+            writeJar(projectPath.resolve(MODULE_JAR), VERSION_TWO_TIME, deploymentEntries())
             writeJar(projectPath.resolve(SOURCE_JAR), VERSION_TWO_TIME, sourceEntries("VersionTwoChanged"))
 
             access.extra { refreshExternalChanges() }
@@ -53,6 +53,8 @@ class PackagedModuleRefreshSemanticsTest {
 
     private fun rootName(access: MpsAccess): String =
         propertyValue(access.read { getNode(NodeTarget.InModel(MODEL_NAME, ROOT_NODE_ID)) }, "name")
+
+    private fun deploymentEntries(): Map<String, String> = mapOf("META-INF/module.xml" to moduleXml(SOURCE_JAR_NAME))
 
     private fun singleJarEntries(rootName: String): Map<String, String> =
         mapOf("META-INF/module.xml" to moduleXml(".")) + sourceEntries(rootName)
