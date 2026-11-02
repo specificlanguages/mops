@@ -71,6 +71,8 @@ class FullClasspathDaemonLauncher(
                     add(javaExecutableFromJavaHome(context.realJavaHome).pathString)
                     addAll(launchJvmArgs)
                     addAll(mpsBootstrapJvmArgs(context.realMpsHome))
+                    // The daemon calls native code to detach from the launching session or console.
+                    add("--enable-native-access=ALL-UNNAMED")
                     // IdeaEnvironment otherwise forces plugin modules onto the application classpath.
                     add("-Didea.force.use.core.classloader=false")
                     add("-Didea.config.path=${workspace.ideaConfigDir()}")
