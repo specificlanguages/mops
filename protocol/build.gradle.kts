@@ -7,7 +7,7 @@ plugins {
 
 // kotlinx.serialization is shaded and relocated into the protocol jar so it can never shadow MPS's own copy on the
 // daemon's flat classpath. It is compiled against the real package but shipped only under the relocated package.
-val relocatedSerialization: Configuration by configurations.creating
+val relocatedSerialization = configurations.register("relocatedSerialization") { isCanBeConsumed = false }
 
 configurations {
     compileOnly { extendsFrom(relocatedSerialization) }
@@ -22,7 +22,7 @@ dependencies {
 
 val relocatedPackage = "com.specificlanguages.mops.shaded.kotlinx.serialization"
 
-val generateMopsVersion by tasks.registering(WriteProperties::class) {
+val generateMopsVersion = tasks.register<WriteProperties>("generateMopsVersion") {
     destinationFile = layout.buildDirectory.file("generated/mops-version/mops-version.properties").get().asFile
     property("version", project.version.toString())
 }
@@ -41,7 +41,7 @@ tasks.test {
 
 tasks.shadowJar {
     // Keep the default "all" classifier so the shaded jar never collides with the thin jar used for compilation.
-    configurations = listOf(relocatedSerialization)
+    configurations.empty().add(relocatedSerialization)
     relocate("kotlinx.serialization", relocatedPackage)
 
     // The Kotlin standard library and its annotations are provided by MPS and by the consuming distributions; bundling
@@ -50,6 +50,8 @@ tasks.shadowJar {
         exclude(dependency("org.jetbrains.kotlin:.*:.*"))
         exclude(dependency("org.jetbrains:annotations:.*"))
     }
+
+    duplicatesStrategy = DuplicatesStrategy.WARN
 }
 
 // Compile against the plain protocol classes, but run against the shaded jar with the relocated runtime bundled in.
