@@ -61,7 +61,13 @@ versions. CI runs every version's task in its own `daemon-versions` matrix job i
 ./gradlew :cli:integrationTestMps2024.1.6
 ./gradlew :cli:integrationTestMps2025.1.4
 ./gradlew :cli:integrationTestMps2026.1.1
+./gradlew :cli:integrationTestMpsPrerelease
 ```
+
+The `Prerelease` entry stands for the `mps-prerelease` version in `gradle/libs.versions.toml`, which selects both
+`com.jetbrains.mps:mps-prerelease` and the matching `com.jetbrains.mps:mps-jbr` marker. Renovate updates it with the
+other dependencies. Prerelease builds are deleted from the repository a few weeks after publishing, so a pinned
+prerelease that is not updated stops resolving.
 
 Each task resolves its MPS distribution and matching host-specific JBR through mps-platform-cache. Distributions are
 cached and reused. Reports are written separately under `cli/build/reports/tests/<task-name>/`; JUnit XML results are
@@ -110,9 +116,10 @@ through the daemon launcher, without IDE-plugin host-platform validation.
 
 `smokeTest` combines unit and integration tests tagged `@Tag("smoke")`. The unit task uses the normal unit-test
 classpath and starts no MPS daemon. The integration task shares runtime configuration with the full integration suite
-and uses the last version listed in `supportedMpsVersions` and its matching JBR. Both tasks have separate reports. Tag a
-test class or method to add focused cross-platform smoke coverage; no workflow filter needs updating. Tagged tests also
-run in their normal unit/integration suites. The smoke tasks are not added to `check`, which already runs those suites.
+and uses the last release listed in `supportedMpsVersions` (not `Prerelease`) and its matching JBR. Both tasks have
+separate reports. Tag a test class or method to add focused cross-platform smoke coverage; no workflow filter needs
+updating. Tagged tests also run in their normal unit/integration suites. The smoke tasks are not added to `check`, which
+already runs those suites.
 
 ### Code-mode runtime tests
 

@@ -68,10 +68,10 @@ partial report remains accessible. A standalone `mops test` timeout terminates i
 ## Compatibility validation
 
 Use the shared CLI integration-test infrastructure documented in [development.md](development.md). The
-`integrationTestMps2024.1.6`, `integrationTestMps2025.1.4`, and `integrationTestMps2026.1.1` tasks resolve their MPS
-distributions and matching host JBRs. `integrationTest` aggregates the release matrix and participates in `check` and
-CI. The `integrationTestLocal` task accepts an extracted distribution and JBR, providing a validation path for a pinned
-master build without introducing a separate harness. Master is not currently included in the default release matrix.
+`integrationTestMps2024.1.6`, `integrationTestMps2025.1.4`, `integrationTestMps2026.1.1`, and
+`integrationTestMpsPrerelease` tasks resolve their MPS distributions and matching host JBRs. `integrationTest`
+aggregates the matrix and participates in `check` and CI. The `integrationTestLocal` task accepts an extracted
+distribution and JBR, providing a validation path for a pinned master build without introducing a separate harness.
 
 Feature validation must exercise representative native BaseLanguage, language, generator, and ordinary JUnit tests
 across the supported versions, including ordinary legacy JUnit classes recognized by Ant. Verify supported selection

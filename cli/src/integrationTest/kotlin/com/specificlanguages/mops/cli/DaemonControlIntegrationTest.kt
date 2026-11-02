@@ -91,22 +91,41 @@ class DaemonControlIntegrationTest {
                 "--daemon-home", daemonHome.pathString, "daemon", "ping")
             assertEquals(0, ping.exitCode, ping.output)
             val record = requireNotNull(store.read(project)).record
+            // Calls an int-returning native function with int arguments, the same way DaemonProcess does: through the
+            // Foreign Function API on Java 22 and newer, otherwise through JNA from the MPS boot classpath. Starting
+            // with MPS 2026.3, JNA is no longer on the boot classpath.
+            val nativeCall = """
+                def windows = $windows
+                def call
+                if (Runtime.version().feature() >= 22) {
+                    def linker = java.lang.foreign.Linker.nativeLinker()
+                    def symbols = windows
+                        ? java.lang.foreign.SymbolLookup.libraryLookup('kernel32', java.lang.foreign.Arena.global())
+                        : linker.defaultLookup()
+                    def int32 = java.lang.foreign.ValueLayout.JAVA_INT
+                    call = { String name, List<Integer> args ->
+                        def descriptor = java.lang.foreign.FunctionDescriptor.of(int32, *([int32] * args.size()))
+                        linker.downcallHandle(symbols.find(name).orElseThrow(), descriptor).invokeWithArguments(args) as int
+                    }
+                } else {
+                    def library = com.sun.jna.NativeLibrary.getInstance(windows ? 'kernel32' : 'c')
+                    def convention = windows ? com.sun.jna.Function.ALT_CONVENTION : com.sun.jna.Function.C_CONVENTION
+                    call = { String name, List<Integer> args ->
+                        library.getFunction(name, convention).invokeInt(args as Object[])
+                    }
+                }
+            """.trimIndent()
             val program = tempDir.resolve("process-group.groovy").also {
-                it.writeText(if (windows) """
-                    def kernel = com.sun.jna.NativeLibrary.getInstance('kernel32')
-                    def getConsoleCP = kernel.getFunction('GetConsoleCP', com.sun.jna.Function.ALT_CONVENTION)
-                    assert getConsoleCP.invokeInt(new Object[0]) == 0
-                    assert kernel.getFunction('AllocConsole', com.sun.jna.Function.ALT_CONVENTION)
-                        .invokeInt(new Object[0]) != 0
-                    assert getConsoleCP.invokeInt(new Object[0]) != 0
+                it.writeText(nativeCall + "\n" + if (windows) """
+                    assert call('GetConsoleCP', []) == 0
+                    assert call('AllocConsole', []) != 0
+                    assert call('GetConsoleCP', []) != 0
                     com.specificlanguages.mops.daemon.DaemonProcess.INSTANCE.detach()
-                    assert getConsoleCP.invokeInt(new Object[0]) == 0
+                    assert call('GetConsoleCP', []) == 0
                     com.specificlanguages.mops.daemon.DaemonProcess.INSTANCE.detach()
-                    return [consoleCodePage: getConsoleCP.invokeInt(new Object[0])]
+                    return [consoleCodePage: call('GetConsoleCP', [])]
                 """.trimIndent() else """
-                    def libc = com.sun.jna.NativeLibrary.getInstance('c')
-                    return [processGroup: libc.getFunction('getpgrp').invokeInt(new Object[0]),
-                            session: libc.getFunction('getsid').invokeInt([0] as Object[])]
+                    return [processGroup: call('getpgrp', []), session: call('getsid', [0])]
                 """.trimIndent())
             }
             val group = runCommandLine(project, *javaAndMpsHomeArgs(),

@@ -237,7 +237,7 @@ val jbrArch = when (System.getProperty("os.arch")) {
 }
 
 val supportedMpsVersions = providers.gradleProperty("supportedMpsVersions").get().split(',').map(String::trim)
-val smokeMpsVersion = supportedMpsVersions.last()
+val smokeMpsVersion = supportedMpsVersions.last { it != "Prerelease" }
 val smokeIntegrationTest = tasks.register<Test>("smokeIntegrationTest") {
     description = "Runs smoke integration tests against MPS $smokeMpsVersion and its matching JBR."
     useJUnitPlatform { includeTags("smoke") }
@@ -259,8 +259,13 @@ val integrationTests = supportedMpsVersions.map { mpsVersion ->
             }
         }
     }
-    dependencies.add(mps.name, "com.jetbrains:mps:$mpsVersion")
-    dependencies.add(jbr.name, "com.jetbrains.mps:mps-jbr:$mpsVersion")
+    if (mpsVersion == "Prerelease") {
+        dependencies.add(mps.name, libs.mps.prerelease.distribution)
+        dependencies.add(jbr.name, libs.mps.prerelease.jbr)
+    } else {
+        dependencies.add(mps.name, "com.jetbrains:mps:$mpsVersion")
+        dependencies.add(jbr.name, "com.jetbrains.mps:mps-jbr:$mpsVersion")
+    }
     val mpsHome = mpsPlatformCache.getMpsRoot(mps)
     val jbrHome = mpsPlatformCache.getJbrRoot(jbr).map {
         if (jbrOs == "osx") it.resolve("Contents/Home") else it
