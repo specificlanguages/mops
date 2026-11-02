@@ -72,10 +72,9 @@ prerelease that is not updated stops resolving.
 Each task resolves its MPS distribution and matching host-specific JBR through mps-platform-cache. Distributions are
 cached and reused. Reports are written separately under `cli/build/reports/tests/<task-name>/`; JUnit XML results are
 under `cli/build/test-results/<task-name>/`. Each task runs test classes in two parallel test JVMs. CI runs each version
-in a separate Ubuntu matrix job. The matrix lists the versions in `.github/workflows/ci.yml`, and the verification job
-fails if that list differs from `supportedMpsVersions`. Each job uploads its test reports even on success, and test
-start/completion events appear in the job log to help identify slow or stalled tests. Apply `--tests` to a
-version-specific task to select tests:
+in a separate Ubuntu matrix job. The CI matrices read their versions from `supportedMpsVersions`. Each job uploads its
+test reports even on success, and test start/completion events appear in the job log to help identify slow or stalled
+tests. Apply `--tests` to a version-specific task to select tests:
 
 ```sh
 ./gradlew :cli:integrationTestMps2024.1.6 --tests '*CodeModeIntegrationTest'

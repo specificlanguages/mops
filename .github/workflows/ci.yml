@@ -14,6 +14,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  mps-versions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      versions: ${{ steps.read.outputs.versions }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Read supportedMpsVersions from gradle.properties
+        id: read
+        run: |
+          versions="$(sed -n 's/^supportedMpsVersions=//p' gradle.properties | jq -Rc 'split(",") | map(gsub("^\\s+|\\s+$"; ""))')"
+          echo "$versions"
+          echo "versions=$versions" >> "$GITHUB_OUTPUT"
+
   verification:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -34,17 +50,6 @@ jobs:
         with:
           prek-version: v0.5.7
           extra-args: --all-files
-      - name: Check the MPS version matrices list the supported MPS versions
-        if: ${{ !cancelled() }}
-        run: |
-          expected="$(sed -n 's/^supportedMpsVersions=//p' gradle.properties | tr -d ' ')"
-          for job in integration daemon-versions; do
-            actual="$(yq -r ".jobs.\"$job\".strategy.matrix.mps | join(\",\")" .github/workflows/ci.yml)"
-            if [[ "$actual" != "$expected" ]]; then
-              echo "ci.yml $job matrix is [$actual], gradle.properties supportedMpsVersions is [$expected]" >&2
-              exit 1
-            fi
-          done
       - name: Upload test reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -83,10 +88,11 @@ jobs:
             cli/build/reports/tests/
 
   daemon-versions:
+    needs: mps-versions
     strategy:
       fail-fast: false
       matrix:
-        mps: ["2024.1.6", "2025.1.4", "2026.1.1", "Prerelease"]
+        mps: ${{ fromJSON(needs.mps-versions.outputs.versions) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -112,10 +118,11 @@ jobs:
             daemon/build/reports/tests/
 
   integration:
+    needs: mps-versions
     strategy:
       fail-fast: false
       matrix:
-        mps: ["2024.1.6", "2025.1.4", "2026.1.1", "Prerelease"]
+        mps: ${{ fromJSON(needs.mps-versions.outputs.versions) }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -142,7 +149,7 @@ jobs:
 
   ci-passed:
     name: CI passed
-    needs: [verification, daemon, daemon-versions, integration]
+    needs: [mps-versions, verification, daemon, daemon-versions, integration]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
