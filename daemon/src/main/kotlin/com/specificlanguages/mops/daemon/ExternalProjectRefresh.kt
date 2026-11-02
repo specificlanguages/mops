@@ -21,6 +21,7 @@ import java.util.HexFormat
 /** Refreshes project files and replaces runtimes whose Java classpath contents changed between requests. */
 internal class ExternalProjectRefresh(private val project: Project) {
     private var outputs = snapshot()
+    private var archiveStamps: Map<String, Pair<Long, Long>?>? = null
 
     fun refresh() {
         val mpsProject = project as MPSProject
@@ -35,6 +36,7 @@ internal class ExternalProjectRefresh(private val project: Project) {
                 project.projectModules.mapNotNull { (it as? AbstractModule)?.descriptorFile?.parent }.distinct()
             }
             roots.forEach { it.refresh(DefaultCachingContext(true, true)) }
+            refreshModuleArchives()
             ReloadManager.getInstance().flush()
             val current = snapshot()
             val changed = current.filter { (module, files) -> outputs[module] != files }.keys
@@ -47,6 +49,34 @@ internal class ExternalProjectRefresh(private val project: Project) {
             outputs = current
         }
     }
+
+    /**
+     * Refreshes the archives that packaged modules (from the MPS distribution and from libraries) are loaded from. The
+     * persistent VFS keeps archive entries and their cached contents across daemon restarts, and refreshing the archive
+     * file itself does not revalidate them, so a replaced archive keeps serving the old models until its archive root
+     * is refreshed. The first call refreshes every archive because the VFS may predate this daemon; later calls refresh
+     * only archives whose size or timestamp on disk changed since the previous call.
+     */
+    private fun refreshModuleArchives() {
+        val current = project.modelAccess.computeReadAction {
+            project.repository.modules
+                .mapNotNull { (it as? AbstractModule)?.descriptorFile }
+                .filter { it.isInZipArchive }
+                .map { it.path.substringBefore("!/") }
+                .distinct()
+        }.associateWith { archiveStamp(Path.of(it)) }
+        val previous = archiveStamps
+        val changed = if (previous == null) current.keys else current.filter { (path, stamp) -> previous[path] != stamp }.keys
+        val fileSystem = (project as MPSProject).fileSystem
+        changed.forEach { path ->
+            fileSystem.getFile(path).refresh(DefaultCachingContext(true, false))
+            fileSystem.getFile("$path!/").refresh(DefaultCachingContext(true, true))
+        }
+        archiveStamps = current
+    }
+
+    private fun archiveStamp(archive: Path): Pair<Long, Long>? =
+        if (Files.isRegularFile(archive)) Files.getLastModifiedTime(archive).toMillis() to Files.size(archive) else null
 
     // Replaced classes and libraries can retain both their timestamps and sizes.
     private fun snapshot(): Map<SModuleReference, List<Pair<Path, String>>> =
