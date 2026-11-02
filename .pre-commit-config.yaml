@@ -32,6 +32,24 @@ repos:
         types:
           - markdown
 
+      - id: file-size
+        name: Check Kotlin and Markdown file size
+        entry: tools/pre-commit/check-file-size.py
+        language: python
+        files: \.(kt|md)$
+        # Files that were over the limit when the check was introduced. Remove a file from this list after splitting it.
+        exclude: |
+          (?x)^(
+            README\.md|
+            cli/src/test/kotlin/com/specificlanguages/mops/cli/FindInstancesCommandTest\.kt|
+            daemon/src/main/kotlin/com/specificlanguages/mops/daemon/EditBatchExecutor\.kt|
+            daemon/src/main/kotlin/com/specificlanguages/mops/daemon/JetBrainsMpsAccess\.kt|
+            daemon/src/main/kotlin/com/specificlanguages/mops/daemon/ModuleLoadDiagnostics\.kt|
+            daemon/src/test/kotlin/com/specificlanguages/mops/daemon/FindInstancesSemanticsTest\.kt|
+            daemon/src/test/kotlin/com/specificlanguages/mops/daemon/MpsListSemanticsTest\.kt|
+            protocol/src/test/kotlin/com/specificlanguages/mops/protocol/DaemonProtocolJsonTest\.kt
+          )$
+
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
     rev: v1.30.1
     hooks:
