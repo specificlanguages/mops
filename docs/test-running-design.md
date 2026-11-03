@@ -92,14 +92,48 @@ observations across the four validation baselines.
 
 ## Worker startup
 
-The daemon resolves selection to persistent identities and descriptor paths. A separate controller performs the optional
-incremental build in a normal-mode preparation environment and saves the project. No-build runs start Ant without
-initializing a preparation MPS environment. It starts the selected distribution's Ant `launchtests` task on an
-independent classpath. Ant constructs the test JVM arguments and classpath; a small `LaunchTestWorker` subclass inherits
-test-mode environment startup and loads a version-specific launcher adapter through the stock launcher module's
-classloader. The adapter filters stock module discovery, forwards listener callbacks to the stock failure detector, and
-publishes atomic protocol events. The preparation process collects those events while supervising the Ant process.
-Cancellation, deadline expiration, and parent termination kill the whole process tree.
+The daemon resolves selection to persistent identities and descriptor paths. It also records the worker's repository and
+path macros as the daemon loaded them: the project module descriptors, the folders of the project libraries from
+`ProjectLibraryManager` with macros expanded, and the user path macros from `PathMacros`. The worker does not open the
+project before discovery, so it never reads `.mps/libraries.xml` itself; without these folders, modules that depend on
+project-library modules cannot load classes. A project library whose path keeps an undefined macro is left out, with a
+report diagnostic. The Ant file passes the folders as `<modules dir>` and the macros as `<macro name path>`, so tests
+that open a project through a macro-based `TestInfo.projectPath` find it.
+
+A separate controller performs the optional incremental build in a normal-mode preparation environment, with the same
+path macros, and saves the project. No-build runs start Ant without initializing a preparation MPS environment. It
+starts the selected distribution's Ant `launchtests` task on an independent classpath. Ant constructs the test JVM
+arguments and classpath; a small `LaunchTestWorker` subclass inherits test-mode environment startup and loads a
+version-specific launcher adapter through the stock launcher module's classloader. The adapter filters stock module
+discovery, forwards listener callbacks to the stock failure detector, and publishes atomic protocol events.
+
+The preparation process collects those events while supervising the Ant process. When a run is unsuccessful, it adds the
+worker's class-loading warnings from `test-log/idea.log` (modules MPS marked invalid for class loading) to the report's
+diagnostics, so a missing dependency is not visible only as a `ClassNotFoundException`. Cancellation, deadline
+expiration, and parent termination kill the whole process tree.
+
+In test mode, MPS waits for indexes before it opens a project, and it indexes the source roots of every repository
+module, including the whole distribution. So that a run does not scan and index all of it again, the test worker and the
+preparation environment keep their IntelliJ system directories (VFS, indexes, caches) between runs, in
+`test-system-cache/<MPS build number>/worker` and `.../preparation` under the daemon home, shared by all projects of
+that daemon home. The two run at the same time, so each has its own directory, and the build number in the path keeps
+one build from reading another build's indexes. Configuration and logs stay per run. MPS 2026.3 deletes the test-mode
+system directory at startup unless `mps.test.keep.system.dir` is set, so the worker sets it.
+
+The daemon takes an exclusive file lock on a directory until the run's processes have exited; killing a process tree
+waits for the descendants to exit. IntelliJ does not protect a system directory shared by processes: the test-mode
+application takes no directory lock, and the normal-mode preparation environment keeps its lock file in the per-run
+config directory, so a second preparation environment would find the first one's port file in the shared system
+directory and pass its command line to it instead of starting. When another run, for example in another project's
+daemon, holds the lock, the run uses a fresh directory under its run directory and adds a report diagnostic naming both
+directories. No-build runs lock only the worker's directory.
+
+A reused VFS keeps file records and content from earlier runs, and the headless platform does not refresh them
+synchronously when it opens a project; the test-mode platform skips that refresh. So both processes refresh the project
+folder, the repository folders, and the module folders of the selection from disk before they use them, the preparation
+environment also the archives of packaged modules outside the distribution, and MPS reloads what changed. IntelliJ's own
+version and corruption checks rebuild outdated or broken storage. mops adds no check of its own: deleting the cache is
+the way out, documented for users, and costs one cold run.
 
 Automatic plugin discovery loads installed plugins through normal plugin loading. MPS 2025.1 disables
 `com.intellij.platform.images` in the isolated test configuration because its SVG parser on the Ant application

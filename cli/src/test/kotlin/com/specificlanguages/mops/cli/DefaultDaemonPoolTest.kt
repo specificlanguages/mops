@@ -19,6 +19,7 @@ import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import java.time.Duration
+import kotlin.io.path.createDirectories
 import kotlin.io.path.pathString
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -142,6 +143,34 @@ class DefaultDaemonPoolTest {
         fakeDaemon.join(5_000)
         assertContains(exception.message!!, "different context")
         assertContains(exception.message!!, otherMpsHome.pathString)
+        verify(launcher, never()).startDaemon(any())
+    }
+
+    @Test
+    fun `fails when the running daemon has different path macros`() {
+        val project = tempDir.mpsProject()
+        val mpsHome = tempDir.mpsHome()
+        val javaHome = Path.of(System.getProperty("java.home"))
+        val macroValue = tempDir.resolve("macro value").createDirectories()
+
+        val fakeDaemon = startPrerecordedDaemon(
+            PongResponse(projectPath = project.pathString, mpsHome = mpsHome.pathString, workspacePath = "irrelevant"),
+        )
+        val store = DaemonRecordStore.forDaemonHome(tempDir.resolve("daemon-home"))
+        val record = daemonRecord(port = fakeDaemon.port, project = project, mpsHome = mpsHome, workspace = Path.of("irrelevant"))
+            .let { it.copy(context = DaemonContext.fromLivePaths(project, mpsHome, javaHome, mapOf("repo.root" to macroValue))) }
+        store.write(record)
+
+        val launcher = mock<DaemonLauncher>()
+        whenever(launcher.connectToExistingDaemon(record)).thenReturn(DefaultDaemonClient(fakeDaemon.port, record.token))
+        val exception = assertFailsWith<IllegalStateException> {
+            DefaultDaemonPool(store, launcher).ensureDaemon(DaemonContext.fromLivePaths(project, mpsHome, javaHome))
+        }
+
+        fakeDaemon.join(5_000)
+        assertContains(exception.message!!, "different context")
+        assertContains(exception.message!!, "repo.root=${macroValue.toRealPath()}")
+        assertContains(exception.message!!, "mops daemon stop")
         verify(launcher, never()).startDaemon(any())
     }
 

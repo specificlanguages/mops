@@ -66,7 +66,8 @@ class DefaultDaemonPool(
                     throw IllegalStateException(
                         "project is already owned by a mops daemon with a different context:\n" +
                                 "  requested: ${context}\n" +
-                                "  existing:  ${existing.record.context}",
+                                "  existing:  ${existing.record.context}\n" +
+                                "stop it with `mops daemon stop` to start one with the requested context",
                     )
                 }
                 return client

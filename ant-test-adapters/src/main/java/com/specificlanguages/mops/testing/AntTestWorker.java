@@ -1,7 +1,15 @@
 package com.specificlanguages.mops.testing;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.vfs.LocalFileSystem;
+import com.intellij.openapi.vfs.VfsUtil;
+import com.intellij.openapi.vfs.VirtualFile;
 import java.io.File;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import jetbrains.mps.ide.platform.watching.ReloadManager;
 import jetbrains.mps.tool.common.Script;
 import jetbrains.mps.tool.environment.Environment;
 import jetbrains.mps.tool.run.ModuleClassCode;
@@ -15,6 +23,7 @@ public class AntTestWorker extends LaunchTestWorker {
   @Override public void work() {
     System.out.println("MOPS_TEST_MODE=" + jetbrains.mps.RuntimeFlags.getTestMode());
     if (!jetbrains.mps.RuntimeFlags.isTestMode()) throw new AssertionError("Test mode required");
+    refreshFromDisk(System.getProperty("mops.test.sources").split(File.pathSeparator));
     try {
       ModuleClassCode code = new ModuleClassCode("c234a56a-502f-4751-aded-6f9846fff7ce(jetbrains.mps.lang.test.junit5)");
       code.load(myEnvironment.getPlatform(), "jetbrains.mps.lang.test.junit5.ScriptJUnit5Launcher");
@@ -30,5 +39,21 @@ public class AntTestWorker extends LaunchTestWorker {
         failBuild("launchtests");
       }
     } catch (Exception e) { throw new RuntimeException(e); }
+  }
+
+  /**
+   * Brings the VFS up to date with the given folders on disk and lets MPS reload what changed. A reused IntelliJ system
+   * directory keeps VFS records from earlier runs, and the test-mode platform skips its initial VFS refresh.
+   */
+  private static void refreshFromDisk(String[] folders) {
+    List<VirtualFile> files = new ArrayList<>();
+    for (String folder : folders) {
+      VirtualFile file = LocalFileSystem.getInstance().findFileByNioFile(Path.of(folder));
+      if (file != null) files.add(file);
+    }
+    ApplicationManager.getApplication().invokeAndWait(() -> {
+      VfsUtil.markDirtyAndRefresh(false, true, true, files.toArray(VirtualFile.EMPTY_ARRAY));
+      ReloadManager.getInstance().flush();
+    });
   }
 }

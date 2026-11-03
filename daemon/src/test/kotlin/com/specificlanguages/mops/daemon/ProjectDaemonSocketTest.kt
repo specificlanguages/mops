@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.daemon
 
+import com.specificlanguages.mops.protocol.DaemonContext
 import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.DaemonRecord
 import com.specificlanguages.mops.protocol.DaemonRequest
@@ -262,15 +263,14 @@ class ProjectDaemonSocketTest {
     }
 
     private fun start(idleTimeout: Duration = Duration.ofSeconds(30)): RunningDaemon {
-        val projectPath = tempDir.resolve("project").createDirectories()
-        val mpsHome = tempDir.resolve("mps").createDirectories()
+        val projectPath = tempDir.resolve("project").createDirectories().toRealPath()
+        val mpsHome = tempDir.resolve("mps").createDirectories().toRealPath()
         val workspacePath = tempDir.resolve("workspace")
 
         val daemon = ProjectDaemon(
             logger = DaemonLogger(),
-            projectPath = projectPath,
+            context = DaemonContext.fromLivePaths(projectPath, mpsHome, Path.of(System.getProperty("java.home"))),
             workspace = DaemonWorkspace(workspacePath),
-            mpsHome = mpsHome,
             token = TOKEN,
             idleTimeout = idleTimeout,
         )

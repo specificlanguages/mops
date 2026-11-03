@@ -9,17 +9,29 @@ import org.jetbrains.mps.openapi.persistence.PersistenceFacade
  * ([org.jetbrains.mps.openapi.language.SAbstractConcept.isValid] == false), which almost always means the owning
  * language was never compiled.
  *
- * Read paths annotate such a node (`conceptValid = false`) rather than failing. The write path uses these helpers to
- * abort under strict enforcement and to name the unloaded language when it reports a skipped check as a warning.
+ * Read commands annotate such a node (`conceptValid = false`) rather than failing. The write path uses these helpers to
+ * abort under strict enforcement and to name the unloaded language when it reports a skipped check as a warning. Code
+ * Mode role and property lookups fail on such a node, because its concept has no roles or properties to look up.
  */
 object ConceptValidityGuard {
 
     fun messageFor(node: SNode): String {
         val address = runCatching { PersistenceFacade.getInstance().asString(node.reference) }.getOrNull()
             ?: node.nodeId.toString()
-        val language = languageName(node.concept)
         return "MPS concept of node $address could not be resolved (${node.concept.qualifiedName}); " +
-            "its owning language '$language' is most likely not compiled — run 'mops make module $language' and retry"
+            notCompiledHint(node.concept)
+    }
+
+    /** Fails with the unloaded language when [concept] did not resolve; [lookup] names what could not be looked up. */
+    fun requireValid(concept: SConcept, lookup: String) {
+        check(concept.isValid) {
+            "cannot look up $lookup: concept ${concept.qualifiedName} is not loaded; ${notCompiledHint(concept)}"
+        }
+    }
+
+    private fun notCompiledHint(concept: SConcept): String {
+        val language = languageName(concept)
+        return "its owning language '$language' is most likely not compiled — run 'mops make module $language' and retry"
     }
 
     /** Best-effort qualified name of [concept]'s owning language, used to group warnings once per language. */

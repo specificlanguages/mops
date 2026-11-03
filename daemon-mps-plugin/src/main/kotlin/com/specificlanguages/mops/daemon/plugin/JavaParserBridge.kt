@@ -9,6 +9,8 @@ import jetbrains.mps.project.AbstractModule
 import jetbrains.mps.smodel.ModelDependencyUpdate
 import jetbrains.mps.smodel.ModelImports
 import jetbrains.mps.smodel.adapter.structure.MetaAdapterFactory
+import jetbrains.mps.smodel.language.LanguageRegistry
+import java.lang.reflect.InvocationTargetException
 import org.jetbrains.mps.openapi.language.SContainmentLink
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SNode
@@ -85,7 +87,36 @@ object JavaParserBridge {
         ModelDependencyUpdate(model).updateUsedLanguages().updateImportedModels(null)
         addDependenciesForNewImports(model, importsBefore)
         val attached = inserted.filter { it.model === model }
+        bindOverloads(model, attached)
         return arrayOf(attached, unresolved(attached))
+    }
+
+    /**
+     * The converter resolves a method or constructor reference by name, so an overloaded call can point to the wrong
+     * declaration. MPS's own method-call fixer picks the declaration the argument types select. Arguments are bound
+     * before the calls that take them, since an argument's type can depend on the overload its own call binds to.
+     * A call whose overload MPS cannot decide keeps its target.
+     */
+    private fun bindOverloads(model: SModel, roots: List<SNode>) {
+        val calls = roots.flatMap { root -> root.subtree().toList().asReversed() }
+            .filter { it.isInstanceOfConcept(fixableMethodReferenceConcept) }
+        if (calls.isEmpty()) return
+        val replaceFromEditor = methodResolveUtil(model).getMethod("replaceFromEditor", SNode::class.java)
+        calls.forEach { call ->
+            try {
+                replaceFromEditor.invoke(null, call)
+            } catch (failure: InvocationTargetException) {
+                throw failure.targetException
+            }
+        }
+    }
+
+    // MethodResolveUtil ships in a BaseLanguage module jar, which is not on this plugin's classpath; the BaseLanguage
+    // runtime's module class loader sees it.
+    private fun methodResolveUtil(model: SModel): Class<*> {
+        val baseLanguage = LanguageRegistry.getInstance(requireNotNull(model.repository)).getLanguage(baseLanguageId)
+            ?: error("BaseLanguage runtime is not loaded")
+        return baseLanguage.javaClass.classLoader.loadClass("jetbrains.mps.baseLanguage.scopes.MethodResolveUtil")
     }
 
     private fun addDependenciesForNewImports(
@@ -102,14 +133,18 @@ object JavaParserBridge {
     }
 
     private fun unresolved(roots: List<SNode>): List<SNode> = roots.asSequence()
-        .flatMap { root -> sequenceOf(root) + root.descendants() }
+        .flatMap { root -> root.subtree() }
         .filter { node -> node.isInstanceOfConcept(yetUnresolvedConcept) || node.references.any { it.targetNode == null } }
         .toList()
+
+    private fun SNode.subtree(): Sequence<SNode> = sequenceOf(this) + descendants()
 
     private fun SNode.descendants(): Sequence<SNode> = sequence {
         children.forEach { child -> yield(child); yieldAll(child.descendants()) }
     }
 
+    private val baseLanguageId = MetaAdapterFactory.getLanguage(0xf3061a5392264cc5UL.toLong(), 0xa443f952ceaf5816UL.toLong(), "jetbrains.mps.baseLanguage")
+    private val fixableMethodReferenceConcept = MetaAdapterFactory.getInterfaceConcept(0xf3061a5392264cc5UL.toLong(), 0xa443f952ceaf5816UL.toLong(), 0x5a672f2d82ff2834L, "jetbrains.mps.baseLanguage.structure.IFixableMethodReference")
     private val classifierConcept = MetaAdapterFactory.getConcept(0xf3061a5392264cc5UL.toLong(), 0xa443f952ceaf5816UL.toLong(), 0x101d9d3ca30L, "jetbrains.mps.baseLanguage.structure.Classifier")
     private val statementListConcept = MetaAdapterFactory.getConcept(0xf3061a5392264cc5UL.toLong(), 0xa443f952ceaf5816UL.toLong(), 0xf8cc56b200L, "jetbrains.mps.baseLanguage.structure.StatementList")
     private val yetUnresolvedConcept = MetaAdapterFactory.getInterfaceConcept(0xf3061a5392264cc5UL.toLong(), 0xa443f952ceaf5816UL.toLong(), 0x70ea1dc4c5721865L, "jetbrains.mps.baseLanguage.structure.IYetUnresolved")

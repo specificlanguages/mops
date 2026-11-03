@@ -15,9 +15,9 @@ serialized references.
 
 | Task                                | Groovy program                                                                                                                                                                                                                   |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| List root names and references      | `project.read { mops.lookup.requireModel('sample.model').rootNodes.collect { [name: it.properties['name'], node: it] } }`                                                                                                        |
+| List root names and references      | `project.read { mops.lookup.requireModel('sample.model').rootNodes.collect { [name: it.name, node: it] } }`                                                                                                                      |
 | Read a node property                | `project.read { mops.lookup.requireNode('NODE_REF').properties['name'] }`                                                                                                                                                        |
-| Find a root with an exact name      | `project.read { mops.lookup.requireModel('sample.model').rootNodes.find { it.properties['name'] == 'Example' } }`                                                                                                                |
+| Find a root with an exact name      | `project.read { mops.lookup.requireModel('sample.model').rootNodes.find { it.name == 'Example' } }`                                                                                                                              |
 | List containment descendants        | `project.read { mops.lookup.requireNode('NODE_REF').descendants.collect { [concept: it.concept.qualifiedName, node: it] } }`                                                                                                     |
 | List ancestors                      | `project.read { mops.lookup.requireNode('NODE_REF').ancestors }`                                                                                                                                                                 |
 | List available property names       | `project.read { mops.lookup.requireNode('NODE_REF').concept.properties.collect { it.name } }`                                                                                                                                    |
@@ -39,6 +39,10 @@ serialized references.
 | Inspect a runtime object's API      | `project.read { help(mops.lookup.requireNode('NODE_REF')) }`                                                                                                                                                                     |
 
 `child[role]` rejects multiple children; use `children[role]` for lists. Newly attached children must be detached.
+Reading or writing a role or property that the node's concept does not have fails with a message that lists the
+concept's names of that kind; a known role with no value reads as `null` or `[]`. If the concept's language is not
+loaded, the lookup fails and names the language to make.
+
 The indexed accessors shadow the native no-argument getters: `getChildren()`, `getReferences()`, and `getProperties()`
 return the accessors as well. Each accessor iterates like the native collection, so Groovy's `collect`, `findAll`,
 `each`, and `size()` work on it. Use concept descriptors and native methods when necessary; consult

@@ -78,7 +78,7 @@ class TestRunLimitsTest {
     }
 
     @Test
-    fun `destroying a process tree kills the process and its descendants`() {
+    fun `destroying a process tree returns once its descendants have exited`() {
         val process = ProcessBuilder("sh", "-c", "sleep 60 & wait").start()
         try {
             val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
@@ -87,9 +87,8 @@ class TestRunLimitsTest {
 
             destroyProcessTree(process.toHandle())
 
+            assertFalse(child.isAlive, "its descendant must be gone when the call returns")
             assertTrue(process.waitFor(10, TimeUnit.SECONDS), "the process must be killed")
-            assertTrue(child.onExit().get(10, TimeUnit.SECONDS) != null)
-            assertFalse(child.isAlive, "its descendant must be killed")
         } finally {
             process.descendants().forEach { it.destroyForcibly() }
             process.destroyForcibly()

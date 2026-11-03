@@ -23,16 +23,14 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
-import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import kotlin.io.path.pathString
 
 class ProjectDaemon(
     val logger: DaemonLogger,
-    val projectPath: Path,
+    val context: DaemonContext,
     val workspace: DaemonWorkspace,
-    val mpsHome: Path,
     val token: String,
     val idleTimeout: Duration,
 ) {
@@ -46,7 +44,7 @@ class ProjectDaemon(
      * @param mpsAccess Provides read and write access for operations requiring MPS context.
      */
     fun serve(mpsAccess: MpsAccess) {
-        logger.log("environment ready for project ${projectPath.pathString}")
+        logger.log("environment ready for project ${context.realProjectPath.pathString}")
 
         // Load the lifecycle request classes now, while the classloader is healthy, so a later stop is always
         // decodable even if the platform is mid-teardown by then.
@@ -61,11 +59,7 @@ class ProjectDaemon(
                     token = token,
                     pid = ProcessHandle.current().pid(),
                     daemonVersion = "0.3.0-SNAPSHOT",
-                    context = DaemonContext.fromLivePaths(
-                        projectPath = projectPath,
-                        mpsHome = mpsHome,
-                        javaHome = Path.of(System.getProperty("java.home"))
-                    ),
+                    context = context,
                     workspace = workspace.path,
                     startupTime = Instant.now().toString(),
                 ),
@@ -159,8 +153,8 @@ class ProjectDaemon(
 
             return@run when (request) {
                 is PingRequest -> PongResponse(
-                    projectPath = projectPath.pathString,
-                    mpsHome = mpsHome.pathString,
+                    projectPath = context.realProjectPath.pathString,
+                    mpsHome = context.realMpsHome.pathString,
                     workspacePath = workspace.path.pathString,
                 )
 

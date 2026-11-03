@@ -69,12 +69,17 @@ CI build; check that build's test configuration separately.
 `mops test` exits zero only for a complete, successful run; otherwise it exits nonzero. Use `--json` to inspect
 `outcome`, `complete`, `diagnostics`, `build`, and per-test `results` (including `status`, `detail`, and source references
 when available). Read container failures too: fixture setup can fail before any individual test runs. Distinguish
-assertion failures from build, discovery, startup, timeout, and worker failures. A discovery failure with no tests names
-the selection that resolved to nothing (the project, or the module, model, or root test case), so check that it is the
-one you meant. Partial results after an interrupted worker are not evidence of a successful run. Use `reportPath` to
-retain the report. Inspect the adjacent `worker.log` for preparation failures and `ant.log` for test execution failures.
-When the run is evidence for a bug report, record the mops version (`mops --version`) together with the MPS and Java
-versions and the preparation commands.
+assertion failures from build, discovery, startup, timeout, and worker failures. Partial results after an interrupted
+worker are not evidence of a successful run.
+
+A discovery failure with no tests names the selection that resolved to nothing (the project, or the module, model, or
+root test case), so check that it is the one you meant. A diagnostic that lists modules the test worker could not load
+classes of explains a `ClassNotFoundException` for test classes: a dependency is missing from the worker's repository,
+which holds the project modules and project libraries as the daemon loaded them.
+
+Use `reportPath` to retain the report. Inspect the adjacent `worker.log` for preparation failures and `ant.log` for test
+execution failures. When the run is evidence for a bug report, record the mops version (`mops --version`) together
+with the MPS and Java versions and the preparation commands.
 
 ### Run from Code Mode
 
@@ -98,3 +103,6 @@ Run Code Mode, edits, make, tests, checks, and rendering sequentially for a proj
 `code help` can run concurrently. Stop existing daemons after upgrading mops. If a language is missing/unloaded, use
 `diagnose module` and `make module` before retrying concept lookup. For startup delays,
 `MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS=600 mops daemon ping` extends the startup wait.
+Test runs keep IntelliJ indexes between runs in the daemon home's `test-system-cache/` directory. If test results
+contradict the sources, for example find-usages results that miss existing nodes, delete that directory while no test
+runs and run the tests again.

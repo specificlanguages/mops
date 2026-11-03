@@ -16,8 +16,14 @@ mops daemon stop
 
 The CLI starts or reuses a per-project daemon process for most commands.
 
-Global options (`--mps-home`, `--java-home`, `--daemon-home`, `--project-root`, and `--refs-as-urls`) can appear before,
-between, or after command names. Command-specific options belong after their command name.
+Global options (`--mps-home`, `--java-home`, `--daemon-home`, `--project-root`, `--macro`, and `--refs-as-urls`) can
+appear before, between, or after command names. Command-specific options belong after their command name.
+
+Pass `--macro NAME=PATH` to define a path macro, such as one that `.mps/libraries.xml` or `.mps/modules.xml` uses as
+`${NAME}`. Repeat it for more macros. PATH must be an existing directory, absolute or relative to the directory where
+`mops` was started. The daemon defines the macros in MPS before it opens the project, and test runs pass them to the
+test worker. A running daemon started with other macros is not reused: the command fails, and `mops daemon stop` lets
+the next command start a daemon with the new macros. Paths relative to the project (`$PROJECT_DIR$`) need no macro.
 
 Pass `--project-root PATH` to select an MPS project explicitly. The path can be absolute or relative to the directory
 where `mops` was started, for example `mops --project-root ../my-project daemon status`.
@@ -43,6 +49,13 @@ working directory.
 Each wrapper supplies the shared discovered MPS and Java homes and its MPS project directory. It calls the mops
 installation that generated it by its full path, so mops need not be in `PATH`. The POSIX wrappers are executable. Run
 the generated wrapper in place of `mops`; it forwards its arguments to `mops`.
+
+Each wrapper also passes the `--macro NAME=PATH` values given to `mops wrapper`. `mops wrapper` looks for path macros
+used in each project's `.mps/libraries.xml` and `.mps/modules.xml`, apart from those MPS defines itself (`project`,
+`mps_home`, `platform_lib`, `lib_ext`). For a used macro without a `--macro` value, it guesses the root of the Git
+repository that holds the project, writes that into the wrapper, and prints a warning; rerun `mops wrapper` with
+`--macro NAME=PATH` to set another value. When the project is not in a Git repository, `mops wrapper` fails and names
+the macro that needs `--macro`.
 
 Discovery queries configured providers, which can download and extract distributions. It does not execute preparation or
 language build task actions. It inspects all Gradle projects in the build and takes the shared runtime paths from a
@@ -367,10 +380,16 @@ worker. Standalone cancellation and timeouts leave the daemon usable.
 
 Execution uses the distribution's Ant `launchtests` machinery in IDEA test mode, including its test session, failure
 detection, and XML reports. The test JVM's classpath is constructed independently of the normal daemon's boot classpath.
-Plugins are discovered automatically. A matching JBR with `javac` is required to compile the version-specific adapter.
-Model and test-case filtering occurs after module-wide class discovery, so broken unselected classes can also fail a
-run, particularly with `--no-build`. On MPS 2025.1 only, Images (`com.intellij.platform.images`) is disabled to avoid
-its SVG parser classloader defect; tests requiring Images are unsupported on that version.
+The worker's module repository holds the project modules and the folders of the project libraries (`.mps/libraries.xml`)
+as the daemon loaded them, and the worker gets the path macros the daemon defines, including those given with `--macro`.
+A project library whose path uses a macro the daemon does not define is left out, with a diagnostic. Plugins are
+discovered automatically. A matching JBR with `javac` is required to compile the version-specific adapter.
+
+When the worker cannot load classes of some modules, for example because a dependency is absent from its repository, the
+report's diagnostics list the modules from the worker's log. Model and test-case filtering occurs after module-wide
+class discovery, so broken unselected classes can also fail a run, particularly with `--no-build`. On MPS 2025.1 only,
+Images (`com.intellij.platform.images`) is disabled to avoid its SVG parser classloader defect; tests requiring Images
+are unsupported on that version.
 
 Every run saves `report.json` under the daemon workspace's `test-runs/<run-id>/` directory and updates it as results
 arrive. Text output prints the action report on stdout: an `<outcome>: <N> passed, <N> failed, ...` summary line and a
@@ -451,6 +470,13 @@ subdirectory under `projects/`, including:
   workspace path, and startup time
 - `logs/daemon.log` - daemon startup and runtime log for the current prototype
 - `daemon/config` and `daemon/system` - isolated IDEA directories passed to the daemon JVM
+
+Test runs keep the IntelliJ system directories (VFS and indexes) of the test worker and of the preparation environment
+between runs in the daemon home's `test-system-cache/<MPS build number>/` directory, shared by all projects, so a run
+does not index the MPS distribution again. A run that finds a directory in use by another run, for example of another
+project's daemon, uses a fresh directory under its `test-runs/<run-id>/` and says so in the report's diagnostics. Set
+`MOPS_TEST_SYSTEM_CACHE` to use another directory for a newly started daemon. The cache is safe to delete while no test
+runs; delete it if test results contradict the sources, and to free the disk space of MPS builds no longer in use.
 
 Daemon commands use loopback socket IPC with a per-daemon token. Independent list, get-node, find, diagnostic, and Code
 Mode help requests can run in reader batches. Edits, creation, builds, tests, checks, rendering, and Code Mode execution
