@@ -63,6 +63,30 @@ class HomeGuessTest {
     }
 
     @Test
+    fun `wrappers pass path macros after the project root`() {
+        val guess = HomeGuess(
+            projectDir = temporary,
+            buildDir = temporary.resolve("build"),
+            source = ": mpsDefaults",
+            mpsHome = Path.of("/MPS"),
+            javaHome = Path.of("/Java"),
+            mpsProjectRoots = listOf(Path.of("/project")),
+        )
+        val macros = mapOf("repo.root" to Path.of("/repo's root"), "other" to Path.of("/100%"))
+
+        assertEquals(
+            "#!/bin/sh\nexec '/mops' --mps-home='/MPS' --java-home='/Java' --project-root='/project' " +
+                "--macro='repo.root=/repo'\"'\"'s root' --macro='other=/100%' \"\$@\"\n",
+            guess.posixWrapper(Path.of("/project"), Path.of("/mops"), macros),
+        )
+        assertEquals(
+            "@echo off\r\n\"/mops.bat\" --mps-home=\"/MPS\" --java-home=\"/Java\" --project-root=\"/project\" " +
+                "--macro=\"repo.root=/repo's root\" --macro=\"other=/100%%\" %*\r\n",
+            guess.windowsWrapper(Path.of("/project"), Path.of("/mops.bat"), macros),
+        )
+    }
+
+    @Test
     fun `POSIX wrapper runs mops outside PATH and forwards its arguments`() {
         val bin = temporary.resolve("bin with spaces and a quote'").createDirectories()
         val mops = bin.resolve("mops")

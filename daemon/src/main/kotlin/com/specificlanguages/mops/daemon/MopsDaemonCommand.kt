@@ -3,6 +3,7 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.protocol.*
 import de.itemis.mps.gradle.project.loader.EnvironmentKind
+import de.itemis.mps.gradle.project.loader.Macro
 import de.itemis.mps.gradle.project.loader.Plugin
 import de.itemis.mps.gradle.project.loader.ProjectLoader
 import jetbrains.mps.project.MPSProject
@@ -44,6 +45,9 @@ class MopsDaemonCommand : Runnable {
     @Option(names = ["--token"], required = true)
     lateinit var token: String
 
+    @Option(names = ["--macro"], paramLabel = "NAME=PATH")
+    var macros: Map<String, String> = emptyMap()
+
     @Option(names = ["--idle-timeout-ms"])
     var idleTimeoutMillis: Long = Duration.ofMinutes(30).toMillis()
 
@@ -57,22 +61,27 @@ class MopsDaemonCommand : Runnable {
         val workspacePath = Path.of(workspacePath)
         val mpsPlugin = Path.of(mpsPlugin)
 
-        val projectDaemon = ProjectDaemon(
-            logger = logger,
-            projectPath = projectPath,
-            mpsHome = mpsHome,
-            token = token,
-            idleTimeout = idleTimeout,
-            workspace = DaemonWorkspace(workspacePath),
-        )
-
         DaemonRunner(
             projectPath = projectPath,
             mpsHome = mpsHome,
             mpsPlugin = mpsPlugin,
+            macros = macros,
             workspacePath = workspacePath,
             logger = logger,
-        ).runWithMpsAccess(projectDaemon::serve)
+        ).runWithMpsAccess { mpsAccess ->
+            ProjectDaemon(
+                logger = logger,
+                context = DaemonContext.fromLivePaths(
+                    projectPath = projectPath,
+                    mpsHome = mpsHome,
+                    javaHome = Path.of(System.getProperty("java.home")),
+                    macros = macros.mapValues { (_, path) -> Path.of(path) },
+                ),
+                token = token,
+                idleTimeout = idleTimeout,
+                workspace = DaemonWorkspace(workspacePath),
+            ).serve(mpsAccess)
+        }
     }
 }
 
@@ -86,6 +95,7 @@ class DaemonRunner(
     val projectPath: Path,
     val mpsHome: Path,
     val mpsPlugin: Path,
+    val macros: Map<String, String>,
     val workspacePath: Path,
     val logger: DaemonLogger
 ) {
@@ -108,6 +118,7 @@ class DaemonRunner(
                 environmentConfig {
                     addPluginsRecursivelyFrom(mpsHome.resolve("plugins"))
                     plugins += Plugin(JavaSnippetParser.PLUGIN_ID, mpsPlugin.toAbsolutePath().normalize().toString())
+                    this.macros += this@DaemonRunner.macros.map { (name, path) -> Macro(name, path) }
                 }
             }
             .executeWithProject(projectPath.toFile()) { environment, project ->

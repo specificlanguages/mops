@@ -16,8 +16,14 @@ mops daemon stop
 
 The CLI starts or reuses a per-project daemon process for most commands.
 
-Global options (`--mps-home`, `--java-home`, `--daemon-home`, `--project-root`, and `--refs-as-urls`) can appear before,
-between, or after command names. Command-specific options belong after their command name.
+Global options (`--mps-home`, `--java-home`, `--daemon-home`, `--project-root`, `--macro`, and `--refs-as-urls`) can
+appear before, between, or after command names. Command-specific options belong after their command name.
+
+Pass `--macro NAME=PATH` to define a path macro, such as one that `.mps/libraries.xml` or `.mps/modules.xml` uses as
+`${NAME}`. Repeat it for more macros. PATH must be an existing directory, absolute or relative to the directory where
+`mops` was started. The daemon defines the macros in MPS before it opens the project, and test runs pass them to the
+test worker. A running daemon started with other macros is not reused: the command fails, and `mops daemon stop` lets
+the next command start a daemon with the new macros. Paths relative to the project (`$PROJECT_DIR$`) need no macro.
 
 Pass `--project-root PATH` to select an MPS project explicitly. The path can be absolute or relative to the directory
 where `mops` was started, for example `mops --project-root ../my-project daemon status`.
@@ -39,6 +45,13 @@ MPS project directory. MPS projects come from configured `mpsBuilds` entries and
 build. Each wrapper invokes the full path of the mops installation that generated it, so mops need not be in `PATH`. Run
 the generated wrapper in place of `mops`; arguments passed to it are forwarded to `mops`. No MPS home or daemon is
 required in the CLI invocation that writes the wrapper; Java must be available to run Gradle.
+
+Each wrapper also passes the `--macro NAME=PATH` values given to `mops wrapper`. `mops wrapper` looks for path macros
+used in each project's `.mps/libraries.xml` and `.mps/modules.xml`, apart from those MPS defines itself (`project`,
+`mps_home`, `platform_lib`, `lib_ext`). For a used macro without a `--macro` value, it guesses the root of the Git
+repository that holds the project, writes that into the wrapper, and prints a warning; rerun `mops wrapper` with
+`--macro NAME=PATH` to set another value. When the project is not in a Git repository, `mops wrapper` fails and names
+the macro that needs `--macro`.
 
 Discovery queries configured providers, which can download and extract distributions. It does not execute preparation or
 language build task actions. It inspects all Gradle projects in the build and uses a discovered `mpsDefaults` extension
@@ -356,13 +369,13 @@ worker. Standalone cancellation and timeouts leave the daemon usable. Execution 
 `launchtests` machinery in IDEA test mode, including its test session, failure detection, and XML reports. The test
 JVM's classpath is constructed independently of the normal daemon's boot classpath. The worker's module repository holds
 the project modules and the folders of the project libraries (`.mps/libraries.xml`) as the daemon loaded them, and the
-worker gets the path macros the daemon defines. A project library whose path uses a macro the daemon does not define is
-left out, with a diagnostic. When the worker cannot load classes of some modules, for example because a dependency is
-absent from its repository, the report's diagnostics list the modules from the worker's log. Plugins are discovered
-automatically. On MPS 2025.1 only, Images (`com.intellij.platform.images`) is disabled to avoid its SVG parser
-classloader defect; tests requiring Images are unsupported on that version. Model and test-case filtering occurs after
-module-wide class discovery, so broken unselected classes can also fail a run, particularly with `--no-build`. A
-matching JBR with `javac` is required to compile the version-specific adapter.
+worker gets the path macros the daemon defines, including those given with `--macro`. A project library whose path uses
+a macro the daemon does not define is left out, with a diagnostic. When the worker cannot load classes of some modules,
+for example because a dependency is absent from its repository, the report's diagnostics list the modules from the
+worker's log. Plugins are discovered automatically. On MPS 2025.1 only, Images (`com.intellij.platform.images`) is
+disabled to avoid its SVG parser classloader defect; tests requiring Images are unsupported on that version. Model and
+test-case filtering occurs after module-wide class discovery, so broken unselected classes can also fail a run,
+particularly with `--no-build`. A matching JBR with `javac` is required to compile the version-specific adapter.
 
 Every run saves `report.json` under the daemon workspace's `test-runs/<run-id>/` directory and updates it as results
 arrive. Text output prints the action report on stdout: an `<outcome>: <N> passed, <N> failed, ...` summary line and a

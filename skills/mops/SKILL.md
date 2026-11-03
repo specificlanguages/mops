@@ -16,6 +16,9 @@ line. The wrapper goes into the Gradle project's build directory, so its locatio
 MPS-extensions, for example, gets `code/extensions/build/mopsw` on current branches and `build/mopsw` on older ones.
 Call the wrapper in place of `mops`; the examples in this skill write `mops`.
 
+When `mops wrapper` warns that it guessed the value of a path macro, tell the user the guess. If it is wrong, rerun
+`mops wrapper --macro NAME=PATH` with the right directory, then `mops daemon stop`.
+
 Writing the wrapper can download MPS and the Java runtime, but it builds nothing. Build the project with its own build
 tool first; most mops operations need at least all project languages built.
 
