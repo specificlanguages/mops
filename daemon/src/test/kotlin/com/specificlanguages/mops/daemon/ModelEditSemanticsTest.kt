@@ -95,6 +95,95 @@ class ModelEditSemanticsTest {
     }
 
     @Test
+    fun `set enumeration property by literal presentation persists the literal`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
+            val response = mpsAccess.write {
+                modelEdit(
+                    EditBatch(
+                        operations = listOf(
+                            EditOperation.SetProperty(
+                                target = EditTarget.NodeReference(CONTENT_LINK_NODE_REFERENCE),
+                                name = "sourceCardinality",
+                                value = "1..n",
+                            ),
+                        ),
+                    ),
+                )
+            }
+
+            assertEquals(ModelEditResponse(created = emptyMap(), violations = emptyList()), response)
+            val node = mpsAccess.read { getNode(NodeTarget.NodeReference(CONTENT_LINK_NODE_REFERENCE)) }
+            assertEquals("_1__n", propertyValue(node, "sourceCardinality"))
+            assertContains(projectPath.resolve(STRUCTURE_MODEL_PATH).readText(), """<property role="20lbJX" value="fLJekj6/_1__n" />""")
+        }
+    }
+
+    @Test
+    fun `enumeration property value read from a node writes back unchanged`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
+            val before = projectPath.resolve(STRUCTURE_MODEL_PATH).readText()
+            val node = mpsAccess.read { getNode(NodeTarget.NodeReference(CONTENT_LINK_NODE_REFERENCE)) }
+            val value = propertyValue(node, "sourceCardinality")
+            assertEquals("_1", value)
+
+            mpsAccess.write {
+                modelEdit(
+                    EditBatch(
+                        operations = listOf(
+                            EditOperation.SetProperty(
+                                target = EditTarget.NodeReference(CONTENT_LINK_NODE_REFERENCE),
+                                name = "sourceCardinality",
+                                value = "_0__n",
+                            ),
+                            EditOperation.SetProperty(
+                                target = EditTarget.NodeReference(CONTENT_LINK_NODE_REFERENCE),
+                                name = "sourceCardinality",
+                                value = value,
+                            ),
+                        ),
+                    ),
+                )
+            }
+
+            assertEquals(before, projectPath.resolve(STRUCTURE_MODEL_PATH).readText())
+        }
+    }
+
+    @Test
+    fun `unknown enumeration value fails and lists the literals`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
+            val before = projectPath.resolve(STRUCTURE_MODEL_PATH).readText()
+            val exception = assertFailsWith<MpsRequestException> {
+                mpsAccess.write {
+                    modelEdit(
+                        EditBatch(
+                            operations = listOf(
+                                EditOperation.AddChild(
+                                    target = EditTarget.NodeReference(JSON_FILE_NODE_REFERENCE),
+                                    role = "linkDeclaration",
+                                    concept = "jetbrains.mps.lang.structure.structure.LinkDeclaration",
+                                    properties = listOf(MpsNodePropertyJson(name = "sourceCardinality", value = "0..1")),
+                                ),
+                                EditOperation.SetProperty(
+                                    target = EditTarget.NodeReference(CONTENT_LINK_NODE_REFERENCE),
+                                    name = "sourceCardinality",
+                                    value = "bogus",
+                                ),
+                            ),
+                        ),
+                    )
+                }
+            }
+
+            assertEquals(MpsErrorCode.INVALID_PROPERTY_VALUE, exception.code)
+            assertContains(exception.message, "operation 1")
+            assertContains(exception.message, "'bogus'")
+            assertContains(exception.message, "_0__1 (0..1), _1 (1), _0__n (0..n), _1__n (1..n)")
+            assertEquals(before, projectPath.resolve(STRUCTURE_MODEL_PATH).readText())
+        }
+    }
+
+    @Test
     fun `clear property by model target persists`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
             val model = projectPath.resolve(STRUCTURE_MODEL_PATH)
@@ -189,6 +278,7 @@ class ModelEditSemanticsTest {
         // The same node ID in the encoded spelling MPS persists in .mps files.
         const val JSON_FILE_ENCODED_NODE_ID = "1P8oQ4NaXDS"
         const val JSON_FILE_NODE_REFERENCE = "$STRUCTURE_MODEL_REFERENCE/$JSON_FILE_NODE_ID"
+        const val CONTENT_LINK_NODE_REFERENCE = "$STRUCTURE_MODEL_REFERENCE/2110045694544566910"
         const val STRUCTURE_MODEL_PATH = "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps"
     }
 }

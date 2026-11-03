@@ -54,11 +54,12 @@ Reads require project.read or project.command. Assignments require project.comma
   node.references['role'] = target    // SNode, SNodeReference, or SReference; null clears
 
 Unknown names or roles return null (an empty list for children) on reads and fail on writes. Child assignments accept
-detached nodes or existing children of that same role. Property reads and writes use SNodeAccessUtil.getProperty
-and setProperty, invoking MPS property getter/setter handlers while keeping serialized string values. Unset property
-values follow MPS getter and data type defaults. Child access
-uses native SNode operations: SNodeAccessUtil has no child APIs. Declared child cardinality and containment constraints
-are not checked. Reference assignments resolve SNodeReference and SReference values to a target node and use
+detached nodes or existing children of that same role. Property reads and writes invoke MPS property getter/setter
+handlers and use persisted string values. Enumeration properties are the exception: they read as the literal name
+(`_1`, not the persisted `fLJekj4/_1`) and accept a literal name or a presentation (such as `0..1`) that only one literal
+has; any other value fails and lists the literals. Unset property values follow MPS getter and data type defaults. Child
+access uses native SNode operations: SNodeAccessUtil has no child APIs. Declared child cardinality and containment
+constraints are not checked. Reference assignments resolve SNodeReference and SReference values to a target node and use
 SNodeAccessUtil.setReferenceTarget, which invokes MPS reference setter hooks. An unresolved target fails without
 clearing the existing reference; only explicit null requests clearing. Assigning an SReference uses its resolved
 target, not its dynamic resolution information.
