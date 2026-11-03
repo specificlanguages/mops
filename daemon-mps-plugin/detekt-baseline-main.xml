@@ -2,6 +2,6 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>TooManyFunctions:MpsRead.kt:MpsRead</ID>
+    <ID>LongParameterList:JavaParserBridge.kt:JavaParserBridge$private fun addChildren: Array&lt;Any&gt;</ID>
   </CurrentIssues>
 </SmellBaseline>

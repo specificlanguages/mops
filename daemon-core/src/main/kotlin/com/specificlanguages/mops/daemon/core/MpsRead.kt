@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.daemon.core
 
+import com.specificlanguages.mops.protocol.Facade
 import com.specificlanguages.mops.protocol.FindByNameResponse
 import com.specificlanguages.mops.protocol.FindSubconceptsResponse
 import com.specificlanguages.mops.protocol.FindInstancesResponse
@@ -19,6 +20,7 @@ import com.specificlanguages.mops.protocol.NodeTarget
  * Read operations on the MPS repository. Operations throw [MpsRequestException] on failures that
  * carry a specific error code.
  */
+@Facade
 interface MpsRead {
     /**
      * Lists one navigation target as a bounded semantic tree. [depth] bounds descent; [limit] caps each level's

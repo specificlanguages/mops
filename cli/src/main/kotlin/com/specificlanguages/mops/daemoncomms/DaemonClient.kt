@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.daemoncomms
 
+import com.specificlanguages.mops.protocol.Facade
 import com.specificlanguages.mops.protocol.ConstraintEnforcement
 import com.specificlanguages.mops.protocol.FindByNameResponse
 import com.specificlanguages.mops.protocol.FindSubconceptsResponse
@@ -31,6 +32,7 @@ import com.specificlanguages.mops.protocol.ModelCreationResponse
 /**
  * The client talking to a remote daemon process.
  */
+@Facade
 interface DaemonClient {
     fun runTests(
         target: List<String>, build: Boolean, timeoutMillis: Long, cancellationPath: String?,
