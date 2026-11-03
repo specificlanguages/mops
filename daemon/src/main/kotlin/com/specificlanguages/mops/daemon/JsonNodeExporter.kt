@@ -43,7 +43,7 @@ class JsonNodeExporter(
 
         val properties = node.properties
             .mapNotNull { property ->
-                node.getProperty(property)?.let { value ->
+                readStoredPropertyText(node, property)?.let { value ->
                     MpsNodePropertyJson(name = property.name, value = value)
                 }
             }

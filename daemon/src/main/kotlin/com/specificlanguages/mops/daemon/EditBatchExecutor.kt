@@ -34,7 +34,6 @@ import org.jetbrains.mps.openapi.language.SReferenceLink
 import org.jetbrains.mps.openapi.model.EditableSModel
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SNode
-import org.jetbrains.mps.openapi.model.SNodeAccessUtil
 import org.jetbrains.mps.openapi.model.SNodeUtil
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 
@@ -348,6 +347,14 @@ class EditBatchExecutor(
             placements.add(Placement(index, parent, link, source))
         }
 
+        fun setPropertyOrFail(index: Int, node: SNode, property: SProperty, value: String?) {
+            try {
+                writePropertyText(node, property, value)
+            } catch (exception: InvalidPropertyValueException) {
+                fail(MpsErrorCode.INVALID_PROPERTY_VALUE, "operation $index ${exception.message}")
+            }
+        }
+
         // Sets properties and references on [node] and builds its nested children, recursively. Each child is a fresh
         // node spec, a Move Leaf (adopting an existing node identity-preservingly), or a Copy Leaf (deep-copying with
         // fresh IDs).
@@ -360,7 +367,7 @@ class EditBatchExecutor(
             children: List<InlineChild>?,
         ) {
             properties?.forEach { property ->
-                setPropertyFromString(node, resolvePropertyOrFail(index, node, property.name), property.value)
+                setPropertyOrFail(index, node, resolvePropertyOrFail(index, node, property.name), property.value)
             }
             references?.forEach { reference ->
                 val link = resolveReferenceLinkOrFail(index, node, reference.role)
@@ -426,8 +433,10 @@ class EditBatchExecutor(
                     val node = requireEditableNode(index, operation.target)
                     val property = resolvePropertyOrFail(index, node, operation.name)
                     try {
-                        setPropertyFromString(node, property, operation.value)
+                        setPropertyOrFail(index, node, property, operation.value)
                         mutated = true
+                    } catch (exception: MpsRequestException) {
+                        throw exception
                     } catch (exception: Exception) {
                         fail(
                             MpsErrorCode.MODEL_EDIT_FAILED,
@@ -921,23 +930,6 @@ class EditBatchExecutor(
 
     private fun reload(models: Iterable<EditableSModel>) {
         models.forEach { it.reloadFromSource() }
-    }
-}
-
-/**
- * Sets [property] on [node] from a persisted-form string, or clears it when [value] is null.
- *
- * Uses [SNodeAccessUtil.setProperty] (the String overload) rather than [SNodeAccessUtil.setPropertyValue] (the Object
- * overload) so the value goes through the property datatype's `fromString` conversion. Passing a raw string to the
- * Object overload silently fails for non-string datatypes: e.g. a boolean property handed the string "true" (instead of
- * a converted `Boolean`) ends up unset. Reads are symmetric — [SNode.getProperty] renders the typed value back via
- * `toString` — so the string overload round-trips every datatype.
- */
-private fun setPropertyFromString(node: SNode, property: SProperty, value: String?) {
-    if (value == null) {
-        SNodeAccessUtil.setPropertyValue(node, property, null)
-    } else {
-        SNodeAccessUtil.setProperty(node, property, value)
     }
 }
 

@@ -105,7 +105,8 @@ assignments require command access. They shadow the native no-argument getters, 
 `node.getReferences()`, and `node.getProperties()` return the accessors too. Each accessor iterates like the native
 collection it shadows (`node.children.collect { ... }`, `node.references.findAll { ... }`, `node.properties.size()`);
 native `getChildren(containmentLink)`, `getReference(referenceLink)`, and `SNodeOperations.getReferences(node)` remain
-available.
+available. Enumeration properties read as the literal name and accept a literal name or a presentation that only one
+literal has.
 
 Return the final expression instead of relying on `println`. Strings print as text; MPS nodes, models, and modules
 become serialized references. Maps and collections become JSON, including references for contained MPS objects. Convert

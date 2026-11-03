@@ -10,6 +10,10 @@ SEMANTICS
   Writes the named property on the target node. Omitting value (or passing null)
   clears the property back to its empty state.
 
+  For an enumeration property, value is a literal name (for example "_0__1"), or a
+  presentation ("0..1") that only one literal has. Any other value fails the batch
+  with INVALID_PROPERTY_VALUE and lists the literals. Reads report the literal name.
+
 EXAMPLE
 {
   "operations": [
