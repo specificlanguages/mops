@@ -1,6 +1,6 @@
 package com.specificlanguages.mops.cli.homes
 
-import com.specificlanguages.mops.cli.mpsBuiltInPathMacros
+import com.specificlanguages.mops.cli.common.mpsBuiltInPathMacros
 import java.io.PrintWriter
 import java.nio.file.Path
 import kotlin.io.path.exists

@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.cli.common.CommandEnvironment
+import com.specificlanguages.mops.cli.common.mpsBuiltInPathMacros
 import com.specificlanguages.mops.cli.output.NodeReferenceFormat
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.daemoncomms.DaemonPool
