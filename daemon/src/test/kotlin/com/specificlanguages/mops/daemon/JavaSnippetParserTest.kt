@@ -2,6 +2,7 @@ package com.specificlanguages.mops.daemon
 
 import com.intellij.ide.plugins.cl.PluginAwareClassLoader
 import com.specificlanguages.mops.protocol.CodeRunRequest
+import com.specificlanguages.mops.protocol.FindingSeverity
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -49,6 +50,56 @@ class JavaSnippetParserTest {
             )
             val output = requireNotNull(response.output)
             assertEquals(0, output.count { it == '\n' })
+        }
+    }
+
+    @Test
+    fun `Java parser binds method and constructor calls to the overload the argument types select`() {
+        SharedMpsEnvironment.withOpenProjectCopy("base-language-sandbox") { project, _ ->
+            val access = SharedMpsEnvironment.mpsAccess(project)
+            val response = CodeModeExecutor(access, project, SharedMpsEnvironment.platform).execute(
+                CodeRunRequest("", """
+                    def model = project.read { mops.lookup.requireModel('baselanguage.sandbox') }
+                    project.command {
+                        def result = mops.parsing.java.addJavaClassesFromString(model, '''
+                            import java.util.ArrayList;
+                            import java.util.List;
+                            public class OverloadProbe {
+                              public static String probe(int n, char c, Object o) {
+                                StringBuilder sb = new StringBuilder();
+                                sb.append('x');
+                                sb.append(n);
+                                sb.append("s");
+                                sb.append(c);
+                                sb.append(o);
+                                List<String> list = new ArrayList<String>(4);
+                                List<String> copy = new ArrayList<String>(list);
+                                return sb.toString() + list.size() + copy.size();
+                              }
+                            }
+                        ''')
+                        assert result.unresolved.isEmpty()
+                        def signature = { call ->
+                            def target = call.references['baseMethodDeclaration'].targetNode
+                            target.name + '(' + target.children['parameter'].collect { it.child['type'].presentation.replaceAll(/<.*/, '') }.join(',') + ')'
+                        }
+                        def calls = result.nodes[0].descendants.toList().findAll {
+                            it.concept.name in ['InstanceMethodCallOperation', 'ClassCreator']
+                        }
+                        calls.collect(signature).join(';')
+                    }
+                """.trimIndent(), "java-parser-overloads.groovy"),
+            )
+            assertEquals(
+                listOf(
+                    "StringBuilder()", "append(char)", "append(int)", "append(String)", "append(char)", "append(Object)",
+                    "ArrayList(int)", "ArrayList(Collection)", "toString()", "size()", "size()",
+                ).joinToString(";"),
+                response.output?.trim(),
+            )
+            val errors = access.read { checkModel("baselanguage.sandbox", limit = 0) }.findings
+                .filter { it.severity == FindingSeverity.ERROR }
+            assertEquals(emptyList(), errors)
         }
     }
 }
