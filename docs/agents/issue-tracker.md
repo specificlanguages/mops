@@ -30,6 +30,13 @@ it infers the repo from the clone you run it in.
 - **Comments** record decisions and findings that change the spec. Edit the body when the spec itself changes, and say
   so in a comment.
 
+## Field-test reports
+
+- **A field-test report** is a parent issue labelled `field-test`, with the report in its body. It holds evidence, not
+  decided work, so it carries no triage label. If the label is missing, create it with `gh label create field-test`.
+- **A record filed from a report** is a sub-issue of the report, labelled `needs-triage` like any new issue.
+- **Close the report** when every record in it is filed or dismissed.
+
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.** _(Set to `yes` if this repo treats external PRs as feature requests; `/triage` reads

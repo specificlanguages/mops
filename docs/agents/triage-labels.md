@@ -12,4 +12,5 @@ repo's GitHub issue tracker. All five labels exist in the repo.
 | `wontfix`                  | `wontfix`            | Will not be actioned                     |
 
 When a skill mentions a role, such as "apply the AFK-ready triage label", use the corresponding label string from this
-table. Category labels are GitHub's defaults: `bug` and `enhancement`.
+table. Category labels are GitHub's defaults: `bug` and `enhancement`. The `field-test` label marks a field-test report
+(see `docs/agents/issue-tracker.md`).
