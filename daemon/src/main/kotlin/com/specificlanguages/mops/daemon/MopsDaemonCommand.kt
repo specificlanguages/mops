@@ -1,11 +1,11 @@
 package com.specificlanguages.mops.daemon
 
-import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.protocol.*
 import de.itemis.mps.gradle.project.loader.EnvironmentKind
 import de.itemis.mps.gradle.project.loader.Macro
 import de.itemis.mps.gradle.project.loader.Plugin
 import de.itemis.mps.gradle.project.loader.ProjectLoader
+import jetbrains.mps.core.platform.Platform
 import jetbrains.mps.project.MPSProject
 import jetbrains.mps.project.Project
 import picocli.CommandLine.Command
@@ -42,6 +42,9 @@ class MopsDaemonCommand : Runnable {
     @Option(names = ["--mps-plugin"], required = true)
     lateinit var mpsPlugin: String
 
+    @Option(names = ["--test-system-cache"], required = true)
+    lateinit var testSystemCache: String
+
     @Option(names = ["--token"], required = true)
     lateinit var token: String
 
@@ -66,9 +69,9 @@ class MopsDaemonCommand : Runnable {
             mpsHome = mpsHome,
             mpsPlugin = mpsPlugin,
             macros = macros,
-            workspacePath = workspacePath,
             logger = logger,
-        ).runWithMpsAccess { mpsAccess ->
+        ).runWithProject { project, platform ->
+            val mpsAccess = JetBrainsMpsAccess(project, logger, workspacePath, Path.of(testSystemCache), platform)
             ProjectDaemon(
                 logger = logger,
                 context = DaemonContext.fromLivePaths(
@@ -96,11 +99,10 @@ class DaemonRunner(
     val mpsHome: Path,
     val mpsPlugin: Path,
     val macros: Map<String, String>,
-    val workspacePath: Path,
     val logger: DaemonLogger
 ) {
 
-    fun runWithMpsAccess(action: (MpsAccess) -> Unit) {
+    fun runWithProject(action: (MPSProject, Platform) -> Unit) {
         logger.log("verifying environment for project $projectPath")
         val environmentProblem = checkEnvironment()
         if (environmentProblem != null) {
@@ -125,7 +127,7 @@ class DaemonRunner(
                 // A project can pass the filesystem checks yet open with no Project Modules; refuse to serve it so
                 // callers see the startup error instead of every navigation silently returning nothing.
                 projectModulesProblem(project, projectPath)?.let { reportAndThrowStartupError(it) }
-                action(JetBrainsMpsAccess(project as MPSProject, logger, workspacePath, environment.platform))
+                action(project as MPSProject, environment.platform)
             }
     }
 

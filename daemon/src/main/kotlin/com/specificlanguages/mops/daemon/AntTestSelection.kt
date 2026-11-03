@@ -32,6 +32,10 @@ data class AntTestSelection(
     val description: String,
     val diagnostics: List<String>,
 ) {
+    /** The folders a run of this selection on [project] reads modules and models from. */
+    fun sourceFolders(project: Path): List<Path> =
+        (listOf(project) + repositoryFolders + (testModules + repositoryModules).map { it.parent }).distinct()
+
     fun save(path: Path) {
         val properties = Properties()
         fun list(name: String, values: List<String>) {
