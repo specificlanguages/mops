@@ -135,6 +135,37 @@ class CliSmokeTest {
     }
 
     @Test
+    fun `edit with an unknown enumeration value fails and lists the literals`() {
+        val project = daemons.project("mps-json")
+        val model = project.root.resolve(
+            "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps",
+        )
+        val original = model.readText()
+        val batchFile = tempDir.resolve("enum-batch.json")
+        batchFile.writeText(
+            ProtocolJson.batch.encode(
+                EditBatch(
+                    operations = listOf(
+                        EditOperation.SetProperty(
+                            target = EditTarget.NodeReference(
+                                "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566910",
+                            ),
+                            name = "sourceCardinality",
+                            value = "bogus",
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        val result = project.run("edit", "model", "--file", batchFile.pathString)
+
+        assertEquals(1, result.exitCode, result.output)
+        assertContains(result.stderr, "_0__1 (0..1), _1 (1), _0__n (0..n), _1__n (1..n)")
+        assertEquals(original, model.readText())
+    }
+
+    @Test
     fun `failing command exits nonzero with the daemon error`() {
         val result = daemons.project("mps-json")
             .run("find", "instances", "com.specificlanguages.json.structure.DoesNotExist")
