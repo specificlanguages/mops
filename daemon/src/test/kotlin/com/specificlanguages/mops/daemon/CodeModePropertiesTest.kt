@@ -43,7 +43,13 @@ class CodeModePropertiesTest {
                             assert descriptor != null
                             assert node.properties['name'] == node.getProperty(descriptor)
                             assert node.properties['name'] != null
-                            assert node.properties['missingProperty'] == null
+                            try {
+                                node.properties['missingProperty']
+                                assert false: 'Unknown properties must reject reads'
+                            } catch (IllegalArgumentException expected) {
+                                assert expected.message.contains("ConceptDeclaration has no property 'missingProperty'"): expected.message
+                                assert expected.message.contains('conceptAlias'): expected.message
+                            }
                             try {
                                 node.properties['name'] = 'changed'
                                 assert false: 'Writes must require command access'
@@ -98,6 +104,8 @@ class CodeModePropertiesTest {
                             properties['missingProperty'] = 'value'
                             assert false: 'Unknown properties must reject writes'
                         } catch (IllegalArgumentException expected) {
+                            assert expected.message.contains("ConceptDeclaration has no property 'missingProperty'"): expected.message
+                            assert expected.message.contains('conceptAlias'): expected.message
                         }
                     }
                     project.read { assert properties['name'] == 'SavedName' }

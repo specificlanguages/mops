@@ -15,7 +15,7 @@ class NodeChildren(private val node: SNode) : NodeAccessor<SNode>("children", "r
 
     fun getAt(role: String): List<SNode> {
         requireRead("SNode.children[]")
-        val link = node.concept.containmentLinks.firstOrNull { it.name == role } ?: return emptyList()
+        val link = node.requireContainmentLink(role)
         return Collections.unmodifiableList(node.getChildren(link).toList())
     }
 
@@ -24,8 +24,7 @@ class NodeChildren(private val node: SNode) : NodeAccessor<SNode>("children", "r
         requireCommand("SNode.children[] assignment")
         require(value is List<*> && value.all { it is SNode }) { "children must be a list of nodes" }
         val children = value.map { it as SNode }
-        val link = node.concept.containmentLinks.firstOrNull { it.name == role }
-            ?: throw IllegalArgumentException("unknown child role: $role")
+        val link = node.requireContainmentLink(role)
         val existing = node.getChildren(link).toList()
         val identities = Collections.newSetFromMap(java.util.IdentityHashMap<SNode, Boolean>())
         children.forEach { child ->

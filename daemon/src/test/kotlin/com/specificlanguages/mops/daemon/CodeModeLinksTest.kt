@@ -17,6 +17,14 @@ class CodeModeLinksTest {
                         try { action(); assert false: 'Expected ' + type.name }
                         catch (Exception failure) { assert type.isInstance(failure): failure }
                     }
+                    def unknown = { String kind, String known, Closure action ->
+                        try { action(); assert false: 'Expected unknown ' + kind }
+                        catch (IllegalArgumentException failure) {
+                            assert failure.message.contains('jetbrains.mps.lang.structure.structure.ConceptDeclaration'): failure.message
+                            assert failure.message.contains('no ' + kind + " 'missing'"): failure.message
+                            assert failure.message.contains(known): failure.message
+                        }
+                    }
                     def node = project.read {
                         mops.lookup.requireModel('com.specificlanguages.json.structure').rootNodes.find {
                             it.properties['name'] == 'JsonFile'
@@ -33,9 +41,9 @@ class CodeModeLinksTest {
                     fails(IllegalStateException) { children['implements'] = [] }
                     fails(IllegalStateException) { references['extends'] = null }
                     project.read {
-                        assert child['missing'] == null
-                        assert children['missing'] == []
-                        assert references['missing'] == null
+                        unknown('child role', 'propertyDeclaration') { child['missing'] }
+                        unknown('child role', 'propertyDeclaration') { children['missing'] }
+                        unknown('reference role', 'extends') { references['missing'] }
                         assert child['implements'].is(children['implements'][0])
                         assert references['extends'] instanceof SReference
                         assert references['extends'].targetNode != null
@@ -79,8 +87,8 @@ class CodeModeLinksTest {
                         assert statement.children[singleLink.name] == [a, b]
                         fails(IllegalStateException) { statement.child[singleLink.name] }
                         statement.children[singleLink.name] = []
-                        fails(IllegalArgumentException) { child['missing'] = a }
-                        fails(IllegalArgumentException) { children['missing'] = [] }
+                        unknown('child role', 'propertyDeclaration') { child['missing'] = a }
+                        unknown('child role', 'propertyDeclaration') { children['missing'] = [] }
 
                         def original = references['extends']
                         def target = original.targetNode
@@ -105,7 +113,7 @@ class CodeModeLinksTest {
                         def unresolvedPointer = [resolve: { repository -> null }] as SNodeReference
                         fails(IllegalArgumentException) { references['extends'] = unresolvedPointer }
                         assert references['extends'].targetNode.is(target)
-                        fails(IllegalArgumentException) { references['missing'] = target }
+                        unknown('reference role', 'extends') { references['missing'] = target }
                         fails(IllegalArgumentException) { references['extends'] = 'invalid' }
                         assert references['extends'].targetNode.is(target)
                     }
