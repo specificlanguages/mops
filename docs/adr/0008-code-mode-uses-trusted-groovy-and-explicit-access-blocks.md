@@ -49,12 +49,15 @@ every CLI operation have a Code Mode extension.
 
 ## Consequences
 
-Code Mode remains trusted code rather than a sandbox. It executes with the daemon JVM's authority. When the selected MPS
-distribution supplies Groovy, the daemon uses that runtime and excludes the mops Groovy core JAR from its classpath. MPS
-can bundle additional Groovy modules compiled against its core, so replacing only that core would mix runtime versions.
-For MPS distributions without Groovy, mops ships a pinned Groovy core dependency in its distribution and uses it as the
-fallback. Selection checks for the compiler class in the MPS runtime JARs; it does not depend on a particular JAR
-filename. Programs and mops extensions share the selected Groovy class identity. Dependency injection such as `@Grab`
-stays disabled. The default hard timeout still terminates the daemon, may be configured or disabled, and a later
-invocation starts a fresh daemon. Removing handles and public Code Services is a clean pre-release break: the
-implementation and documentation migrate together, with no compatibility bridge.
+Code Mode remains trusted code rather than a sandbox. It executes with the daemon JVM's authority. Dependency injection
+such as `@Grab` stays disabled. The default hard timeout still terminates the daemon, may be configured or disabled, and
+a later invocation starts a fresh daemon.
+
+When the selected MPS distribution supplies Groovy, the daemon uses that runtime and excludes the mops Groovy core JAR
+from its classpath. MPS can bundle additional Groovy modules compiled against its core, so replacing only that core
+would mix runtime versions. For MPS distributions without Groovy, mops ships a pinned Groovy core dependency in its
+distribution and uses it as the fallback. Selection checks for the compiler class in the MPS runtime JARs, not for a
+particular JAR filename. Programs and mops extensions share the selected Groovy class identity.
+
+Removing handles and public Code Services is a clean pre-release break: the implementation and documentation migrate
+together, with no compatibility bridge.

@@ -3,5 +3,9 @@ config:
     line_length: 120
     code_blocks: false
     tables: false
+  paragraph-length:
+    max_words: 150
+customRules:
+  - ./tools/markdownlint/paragraph-length.cjs
 globs:
   - cli/build/generated/examples/pages/*.md

@@ -25,31 +25,36 @@ where `mops` was started, for example `mops --project-root ../my-project daemon 
 Pass `--refs-as-urls` to render node references in text output as MPS URLs, for example
 `mops --refs-as-urls find instances <concept>`. JSON output is unchanged.
 
-If you do not know where MPS and Java are installed, run `mops wrapper [PATH]` from the project checkout. PATH is the
-starting point of discovery, defaulting to `--project-root` when supplied, or the working directory. `wrapper` uses the
-nearest Gradle wrapper to inspect `mpsDefaults` of the `com.specificlanguages.mps` Gradle plugin or `RunAntScript` tasks
-of the `de.itemis.mps.gradle.common` plugin. By default it writes a wrapper for every MPS project in every Gradle
-project in the build. Each `mopsw` on macOS and Linux, or `mopsw.cmd` on Windows, is written directly in the Gradle
-project's build directory when it has one detected MPS project. With multiple MPS projects, wrappers are written under
+If you do not know where MPS and Java are installed, run `mops wrapper [PATH]` from the project checkout. The command
+uses the nearest Gradle wrapper to inspect `mpsDefaults` of the `com.specificlanguages.mps` Gradle plugin or
+`RunAntScript` tasks of the `de.itemis.mps.gradle.common` plugin. PATH is the starting point of discovery; the default
+is `--project-root` when supplied, or else the working directory. The command needs no MPS home or daemon, but Java must
+be available to run Gradle.
+
+By default the command writes a wrapper for every MPS project in every Gradle project in the build. MPS projects come
+from configured `mpsBuilds` entries and `.mps` project markers in the Gradle build. The wrapper is `mopsw` on macOS and
+Linux, or `mopsw.cmd` on Windows. If a Gradle project has one detected MPS project, its wrapper goes directly in the
+Gradle project's build directory. With multiple MPS projects, wrappers go under
 `<build-directory>/mops/<MPS-project-name>/`. Pass `mops wrapper --project-root PATH` to write only that MPS project's
-wrapper; `--project-root` can also precede `wrapper`. Reported paths are relative to the working directory. When one
-wrapper is selected, `--output PATH` selects its exact file; a relative path is resolved from the directory where `mops`
-was started. The POSIX wrappers are executable. Each wrapper supplies the shared discovered MPS and Java homes and its
-MPS project directory. MPS projects come from configured `mpsBuilds` entries and `.mps` project markers in the Gradle
-build. Each wrapper invokes the full path of the mops installation that generated it, so mops need not be in `PATH`. Run
-the generated wrapper in place of `mops`; arguments passed to it are forwarded to `mops`. No MPS home or daemon is
-required in the CLI invocation that writes the wrapper; Java must be available to run Gradle.
+wrapper; `--project-root` can also come before `wrapper`. When one wrapper is selected, `--output PATH` sets its exact
+file; a relative path is resolved from the directory where `mops` was started. Reported paths are relative to the
+working directory.
+
+Each wrapper supplies the shared discovered MPS and Java homes and its MPS project directory. It calls the mops
+installation that generated it by its full path, so mops need not be in `PATH`. The POSIX wrappers are executable. Run
+the generated wrapper in place of `mops`; it forwards its arguments to `mops`.
 
 Discovery queries configured providers, which can download and extract distributions. It does not execute preparation or
-language build task actions. It inspects all Gradle projects in the build and uses a discovered `mpsDefaults` extension
-or conventional `RunAntScript` task for the shared runtime paths. Provider resolution failures stop discovery and retain
-Gradle’s dependency diagnostics; check the configured runtime versions and repositories. Partial discoveries show
-available paths without writing a wrapper and exit with status 1; when both paths are known, the command writes the
-wrappers and exits with status 0. Missing or unusable runtime directories are reported as warnings, so wrappers can be
-created before the project's documented preparation steps. If a pinned MPS prerelease is no longer available, update the
-project’s MPS prerelease version to the newest available version; prerelease artifacts are periodically deleted.
-Task-action overrides, included builds, and custom Ant property loading are outside this heuristic; Specific Languages
-values are project defaults.
+language build task actions. It inspects all Gradle projects in the build and takes the shared runtime paths from a
+discovered `mpsDefaults` extension or a conventional `RunAntScript` task. Task-action overrides, included builds, and
+custom Ant property loading are outside this heuristic; Specific Languages values are project defaults.
+
+If provider resolution fails, discovery stops and keeps Gradle's dependency diagnostics; check the configured runtime
+versions and repositories. If a pinned MPS prerelease is no longer available, update the project's MPS prerelease
+version to the newest available version; prerelease artifacts are periodically deleted. If discovery finds only some
+paths, it shows them, writes no wrapper, and exits with status 1. When both paths are known, it writes the wrappers and
+exits with status 0. Missing or unusable runtime directories are reported as warnings, so wrappers can be created before
+the project's documented preparation steps.
 
 ## Agent skill
 
@@ -124,17 +129,22 @@ with `--depth`. When neither is given and the export exceeds about 16 KB, a hint
 mops --mps-home <path> get module [--json] <module>
 ```
 
-Reports where MPS locates one module's files, addressed by module name or serialized module reference and found anywhere
-in the repository, library modules included. Text output is one `key<TAB>value` row per location MPS reports, keyed by
-the JSON field name: `kind`, `name`, `reference`, `packaged`, then `descriptor` (the `.mpl`/`.msd`/`.devkit` of a source
-module, or `name.jar!/META-INF/module.xml` of a deployed one), `jar` and `sourcesJar` (the deployed module's archive and
-the sources archive its deployment descriptor names), `sourceDescriptor` (the source descriptor inside that archive),
-`sourceDirectory` (a source module's descriptor directory), `classesGen` (a source module's compiled-class output, when
-its Java facet declares one), `classPath` (one row per entry of the Java facet's runtime classpath) and `modelRoots`
-(one row per file-based model root). A location MPS does not record for the module is omitted rather than guessed from a
-naming convention. `--json` prints the daemon response, with the same fields under `module`. An unknown module fails
-with `MODULE_NOT_FOUND`; a name shared by several modules fails and lists their serialized references, so a reference
-disambiguates it.
+Reports where MPS locates the files of one module. The module is addressed by module name or serialized module
+reference, and can be anywhere in the repository, library modules included. Text output is one `key<TAB>value` row per
+location MPS reports, keyed by the JSON field name:
+
+- `kind`, `name`, `reference`, `packaged`
+- `descriptor`: the `.mpl`/`.msd`/`.devkit` of a source module, or `name.jar!/META-INF/module.xml` of a deployed one
+- `jar` and `sourcesJar`: the deployed module's archive and the sources archive its deployment descriptor names
+- `sourceDescriptor`: the source descriptor inside that archive
+- `sourceDirectory`: a source module's descriptor directory
+- `classesGen`: a source module's compiled-class output, when its Java facet declares one
+- `classPath`: one row per entry of the Java facet's runtime classpath
+- `modelRoots`: one row per file-based model root
+
+A location that MPS does not record for the module is omitted, not guessed from a naming convention. `--json` prints the
+daemon response, with the same fields under `module`. An unknown module fails with `MODULE_NOT_FOUND`. A name shared by
+several modules fails and lists their serialized references; pass one of the references instead.
 
 ```sh
 mops --mps-home <path> list [--depth N] [--limit N] [--summary] [--role ROLE] [--full-concept] [--json] [TARGET_SEGMENT...]
@@ -238,11 +248,12 @@ Searches **editable project sources** for references to one resolved target node
 An unresolved target fails with `NODE_NOT_FOUND`. Text output is tab-separated rows of `usage`, the reference role, and
 the owning node's name (or `<unnamed>`), concept, and reference; the owner is typed `root` or `node` by its position in
 its model. A non-root owner appends its immediate parent as trailing `parent`, parent name (or `<unnamed>`), parent
-concept, and parent reference columns. `--json` prints an object with `limit`, `truncated`, and a `usages` array whose
-entries carry the reference `role` and a nested `owner` node summary, itself carrying a nested `parent` summary for a
-non-root owner. Concept columns follow the same short-name default, `--full-concept`, and JSON-keeps-qualified rules as
-`find instances`; `--refs-only` prints one serialized reference per referencing node. Both `find` modes default to
-`--limit 100`, treat `--limit 0` as unlimited, reject negative limits, and append a
+concept, and parent reference columns. `--json` prints an object with `limit`, `truncated`, and a `usages` array. Each
+entry carries the reference `role` and a nested `owner` node summary; a non-root owner carries a nested `parent`
+summary. Concept columns follow the same short-name default, `--full-concept`, and JSON-keeps-qualified rules as
+`find instances`; `--refs-only` prints one serialized reference per referencing node.
+
+Both `find` modes default to `--limit 100`, treat `--limit 0` as unlimited, and reject negative limits. They append a
 `# truncated: showing <shown>; pass --limit 0 for all` line (in text) or set `truncated` (in JSON) only when more
 matches exist than were returned. Lines starting with `#` are metadata, never results, so `grep -v '^#'` leaves only
 rows.
@@ -262,15 +273,14 @@ output is tab-separated rows in the same shape as `find instances`, including th
 mops --mps-home <path> diagnose project [--all] [--json]
 ```
 
-Reports the load state of the project's languages and every other project module that has a Java facet, so a
-`CONCEPT_NOT_FOUND` from `find instances` can be traced to its cause: a concept resolves by name only if its owning
-language's runtime is loaded. Text output starts with a `modules\t<loaded>/<total> loaded\t<failed> failed` summary row
-(the summary is part of the report, so it is a result row, not metadata), then one tab-separated row per failed module —
-its name, `kind`, and a reason code — followed, when the reason is `BROKEN_DEPENDENCIES`, by indented rows naming the
-root-cause modules to fix. It ends with a `#` metadata line saying what the listing left out: modules without a Java
-facet are not listed and can be inspected individually with `diagnose module`. Lines starting with `#` are metadata,
-never results, so `grep -v '^#'` leaves only rows. `--all` also lists the modules that loaded; `--json` prints the full
-structured diagnosis.
+Reports the load state of the project's languages and of every other project module that has a Java facet. Use it to
+trace a `CONCEPT_NOT_FOUND` from `find instances` to its cause: a concept resolves by name only if its owning language's
+runtime is loaded. Text output starts with a `modules\t<loaded>/<total> loaded\t<failed> failed` summary row, which is a
+result row, not metadata. Then comes one tab-separated row per failed module: its name, `kind`, and a reason code. For
+the reason `BROKEN_DEPENDENCIES`, indented rows follow that name the root-cause modules to fix. A final `#` metadata
+line says that modules without a Java facet are not listed; inspect them with `diagnose module`. Lines starting with `#`
+are metadata, never results, so `grep -v '^#'` leaves only rows. `--all` also lists the modules that loaded; `--json`
+prints the full structured diagnosis.
 
 ```sh
 mops --mps-home <path> diagnose module [--json] <module>
@@ -310,17 +320,18 @@ mops --mps-home <path> check module [--format human|jsonl] [--limit N] <module>.
 mops --mps-home <path> check project [--format human|jsonl] [--limit N]
 ```
 
-Runs MPS's full model check (typesystem, model, module, and checking rules) over one model, the named project modules,
-or every project module, through the daemon. Findings print most severe first, capped at `--limit` (default 20; `0` is
-unlimited). Text output is one tab-separated row per finding (`severity`, message, and for a node-level finding the
-node's name, concept, and reference) followed by `#` metadata lines: `# <errors>, <warnings>, <infos>` (or
-`# no findings`) and, when the cap cut the list,
-`# truncated: showing <shown> of <total> findings; pass --limit 0 for all`. Lines starting with `#` are metadata, never
-findings, so `grep -v '^#'` leaves only rows. `--format jsonl` prints one finding object per line and ends with a
-`{"type":"summary",...}` record carrying `shown`, `total`, `errors`, `warnings`, `infos`, `limit`, `truncated`, and,
-when truncated, a `hint` naming `--limit 0`; findings have no `type` field, so a reader tells the two apart. Totals
-count every finding, not only the shown ones, and all three commands exit `1` when the totals include an error, in both
-formats.
+Runs MPS's full model check (typesystem, model, module, and checking rules) through the daemon, over one model, the
+named project modules, or every project module. Findings print most severe first, capped at `--limit` (default 20; `0`
+is unlimited). Totals count every finding, not only the shown ones. All three commands exit `1` when the totals include
+an error, in both formats.
+
+Text output is one tab-separated row per finding (`severity`, message, and for a node-level finding the node's name,
+concept, and reference). `#` metadata lines follow: `# <errors>, <warnings>, <infos>` (or `# no findings`) and, when the
+cap cut the list, `# truncated: showing <shown> of <total> findings; pass --limit 0 for all`. Lines starting with `#`
+are metadata, never findings, so `grep -v '^#'` leaves only rows. `--format jsonl` prints one finding object per line
+and ends with a `{"type":"summary",...}` record carrying `shown`, `total`, `errors`, `warnings`, `infos`, `limit`,
+`truncated`, and, when truncated, a `hint` naming `--limit 0`. Findings have no `type` field, so a reader tells the two
+apart.
 
 ```sh
 mops create language [--descriptor FILE] [--with-generator] [--dry-run] [--json] <module-name>
@@ -349,16 +360,17 @@ mops test --timeout 60
 ```
 
 Tests run in a separate MPS process using the selected distribution's testing framework. Selection accepts a project
-(omit the target), module, model, or root test case. Individual test methods are unsupported. The default build includes
+(omit the target), module, model, or root test case; individual test methods are unsupported. The default build includes
 the owning modules and required dependencies. `--no-build` requires existing compiled classes. The timeout limits test
 execution, counted after build and discovery, and defaults to 900 seconds; `--timeout 0` disables it. Ctrl-C cancels the
-worker. Standalone cancellation and timeouts leave the daemon usable. Execution uses the distribution's Ant
-`launchtests` machinery in IDEA test mode, including its test session, failure detection, and XML reports. The test
-JVM's classpath is constructed independently of the normal daemon's boot classpath. Plugins are discovered
-automatically. On MPS 2025.1 only, Images (`com.intellij.platform.images`) is disabled to avoid its SVG parser
-classloader defect; tests requiring Images are unsupported on that version. Model and test-case filtering occurs after
-module-wide class discovery, so broken unselected classes can also fail a run, particularly with `--no-build`. A
-matching JBR with `javac` is required to compile the version-specific adapter.
+worker. Standalone cancellation and timeouts leave the daemon usable.
+
+Execution uses the distribution's Ant `launchtests` machinery in IDEA test mode, including its test session, failure
+detection, and XML reports. The test JVM's classpath is constructed independently of the normal daemon's boot classpath.
+Plugins are discovered automatically. A matching JBR with `javac` is required to compile the version-specific adapter.
+Model and test-case filtering occurs after module-wide class discovery, so broken unselected classes can also fail a
+run, particularly with `--no-build`. On MPS 2025.1 only, Images (`com.intellij.platform.images`) is disabled to avoid
+its SVG parser classloader defect; tests requiring Images are unsupported on that version.
 
 Every run saves `report.json` under the daemon workspace's `test-runs/<run-id>/` directory and updates it as results
 arrive. Text output prints the action report on stdout: an `<outcome>: <N> passed, <N> failed, ...` summary line and a
