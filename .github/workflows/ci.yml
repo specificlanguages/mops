@@ -14,6 +14,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # A pull request run skips the test jobs when an earlier run of the same pull request already passed for the same git
+  # tree, for example after a stacked pull request is rebased onto main without changing its code. `CI passed` saves a
+  # `ci-passed-<tree>` cache entry when every job succeeds. Pull request caches are scoped to the pull request's merge
+  # ref, so a run only finds markers saved by runs of the same pull request or of its base and default branches.
+  # Pushes to main and manual dispatches always run in full. To force a full pull request run, delete the marker
+  # (`gh cache delete ci-passed-<tree>`) and re-run the workflow.
+  tree-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      tree: ${{ steps.tree.outputs.tree }}
+      already-passed: ${{ steps.marker.outputs.cache-hit == 'true' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Compute the tree hash of the tested commit
+        id: tree
+        run: echo "tree=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
+      - name: Look up a passed marker for this tree
+        id: marker
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ci-passed-marker
+          key: ci-passed-${{ steps.tree.outputs.tree }}
+          lookup-only: true
+
   mps-versions:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -31,6 +59,8 @@ jobs:
           echo "versions=$versions" >> "$GITHUB_OUTPUT"
 
   verification:
+    needs: tree-check
+    if: needs.tree-check.outputs.already-passed != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -60,6 +90,8 @@ jobs:
             */build/reports/tests/
 
   daemon:
+    needs: tree-check
+    if: needs.tree-check.outputs.already-passed != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -88,7 +120,8 @@ jobs:
             cli/build/reports/tests/
 
   daemon-versions:
-    needs: mps-versions
+    needs: [tree-check, mps-versions]
+    if: needs.tree-check.outputs.already-passed != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -118,7 +151,8 @@ jobs:
             daemon/build/reports/tests/
 
   integration:
-    needs: mps-versions
+    needs: [tree-check, mps-versions]
+    if: needs.tree-check.outputs.already-passed != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -149,7 +183,7 @@ jobs:
 
   ci-passed:
     name: CI passed
-    needs: [mps-versions, verification, daemon, daemon-versions, integration]
+    needs: [tree-check, mps-versions, verification, daemon, daemon-versions, integration]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -157,5 +191,20 @@ jobs:
       - name: Require all jobs to succeed
         env:
           JOB_RESULTS: ${{ toJSON(needs) }}
+          ALREADY_PASSED: ${{ needs.tree-check.outputs.already-passed }}
         run: |
-          echo "$JOB_RESULTS" | jq -e 'all(.[]; .result == "success")'
+          if [ "$ALREADY_PASSED" = true ]; then
+            echo "CI already passed for this tree, the test jobs were skipped."
+            echo "$JOB_RESULTS" | jq -e 'all(.[]; .result == "success" or .result == "skipped")'
+          else
+            echo "$JOB_RESULTS" | jq -e 'all(.[]; .result == "success")'
+          fi
+      - name: Create the passed marker
+        if: needs.tree-check.outputs.already-passed != 'true'
+        run: touch ci-passed-marker
+      - name: Save the passed marker for this tree
+        if: needs.tree-check.outputs.already-passed != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ci-passed-marker
+          key: ci-passed-${{ needs.tree-check.outputs.tree }}

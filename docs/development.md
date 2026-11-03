@@ -99,7 +99,13 @@ version runs every smoke test on Ubuntu. The verification job runs
 `check -x :cli:integrationTest -x :daemon:test -x :daemon:testOtherMpsVersions`, covering all subprojects' unit tests,
 daemon checks, Gradle discovery tests, and packaging checks, and then runs the `prek` hooks on all files. The separate
 `daemon-versions` and integration matrices cover the excluded daemon tests and CLI integration suite. The `CI passed`
-job requires every job to succeed. Release validation runs the complete `check`, including the full integration matrix.
+job requires every job to succeed and then saves a `ci-passed-<tree>` cache entry for the tested git tree. A pull
+request run that finds such an entry for its tree skips the test jobs, and `CI passed` still succeeds. This happens, for
+example, when a stacked pull request is rebased onto `main` without changing its code. Pull request cache entries are
+scoped to the pull request, so a run only sees entries saved by runs of the same pull request or of `main`. Pushes to
+`main` and manual dispatches always run in full. To force a full pull request run, delete the entry with
+`gh cache delete ci-passed-<tree>` and re-run the workflow. Release validation runs the complete `check`, including the
+full integration matrix.
 
 To test an already extracted distribution, use the separate local task:
 
