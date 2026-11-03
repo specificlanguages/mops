@@ -34,7 +34,8 @@ fun main(args: Array<String>) {
     try {
         // The daemon resolved the selection, so the worker sees the repository and path macros the daemon loaded.
         val antSelection = AntTestSelection.load(Path.of(args[4]))
-        fun runTests() = AntTestExecution(Path.of(args[3]), Path.of(args[1]).parent, report, limits).run(Path.of(args[2]), antSelection)
+        fun runTests() = AntTestExecution(Path.of(args[3]), Path.of(args[1]).parent, Path.of(args[5]), report, limits)
+            .run(Path.of(args[2]), antSelection)
         if (!request.build) {
             report.endTiming()
             report.phase("DISCOVERY")
@@ -49,8 +50,9 @@ fun main(args: Array<String>) {
                 macros += antSelection.macros.map { (name, value) -> Macro(name, value) }
             }
         }.executeWithProject(Path.of(args[2]).toFile()) { _, opened ->
-            report.endTiming()
             val project = opened as MPSProject
+            refreshFromDisk(project, antSelection.sourceFolders(Path.of(args[2])), Path.of(args[3]))
+            report.endTiming()
             report.phase("DISCOVERY")
             val selection = project.modelAccess.computeReadAction { AntTestSelection.select(project, request.target) }
             val modules = project.modelAccess.computeReadAction {

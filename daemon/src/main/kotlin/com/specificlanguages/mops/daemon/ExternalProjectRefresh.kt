@@ -2,11 +2,7 @@ package com.specificlanguages.mops.daemon
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.configurationStore.StoreReloadManager
-import com.intellij.openapi.vfs.JarFileSystem
-import com.intellij.openapi.vfs.LocalFileSystem
-import com.intellij.openapi.vfs.VfsUtil
 import jetbrains.mps.classloading.ClassLoaderManager
-import jetbrains.mps.extapi.persistence.FileBasedModelRoot
 import jetbrains.mps.ide.platform.watching.ReloadManager
 import jetbrains.mps.project.AbstractModule
 import jetbrains.mps.project.MPSProject
@@ -66,7 +62,7 @@ internal class ExternalProjectRefresh(private val project: Project) {
      * this daemon; later calls refresh only archives whose size or timestamp on disk changed since the previous call.
      */
     private fun refreshModuleArchives() {
-        val current = project.modelAccess.computeReadAction { moduleArchives() }.associateWith(ArchiveStamp::of)
+        val current = project.modelAccess.computeReadAction { moduleArchives(project) }.associateWith(ArchiveStamp::of)
         val previous = archiveStamps
         val changed = if (previous == null) {
             current.keys
@@ -76,28 +72,6 @@ internal class ExternalProjectRefresh(private val project: Project) {
         changed.forEach(::refreshArchive)
         archiveStamps = current
     }
-
-    /**
-     * Refreshes the entries of [archive], then the archive file itself. The archive file system caches the entry list
-     * of an archive, so its cache is cleared first or the refresh finds no changed entries. MPS ignores events from
-     * archive file systems and learns about archive changes only from the event for the archive file, so the entries
-     * must be current when that event arrives.
-     */
-    private fun refreshArchive(archive: Path) {
-        val local = LocalFileSystem.getInstance().findFileByNioFile(archive) ?: return
-        val root = JarFileSystem.getInstance().getJarRootForLocalFile(local)
-        if (root != null) {
-            JarFileSystem.getInstance().clearArchiveCache(root)
-            VfsUtil.markDirtyAndRefresh(false, true, true, root)
-        }
-        VfsUtil.markDirtyAndRefresh(false, false, false, local)
-    }
-
-    private fun moduleArchives(): Set<Path> =
-        project.repository.modules.filterIsInstance<AbstractModule>().flatMap { module ->
-            val contentDirectories = module.modelRoots.filterIsInstance<FileBasedModelRoot>().map { it.contentDirectory }
-            listOf(module.descriptorFile, module.moduleSourceDir) + contentDirectories
-        }.filterNotNull().filter { it.isInZipArchive }.map { Path.of(it.path.substringBefore("!/")) }.toSet()
 
     /** The size and timestamp of an archive on disk, or `null` for a missing archive. */
     private data class ArchiveStamp(val modified: Long, val size: Long) {

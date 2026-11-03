@@ -65,6 +65,9 @@ class DaemonRecordStore(val paths: DaemonPaths) {
 class DaemonPaths(root: Path) {
     val projects: Path = root.resolve("projects")
 
+    /** IntelliJ system directories that test runs of all projects keep between runs, one set per MPS build. */
+    val testSystemCache: Path = root.resolve("test-system-cache")
+
     fun workspace(projectPath: Path): DaemonWorkspace =
         DaemonWorkspace(workspacePath(projectPath))
 

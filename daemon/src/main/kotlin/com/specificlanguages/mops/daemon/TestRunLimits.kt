@@ -2,6 +2,7 @@ package com.specificlanguages.mops.daemon
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.TimeUnit
 
 /**
  * Decides when a test run must stop early: when the cancellation file appears, or when test execution has run longer
@@ -36,8 +37,13 @@ class TestRunLimits(
     }
 }
 
-/** Kills [process]'s descendants, deepest first, then [process] itself unless it is the current process. */
+/**
+ * Kills [process]'s descendants, deepest first, and waits up to 30 seconds for each to exit, then kills [process] itself
+ * unless it is the current process.
+ */
 fun destroyProcessTree(process: ProcessHandle) {
-    process.descendants().toList().asReversed().forEach { it.destroyForcibly() }
+    val descendants = process.descendants().toList().asReversed()
+    descendants.forEach { it.destroyForcibly() }
+    descendants.forEach { it.onExit().completeOnTimeout(it, 30, TimeUnit.SECONDS).join() }
     if (process != ProcessHandle.current()) process.destroyForcibly()
 }

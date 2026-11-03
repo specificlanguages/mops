@@ -11,6 +11,7 @@ import kotlin.io.path.*
 class AntTestExecution(
     private val mps: Path,
     private val directory: Path,
+    private val systemDirectory: Path,
     private val report: TestReportStore,
     private val limits: TestRunLimits,
 ) {
@@ -40,9 +41,12 @@ class AntTestExecution(
         }
         val jvmArgs = listOf(
             "-ea", "-Xmx2048m", "-Dplugin.path=$pluginPath", "-Djava.awt.headless=true", "-Didea.config.path=$config",
-            "-Didea.system.path=${directory.resolve("test-system")}", "-Didea.log.path=${directory.resolve("test-log")}",
+            // MPS 2026.3 deletes the test-mode system directory at startup unless mps.test.keep.system.dir is set.
+            "-Didea.system.path=$systemDirectory", "-Dmps.test.keep.system.dir=true", "-Didea.log.path=${directory.resolve("test-log")}",
             "-Djna.boot.library.path=${mps.resolve("lib/jna/$jnaArch")}",
-            "-Dmops.test.modules=${selection.testModuleIds.joinToString(",")}", "-Dmops.test.adapters=$adapters", "-Dmops.test.events=$events",
+            "-Dmops.test.modules=${selection.testModuleIds.joinToString(",")}",
+            "-Dmops.test.sources=${selection.sourceFolders(project).joinToString(File.pathSeparator)}",
+            "-Dmops.test.adapters=$adapters", "-Dmops.test.events=$events",
         ) + listOfNotNull(selection.model?.let { "-Dmops.test.model=$it" }, selection.node?.let { "-Dmops.test.node=$it" }) +
             if (version.startsWith("2024.1")) listOf("-Djava.system.class.loader=com.intellij.util.lang.PathClassLoader") else emptyList()
         val antFile = directory.resolve("launchtests.xml")

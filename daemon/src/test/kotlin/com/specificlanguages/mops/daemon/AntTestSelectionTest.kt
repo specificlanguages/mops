@@ -41,4 +41,18 @@ class AntTestSelectionTest {
 
         assertEquals(selection, AntTestSelection.load(path))
     }
+
+    @Test
+    fun `source folders are the project, the repository folders, and the folders of the module descriptors`() {
+        val selection = AntTestSelection(
+            testModules = listOf(Path.of("/project/solutions/tests/tests.msd")),
+            testModuleIds = listOf("85ebbead-a656-46af-af88-81c850c5e554"),
+            repositoryModules = listOf(Path.of("/project/solutions/tests/tests.msd"), Path.of("/elsewhere/peer/peer.msd")),
+            repositoryFolders = listOf(Path.of("/shared/libraries")),
+            macros = emptyMap(), model = null, node = null, description = "project (no target given)", diagnostics = emptyList(),
+        )
+
+        assertEquals(listOf(Path.of("/project"), Path.of("/shared/libraries"), Path.of("/project/solutions/tests"),
+            Path.of("/elsewhere/peer")), selection.sourceFolders(Path.of("/project")))
+    }
 }

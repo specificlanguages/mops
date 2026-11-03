@@ -1,12 +1,16 @@
 package com.specificlanguages.mops.cli
 
+import com.specificlanguages.mops.launcher.MpsBuildProperties
 import com.specificlanguages.mops.protocol.DaemonPaths
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.ProtocolJson
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.api.parallel.ResourceLock
+import java.nio.channels.FileChannel
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption.CREATE
+import java.nio.file.StandardOpenOption.WRITE
 import kotlin.io.path.*
 import kotlin.test.*
 
@@ -27,11 +31,22 @@ class TestRunningIntegrationTest {
             assertEquals("DISCOVERY_FAILED", report.outcome, result.output)
             assertContains(report.diagnostics, "No tests discovered for selection: project (no target given)")
             assertEquals(report, ProtocolJson.testReport.decode(Path.of(report.reportPath).readText()))
-            val model = cli("test", "r:9363093b-3fa9-4e39-87cb-26240d0efa37(baselanguage.sandbox)", "--no-build", "--json")
+            // While another run holds the worker's persistent system directory, this run uses a fresh one and says so.
+            val workerSystems = Path.of(System.getenv("MOPS_TEST_SYSTEM_CACHE"))
+                .resolve(requireNotNull(MpsBuildProperties.fromMpsHome(Path.of(System.getProperty("test.mpsHome")))?.buildNumber))
+                .createDirectories()
+            val model = FileChannel.open(workerSystems.resolve("worker.lock"), CREATE, WRITE).use { channel ->
+                channel.lock().use { cli("test", "r:9363093b-3fa9-4e39-87cb-26240d0efa37(baselanguage.sandbox)", "--no-build", "--json") }
+            }
             assertEquals(1, model.exitCode, model.output)
             val modelReport = ProtocolJson.testReport.decode(model.stdout)
             assertEquals("DISCOVERY_FAILED", modelReport.outcome, model.output)
             assertContains(modelReport.diagnostics, "No tests discovered for selection: model baselanguage.sandbox")
+            val runDirectory = Path.of(modelReport.reportPath).parent
+            assertContains(modelReport.diagnostics, "The test worker's system directory ${workerSystems.resolve("worker")} is in use " +
+                "by another test run; this run uses the fresh directory ${runDirectory.resolve("test-system")} and indexes the " +
+                "MPS distribution again.")
+            assertTrue(runDirectory.resolve("test-system").isDirectory(), model.output)
             assertEquals(0, cli("daemon", "ping").exitCode)
         } finally { stopDaemons(project, home) }
     }

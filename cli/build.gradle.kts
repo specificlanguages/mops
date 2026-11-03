@@ -206,6 +206,11 @@ fun Test.configureIntegrationTest(mpsHome: Provider<File>, jbrHome: Provider<Fil
     // Each test run starts a daemon and a test worker, and without a limit each JVM may grow to a quarter of physical
     // memory. Two test JVMs side by side could then reserve more heap than a 16 GB CI runner has.
     environment("MOPS_DAEMON_JAVA_OPTIONS", "-Xmx2g")
+    // Every test uses its own daemon home, so without a shared cache each test run would index the MPS distribution
+    // again. The cache is emptied when the task starts, so a Gradle run never depends on an earlier one.
+    val testSystemCache = layout.buildDirectory.dir("integration-test-system-cache/$name").get().asFile
+    environment("MOPS_TEST_SYSTEM_CACHE", testSystemCache.path)
+    doFirst { testSystemCache.deleteRecursively() }
     testLogging {
         events("started", "passed", "skipped", "failed")
         exceptionFormat = TestExceptionFormat.FULL

@@ -457,6 +457,13 @@ subdirectory under `projects/`, including:
 - `logs/daemon.log` - daemon startup and runtime log for the current prototype
 - `daemon/config` and `daemon/system` - isolated IDEA directories passed to the daemon JVM
 
+Test runs keep the IntelliJ system directories (VFS and indexes) of the test worker and of the preparation environment
+between runs in the daemon home's `test-system-cache/<MPS build number>/` directory, shared by all projects, so a run
+does not index the MPS distribution again. A run that finds a directory in use by another run, for example of another
+project's daemon, uses a fresh directory under its `test-runs/<run-id>/` and says so in the report's diagnostics. Set
+`MOPS_TEST_SYSTEM_CACHE` to use another directory for a newly started daemon. The cache is safe to delete while no test
+runs; delete it if test results contradict the sources, and to free the disk space of MPS builds no longer in use.
+
 Daemon commands use loopback socket IPC with a per-daemon token. Independent list, get-node, find, diagnostic, and Code
 Mode help requests can run in reader batches. Edits, creation, builds, tests, checks, rendering, and Code Mode execution
 have exclusive admission; ping and stop remain responsive independently of project work. Stale daemon records are
