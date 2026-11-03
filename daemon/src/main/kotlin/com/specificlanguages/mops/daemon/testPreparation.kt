@@ -2,6 +2,7 @@ package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.protocol.*
 import de.itemis.mps.gradle.project.loader.EnvironmentKind
+import de.itemis.mps.gradle.project.loader.Macro
 import de.itemis.mps.gradle.project.loader.ProjectLoader
 import jetbrains.mps.project.MPSProject
 import org.jetbrains.mps.openapi.model.SModel
@@ -31,11 +32,13 @@ fun main(args: Array<String>) {
         Runtime.getRuntime().halt(1)
     }
     try {
+        // The daemon resolved the selection, so the worker sees the repository and path macros the daemon loaded.
+        val antSelection = AntTestSelection.load(Path.of(args[4]))
+        fun runTests() = AntTestExecution(Path.of(args[3]), Path.of(args[1]).parent, report, limits).run(Path.of(args[2]), antSelection)
         if (!request.build) {
             report.endTiming()
             report.phase("DISCOVERY")
-            val selection = AntTestSelection.load(Path.of(args[4]))
-            AntTestExecution(Path.of(args[3]), Path.of(args[1]).parent, report, limits).run(Path.of(args[2]), selection)
+            runTests()
             Runtime.getRuntime().halt(if (report.snapshot().successful) 0 else 1)
         }
         ProjectLoader.build {
@@ -43,6 +46,7 @@ fun main(args: Array<String>) {
             environmentConfig {
                 testMode = false
                 addPluginsRecursivelyFrom(Path.of(args[3], "plugins"))
+                macros += antSelection.macros.map { (name, value) -> Macro(name, value) }
             }
         }.executeWithProject(Path.of(args[2]).toFile()) { _, opened ->
             report.endTiming()
@@ -71,8 +75,7 @@ fun main(args: Array<String>) {
                 report.endTiming()
             }
             report.phase("DISCOVERY")
-            AntTestExecution(Path.of(args[3]), Path.of(args[1]).parent, report, limits)
-                .run(Path.of(args[2]), AntTestSelection.resolve(project, request.target))
+            runTests()
         }
     } catch (failure: Throwable) {
         failure.printStackTrace()

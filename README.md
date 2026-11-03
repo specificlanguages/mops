@@ -354,7 +354,11 @@ the owning modules and required dependencies. `--no-build` requires existing com
 execution, counted after build and discovery, and defaults to 900 seconds; `--timeout 0` disables it. Ctrl-C cancels the
 worker. Standalone cancellation and timeouts leave the daemon usable. Execution uses the distribution's Ant
 `launchtests` machinery in IDEA test mode, including its test session, failure detection, and XML reports. The test
-JVM's classpath is constructed independently of the normal daemon's boot classpath. Plugins are discovered
+JVM's classpath is constructed independently of the normal daemon's boot classpath. The worker's module repository holds
+the project modules and the folders of the project libraries (`.mps/libraries.xml`) as the daemon loaded them, and the
+worker gets the path macros the daemon defines. A project library whose path uses a macro the daemon does not define is
+left out, with a diagnostic. When the worker cannot load classes of some modules, for example because a dependency is
+absent from its repository, the report's diagnostics list the modules from the worker's log. Plugins are discovered
 automatically. On MPS 2025.1 only, Images (`com.intellij.platform.images`) is disabled to avoid its SVG parser
 classloader defect; tests requiring Images are unsupported on that version. Model and test-case filtering occurs after
 module-wide class discovery, so broken unselected classes can also fail a run, particularly with `--no-build`. A

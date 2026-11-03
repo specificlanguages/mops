@@ -190,9 +190,10 @@ not reached or could not be saved before a process was killed. These timings do 
 indexing. Per-event report writes checkpoint the active duration, and orderly failures/timeouts close it.
 
 `TestRunningIntegrationTest` uses fresh project copies for root test-case/model/module/project selection, multiple test
-modules, preparation failures, and worker lifecycle behavior. The fixtures live in `test-projects/testing`. The
-lifecycle test reacts to report updates instead of waiting out deadlines, apart from one 15-second test execution limit.
-Runtime reload and daemon lifecycle tests also retain their independent process boundaries.
+modules, preparation failures, and worker lifecycle behavior. The fixtures live in `test-projects/testing`, and the
+project-library and path-macro fixture in `test-projects/project-library`. The lifecycle test reacts to report updates
+instead of waiting out deadlines, apart from one 15-second test execution limit. Runtime reload and daemon lifecycle
+tests also retain their independent process boundaries.
 
 ```sh
 ./gradlew :cli:integrationTestMps2024.1.6 --tests '*TestRunningIntegrationTest' --tests '*TestFamiliesIntegrationTest' \

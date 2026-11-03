@@ -69,6 +69,8 @@ dependencies {
             include("lib/mps-environment.jar")
             include("lib/mps-persistence.jar")
             include("lib/mps-platform.jar")
+            // ProjectLibraryManager, which lists the project libraries the test worker's repository needs.
+            include("lib/mps-workbench.jar")
             include("lib/mps-openapi.jar")
             include("lib/mpsant/mps-tool.jar")
             include("lib/mps-references.jar")

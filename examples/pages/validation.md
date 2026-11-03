@@ -51,6 +51,9 @@ assertion failures from build, discovery, startup, timeout, and worker failures.
 the selection that resolved to nothing (the project, or the module, model, or root test case), so check that it is the
 one you meant. Partial results after an interrupted worker are not evidence of a successful run. Use `reportPath` to
 retain the report. Inspect the adjacent `worker.log` for preparation failures and `ant.log` for test execution failures.
+A diagnostic that lists modules the test worker could not load classes of explains a `ClassNotFoundException` for test
+classes: a dependency is missing from the worker's repository, which holds the project modules and project libraries as
+the daemon loaded them.
 When the run is evidence for a bug report, record the mops version (`mops --version`) together with the MPS and Java
 versions and the preparation commands.
 
