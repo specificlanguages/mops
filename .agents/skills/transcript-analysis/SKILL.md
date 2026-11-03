@@ -82,5 +82,3 @@ causes not found (with the evidence that would show them), scenario-specific cau
 
 Show the draft to the maintainer, who picks the causes to file. Then publish and file as described under _Field-test
 reports_ in `docs/agents/issue-tracker.md`.
-
-Finally, ask the maintainer which parts of the report were unclear, too long, or unused, and update this skill to match.
