@@ -306,7 +306,7 @@ class DaemonProtocolJsonTest {
             ),
         )
 
-        val encoded = ProtocolJson.encodeNode(node)
+        val encoded = ProtocolJson.node.encode(node)
 
         assertEquals(
             """{"model":"$model","concept":"com.acme.Class","id":"100","truncatedAt":1,""" +
@@ -316,7 +316,7 @@ class DaemonProtocolJsonTest {
                 """{"role":"member","concept":"com.acme.Field","reference":"$model/300","childCount":0}]}""",
             encoded,
         )
-        assertEquals(node, ProtocolJson.decodeNode(encoded))
+        assertEquals(node, ProtocolJson.node.decode(encoded))
     }
 
     @Test
@@ -336,7 +336,7 @@ class DaemonProtocolJsonTest {
             parent = MpsNodeParentJson(type = "root", role = "member", name = "Foo", concept = "com.acme.Class", reference = "$model/100"),
             children = mapOf("parameter" to 2, "body" to 1),
         )
-        val encoded = ProtocolJson.encodeNodeSummary(summary)
+        val encoded = ProtocolJson.nodeSummary.encode(summary)
         assertContains(encoded, """"children":{"parameter":2,"body":1}""")
         assertEquals(ModelGetNodeSummaryResponse(summary), ProtocolJson.decodeResponse(ProtocolJson.encodeResponse(ModelGetNodeSummaryResponse(summary))))
 
@@ -348,7 +348,7 @@ class DaemonProtocolJsonTest {
     fun `pretty node encoding indents by two spaces and leaves the compact encoding unchanged`() {
         val node = MpsNodeJson(concept = "com.acme.Class", id = "100", children = listOf(MpsNodeJson(role = "member", concept = "com.acme.Field", id = "300")))
 
-        assertEquals("""{"concept":"com.acme.Class","id":"100","children":[{"role":"member","concept":"com.acme.Field","id":"300"}]}""", ProtocolJson.encodeNode(node))
+        assertEquals("""{"concept":"com.acme.Class","id":"100","children":[{"role":"member","concept":"com.acme.Field","id":"300"}]}""", ProtocolJson.node.encode(node))
         assertEquals(
             """
             {
@@ -363,7 +363,7 @@ class DaemonProtocolJsonTest {
               ]
             }
             """.trimIndent(),
-            ProtocolJson.encodeNode(node, pretty = true),
+            ProtocolJson.node.encode(node, pretty = true),
         )
         val summary = MpsNodeSummaryJson(type = "root", name = "Foo", concept = "com.acme.Class", reference = "m/100", children = mapOf("member" to 2))
         assertEquals(
@@ -378,7 +378,7 @@ class DaemonProtocolJsonTest {
               }
             }
             """.trimIndent(),
-            ProtocolJson.encodeNodeSummary(summary, pretty = true),
+            ProtocolJson.nodeSummary.encode(summary, pretty = true),
         )
     }
 
@@ -567,14 +567,14 @@ class DaemonProtocolJsonTest {
             ),
         )
 
-        val fromString = ProtocolJson.decodeBatch(
+        val fromString = ProtocolJson.batch.decode(
             """{"operations":[{"op":"delete","target":"${'$'}copy/left/expression"}]}""",
         )
-        val fromObject = ProtocolJson.decodeBatch(
+        val fromObject = ProtocolJson.batch.decode(
             """{"operations":[{"op":"delete","target":{"base":"${'$'}copy","path":"left/expression"}}]}""",
         )
         // The object form may drop the '$' sigil on base; it normalizes to the same alias.
-        val fromBareBase = ProtocolJson.decodeBatch(
+        val fromBareBase = ProtocolJson.batch.decode(
             """{"operations":[{"op":"delete","target":{"base":"copy","path":"left/expression"}}]}""",
         )
 
@@ -621,10 +621,10 @@ class DaemonProtocolJsonTest {
     @Test
     fun `a model destination decodes from both a bare string and a model object`() {
         val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
-        val fromObject = ProtocolJson.decodeBatch(
+        val fromObject = ProtocolJson.batch.decode(
             """{"operations":[{"op":"addRoot","model":{"model":"$model"},"concept":"com.acme.Foo"}]}""",
         )
-        val fromString = ProtocolJson.decodeBatch(
+        val fromString = ProtocolJson.batch.decode(
             """{"operations":[{"op":"addRoot","model":"$model","concept":"com.acme.Foo"}]}""",
         )
 
@@ -848,11 +848,11 @@ class DaemonProtocolJsonTest {
             severity = FindingSeverity.INFO,
             message = "informational note",
         )
-        val encoded = ProtocolJson.encodeFinding(finding)
+        val encoded = ProtocolJson.finding.encode(finding)
 
         assertContains(encoded, """"severity":"info"""")
         assertFalse(encoded.contains(""""node""""), "a nodeless finding must omit the node field: $encoded")
-        assertEquals(finding, ProtocolJson.decodeFinding(encoded))
+        assertEquals(finding, ProtocolJson.finding.decode(encoded))
     }
 
     @Test
@@ -867,18 +867,18 @@ class DaemonProtocolJsonTest {
             truncated = true,
             hint = "pass --limit 0 for all",
         )
-        val encoded = ProtocolJson.encodeCheckSummary(truncated)
+        val encoded = ProtocolJson.checkSummary.encode(truncated)
 
         assertEquals(
             """{"type":"summary","shown":1,"total":10,"errors":3,"warnings":2,"infos":5,"limit":1,"truncated":true,"hint":"pass --limit 0 for all"}""",
             encoded,
         )
-        assertEquals(truncated, ProtocolJson.decodeCheckSummary(encoded))
+        assertEquals(truncated, ProtocolJson.checkSummary.decode(encoded))
 
         val complete = truncated.copy(shown = 10, limit = 0, truncated = false, hint = null)
         assertEquals(
             """{"type":"summary","shown":10,"total":10,"errors":3,"warnings":2,"infos":5,"limit":0,"truncated":false}""",
-            ProtocolJson.encodeCheckSummary(complete),
+            ProtocolJson.checkSummary.encode(complete),
         )
     }
 

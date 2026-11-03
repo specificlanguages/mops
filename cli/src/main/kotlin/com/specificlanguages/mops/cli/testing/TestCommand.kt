@@ -30,7 +30,7 @@ class TestCommand(private val environment: CommandEnvironment) : CliCommand(), I
         Runtime.getRuntime().addShutdownHook(hook)
         try {
             val report = environment.daemon().runTests(target, !noBuild, timeout * 1000, cancel.toString()).report
-            if (json) println(ProtocolJson.encodeTestReport(report)) else {
+            if (json) println(ProtocolJson.testReport.encode(report)) else {
                 val counts = report.results.filter { it.kind == "TEST" }.groupingBy { it.status }.eachCount()
                 println("${report.outcome}: ${counts.entries.joinToString { "${it.value} ${it.key.lowercase()}" }}")
                 report.diagnostics.forEach { System.err.println(it.lineSequence().first()) }

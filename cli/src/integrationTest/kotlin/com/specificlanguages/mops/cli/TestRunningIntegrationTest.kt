@@ -22,13 +22,13 @@ class TestRunningIntegrationTest {
         try {
             val result = cli("test", "--no-build", "--json")
             assertEquals(1, result.exitCode, result.output)
-            val report = ProtocolJson.decodeTestReport(result.stdout)
+            val report = ProtocolJson.testReport.decode(result.stdout)
             assertEquals("DISCOVERY_FAILED", report.outcome, result.output)
             assertContains(report.diagnostics, "No tests discovered for selection: project (no target given)")
-            assertEquals(report, ProtocolJson.decodeTestReport(Path.of(report.reportPath).readText()))
+            assertEquals(report, ProtocolJson.testReport.decode(Path.of(report.reportPath).readText()))
             val model = cli("test", "r:9363093b-3fa9-4e39-87cb-26240d0efa37(baselanguage.sandbox)", "--no-build", "--json")
             assertEquals(1, model.exitCode, model.output)
-            val modelReport = ProtocolJson.decodeTestReport(model.stdout)
+            val modelReport = ProtocolJson.testReport.decode(model.stdout)
             assertEquals("DISCOVERY_FAILED", modelReport.outcome, model.output)
             assertContains(modelReport.diagnostics, "No tests discovered for selection: model baselanguage.sandbox")
             assertEquals(0, cli("daemon", "ping").exitCode)
@@ -45,16 +45,16 @@ class TestRunningIntegrationTest {
         try {
             val missing = cli("test", "mops.tests.nativecases@tests", "--no-build", "--json")
             assertEquals(1, missing.exitCode, missing.output)
-            assertEquals("DISCOVERY_FAILED", ProtocolJson.decodeTestReport(missing.stdout).outcome, missing.output)
+            assertEquals("DISCOVERY_FAILED", ProtocolJson.testReport.decode(missing.stdout).outcome, missing.output)
             val all = cli("test", "--json")
             assertEquals(1, all.exitCode, all.output)
-            val report = ProtocolJson.decodeTestReport(all.stdout)
+            val report = ProtocolJson.testReport.decode(all.stdout)
             assertEquals("TEST_FAILED", report.outcome, all.output)
             val passed = report.results.first { it.kind == "TEST" && it.className?.contains("NativePass") == true }
             val caseSource = report.results.first { it.kind == "CONTAINER" && it.className?.contains("NativePass") == true }.source
             val testCase = cli("test", requireNotNull(caseSource), "--no-build", "--json")
             assertEquals(0, testCase.exitCode, testCase.output)
-            assertEquals(1, ProtocolJson.decodeTestReport(testCase.stdout).results.count { it.kind == "TEST" }, testCase.output)
+            assertEquals(1, ProtocolJson.testReport.decode(testCase.stdout).results.count { it.kind == "TEST" }, testCase.output)
             val script = tempDir.resolve("testing.groovy")
             script.writeText("""
                 def module = project.read { mops.lookup.requireModule('mops.tests') }
@@ -71,16 +71,16 @@ class TestRunningIntegrationTest {
             """.trimIndent())
             val code = cli("code", "run", script.pathString)
             assertEquals(0, code.exitCode, code.output)
-            assertTrue(ProtocolJson.decodeTestReport(code.stdout).successful, code.output)
+            assertTrue(ProtocolJson.testReport.decode(code.stdout).successful, code.output)
             val invalid = cli("test", "r:df8fc5ad-b32f-4109-bfab-79b959f29474(mops.tests.nativecases@tests)/4098", "--no-build", "--json")
             assertEquals(1, invalid.exitCode, invalid.output)
-            assertContains(ProtocolJson.decodeTestReport(invalid.stdout).diagnostics.joinToString(), "Individual test methods are unsupported")
+            assertContains(ProtocolJson.testReport.decode(invalid.stdout).diagnostics.joinToString(), "Individual test methods are unsupported")
             val modelFile = project.resolve("solutions/tests/models/ordinary.mps")
             modelFile.writeText(modelFile.readText().replace("~RuntimeException.&lt;init&gt;(java.lang.String)", "~MissingClass.&lt;init&gt;(java.lang.String)"))
             val build = cli("test", "--json")
             assertEquals(1, build.exitCode, build.output)
-            assertEquals("BUILD_FAILED", ProtocolJson.decodeTestReport(build.stdout).outcome, build.output)
-            assertTrue(ProtocolJson.decodeTestReport(build.stdout).results.isEmpty())
+            assertEquals("BUILD_FAILED", ProtocolJson.testReport.decode(build.stdout).outcome, build.output)
+            assertTrue(ProtocolJson.testReport.decode(build.stdout).results.isEmpty())
         } finally { stopDaemons(project, home) }
     }
 
@@ -92,13 +92,13 @@ class TestRunningIntegrationTest {
         fun reports() = home.resolve("projects").listDirectoryEntries().flatMap { workspace ->
             val runs = workspace.resolve("test-runs")
             if (runs.exists()) runs.listDirectoryEntries().map { it.resolve("report.json") }
-                .filter { it.exists() }.map { ProtocolJson.decodeTestReport(it.readText()) }
+                .filter { it.exists() }.map { ProtocolJson.testReport.decode(it.readText()) }
             else emptyList()
         }
         try {
             val warm = cli("test", "mops.tests", ".ordinary", "OrdinaryPass", "--json", "--timeout", "0")
             assertEquals(0, warm.exitCode, warm.output)
-            val warmReport = ProtocolJson.decodeTestReport(warm.stdout)
+            val warmReport = ProtocolJson.testReport.decode(warm.stdout)
             assertEquals("SUCCESS", warmReport.outcome, warm.output)
             assertTrue(warmReport.results.any { it.kind == "TEST" && it.status == "PASSED" }, warm.output)
             assertTrue(warmReport.timingsMillis.keys.containsAll(listOf(
@@ -117,7 +117,7 @@ class TestRunningIntegrationTest {
             // The limit counts from the start of test execution: aCompleted passes within it, zSlow sleeps 600 seconds.
             val timed = cli("test", "mops.tests", ".slow", "SlowTest", "--no-build", "--json", "--timeout", "15")
             assertEquals(1, timed.exitCode, timed.output)
-            val report = ProtocolJson.decodeTestReport(timed.stdout)
+            val report = ProtocolJson.testReport.decode(timed.stdout)
             assertEquals("TIMED_OUT", report.outcome, timed.output)
             assertFalse(report.complete)
             assertTrue(report.results.any { it.kind == "TEST" && it.status == "PASSED" }, timed.output)
@@ -137,7 +137,7 @@ class TestRunningIntegrationTest {
             assertEquals(0, cli("daemon", "ping").exitCode)
             val crashed = cli("test", "mops.tests.crash", "--no-build", "--json")
             assertEquals(1, crashed.exitCode, crashed.output)
-            val crashedReport = ProtocolJson.decodeTestReport(crashed.stdout)
+            val crashedReport = ProtocolJson.testReport.decode(crashed.stdout)
             assertEquals("WORKER_FAILED", crashedReport.outcome, crashed.output)
             assertFalse(crashedReport.complete)
             assertTrue(crashedReport.results.any { it.kind == "TEST" && it.status == "PASSED" }, crashed.output)
@@ -184,13 +184,13 @@ class TestRunningIntegrationTest {
         fun cli(vararg args: String) = runCommandLine(project, "--daemon-home", home.pathString, *javaAndMpsHomeArgs(), *args)
         try {
             val all = cli("test", "--json")
-            val report = ProtocolJson.decodeTestReport(all.stdout)
+            val report = ProtocolJson.testReport.decode(all.stdout)
             assertEquals("TEST_FAILED", report.outcome, all.output)
             val namespaces = report.results.mapNotNull { it.className }.map { it.substringBeforeLast('.') }.toSet()
             assertTrue("mops.tests.nativecases" in namespaces, all.output)
             assertTrue("mops.peer.nativecases" in namespaces, all.output)
             val selected = cli("test", "mops.peer", "--no-build", "--json")
-            val peerReport = ProtocolJson.decodeTestReport(selected.stdout)
+            val peerReport = ProtocolJson.testReport.decode(selected.stdout)
             assertEquals("TEST_FAILED", peerReport.outcome, selected.output)
             val cases = peerReport.results.filter { it.kind == "TEST" }
             assertEquals(2, cases.size, selected.output)

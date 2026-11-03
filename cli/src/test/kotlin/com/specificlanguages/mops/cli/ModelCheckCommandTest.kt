@@ -151,8 +151,8 @@ class ModelCheckCommandTest {
         assertEquals(1, exitCode)
         val lines = stdout.trim().lines()
         assertEquals(3, lines.size, "each finding prints on its own line, then the summary: $stdout")
-        assertEquals(ERROR_FINDING, ProtocolJson.decodeFinding(lines[0]))
-        assertEquals(WARNING_FINDING, ProtocolJson.decodeFinding(lines[1]))
+        assertEquals(ERROR_FINDING, ProtocolJson.finding.decode(lines[0]))
+        assertEquals(WARNING_FINDING, ProtocolJson.finding.decode(lines[1]))
         assertEquals(
             ModelCheckSummaryJson(
                 shown = 2,
@@ -163,7 +163,7 @@ class ModelCheckCommandTest {
                 limit = 20,
                 truncated = false,
             ),
-            ProtocolJson.decodeCheckSummary(lines[2]),
+            ProtocolJson.checkSummary.decode(lines[2]),
         )
         // The payload is the findings and the summary, not the daemon response wrapper.
         assertFalse(stdout.contains("\"findings\""), "jsonl must print bare findings, not wrapped responses: $stdout")
@@ -202,7 +202,7 @@ class ModelCheckCommandTest {
                 truncated = true,
                 hint = "pass --limit 0 for all",
             ),
-            ProtocolJson.decodeCheckSummary(lines[1]),
+            ProtocolJson.checkSummary.decode(lines[1]),
         )
     }
 

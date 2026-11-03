@@ -98,7 +98,7 @@ class WrapUnwrapNotationTest {
                 EditOperation.Unwrap(target = EditTarget.Alias("\$w"), keep = EditTarget.InModel("m", "3")),
             ),
         )
-        assertEquals(batch, ProtocolJson.decodeBatch(ProtocolJson.encodeBatch(batch)))
+        assertEquals(batch, ProtocolJson.batch.decode(ProtocolJson.batch.encode(batch)))
     }
 
     @Test

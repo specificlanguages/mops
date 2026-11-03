@@ -10,13 +10,13 @@ import com.specificlanguages.mops.protocol.ProtocolJson
 
 internal fun renderJson(response: DaemonResponse): String = ProtocolJson.encodeResponse(response)
 
-internal fun renderJson(node: MpsNodeJson, pretty: Boolean = false): String = ProtocolJson.encodeNode(node, pretty)
+internal fun renderJson(node: MpsNodeJson, pretty: Boolean = false): String = ProtocolJson.node.encode(node, pretty)
 
 internal fun renderJson(summary: MpsNodeSummaryJson, pretty: Boolean = false): String =
-    ProtocolJson.encodeNodeSummary(summary, pretty)
+    ProtocolJson.nodeSummary.encode(summary, pretty)
 
-internal fun renderJson(entry: MpsListEntryJson): String = ProtocolJson.encodeListEntry(entry)
+internal fun renderJson(entry: MpsListEntryJson): String = ProtocolJson.listEntry.encode(entry)
 
-internal fun renderJson(finding: ModelCheckFindingJson): String = ProtocolJson.encodeFinding(finding)
+internal fun renderJson(finding: ModelCheckFindingJson): String = ProtocolJson.finding.encode(finding)
 
-internal fun renderJson(summary: ModelCheckSummaryJson): String = ProtocolJson.encodeCheckSummary(summary)
+internal fun renderJson(summary: ModelCheckSummaryJson): String = ProtocolJson.checkSummary.encode(summary)

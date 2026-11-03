@@ -85,7 +85,7 @@ object CodeCatalog {
         }.trimEnd()
     }
 
-    fun json(subject: Any?): String = ProtocolJson.encodeCodeHelp(document(subject))
+    fun json(subject: Any?): String = ProtocolJson.codeHelp.encode(document(subject))
 
     internal fun document(subject: Any?): CodeHelpDocument {
         if (subject == null) return CodeHelpDocument(index = (entries.map { it.receiver } + resultMembers.keys).distinct().sorted())

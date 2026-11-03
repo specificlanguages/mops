@@ -50,7 +50,7 @@ class CheckOutputPipeTest {
                 truncated = true,
                 hint = "pass --limit 0 for all",
             ),
-            ProtocolJson.decodeCheckSummary(output.stdout.lines().last()),
+            ProtocolJson.checkSummary.decode(output.stdout.lines().last()),
         )
     }
 

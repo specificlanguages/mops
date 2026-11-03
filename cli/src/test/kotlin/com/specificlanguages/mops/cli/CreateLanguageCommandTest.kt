@@ -44,6 +44,6 @@ class CreateLanguageCommandTest {
             assertEquals(0, CommandLine(CreateLanguageCommand(client)).execute("example.lang", "--dry-run", "--json"))
         }
 
-        assertEquals(ProtocolJson.encodeModuleCreationPlan(plan) + "\n", output)
+        assertEquals(ProtocolJson.moduleCreationPlan.encode(plan) + "\n", output)
     }
 }

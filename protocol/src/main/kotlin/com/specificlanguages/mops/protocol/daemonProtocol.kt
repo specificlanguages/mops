@@ -87,18 +87,6 @@ object ProtocolJson {
 
     fun decodeResponse(text: String): DaemonResponse = json.decodeFromString(text)
 
-    fun encodeTestReport(report: TestRunReport): String = json.encodeToString(report)
-
-    fun encodeMakeResponse(response: MakeResponse): String = json.encodeToString(response)
-
-    fun encodeCodeHelp(document: CodeHelpDocument): String = json.encodeToString(document)
-    fun decodeCodeHelp(text: String): CodeHelpDocument = json.decodeFromString(text)
-    fun decodeTestReport(text: String): TestRunReport = json.decodeFromString(text)
-
-    fun encodeBatch(batch: EditBatch): String = json.encodeToString(batch)
-
-    fun decodeBatch(text: String): EditBatch = json.decodeFromString(text)
-
     /**
      * Decodes an edit batch through a two-pass, notation-level path, returning either the batch or a structured
      * [BatchDecodeResult.Failure] that already carries a self-correcting message (what is wrong, at which operation, the
@@ -107,37 +95,22 @@ object ProtocolJson {
      */
     fun decodeBatchOrError(text: String): BatchDecodeResult = BatchNotationDecoder.decode(json, text)
 
-    fun encodeNode(node: MpsNodeJson, pretty: Boolean = false): String =
-        (if (pretty) prettyJson else json).encodeToString(node)
+    val batch: JsonCodec<EditBatch> = codec(EditBatch.serializer())
+    val testReport: JsonCodec<TestRunReport> = codec(TestRunReport.serializer())
+    val makeResponse: JsonCodec<MakeResponse> = codec(MakeResponse.serializer())
+    val codeHelp: JsonCodec<CodeHelpDocument> = codec(CodeHelpDocument.serializer())
+    val node: JsonCodec<MpsNodeJson> = codec(MpsNodeJson.serializer())
+    val nodeSummary: JsonCodec<MpsNodeSummaryJson> = codec(MpsNodeSummaryJson.serializer())
+    val finding: JsonCodec<ModelCheckFindingJson> = codec(ModelCheckFindingJson.serializer())
+    val checkSummary: JsonCodec<ModelCheckSummaryJson> = codec(ModelCheckSummaryJson.serializer())
+    val listEntry: JsonCodec<MpsListEntryJson> = codec(MpsListEntryJson.serializer())
+    val moduleCreationPlan: JsonCodec<ModuleCreationPlan> = codec(ModuleCreationPlan.serializer())
+    val moduleCreationReport: JsonCodec<ModuleCreationReport> = codec(ModuleCreationReport.serializer())
+    val modelCreationPlan: JsonCodec<ModelCreationPlan> = codec(ModelCreationPlan.serializer())
+    val modelCreationReport: JsonCodec<ModelCreationReport> = codec(ModelCreationReport.serializer())
+    val record: JsonCodec<DaemonRecord> = codec(DaemonRecord.serializer())
 
-    fun decodeNode(text: String): MpsNodeJson = json.decodeFromString(text)
-
-    fun encodeNodeSummary(summary: MpsNodeSummaryJson, pretty: Boolean = false): String =
-        (if (pretty) prettyJson else json).encodeToString(summary)
-
-    fun encodeFinding(finding: ModelCheckFindingJson): String = json.encodeToString(finding)
-
-    fun decodeFinding(text: String): ModelCheckFindingJson = json.decodeFromString(text)
-
-    fun encodeCheckSummary(summary: ModelCheckSummaryJson): String = json.encodeToString(summary)
-
-    fun decodeCheckSummary(text: String): ModelCheckSummaryJson = json.decodeFromString(text)
-
-    fun encodeListEntry(entry: MpsListEntryJson): String = json.encodeToString(entry)
-
-    fun decodeListEntry(text: String): MpsListEntryJson = json.decodeFromString(text)
-
-    fun encodeModuleCreationPlan(plan: ModuleCreationPlan): String = json.encodeToString(plan)
-
-    fun encodeModuleCreationReport(report: ModuleCreationReport): String = json.encodeToString(report)
-
-    fun encodeModelCreationPlan(plan: ModelCreationPlan): String = json.encodeToString(plan)
-
-    fun encodeModelCreationReport(report: ModelCreationReport): String = json.encodeToString(report)
-
-    fun encodeRecord(record: DaemonRecord): String = json.encodeToString(record)
-
-    fun decodeRecord(text: String): DaemonRecord = json.decodeFromString(text)
+    private fun <T> codec(serializer: KSerializer<T>): JsonCodec<T> = JsonCodec(json, prettyJson, serializer)
 }
 
 /**

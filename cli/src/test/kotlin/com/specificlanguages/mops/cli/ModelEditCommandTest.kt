@@ -41,7 +41,7 @@ class ModelEditCommandTest {
         var exitCode = Int.MIN_VALUE
         var stdout = ""
 
-        withTextFromSystemIn(ProtocolJson.encodeBatch(batch)).execute {
+        withTextFromSystemIn(ProtocolJson.batch.encode(batch)).execute {
             stdout = tapSystemOut {
                 exitCode = CommandLine(ModelEditCommand(client))
                     .setExecutionExceptionHandler(PrintErrorAndExit)
@@ -62,7 +62,7 @@ class ModelEditCommandTest {
         whenever(client.modelEdit(batch, ConstraintEnforcement.STRICT)).thenReturn(response)
         var exitCode = Int.MIN_VALUE
 
-        withTextFromSystemIn(ProtocolJson.encodeBatch(batch)).execute {
+        withTextFromSystemIn(ProtocolJson.batch.encode(batch)).execute {
             tapSystemOut {
                 exitCode = CommandLine(ModelEditCommand(client))
                     .setExecutionExceptionHandler(PrintErrorAndExit)
@@ -81,7 +81,7 @@ class ModelEditCommandTest {
         val response = ModelEditResponse(created = emptyMap(), violations = emptyList())
         whenever(client.modelEdit(batch)).thenReturn(response)
         val batchFile = tempDir.resolve("batch.json").apply {
-            writeText(ProtocolJson.encodeBatch(batch))
+            writeText(ProtocolJson.batch.encode(batch))
         }
         var exitCode = Int.MIN_VALUE
 
@@ -119,7 +119,7 @@ class ModelEditCommandTest {
         whenever(client.modelEdit(batch)).thenReturn(ModelEditResponse(created = emptyMap(), violations = emptyList()))
         var exitCode = Int.MIN_VALUE
 
-        withTextFromSystemIn(ProtocolJson.encodeBatch(batch)).execute {
+        withTextFromSystemIn(ProtocolJson.batch.encode(batch)).execute {
             tapSystemOut {
                 exitCode = CommandLine(ModelEditCommand(client))
                     .setExecutionExceptionHandler(PrintErrorAndExit)

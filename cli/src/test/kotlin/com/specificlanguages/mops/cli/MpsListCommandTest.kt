@@ -60,7 +60,7 @@ class MpsListCommandTest {
 
         assertEquals(0, exitCode)
         verify(client).list(isNull(), eq(1), eq(50), eq(false), isNull())
-        assertEquals(response.root, ProtocolJson.decodeListEntry(stdout))
+        assertEquals(response.root, ProtocolJson.listEntry.decode(stdout))
     }
 
     @Test
