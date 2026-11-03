@@ -9,8 +9,8 @@ disable-model-invocation: true
 # Transcript analysis
 
 The goal is to make agents more effective with mops. Mine the **evidence** of an agent's session for **incidents**, find
-their **causes**, and propose **fixes**. The maintainer reads the report and decides which causes to file as issues.
-Read `docs/VISION.md` first: it says what mops is for and what is out of scope.
+their **causes**, and propose **fixes**. The maintainer reads the report and decides which fixes become issues. Read
+`docs/VISION.md` first: it says what mops is for and what is out of scope.
 
 - **Evidence**: transcripts, operation logs, results files, harness counters, captured output, papercut lists.
 - **Incident**: anything that slowed the agent or sent it the wrong way: a failed call, a retry, a misleading result, a
@@ -41,7 +41,7 @@ shows the agent read it then. The places a fix can go:
 - the test's setup (prompt, task, environment, supervision).
 
 Compilers, shells, and other general tools are fixed context. When the agent simply made a mistake that no change could
-have prevented, say so instead of filing it against mops.
+have prevented, say so instead of proposing a mops fix.
 
 **Prefer general, cheap fixes.** State each cause without the test's domain words. If it only makes sense for this
 scenario, fold it into a more general cause or mark it scenario-specific. Choose the cheapest fix that would have
@@ -80,5 +80,5 @@ Write a draft outside the repository, with one section per cause:
 Put the causes with a fix first, most costly first. Then add short lists: setup causes, causes fixed since the test,
 causes not found (with the evidence that would show them), scenario-specific causes, and agent mistakes.
 
-Show the draft to the maintainer, who picks the causes to file. Then publish and file as described under _Field-test
-reports_ in `docs/agents/issue-tracker.md`.
+Show the draft to the maintainer, who picks the fixes that become issues. Then publish the report and open the issues as
+described under _Field-test reports_ in `docs/agents/issue-tracker.md`.
