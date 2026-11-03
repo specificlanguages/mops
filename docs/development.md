@@ -27,16 +27,21 @@ Commit messages on pull request branches are free-form.
 
 `check` runs two kinds of structure checks on the Kotlin modules:
 
-- **detekt** (`./gradlew detekt`) runs only the complexity rule set from `config/detekt/detekt.yml`: method length,
-  cyclomatic and cognitive complexity, nesting depth, parameter count, and class and file size. Reports are written to
-  `<module>/build/reports/detekt/`.
+- **detekt** (`./gradlew detektMain`) runs only the complexity rule set from `config/detekt/detekt.yml` on the main
+  source sets, with type resolution: method length, cyclomatic and cognitive complexity, nesting depth, parameter count,
+  and class and file size. Test sources are not checked. Reports are written to `<module>/build/reports/detekt/`. detekt
+  runs in a separate worker process (`detekt.use.worker.api` in `gradle.properties`).
 - **Module boundary tests** in `architecture-tests/` (`./gradlew :architecture-tests:test`) use
   [Konsist](https://docs.konsist.lemonappdev.com/) to check which packages each module imports, for example that
   `protocol` and `daemon-core` do not use MPS, and that CLI command packages do not depend on each other.
 
-Each module's `detekt-baseline.xml` lists the detekt findings that existed when the rules were introduced. These
+Each module's `detekt-baseline-main.xml` lists the detekt findings that existed when the rules were introduced. These
 findings do not fail the build; new findings do. Fix a new finding instead of adding it to the baseline. After fixing a
-finding in the baseline, run `./gradlew :<module>:detektBaseline` to remove it.
+finding in the baseline, run `./gradlew :<module>:detektBaselineMain` to remove it.
+
+Facades that expose one function per operation, such as `MpsRead`, `MpsWrite`, `MpsExtra`, and `DaemonClient`, are
+marked `@Facade`, and detekt does not limit their number of functions. Classes that implement such a facade are not
+flagged for the functions they override.
 
 The `file-size` pre-commit hook rejects `.kt` and `.md` files larger than 20000 bytes and explains how to split them.
 Files that were already larger are listed in the hook's `exclude` pattern in `.pre-commit-config.yaml`. Remove a file

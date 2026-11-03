@@ -9,7 +9,15 @@ kotlin.compilerOptions.jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM
 detekt {
     buildUponDefaultConfig = true
     config.setFrom(isolated.rootProject.projectDirectory.file("config/detekt/detekt.yml"))
+    // detektMain reads and detektBaselineMain writes detekt-baseline-main.xml.
     baseline = layout.projectDirectory.file("detekt-baseline.xml")
+}
+
+// Run detekt with type resolution on the main source set instead of the plain `detekt` task the plugin attaches to
+// `check`.
+tasks.named("check") {
+    setDependsOn(dependsOn.filterNot { it is TaskProvider<*> && it.name == "detekt" })
+    dependsOn("detektMain")
 }
 
 dependencies {

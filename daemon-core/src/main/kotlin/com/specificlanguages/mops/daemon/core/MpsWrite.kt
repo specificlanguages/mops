@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.daemon.core
 
+import com.specificlanguages.mops.protocol.Facade
 import com.specificlanguages.mops.protocol.ConstraintEnforcement
 import com.specificlanguages.mops.protocol.CreateModelRequest
 import com.specificlanguages.mops.protocol.CreateModuleRequest
@@ -12,6 +13,7 @@ import com.specificlanguages.mops.protocol.ModuleCreationResponse
  * Write operations on the MPS repository. Operations throw [MpsRequestException] on failures that
  * carry a specific error code.
  */
+@Facade
 interface MpsWrite : MpsRead {
     /**
      * Applies one batch of Edit Operations as a unit under a [ConstraintEnforcement] policy. Atomicity is best-effort:

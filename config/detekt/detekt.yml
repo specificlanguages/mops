@@ -9,9 +9,14 @@ complexity:
   # `when` entries without a block of their own do not count toward cyclomatic complexity.
   CyclomaticComplexMethod:
     ignoreSimpleWhenEntries: true
-  # Only non-private functions count toward a class's function limit.
+  # Only non-private functions count toward a class's function limit. Implementations of facade interfaces such as
+  # MpsRead are not flagged for the functions they override.
   TooManyFunctions:
     ignorePrivate: true
+    ignoreOverridden: true
+    # Facades grow with every operation they offer. See com.specificlanguages.mops.protocol.Facade.
+    ignoreAnnotated:
+      - 'Facade'
 
 comments:
   active: false

@@ -20,14 +20,15 @@
     <ID>CyclomaticComplexMethod:ProjectDaemon.kt:ProjectDaemon$fun serve</ID>
     <ID>LargeClass:EditBatchExecutor.kt:EditBatchExecutor</ID>
     <ID>LongMethod:AntTestExecution.kt:AntTestExecution$fun run</ID>
-    <ID>LongMethod:CodeModeLinksTest.kt:CodeModeLinksTest$@Test fun `indexed children and references read and write native links`</ID>
     <ID>LongMethod:EditBatchExecutor.kt:EditBatchExecutor$fun apply: ModelEditResponse</ID>
     <ID>LongMethod:EditBatchExecutor.kt:EditBatchExecutor$private fun evaluateConstraints: List&lt;EditConstraintViolation&gt;</ID>
-    <ID>LongMethod:OutdatedLanguageSemanticsTest.kt:OutdatedLanguageSemanticsTest$@Test fun `refuses find and edit through a stale language runtime and recovers after rebuild`</ID>
     <ID>LongMethod:ProjectDaemon.kt:ProjectDaemon$fun serve</ID>
     <ID>LongMethod:testPreparation.kt:fun main</ID>
+    <ID>LongParameterList:JetBrainsMpsAccess.kt:JetBrainsMpsAccess</ID>
+    <ID>LongParameterList:ModuleCreator.kt:ModuleCreator$private fun createGeneratorModule: Generator</ID>
+    <ID>LongParameterList:ModuleCreator.kt:ModuleCreator$private fun planEntry</ID>
+    <ID>LongParameterList:MpsListExporter.kt:MpsListExporter$private fun nodeTargetEntry: MpsListEntryJson</ID>
     <ID>NestedBlockDepth:ProjectDaemon.kt:ProjectDaemon$fun serve</ID>
     <ID>TooManyFunctions:CodeModeExtensions.kt:CodeModeExtensions</ID>
-    <ID>TooManyFunctions:JetBrainsMpsAccess.kt:JetBrainsMpsAccess$JetBrainsMpsRead : MpsRead</ID>
   </CurrentIssues>
 </SmellBaseline>

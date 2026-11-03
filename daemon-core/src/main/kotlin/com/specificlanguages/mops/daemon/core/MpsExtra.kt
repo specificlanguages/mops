@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.daemon.core
 
+import com.specificlanguages.mops.protocol.Facade
 import com.specificlanguages.mops.protocol.CodeResultResponse
 import com.specificlanguages.mops.protocol.CodeRunRequest
 import com.specificlanguages.mops.protocol.MakeResponse
@@ -16,6 +17,7 @@ import com.specificlanguages.mops.protocol.TestRunRequest
  * render node). A make that runs but reports generation errors is a normal result with
  * [com.specificlanguages.mops.protocol.MakeOutcome.FAILED], not an exception.
  */
+@Facade
 interface MpsExtra {
     /**
      * Makes the modules named by [modules] (each a module name or serialized module reference) together with their
