@@ -8,7 +8,7 @@ class CodeModeNamespaceTest {
     @Test
     fun `nested extension getter and method resolve in a Code Mode shell`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
+            val response = CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform).execute(
                 CodeRunRequest("", """
                     assert mops.is(mops)
                     assert mops.parsing.is(mops.parsing)

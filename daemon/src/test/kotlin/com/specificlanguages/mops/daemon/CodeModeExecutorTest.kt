@@ -76,7 +76,7 @@ class CodeModeExecutorTest {
     @Test
     fun `a worker thread holds its own read access alongside the request thread`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val response = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform).execute(
+            val response = CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform).execute(
                 CodeRunRequest("", """
                     import java.util.concurrent.CyclicBarrier
                     import java.util.concurrent.TimeUnit

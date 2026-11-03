@@ -4,7 +4,9 @@ import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.daemon.core.MpsExtra
 import com.specificlanguages.mops.daemon.core.MpsRead
 import com.specificlanguages.mops.daemon.core.MpsWrite
+import com.specificlanguages.mops.protocol.CodeRunRequest
 import com.specificlanguages.mops.protocol.NodeTarget
+import com.specificlanguages.mops.protocol.TestRunRequest
 
 /**
  * An [MpsAccess] that runs read and write blocks against [operations] and extra blocks against [extra], so tests
@@ -27,4 +29,6 @@ private object UnstubbedExtra : MpsExtra {
     override fun makeProject() = error("MpsExtra.makeProject not stubbed in this test")
     override fun renderNode(target: NodeTarget, allowReflective: Boolean) =
         error("MpsExtra.renderNode not stubbed in this test")
+    override fun runTests(request: TestRunRequest) = error("MpsExtra.runTests not stubbed in this test")
+    override fun runCode(request: CodeRunRequest) = error("MpsExtra.runCode not stubbed in this test")
 }

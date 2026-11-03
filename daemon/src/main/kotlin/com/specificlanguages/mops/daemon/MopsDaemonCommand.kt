@@ -70,6 +70,7 @@ class MopsDaemonCommand : Runnable {
             projectPath = projectPath,
             mpsHome = mpsHome,
             mpsPlugin = mpsPlugin,
+            workspacePath = workspacePath,
             logger = logger,
         ).runWithMpsAccess(projectDaemon::serve)
     }
@@ -85,10 +86,11 @@ class DaemonRunner(
     val projectPath: Path,
     val mpsHome: Path,
     val mpsPlugin: Path,
+    val workspacePath: Path,
     val logger: DaemonLogger
 ) {
 
-    fun runWithMpsAccess(action: (MpsAccess, jetbrains.mps.core.platform.Platform) -> Unit) {
+    fun runWithMpsAccess(action: (MpsAccess) -> Unit) {
         logger.log("verifying environment for project $projectPath")
         val environmentProblem = checkEnvironment()
         if (environmentProblem != null) {
@@ -112,7 +114,7 @@ class DaemonRunner(
                 // A project can pass the filesystem checks yet open with no Project Modules; refuse to serve it so
                 // callers see the startup error instead of every navigation silently returning nothing.
                 projectModulesProblem(project, projectPath)?.let { reportAndThrowStartupError(it) }
-                action(JetBrainsMpsAccess(project as MPSProject, logger), environment.platform)
+                action(JetBrainsMpsAccess(project as MPSProject, logger, workspacePath, environment.platform))
             }
     }
 

@@ -14,18 +14,13 @@
     <ID>CyclomaticComplexMethod:AntTestExecution.kt:AntTestExecution$fun run</ID>
     <ID>CyclomaticComplexMethod:CodeCatalog.kt:CodeCatalog$internal fun document: CodeHelpDocument</ID>
     <ID>CyclomaticComplexMethod:CodeMemberInspector.kt:CodeMemberInspector$fun inspect: CodeTypeMembers</ID>
-    <ID>CyclomaticComplexMethod:CodeModeExecutor.kt:CodeResultAdapter$fun render: String?</ID>
-    <ID>CyclomaticComplexMethod:DomainRequestHandler.kt:DomainRequestHandler$private fun dispatch: DaemonResponse</ID>
     <ID>CyclomaticComplexMethod:EditBatchExecutor.kt:EditBatchExecutor$fun apply: ModelEditResponse</ID>
     <ID>CyclomaticComplexMethod:EditBatchExecutor.kt:EditBatchExecutor$private fun evaluateConstraints: List&lt;EditConstraintViolation&gt;</ID>
     <ID>CyclomaticComplexMethod:ModuleLoadDiagnostics.kt:ModuleLoadDiagnostics$private fun analyze: Problem?</ID>
-    <ID>CyclomaticComplexMethod:ModuleLoadDiagnostics.kt:ModuleLoadDiagnostics$private fun generationEvidence: ModelGenerationEvidence?</ID>
     <ID>CyclomaticComplexMethod:ProjectDaemon.kt:ProjectDaemon$fun serve</ID>
-    <ID>CyclomaticComplexMethod:codeHelpDetails.kt:internal fun examples: List&lt;String&gt;</ID>
     <ID>LargeClass:EditBatchExecutor.kt:EditBatchExecutor</ID>
     <ID>LongMethod:AntTestExecution.kt:AntTestExecution$fun run</ID>
     <ID>LongMethod:CodeModeLinksTest.kt:CodeModeLinksTest$@Test fun `indexed children and references read and write native links`</ID>
-    <ID>LongMethod:DomainRequestHandler.kt:DomainRequestHandler$private fun dispatch: DaemonResponse</ID>
     <ID>LongMethod:EditBatchExecutor.kt:EditBatchExecutor$fun apply: ModelEditResponse</ID>
     <ID>LongMethod:EditBatchExecutor.kt:EditBatchExecutor$private fun evaluateConstraints: List&lt;EditConstraintViolation&gt;</ID>
     <ID>LongMethod:OutdatedLanguageSemanticsTest.kt:OutdatedLanguageSemanticsTest$@Test fun `refuses find and edit through a stale language runtime and recovers after rebuild`</ID>

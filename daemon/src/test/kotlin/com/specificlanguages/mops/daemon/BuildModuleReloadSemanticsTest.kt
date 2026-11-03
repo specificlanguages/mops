@@ -95,7 +95,7 @@ class BuildModuleReloadSemanticsTest {
     }
 
     private fun executor(project: jetbrains.mps.project.MPSProject) =
-        CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform)
+        CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform)
 
     private fun makeImportedLanguageNameStale(projectPath: Path) {
         val file = buildModel(projectPath)

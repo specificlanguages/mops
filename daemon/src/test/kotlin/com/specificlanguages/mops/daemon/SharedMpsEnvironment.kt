@@ -61,11 +61,16 @@ object SharedMpsEnvironment {
         get() {
             val project = ensureSharedProject()
             environment.flushAllEvents()
-            return JetBrainsMpsAccess(project, DaemonLogger())
+            return mpsAccess(project)
         }
 
     val platform: Platform
         get() = environment.platform
+
+    private val workspace: Path by lazy { Files.createTempDirectory("mops-test-workspace") }
+
+    /** A [JetBrainsMpsAccess] over [project] with the shared environment's platform and a temporary workspace. */
+    fun mpsAccess(project: MPSProject): JetBrainsMpsAccess = JetBrainsMpsAccess(project, DaemonLogger(), workspace, platform)
 
     /**
      * Runs [block] against a fresh copy of the fixture project, opened after [prepare] has had a chance to mutate the
@@ -81,7 +86,7 @@ object SharedMpsEnvironment {
         block: (MpsAccess, Path) -> T,
     ): T =
         withOpenProjectCopy(projectName, prepare) { project, projectPath ->
-            block(JetBrainsMpsAccess(project, DaemonLogger()), projectPath)
+            block(mpsAccess(project), projectPath)
         }
 
     /**

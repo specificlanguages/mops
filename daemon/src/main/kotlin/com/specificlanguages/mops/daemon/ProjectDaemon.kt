@@ -4,14 +4,13 @@ import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.protocol.DaemonContext
 import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.DaemonRecord
-import com.specificlanguages.mops.protocol.DaemonRequest
 import com.specificlanguages.mops.protocol.DaemonWorkspace
+import com.specificlanguages.mops.protocol.DomainRequest
 import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.PingRequest
 import com.specificlanguages.mops.protocol.PongResponse
 import com.specificlanguages.mops.protocol.StopRequest
 import com.specificlanguages.mops.protocol.StoppedResponse
-import jetbrains.mps.core.platform.Platform
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintWriter
@@ -46,7 +45,7 @@ class ProjectDaemon(
      *
      * @param mpsAccess Provides read and write access for operations requiring MPS context.
      */
-    fun serve(mpsAccess: MpsAccess, platform: Platform? = null) {
+    fun serve(mpsAccess: MpsAccess) {
         logger.log("environment ready for project ${projectPath.pathString}")
 
         // Load the lifecycle request classes now, while the classloader is healthy, so a later stop is always
@@ -72,7 +71,7 @@ class ProjectDaemon(
                 ),
             )
 
-            val handler = DomainRequestHandler(workspace.path, mpsAccess, platform)
+            val handler = DomainRequestHandler(workspace.path, mpsAccess)
             val connections = Executors.newCachedThreadPool()
             val active = AtomicInteger()
             val lastActivity = AtomicLong(System.nanoTime())
@@ -166,7 +165,7 @@ class ProjectDaemon(
                 )
 
                 is StopRequest -> StoppedResponse()
-                else -> handler.handleDomainRequest(request)
+                is DomainRequest -> handler.handleDomainRequest(request)
             }
         }
 

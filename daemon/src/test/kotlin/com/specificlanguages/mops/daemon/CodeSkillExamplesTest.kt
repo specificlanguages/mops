@@ -24,7 +24,7 @@ class CodeSkillExamplesTest {
         return examples.map { (heading, source) ->
             DynamicTest.dynamicTest(heading) {
                 SharedMpsEnvironment.withOpenProjectCopy("base-language-sandbox") { project, projectPath ->
-                    val executor = CodeModeExecutor(JetBrainsMpsAccess(project, DaemonLogger()), project, SharedMpsEnvironment.platform)
+                    val executor = CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform)
                     fun run(program: String) = checkNotNull(executor.execute(CodeRunRequest("", program, "skill-example.groovy")).output)
                     val result = JsonSlurper().parseText(run(source))
                     val nodes = when (heading) {

@@ -1,7 +1,11 @@
 package com.specificlanguages.mops.daemon.core
 
+import com.specificlanguages.mops.protocol.CodeResultResponse
+import com.specificlanguages.mops.protocol.CodeRunRequest
 import com.specificlanguages.mops.protocol.MakeResponse
 import com.specificlanguages.mops.protocol.NodeTarget
+import com.specificlanguages.mops.protocol.TestRunReport
+import com.specificlanguages.mops.protocol.TestRunRequest
 
 /**
  * Operations that must run *outside* an MPS model read/write action, reached through [MpsAccess.extra] rather than
@@ -40,4 +44,10 @@ interface MpsExtra {
 
     /** Saves dirty project settings with no read/write action active. */
     fun saveProject()
+
+    /** Runs the tests of a **Test Selection** in a separate process and returns its **Test Run Report**. */
+    fun runTests(request: TestRunRequest): TestRunReport
+
+    /** Runs a Code Mode program; the program takes its own model access through its access blocks. */
+    fun runCode(request: CodeRunRequest): CodeResultResponse
 }

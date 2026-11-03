@@ -19,9 +19,9 @@ admission. Model checks also remain exclusive because they invoke shared checker
 rendering remains exclusive and coordinates its own EDT/model access. Neither admission nor an entire extra operation
 holds an MPS model lock; extra operations establish their own access boundaries.
 
-Read-only requests do not save the project. Successful exclusive requests that may modify it retain their existing save
-behavior. Refresh failure fails every reader in the affected batch; request and refresh failures release admission for
-the next queued request.
+Read-only requests, model checks, rendering, and dry-run creation do not save the project. Successful edits, creation,
+builds, tests, and Code Mode execution save it afterwards. Refresh failure fails every reader in the affected batch;
+request and refresh failures release admission for the next queued request.
 
 Stop acknowledges shutdown, closes the listening socket, and drains accepted connections before the MPS environment is
 disposed. A connection that does not complete its request line times out after ten seconds. The CLI's existing stop
