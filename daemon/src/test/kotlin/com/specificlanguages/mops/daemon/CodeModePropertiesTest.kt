@@ -145,4 +145,41 @@ class CodeModePropertiesTest {
             assertEquals("ok", response.output)
         }
     }
+
+    @Test
+    fun `enumeration properties read and write literal names`() {
+        SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
+            val response = CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform).execute(
+                CodeRunRequest("", """
+                    project.command {
+                        def link = mops.lookup.requireNode('$CONTENT_LINK_NODE_REFERENCE')
+                        def cardinality = link.concept.properties.find { it.name == 'sourceCardinality' }
+                        assert link.properties['sourceCardinality'] == '_1'
+                        link.properties['sourceCardinality'] = '_0__n'
+                        assert link.properties['sourceCardinality'] == '_0__n'
+                        assert link.getProperty(cardinality) == 'fLJekj5/_0__n'
+                        link.properties['sourceCardinality'] = '1..n'
+                        assert link.properties['sourceCardinality'] == '_1__n'
+                        link.properties['sourceCardinality'] = link.properties['sourceCardinality']
+                        assert link.properties['sourceCardinality'] == '_1__n'
+                        try {
+                            link.properties['sourceCardinality'] = 'bogus'
+                            assert false: 'Unknown literals must reject writes'
+                        } catch (IllegalArgumentException expected) {
+                            assert expected.message.contains("'bogus'"): expected.message
+                            assert expected.message.contains('_0__1 (0..1)'): expected.message
+                        }
+                        assert link.properties['sourceCardinality'] == '_1__n'
+                        return 'ok'
+                    }
+                """.trimIndent(), "enum-properties.groovy"),
+            )
+            assertEquals("ok", response.output)
+        }
+    }
+
+    private companion object {
+        const val CONTENT_LINK_NODE_REFERENCE =
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566910"
+    }
 }
