@@ -2,19 +2,12 @@ package com.specificlanguages.mops.daemoncomms
 
 import com.specificlanguages.mops.launcher.MpsLaunchArgs.getJvmArgsFor
 import com.specificlanguages.mops.protocol.*
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
 import java.util.*
-import java.util.jar.JarFile
-import kotlin.io.path.extension
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.pathString
 import kotlin.io.path.readText
@@ -30,7 +23,7 @@ class FullClasspathDaemonLauncher(
     private val records: DaemonRecordStore,
     private val startupTimeout: Duration = startupTimeoutFromEnvironment(System.getenv(STARTUP_TIMEOUT_ENV)),
     private val javaOptions: List<String> = javaOptionsFromEnvironment(System.getenv(JAVA_OPTIONS_ENV)),
-    private val applicationHome: Path? = discoverApplicationHome(),
+    private val distribution: DaemonDistribution = DaemonDistribution(),
 ) : DaemonLauncher {
 
     override fun connectToExistingDaemon(record: DaemonRecord): DefaultDaemonClient {
@@ -39,81 +32,96 @@ class FullClasspathDaemonLauncher(
 
     override fun startDaemon(context: DaemonContext): DefaultDaemonClient {
         val token = UUID.randomUUID().toString()
-
         val workspace = records.paths.workspace(context.realProjectPath)
-
-        val workDir = workspace.daemonWorkingDir()
-        val logFile = workspace.logFile()
-        val launchJvmArgs = getJvmArgsFor(context.realMpsHome)
-
-        val mpsClasspath = mpsRuntimeClasspath(context.realMpsHome)
-        val daemonClasspath = daemonClasspath().split(File.pathSeparator).filter { it.isNotBlank() }
-        val mpsPlugin = daemonMpsPlugin()
-        // MPS can bundle a complete Groovy distribution, including extension modules compiled against its core.
-        // Use that runtime as a unit; the mops core dependency is a fallback for MPS distributions without Groovy.
-        val selectedDaemonClasspath = if (mpsClasspath.any(::providesGroovyCompiler)) {
-            daemonClasspath.filterNot(::providesGroovyCompiler)
-        } else {
-            daemonClasspath
-        }
-        val runtimeClasspath = (selectedDaemonClasspath + mpsClasspath).joinToString(File.pathSeparator)
+        val runtimeClasspath = runtimeClasspath(context.realMpsHome)
+        val mpsPlugin = distribution.mpsPlugin()
 
         workspace.createDirectories()
-        val classpathArgFile = Files.createTempFile(workDir, "daemon-classpath-", ".args")
+        val classpathArgFile = writeClasspathArgFile(workspace.daemonWorkingDir(), runtimeClasspath)
         try {
-            Files.writeString(
-                classpathArgFile,
-                "-cp\n\"${runtimeClasspath.replace("\\", "\\\\").replace("\"", "\\\"")}\"\n",
-                Charset.defaultCharset(),
-            )
-            val processBuilder = ProcessBuilder(
-                buildList {
-                    add(javaExecutableFromJavaHome(context.realJavaHome).pathString)
-                    addAll(launchJvmArgs)
-                    addAll(mpsBootstrapJvmArgs(context.realMpsHome))
-                    // The daemon calls native code to detach from the launching session or console.
-                    add("--enable-native-access=ALL-UNNAMED")
-                    // IdeaEnvironment otherwise forces plugin modules onto the application classpath.
-                    add("-Didea.force.use.core.classloader=false")
-                    add("-Didea.config.path=${workspace.ideaConfigDir()}")
-                    add("-Didea.system.path=${workspace.ideaSystemDir()}")
-                    addAll(javaOptions)
-                    add("@${classpathArgFile.pathString}")
-                    add("com.specificlanguages.mops.daemon.MainKt")
-                    add("--project-path")
-                    add(context.realProjectPath.pathString)
-                    add("--workspace-path")
-                    add(workspace.path.pathString)
-                    add("--mps-home")
-                    add(context.realMpsHome.pathString)
-                    add("--mps-plugin")
-                    add(mpsPlugin.pathString)
-                    add("--token")
-                    add(token)
-                })
-                .directory(workDir.toFile())
+            val logFile = workspace.logFile()
+            val process = ProcessBuilder(daemonCommand(context, workspace, mpsPlugin, classpathArgFile, token))
+                .directory(workspace.daemonWorkingDir().toFile())
                 .redirectOutput(ProcessBuilder.Redirect.appendTo(logFile.toFile()))
                 .redirectError(ProcessBuilder.Redirect.appendTo(logFile.toFile()))
-
-            val process = processBuilder.start()
-
-            var startupSucceeded = false
-            try {
-                process.outputStream.close()
-                val record = waitForDaemonRecord(process, context, token, logFile, workspace)
-                val client = DefaultDaemonClient(port = record.port, token = record.token, timeout = REQUEST_TIMEOUT, daemonPid = record.pid)
-
-                client.ping() // throws on error
-
-                startupSucceeded = true
-                return client
-            } finally {
-                if (!startupSucceeded && process.isAlive) {
-                    process.destroyForcibly()
-                }
-            }
+                .start()
+            return connectToStartedDaemon(process, context, token, workspace)
         } finally {
             Files.deleteIfExists(classpathArgFile)
+        }
+    }
+
+    /** Joins the daemon distribution and the MPS runtime of [mpsHome] into the daemon JVM classpath. */
+    private fun runtimeClasspath(mpsHome: Path): String {
+        val mpsClasspath = MpsProductInfo.runtimeClasspath(mpsHome)
+        return (distribution.daemonClasspath(mpsClasspath) + mpsClasspath).joinToString(File.pathSeparator)
+    }
+
+    private fun writeClasspathArgFile(workDir: Path, runtimeClasspath: String): Path {
+        val classpathArgFile = Files.createTempFile(workDir, "daemon-classpath-", ".args")
+        Files.writeString(
+            classpathArgFile,
+            "-cp\n\"${runtimeClasspath.replace("\\", "\\\\").replace("\"", "\\\"")}\"\n",
+            Charset.defaultCharset(),
+        )
+        return classpathArgFile
+    }
+
+    private fun daemonCommand(
+        context: DaemonContext,
+        workspace: DaemonWorkspace,
+        mpsPlugin: Path,
+        classpathArgFile: Path,
+        token: String,
+    ): List<String> = buildList {
+        add(javaExecutableFromJavaHome(context.realJavaHome).pathString)
+        addAll(getJvmArgsFor(context.realMpsHome))
+        addAll(MpsProductInfo.bootstrapJvmArgs(context.realMpsHome))
+        // The daemon calls native code to detach from the launching session or console.
+        add("--enable-native-access=ALL-UNNAMED")
+        // IdeaEnvironment otherwise forces plugin modules onto the application classpath.
+        add("-Didea.force.use.core.classloader=false")
+        add("-Didea.config.path=${workspace.ideaConfigDir()}")
+        add("-Didea.system.path=${workspace.ideaSystemDir()}")
+        addAll(javaOptions)
+        add("@${classpathArgFile.pathString}")
+        add("com.specificlanguages.mops.daemon.MainKt")
+        add("--project-path")
+        add(context.realProjectPath.pathString)
+        add("--workspace-path")
+        add(workspace.path.pathString)
+        add("--mps-home")
+        add(context.realMpsHome.pathString)
+        add("--mps-plugin")
+        add(mpsPlugin.pathString)
+        add("--token")
+        add(token)
+    }
+
+    /**
+     * Waits until the started daemon [process] writes its record and answers a ping. Kills the process when it does
+     * not.
+     */
+    private fun connectToStartedDaemon(
+        process: Process,
+        context: DaemonContext,
+        token: String,
+        workspace: DaemonWorkspace,
+    ): DefaultDaemonClient {
+        var startupSucceeded = false
+        try {
+            process.outputStream.close()
+            val record = waitForDaemonRecord(process, context, token, workspace.logFile(), workspace)
+            val client = connectToExistingDaemon(record)
+
+            client.ping() // throws on error
+
+            startupSucceeded = true
+            return client
+        } finally {
+            if (!startupSucceeded && process.isAlive) {
+                process.destroyForcibly()
+            }
         }
     }
 
@@ -175,203 +183,10 @@ class FullClasspathDaemonLauncher(
             )
         )
 
-    private fun daemonClasspath(): String = System.getProperty("mops.daemon.classpath") ?: distributionDaemonClasspath()
-
-    private fun daemonMpsPlugin(): Path {
-        val configured = System.getProperty(DAEMON_MPS_PLUGIN_PROPERTY)?.let(Path::of)
-        val plugin = configured ?: applicationHome?.resolve("mps-plugins")?.resolve(DAEMON_MPS_PLUGIN_FILE)
-            ?: throw IllegalStateException(
-                "Could not determine application home, set $DAEMON_MPS_PLUGIN_PROPERTY JVM property explicitly",
-            )
-        require(plugin.isRegularFile()) { "MOPS daemon plugin is missing: ${plugin.toAbsolutePath().normalize()}" }
-        return plugin.toAbsolutePath().normalize()
-    }
-
-    private fun distributionDaemonClasspath(): String {
-        val home = applicationHome
-            ?: throw IllegalStateException("Could not determine application home, set mops.daemon.classpath JVM property explicitly")
-        val classpathFile = home.resolve("lib").resolve(DAEMON_CLASSPATH_FILE)
-        if (!Files.isRegularFile(classpathFile)) {
-            throw IllegalStateException("File lib/${DAEMON_CLASSPATH_FILE} is missing, set mops.daemon.classpath JVM property explicitly")
-        }
-
-        return Files.readAllLines(classpathFile)
-            .asSequence()
-            .map { it.substringBefore("#").trim() }
-            .filter { it.isNotEmpty() }
-            .map { entry -> home.resolve(entry) }
-            .joinToString(File.pathSeparator) { it.normalize().pathString }
-    }
-
-    private fun providesGroovyCompiler(entry: String): Boolean {
-        val file = File(entry)
-        return file.isFile && file.extension == "jar" && JarFile(file).use {
-            it.getJarEntry("org/codehaus/groovy/control/CompilerConfiguration.class") != null
-        }
-    }
-
     companion object {
-        private const val DAEMON_CLASSPATH_FILE = "mops-daemon.classpath"
-        private const val DAEMON_MPS_PLUGIN_FILE = "mops-daemon-plugin.jar"
-        internal const val DAEMON_MPS_PLUGIN_PROPERTY = "mops.daemon.mps.plugin"
         private const val STARTUP_TIMEOUT_ENV = "MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS"
         private const val JAVA_OPTIONS_ENV = "MOPS_DAEMON_JAVA_OPTIONS"
         private val REQUEST_TIMEOUT = Duration.ofMinutes(2)
-
-        internal fun mpsRuntimeClasspath(
-            mpsHome: Path,
-            osName: String = System.getProperty("os.name"),
-            osArch: String = System.getProperty("os.arch"),
-        ): List<String> {
-            val descriptor = listOf(
-                mpsHome.resolve("product-info.json"),
-                mpsHome.resolve("Resources/product-info.json"),
-            ).firstOrNull(Files::isRegularFile)
-
-            val runtimeJars = if (descriptor == null) {
-                legacyMpsRuntimeClasspath(mpsHome)
-            } else {
-                val launches = readMpsLaunches(descriptor)
-                val platform = hostPlatform(osName, osArch, descriptor)
-                selectMpsLaunch(launches, platform, descriptor).bootClassPathJarNames
-                    .map { mpsHome.resolve("lib").resolve(it) }
-                    .filter(Files::isRegularFile)
-                    .map(Path::pathString)
-            }
-
-            val mpsTool = mpsHome.resolve("lib/mpsant/mps-tool.jar")
-            return if (mpsTool.isRegularFile() && mpsTool.pathString !in runtimeJars) {
-                runtimeJars + mpsTool.pathString
-            } else {
-                runtimeJars
-            }
-        }
-
-        internal fun mpsBootstrapJvmArgs(
-            mpsHome: Path,
-            osName: String = System.getProperty("os.name"),
-            osArch: String = System.getProperty("os.arch"),
-        ): List<String> {
-            val descriptor = listOf(
-                mpsHome.resolve("product-info.json"),
-                mpsHome.resolve("Resources/product-info.json"),
-            ).firstOrNull(Files::isRegularFile) ?: return emptyList()
-            val launch = selectMpsLaunch(readMpsLaunches(descriptor), hostPlatform(osName, osArch, descriptor), descriptor)
-            return launch.bootstrapJvmArgs.map {
-                it.replace("%IDE_HOME%", mpsHome.pathString).replace("\$IDE_HOME", mpsHome.pathString)
-            }
-        }
-
-        private fun readMpsLaunches(descriptor: Path): List<MpsLaunch> =
-            try {
-                val launches = Json.parseToJsonElement(descriptor.readText()).jsonObject["launch"]?.jsonArray
-                    ?: error("missing launch array")
-                require(launches.isNotEmpty()) { "launch array is empty" }
-                launches.mapIndexed { index, element ->
-                    val launch = element.jsonObject
-                    val os = launch["os"]?.jsonPrimitive
-                        ?.also { require(it.isString) { "launch[$index].os is not a string" } }
-                        ?.contentOrNull
-                        ?: error("launch[$index] is missing os")
-                    val arch = launch["arch"]?.jsonPrimitive?.let {
-                        require(it.isString) { "launch[$index].arch is not a string" }
-                        it.content
-                    }
-                    val bootClassPath = launch["bootClassPathJarNames"]?.jsonArray
-                        ?: error("launch[$index] is missing bootClassPathJarNames")
-                    MpsLaunch(
-                        os = os,
-                        arch = arch,
-                        bootstrapJvmArgs = launch["additionalJvmArguments"]?.jsonArray?.mapIndexed { argIndex, arg ->
-                            val argument = arg.jsonPrimitive
-                            require(argument.isString) { "launch[$index].additionalJvmArguments[$argIndex] is not a string" }
-                            argument.content
-                        }?.filter { it.startsWith("-Xbootclasspath/a:") } ?: emptyList(),
-                        bootClassPathJarNames = bootClassPath.mapIndexed { jarIndex, jar ->
-                            val jarName = jar.jsonPrimitive
-                            require(jarName.isString) {
-                                "launch[$index].bootClassPathJarNames[$jarIndex] is not a string"
-                            }
-                            jarName.content
-                        },
-                    )
-                }
-            } catch (exception: Exception) {
-                throw IllegalStateException(
-                    "Invalid MPS product descriptor $descriptor: ${exception.message ?: exception.javaClass.simpleName}",
-                    exception,
-                )
-            }
-
-        private fun selectMpsLaunch(
-            launches: List<MpsLaunch>,
-            platform: HostPlatform,
-            descriptor: Path,
-        ): MpsLaunch {
-            val exactMatches = launches.filter { it.os == platform.os && it.arch == platform.arch }
-            if (exactMatches.size == 1) {
-                return exactMatches.single()
-            }
-            if (launches.size == 1) {
-                return launches.single()
-            }
-
-            val commonBootClasspath = launches.map { it.bootClassPathJarNames to it.bootstrapJvmArgs }.distinct()
-            if (commonBootClasspath.size == 1) {
-                return launches.first()
-            }
-
-            throw IllegalStateException(
-                "Ambiguous launch entries in MPS product descriptor $descriptor for ${platform.os}/${platform.arch}",
-            )
-        }
-
-        private fun hostPlatform(osName: String, osArch: String, descriptor: Path): HostPlatform {
-            val os = when {
-                osName.startsWith("Mac", ignoreCase = true) -> "macOS"
-                osName.startsWith("Linux", ignoreCase = true) -> "Linux"
-                osName.startsWith("Windows", ignoreCase = true) -> "Windows"
-                else -> throw IllegalStateException(
-                    "Cannot select a launch entry from MPS product descriptor $descriptor: unsupported host OS $osName",
-                )
-            }
-            val arch = when (osArch.lowercase()) {
-                "amd64", "x86_64" -> "amd64"
-                "aarch64", "arm64" -> "aarch64"
-                else -> throw IllegalStateException(
-                    "Cannot select a launch entry from MPS product descriptor $descriptor: unsupported host architecture $osArch",
-                )
-            }
-            return HostPlatform(os, arch)
-        }
-
-        private fun legacyMpsRuntimeClasspath(mpsHome: Path): List<String> =
-            buildList {
-                addAll(jarsIn(mpsHome.resolve("lib")))
-                addAll(jarsIn(mpsHome.resolve("lib/modules")))
-            }
-
-        private fun jarsIn(directory: Path): List<String> {
-            if (!Files.isDirectory(directory)) {
-                return emptyList()
-            }
-            return Files.list(directory).use { entries ->
-                entries
-                    .filter { Files.isRegularFile(it) && it.extension == "jar" }
-                    .map { it.pathString }
-                    .sorted()
-                    .toList()
-            }
-        }
-
-        private data class HostPlatform(val os: String, val arch: String)
-
-        private data class MpsLaunch(
-            val os: String,
-            val arch: String?,
-            val bootClassPathJarNames: List<String>,
-            val bootstrapJvmArgs: List<String>,
-        )
 
         internal fun startupTimeoutFromEnvironment(value: String?): Duration {
             if (value == null) return Duration.ofMinutes(5)
@@ -415,17 +230,6 @@ class FullClasspathDaemonLauncher(
             return "another process (pid $holderPid) still holds the MPS workspace lock at $configDir, " +
                 "likely an earlier daemon that did not exit; stop it with `mops daemon stop` or `kill $holderPid`, " +
                 "then retry"
-        }
-
-        private fun discoverApplicationHome(): Path? {
-            val location = FullClasspathDaemonLauncher::class.java.protectionDomain.codeSource?.location
-                ?: return null
-            val codeSource = runCatching { Path.of(location.toURI()).toAbsolutePath().normalize() }.getOrNull()
-                ?: return null
-            val libDir =
-                if (Files.isRegularFile(codeSource)) codeSource.parent
-                else codeSource
-            return libDir?.parent
         }
     }
 }
