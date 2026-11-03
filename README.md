@@ -49,8 +49,8 @@ language build task actions. It inspects all Gradle projects in the build and ta
 discovered `mpsDefaults` extension or a conventional `RunAntScript` task. Task-action overrides, included builds, and
 custom Ant property loading are outside this heuristic; Specific Languages values are project defaults.
 
-If provider resolution fails, discovery stops and keeps Gradle's dependency diagnostics; check the configured runtime
-versions and repositories. If a pinned MPS prerelease is no longer available, update the project's MPS prerelease
+If provider resolution fails, discovery stops and keeps Gradle’s dependency diagnostics; check the configured runtime
+versions and repositories. If a pinned MPS prerelease is no longer available, update the project’s MPS prerelease
 version to the newest available version; prerelease artifacts are periodically deleted. If discovery finds only some
 paths, it shows them, writes no wrapper, and exits with status 1. When both paths are known, it writes the wrappers and
 exits with status 0. Missing or unusable runtime directories are reported as warnings, so wrappers can be created before
@@ -277,10 +277,10 @@ Reports the load state of the project's languages and of every other project mod
 trace a `CONCEPT_NOT_FOUND` from `find instances` to its cause: a concept resolves by name only if its owning language's
 runtime is loaded. Text output starts with a `modules\t<loaded>/<total> loaded\t<failed> failed` summary row, which is a
 result row, not metadata. Then comes one tab-separated row per failed module: its name, `kind`, and a reason code. For
-the reason `BROKEN_DEPENDENCIES`, indented rows follow that name the root-cause modules to fix. A final `#` metadata
-line says that modules without a Java facet are not listed; inspect them with `diagnose module`. Lines starting with `#`
-are metadata, never results, so `grep -v '^#'` leaves only rows. `--all` also lists the modules that loaded; `--json`
-prints the full structured diagnosis.
+the reason `BROKEN_DEPENDENCIES`, indented rows below it name the root-cause modules to fix. A final `#` metadata line
+says that modules without a Java facet are not listed; inspect them with `diagnose module`. Lines starting with `#` are
+metadata, never results, so `grep -v '^#'` leaves only rows. `--all` also lists the modules that loaded; `--json` prints
+the full structured diagnosis.
 
 ```sh
 mops --mps-home <path> diagnose module [--json] <module>
@@ -360,7 +360,7 @@ mops test --timeout 60
 ```
 
 Tests run in a separate MPS process using the selected distribution's testing framework. Selection accepts a project
-(omit the target), module, model, or root test case; individual test methods are unsupported. The default build includes
+(omit the target), module, model, or root test case. Individual test methods are unsupported. The default build includes
 the owning modules and required dependencies. `--no-build` requires existing compiled classes. The timeout limits test
 execution, counted after build and discovery, and defaults to 900 seconds; `--timeout 0` disables it. Ctrl-C cancels the
 worker. Standalone cancellation and timeouts leave the daemon usable.
