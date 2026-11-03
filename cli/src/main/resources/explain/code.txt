@@ -22,8 +22,10 @@ to print their references, or select their contents while holding model access.
 Every run receives `project`, the daemon's native `jetbrains.mps.project.Project`. Values returned by resolvers and
 creation extensions are native MPS objects. Use `project.read { ... }` for model reads and `project.command { ... }`
 for mutations. Access blocks cannot nest or start under already-held model access. Make and editor rendering run
-outside access blocks. A successful command saves project changes; commands are non-transactional, so failure may leave
-native partial changes or external side effects.
+outside access blocks. A successful command saves project changes. When a command throws, every changed model is
+reloaded from disk before the error is reported, so the failed command's model changes are dropped and a later command
+does not save them. Other effects of a failed command remain: modules and models it created, module changes (a later
+command saves them), and changes outside MPS.
 
 The program runs on the daemon request thread, outside any model access. `project.read` and `project.command` open
 access for the calling thread only, so a worker thread started by the program may open its own `project.read`. The
