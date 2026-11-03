@@ -14,12 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # A pull request run skips the test jobs when an earlier run of the same pull request already passed for the same git
-  # tree, for example after a stacked pull request is rebased onto main without changing its code. `CI passed` saves a
-  # `ci-passed-<tree>` cache entry when every job succeeds. Pull request caches are scoped to the pull request's merge
-  # ref, so a run only finds markers saved by runs of the same pull request or of its base and default branches.
-  # Pushes to main and manual dispatches always run in full. To force a full pull request run, delete the marker
-  # (`gh cache delete ci-passed-<tree>`) and re-run the workflow.
+  # Pull request runs skip the test jobs when CI already passed for the tested git tree. docs/development.md describes
+  # the `ci-passed-<tree>` cache entry and how to force a full run.
   tree-check:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -32,7 +28,10 @@ jobs:
           persist-credentials: false
       - name: Compute the tree hash of the tested commit
         id: tree
-        run: echo "tree=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
+        run: |
+          tree="$(git rev-parse 'HEAD^{tree}')"
+          echo "Tree: $tree" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "tree=$tree" >> "$GITHUB_OUTPUT"
       - name: Look up a passed marker for this tree
         id: marker
         if: github.event_name == 'pull_request'
