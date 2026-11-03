@@ -116,8 +116,9 @@ private fun waitForAllDaemons(daemonHome: Path) {
 fun copyTestingProject(target: Path): Path {
     val project = copyTestProject("testing", target)
     val mpsHome = Path.of(System.getProperty("test.mpsHome"))
-    // MPS 2026.2 packages the Jupiter API stubs in JUnit; parameterized-test stubs remain in org.junit.junit5.
-    if (mpsHome.resolve("lib/intellij.libraries.junit5.jar").exists()) {
+    // MPS 2026.2 (junit5 jar) and 2026.3 (junit6 jar) package the Jupiter API stubs in JUnit; parameterized-test stubs
+    // remain in org.junit.junit5. MPS 2026.3 discovers @Test methods only when the annotation comes from JUnit.
+    if (listOf("junit5", "junit6").any { mpsHome.resolve("lib/intellij.libraries.$it.jar").exists() }) {
         for (name in listOf("ordinary", "slow", "crash")) {
             val model = project.resolve("solutions/tests/models/$name.mps")
             model.writeText(model.readText().replace(

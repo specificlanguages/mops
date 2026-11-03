@@ -167,6 +167,10 @@ fun Test.configureMpsTest(mpsRoot: Provider<File>, workDirName: String) {
                 include("lib/*.jar")
                 // Exercise the bundled code-mode runtime in daemon tests.
                 exclude("lib/groovy.jar")
+                // MPS 2026.3 ships two incompatible builds of kotlin-metadata-jvm in lib/. Only
+                // kotlin-metadata-jvm-*-mps.jar is on the boot classpath in product-info.json, which the production
+                // daemon uses; on this flat classpath the other one shadows it and breaks Kotlin stub models.
+                exclude("lib/intellij.libraries.kotlin.metadata.jar")
                 include("lib/modules/*.jar")
                 include("lib/mpsant/mps-tool.jar")
             }
@@ -242,8 +246,13 @@ val mpsVersionTests = supportedMpsVersions.map { mpsVersion ->
             }
         }
     }
-    dependencies.add(mps.name, "com.jetbrains:mps:$mpsVersion")
-    dependencies.add(jbr.name, "com.jetbrains.mps:mps-jbr:$mpsVersion")
+    if (mpsVersion == "Prerelease") {
+        dependencies.add(mps.name, libs.mps.prerelease.distribution)
+        dependencies.add(jbr.name, libs.mps.prerelease.jbr)
+    } else {
+        dependencies.add(mps.name, "com.jetbrains:mps:$mpsVersion")
+        dependencies.add(jbr.name, "com.jetbrains.mps:mps-jbr:$mpsVersion")
+    }
     val mpsRoot = mpsPlatformCache.getMpsRoot(mps)
     val jbrHome = mpsPlatformCache.getJbrRoot(jbr).map {
         if (jbrOs == "osx") it.resolve("Contents/Home") else it
