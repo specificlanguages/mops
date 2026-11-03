@@ -84,7 +84,7 @@ class ReplaceNotationTest {
                 ),
             ),
         )
-        assertEquals(batch, ProtocolJson.decodeBatch(ProtocolJson.encodeBatch(batch)))
+        assertEquals(batch, ProtocolJson.batch.decode(ProtocolJson.batch.encode(batch)))
     }
 
     @Test

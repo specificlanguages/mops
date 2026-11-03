@@ -7,7 +7,7 @@ import java.nio.file.StandardCopyOption.*
 
 /** Each replacement is atomic, so a killed worker leaves a complete JSON snapshot. */
 class TestReportStore(private val path: Path, private val nanoTime: () -> Long = System::nanoTime) {
-    private var report = if (Files.exists(path)) ProtocolJson.decodeTestReport(Files.readString(path))
+    private var report = if (Files.exists(path)) ProtocolJson.testReport.decode(Files.readString(path))
         else TestRunReport(path.toAbsolutePath().toString())
 
     private var timing: String? = null
@@ -41,7 +41,7 @@ class TestReportStore(private val path: Path, private val nanoTime: () -> Long =
         report = change(report)
         Files.createDirectories(path.parent)
         val pending = path.resolveSibling("${path.fileName}.pending")
-        Files.writeString(pending, ProtocolJson.encodeTestReport(report))
+        Files.writeString(pending, ProtocolJson.testReport.encode(report))
         Files.move(pending, path, ATOMIC_MOVE, REPLACE_EXISTING)
     }
     fun phase(phase: String) = update { it.copy(phase = phase) }

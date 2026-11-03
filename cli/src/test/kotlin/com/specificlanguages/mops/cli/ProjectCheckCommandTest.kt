@@ -98,7 +98,7 @@ class ProjectCheckCommandTest {
                 truncated = true,
                 hint = "pass --limit 0 for all",
             ),
-            ProtocolJson.decodeCheckSummary(lines[1]),
+            ProtocolJson.checkSummary.decode(lines[1]),
         )
     }
 

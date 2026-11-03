@@ -20,8 +20,8 @@ class CreateModelCommand(private val environment: CommandEnvironment) : CliComma
         val plan = response.plan
         val report = response.report
         when {
-            json && plan != null -> println(ProtocolJson.encodeModelCreationPlan(plan))
-            json && report != null -> println(ProtocolJson.encodeModelCreationReport(report))
+            json && plan != null -> println(ProtocolJson.modelCreationPlan.encode(plan))
+            json && report != null -> println(ProtocolJson.modelCreationReport.encode(report))
             plan != null -> println("would create model ${plan.modelName} in module ${plan.moduleName} [${plan.moduleReference}]\n" +
                 "  persistence: ${plan.persistence.render()}\n  location: ${plan.location}")
             report != null -> println("created model ${report.modelName} [${report.modelReference}] in module " +

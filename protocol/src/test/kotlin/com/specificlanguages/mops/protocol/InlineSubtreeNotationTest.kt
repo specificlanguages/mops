@@ -152,8 +152,8 @@ class InlineSubtreeNotationTest {
             ),
         )
 
-        val encoded = ProtocolJson.encodeBatch(batch)
-        assertEquals(batch, ProtocolJson.decodeBatch(encoded))
+        val encoded = ProtocolJson.batch.encode(batch)
+        assertEquals(batch, ProtocolJson.batch.decode(encoded))
     }
 
     @Test

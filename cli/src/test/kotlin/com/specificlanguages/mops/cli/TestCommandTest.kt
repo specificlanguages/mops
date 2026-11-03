@@ -44,7 +44,7 @@ class TestCommandTest {
         var stdout = ""
         val stderr = tapSystemErr { stdout = tapSystemOut { assertEquals(1, run(client, "--json")) } }
 
-        assertEquals(report, ProtocolJson.decodeTestReport(stdout))
+        assertEquals(report, ProtocolJson.testReport.decode(stdout))
         assertEquals("", stderr)
     }
 

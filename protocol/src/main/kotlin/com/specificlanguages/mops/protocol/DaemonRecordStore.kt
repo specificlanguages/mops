@@ -35,7 +35,7 @@ class DaemonRecordStore(val paths: DaemonPaths) {
                 .map {
                     StoredDaemonRecord(
                         it,
-                        ProtocolJson.decodeRecord(Files.readString(it))
+                        ProtocolJson.record.decode(Files.readString(it))
                     )
                 }
                 .toList()
@@ -87,7 +87,7 @@ class DaemonWorkspace(val path: Path) {
         val recordPath = recordPath()
         recordPath.parent.createDirectories()
         val temporary = recordPath.resolveSibling("${recordPath.fileName}.tmp")
-        writeString(temporary, ProtocolJson.encodeRecord(record))
+        writeString(temporary, ProtocolJson.record.encode(record))
         move(
             temporary,
             recordPath,
@@ -101,7 +101,7 @@ class DaemonWorkspace(val path: Path) {
         if (!Files.isRegularFile(path)) {
             return null
         }
-        return StoredDaemonRecord(path, ProtocolJson.decodeRecord(Files.readString(path)))
+        return StoredDaemonRecord(path, ProtocolJson.record.decode(Files.readString(path)))
     }
 
     /**

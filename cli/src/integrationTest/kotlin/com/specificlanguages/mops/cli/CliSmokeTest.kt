@@ -109,7 +109,7 @@ class CliSmokeTest {
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
         val batchFile = tempDir.resolve("batch.json")
         batchFile.writeText(
-            ProtocolJson.encodeBatch(
+            ProtocolJson.batch.encode(
                 EditBatch(
                     operations = listOf(
                         EditOperation.SetProperty(

@@ -26,12 +26,12 @@ class TestFamiliesIntegrationTest {
         try {
             val all = cli("test", "--json")
             assertEquals(1, all.exitCode, all.output)
-            val allReport = ProtocolJson.decodeTestReport(all.stdout)
+            val allReport = ProtocolJson.testReport.decode(all.stdout)
             assertEquals("TEST_FAILED", allReport.outcome, all.output)
             assertTrue(allReport.complete, all.output)
             val parameterized = cli("test", "mops.tests", ".ordinary", "ParameterizedCase", "--no-build", "--json")
             assertEquals(0, parameterized.exitCode, parameterized.output)
-            allReport to ProtocolJson.decodeTestReport(parameterized.stdout)
+            allReport to ProtocolJson.testReport.decode(parameterized.stdout)
         } finally {
             stopDaemons(project, home)
         }

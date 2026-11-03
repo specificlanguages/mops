@@ -85,7 +85,7 @@ class ExamplesCommandTest {
         val schema = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12)
             .getSchema(ExplainTopics.editSchema())
         for (batch in batches) {
-            assertTrue(ProtocolJson.decodeBatch(batch).operations.isNotEmpty())
+            assertTrue(ProtocolJson.batch.decode(batch).operations.isNotEmpty())
             val errors = schema.validate(batch, InputFormat.JSON)
             assertTrue(errors.isEmpty(), "Edit recipe fails schema validation: $errors")
         }

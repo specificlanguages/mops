@@ -63,8 +63,8 @@ internal object CodeResultAdapter {
         is SNode -> value.reference.let(persistence::asString)
         is SModel -> value.reference.let(persistence::asString)
         is SModule -> value.moduleReference.let(persistence::asString)
-        is TestRunReport -> ProtocolJson.encodeTestReport(value)
-        is MakeResponse -> ProtocolJson.encodeMakeResponse(value)
+        is TestRunReport -> ProtocolJson.testReport.encode(value)
+        is MakeResponse -> ProtocolJson.makeResponse.encode(value)
         is String -> value
         is Char, is Boolean, is Number, is File, is Path -> value.toString()
         is Map<*, *> -> value.entries.joinToString(",", "{", "}") { json(it.key.toString()) + ":" + renderJson(it.value) }

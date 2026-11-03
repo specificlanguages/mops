@@ -13,8 +13,8 @@ abstract class CreateModuleCommand(protected val environment: CommandEnvironment
     protected fun render(response: ModuleCreationResponse) {
         val plan = response.plan; val report = response.report
         when {
-            json && plan != null -> println(ProtocolJson.encodeModuleCreationPlan(plan))
-            json && report != null -> println(ProtocolJson.encodeModuleCreationReport(report))
+            json && plan != null -> println(ProtocolJson.moduleCreationPlan.encode(plan))
+            json && report != null -> println(ProtocolJson.moduleCreationReport.encode(report))
             plan != null -> renderPlan(plan)
             report != null -> renderReport(report)
             else -> error("daemon returned neither a creation plan nor a report")

@@ -31,7 +31,7 @@ class EditSchemaGuardTest {
         for (topic in exampleTopics) {
             val json = exampleJson(pageText(topic))
 
-            ProtocolJson.decodeBatch(json)
+            ProtocolJson.batch.decode(json)
 
             val errors = schema.validate(json, InputFormat.JSON)
             assertTrue(errors.isEmpty(), "$topic example fails schema validation: $errors")

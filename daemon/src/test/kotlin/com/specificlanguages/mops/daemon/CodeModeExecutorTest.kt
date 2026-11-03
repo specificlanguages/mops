@@ -69,7 +69,7 @@ class CodeModeExecutorTest {
             diagnostics = listOf("Tests skipped"),
         )
         val rendered = CodeResultAdapter.render(report)!!
-        assertEquals(report, ProtocolJson.decodeTestReport(rendered))
+        assertEquals(report, ProtocolJson.testReport.decode(rendered))
         assertEquals("{\"tests\":[$rendered]}", CodeResultAdapter.render(mapOf("tests" to listOf(report))))
     }
 

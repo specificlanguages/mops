@@ -127,7 +127,7 @@ class CodeCatalogTest {
     @Test
     fun `JSON faithfully represents the same document used by text`() {
         listOf(null, "mops", "createSolution", "SNode", "JavaParsingResult").forEach { subject ->
-            assertEquals(CodeCatalog.document(subject), com.specificlanguages.mops.protocol.ProtocolJson.decodeCodeHelp(CodeCatalog.json(subject)))
+            assertEquals(CodeCatalog.document(subject), com.specificlanguages.mops.protocol.ProtocolJson.codeHelp.decode(CodeCatalog.json(subject)))
         }
     }
 

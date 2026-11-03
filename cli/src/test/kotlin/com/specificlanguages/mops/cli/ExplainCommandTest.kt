@@ -185,7 +185,7 @@ class ExplainCommandTest {
 
         for (topic in allTopics.filter { it !in nonBatchTopics }) {
             val json = exampleJson(pageText(topic))
-            val batch = ProtocolJson.decodeBatch(json)
+            val batch = ProtocolJson.batch.decode(json)
             for (op in batch.operations) {
                 targetsOf(op).forEach { targetForms += it::class.simpleName!! }
                 positionOf(op)?.let { positionForms += it::class.simpleName!! }
