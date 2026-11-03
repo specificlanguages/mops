@@ -71,15 +71,8 @@ class ModuleCreator(private val project: Project) {
 
     fun createGenerator(languageTarget: String, alias: String, standalone: Boolean = false,
                         descriptorOverride: String? = null): CreatedModules {
-        require(standalone || descriptorOverride == null) { "descriptor override is valid only for a standalone generator" }
-        validateAlias(alias)
-        val language = resolveLanguage(languageTarget)
-        val name = nextGeneratorName(requireNotNull(language.moduleName))
-        val languageDescriptor = requireNotNull((language as AbstractModule).descriptorFile).path.let(Path::of).toAbsolutePath().normalize()
-        val descriptor = if (standalone) descriptorPath(name, ModuleKind.GENERATOR, descriptorOverride) else languageDescriptor
-        if (standalone) preflight(name, descriptor, ".mpst") else validateNameFree(name)
-        val generatorDirectory = if (standalone) descriptor.parent else firstEmbeddedGeneratorDirectory(languageDescriptor.parent)
-        if (!standalone) validateEmptyTarget(generatorDirectory)
+        val (language, name, descriptor, generatorDirectory) =
+            resolveGeneratorTarget(languageTarget, alias, standalone, descriptorOverride)
         generatorDirectory.createDirectories()
         if (standalone) Files.createFile(descriptor)
         return CreatedModules(createGeneratorModule(language, name, alias, standalone, descriptor, generatorDirectory))
@@ -109,6 +102,22 @@ class ModuleCreator(private val project: Project) {
     }
 
     fun planGenerator(languageTarget: String, alias: String, standalone: Boolean, descriptorOverride: String?): ModuleCreationPlan {
+        val (language, name, descriptor, generatorDirectory) =
+            resolveGeneratorTarget(languageTarget, alias, standalone, descriptorOverride)
+        return ModuleCreationPlan(planEntry(name, ModuleKind.GENERATOR, descriptor, persistence.asString(language.moduleReference), alias,
+            if (standalone) GeneratorPersistence.STANDALONE else GeneratorPersistence.EMBEDDED, generatorDirectory.toString()))
+    }
+
+    private data class GeneratorTarget(
+        val language: Language,
+        val name: String,
+        val descriptor: Path,
+        val generatorDirectory: Path,
+    )
+
+    /** Validates a generator request and works out where the new generator goes, without changing anything. */
+    private fun resolveGeneratorTarget(languageTarget: String, alias: String, standalone: Boolean,
+                                       descriptorOverride: String?): GeneratorTarget {
         require(standalone || descriptorOverride == null) { "descriptor override is valid only for a standalone generator" }
         validateAlias(alias)
         val language = resolveLanguage(languageTarget)
@@ -118,8 +127,7 @@ class ModuleCreator(private val project: Project) {
         if (standalone) preflight(name, descriptor, ".mpst") else validateNameFree(name)
         val generatorDirectory = if (standalone) descriptor.parent else firstEmbeddedGeneratorDirectory(languageDescriptor.parent)
         if (!standalone) validateEmptyTarget(generatorDirectory)
-        return ModuleCreationPlan(planEntry(name, ModuleKind.GENERATOR, descriptor, persistence.asString(language.moduleReference), alias,
-            if (standalone) GeneratorPersistence.STANDALONE else GeneratorPersistence.EMBEDDED, generatorDirectory.toString()))
+        return GeneratorTarget(language, name, descriptor, generatorDirectory)
     }
 
     private fun createLanguageModule(name: String, descriptor: Path): Language {

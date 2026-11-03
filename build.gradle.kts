@@ -7,6 +7,7 @@ import kotlin.io.path.isSymbolicLink
 plugins {
     base
     alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.cpd)
 }
 
 group = "com.specificlanguages.mops"
@@ -14,6 +15,26 @@ group = "com.specificlanguages.mops"
 subprojects {
     group = rootProject.group
     version = rootProject.version
+}
+
+repositories {
+    mavenCentral()
+}
+
+cpd {
+    language = "kotlin"
+    toolVersion = libs.versions.pmd.get()
+    minimumTokenCount = 100
+}
+
+tasks.cpdCheck {
+    reports {
+        xml.required = false
+        text.required = true
+    }
+    setSource(fileTree(layout.projectDirectory) {
+        include("*/src/main/**/*.kt")
+    })
 }
 
 tasks.check {
