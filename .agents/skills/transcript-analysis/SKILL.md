@@ -64,7 +64,7 @@ proposing a new one.
 
 ## Report
 
-Write a draft outside the repository. The maintainer has not read this skill, so use plain words and these field names:
+Write a draft outside the repository, with one section per cause:
 
 ```markdown
 ### <the cause, in general words>
