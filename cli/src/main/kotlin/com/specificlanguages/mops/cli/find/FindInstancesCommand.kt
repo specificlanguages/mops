@@ -1,14 +1,9 @@
 package com.specificlanguages.mops.cli.find
 
-import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
-import com.specificlanguages.mops.cli.output.renderJson
-import com.specificlanguages.mops.cli.output.renderNodeReference
 import com.specificlanguages.mops.cli.output.NodeReferenceFormat
-import com.specificlanguages.mops.cli.output.truncationLine
 import com.specificlanguages.mops.daemoncomms.DaemonClient
-import com.specificlanguages.mops.protocol.DaemonResponse
 import com.specificlanguages.mops.protocol.NodeFilter
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
@@ -24,32 +19,11 @@ import picocli.CommandLine.Parameters
             "`mops explain scope`.",
     ],
 )
-class FindInstancesCommand(private val environment: CommandEnvironment) : CliCommand() {
+class FindInstancesCommand(environment: CommandEnvironment) : NodeSearchCommand(environment) {
     constructor(
         daemonClient: DaemonClient,
         nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED,
     ) : this(DaemonClientCommandEnvironment(daemonClient, nodeReferenceFormat))
-
-    @Option(
-        names = ["--json"],
-        description = ["Print instance results as JSON."],
-    )
-    var json: Boolean = false
-
-    @Option(
-        names = ["--full-concept"],
-        description = ["Show fully qualified concept names in text output instead of short names."],
-    )
-    var fullConcept: Boolean = false
-
-    @Option(
-        names = ["--refs-only"],
-        description = [
-            "Print one serialized node reference per line and nothing else, for piping. Cannot combine with --json; " +
-                "truncation is reported on stderr.",
-        ],
-    )
-    var refsOnly: Boolean = false
 
     @Option(
         names = ["--exact"],
@@ -76,13 +50,6 @@ class FindInstancesCommand(private val environment: CommandEnvironment) : CliCom
     )
     var role: String? = null
 
-    @Option(
-        names = ["--limit"],
-        paramLabel = "N",
-        description = ["Maximum instances to return. Defaults to 100; 0 means unlimited."],
-    )
-    var limit: Int = 100
-
     @Parameters(
         index = "0",
         arity = "1",
@@ -94,17 +61,8 @@ class FindInstancesCommand(private val environment: CommandEnvironment) : CliCom
     )
     lateinit var concept: String
 
-    @Parameters(
-        index = "1..*",
-        paramLabel = "[in SCOPE_SEGMENT...]",
-        description = ["Optional search scope clause: the literal `in` followed by navigation-target segments."],
-    )
-    var scopeClause: List<String> = emptyList()
-
     override fun run() {
-        require(limit >= 0) { "limit must not be negative" }
-        require(!(refsOnly && json)) { "--refs-only cannot be combined with --json" }
-        val scope = scopeClauseSegments(scopeClause)
+        val scope = validatedScope()
         val filters = buildList {
             named?.let { add(NodeFilter.Named(it)) }
             role?.let { add(NodeFilter.Role(it)) }
@@ -117,19 +75,6 @@ class FindInstancesCommand(private val environment: CommandEnvironment) : CliCom
             filters = filters,
             limit = limit,
         )
-        when {
-            json -> println(renderJson(response))
-            refsOnly -> {
-                response.nodes.forEach {
-                    println(renderNodeReference(it.reference, environment.nodeReferenceFormat, hyperlinks = false))
-                }
-                if (response.truncated) reportTruncationOnStderr(response.nodes.size)
-            }
-            else -> {
-                response.nodes.forEach { println(renderText(it, fullConcept, environment.nodeReferenceFormat)) }
-                if (response.truncated) println(truncationLine(shown = response.nodes.size))
-            }
-        }
+        printResults(response, response.nodes, response.truncated)
     }
-
 }

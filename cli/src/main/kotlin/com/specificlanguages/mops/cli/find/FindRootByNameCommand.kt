@@ -1,14 +1,9 @@
 package com.specificlanguages.mops.cli.find
 
-import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
-import com.specificlanguages.mops.cli.output.renderJson
-import com.specificlanguages.mops.cli.output.renderNodeReference
-import com.specificlanguages.mops.cli.output.truncationLine
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import picocli.CommandLine.Command
-import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 
 @Command(
@@ -20,36 +15,8 @@ import picocli.CommandLine.Parameters
             "root-bearing scopes are valid. See `mops explain name-pattern` and `mops explain scope`.",
     ],
 )
-class FindRootByNameCommand(private val environment: CommandEnvironment) : CliCommand() {
+class FindRootByNameCommand(environment: CommandEnvironment) : NodeSearchCommand(environment) {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
-
-    @Option(
-        names = ["--json"],
-        description = ["Print results as JSON."],
-    )
-    var json: Boolean = false
-
-    @Option(
-        names = ["--full-concept"],
-        description = ["Show fully qualified concept names in text output instead of short names."],
-    )
-    var fullConcept: Boolean = false
-
-    @Option(
-        names = ["--refs-only"],
-        description = [
-            "Print one serialized node reference per line and nothing else, for piping. Cannot combine with --json; " +
-                "truncation is reported on stderr.",
-        ],
-    )
-    var refsOnly: Boolean = false
-
-    @Option(
-        names = ["--limit"],
-        paramLabel = "N",
-        description = ["Maximum nodes to return. Defaults to 100; 0 means unlimited."],
-    )
-    var limit: Int = 100
 
     @Parameters(
         index = "0",
@@ -59,33 +26,11 @@ class FindRootByNameCommand(private val environment: CommandEnvironment) : CliCo
     )
     lateinit var pattern: String
 
-    @Parameters(
-        index = "1..*",
-        paramLabel = "[in SCOPE_SEGMENT...]",
-        description = ["Optional search scope clause: the literal `in` followed by navigation-target segments."],
-    )
-    var scopeClause: List<String> = emptyList()
-
     override fun run() {
-        require(limit >= 0) { "limit must not be negative" }
         require(pattern.isNotBlank()) { "pattern must not be blank" }
-        require(!(refsOnly && json)) { "--refs-only cannot be combined with --json" }
-        val scope = scopeClauseSegments(scopeClause)
+        val scope = validatedScope()
         val client = environment.daemon()
         val response = client.findByName(pattern = pattern, limit = limit, scope = scope)
-        when {
-            json -> println(renderJson(response))
-            refsOnly -> {
-                response.nodes.forEach {
-                    println(renderNodeReference(it.reference, environment.nodeReferenceFormat, hyperlinks = false))
-                }
-                if (response.truncated) reportTruncationOnStderr(response.nodes.size)
-            }
-            else -> {
-                response.nodes.forEach { println(renderText(it, fullConcept, environment.nodeReferenceFormat)) }
-                if (response.truncated) println(truncationLine(shown = response.nodes.size))
-            }
-        }
+        printResults(response, response.nodes, response.truncated)
     }
-
 }
