@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.cli
 
+import com.specificlanguages.mops.protocol.DaemonPaths
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.ProtocolJson
 import org.junit.jupiter.api.io.CleanupMode
@@ -195,6 +196,48 @@ class TestRunningIntegrationTest {
             val cases = peerReport.results.filter { it.kind == "TEST" }
             assertEquals(2, cases.size, selected.output)
             assertTrue(cases.all { it.className?.startsWith("mops.peer.") == true }, selected.output)
+        } finally { stopDaemons(project, home) }
+    }
+
+    @Test
+    fun `project library modules and daemon path macros reach the test worker`() {
+        val project = copyTestProject("project-library", tempDir.resolve("project"))
+        val home = tempDir.resolve("daemon-home").createDirectories()
+        fun cli(vararg args: String) = runCommandLine(project, "--daemon-home", home.pathString, *javaAndMpsHomeArgs(), *args)
+        try {
+            // The test classes load from the project-library dependency, but the TestInfo project path needs the macro.
+            val undefined = cli("test", "--json")
+            assertEquals(1, undefined.exitCode, undefined.output)
+            val undefinedReport = ProtocolJson.testReport.decode(undefined.stdout)
+            assertEquals("TEST_FAILED", undefinedReport.outcome, undefined.output)
+            assertTrue(undefinedReport.results.any { it.detail?.contains("mops.fixture.project") == true }, undefined.output)
+            stopDaemons(project, home)
+
+            // A path macro the daemon knows from its IDEA configuration, the way an MPS installation keeps path variables.
+            DaemonPaths(home).workspace(project).ideaConfigDir().resolve("options").createDirectories()
+                .resolve("path.macros.xml").writeText("""
+                    <application>
+                      <component name="PathMacrosImpl">
+                        <macro name="mops.fixture.project" value="${project.toRealPath().invariantSeparatorsPathString}" />
+                      </component>
+                    </application>
+                """.trimIndent())
+            val passing = cli("test", "--no-build", "--json")
+            assertEquals(0, passing.exitCode, passing.output)
+            val report = ProtocolJson.testReport.decode(passing.stdout)
+            assertEquals("SUCCESS", report.outcome, passing.output)
+            assertTrue(report.results.any { it.kind == "TEST" && it.status == "PASSED" }, passing.output)
+
+            // Without the library module, the worker cannot load the test module's classes; the report says why.
+            val library = project.resolve("libs/library/library.msd")
+            library.moveTo(library.resolveSibling("library.msd.removed"))
+            val broken = cli("test", "--no-build", "--json")
+            assertEquals(1, broken.exitCode, broken.output)
+            val brokenReport = ProtocolJson.testReport.decode(broken.stdout)
+            assertEquals("DISCOVERY_FAILED", brokenReport.outcome, broken.output)
+            assertTrue(brokenReport.diagnostics.any {
+                it.startsWith("The test worker could not load classes of some modules") && Regex("""\bmops\.library\b""") in it
+            }, broken.output)
         } finally { stopDaemons(project, home) }
     }
 

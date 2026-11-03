@@ -18,7 +18,9 @@ class ProjectTesting(private val access: JetBrainsMpsAccess, private val workspa
         report.phase("DISCOVERY")
         val selectionPath = directory.resolve("selection.properties")
         try {
-            AntTestSelection.resolve(access.project, target).save(selectionPath)
+            val selection = AntTestSelection.resolve(access.project, target)
+            selection.save(selectionPath)
+            report.update { it.copy(diagnostics = it.diagnostics + selection.diagnostics) }
         } catch (failure: Exception) {
             report.finish("DISCOVERY_FAILED", true, failure.stackTraceToString())
             return report.snapshot()

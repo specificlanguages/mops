@@ -25,12 +25,15 @@ class AntTestSelectionTest {
     @Test
     fun `saved selection loads back unchanged`() {
         val selection = AntTestSelection(
-            modules = listOf(Path.of("/project/solutions/tests/tests.msd")),
-            moduleIds = listOf("85ebbead-a656-46af-af88-81c850c5e554"),
-            libraries = listOf(Path.of("/project/solutions/tests/tests.msd"), Path.of("/project/solutions/peer/peer.msd")),
+            testModules = listOf(Path.of("/project/solutions/tests/tests.msd")),
+            testModuleIds = listOf("85ebbead-a656-46af-af88-81c850c5e554"),
+            repositoryModules = listOf(Path.of("/project/solutions/tests/tests.msd"), Path.of("/project/solutions/peer/peer.msd")),
+            repositoryFolders = listOf(Path.of("/project/libs"), Path.of("/shared/libraries")),
+            macros = mapOf("mops.fixture.project" to "/project", "shared.home" to "/shared"),
             model = "r:df8fc5ad-b32f-4109-bfab-79b959f29474(mops.tests.nativecases@tests)",
             node = "r:df8fc5ad-b32f-4109-bfab-79b959f29474(mops.tests.nativecases@tests)/4098",
             description = "root test case NativePass in model mops.tests.nativecases@tests",
+            diagnostics = listOf("Project library external is not in the test worker's repository"),
         )
         val path = directory.resolve("selection.properties")
 

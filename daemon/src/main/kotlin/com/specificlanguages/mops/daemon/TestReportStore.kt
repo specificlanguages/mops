@@ -45,12 +45,12 @@ class TestReportStore(private val path: Path, private val nanoTime: () -> Long =
         Files.move(pending, path, ATOMIC_MOVE, REPLACE_EXISTING)
     }
     fun phase(phase: String) = update { it.copy(phase = phase) }
-    @Synchronized fun finish(outcome: String, complete: Boolean, diagnostic: String? = null) {
+    @Synchronized fun finish(outcome: String, complete: Boolean, vararg diagnostics: String?) {
         endTiming()
         update {
             if (it.outcome in setOf("CANCELLED", "TIMED_OUT", "PARENT_TERMINATED")) it
             else it.copy(outcome = outcome, complete = complete,
-                diagnostics = it.diagnostics + listOfNotNull(diagnostic))
+                diagnostics = it.diagnostics + diagnostics.filterNotNull())
         }
     }
     fun event(event: Map<String, Any?>) = update { current ->
