@@ -33,12 +33,6 @@
     <ID>LongMethod:testPreparation.kt:fun main</ID>
     <ID>NestedBlockDepth:ProjectDaemon.kt:ProjectDaemon$fun serve</ID>
     <ID>TooManyFunctions:CodeModeExtensions.kt:CodeModeExtensions</ID>
-    <ID>TooManyFunctions:ConceptResolver.kt:ConceptResolver</ID>
-    <ID>TooManyFunctions:JetBrainsMpsAccess.kt:JetBrainsMpsAccess : MpsAccess</ID>
     <ID>TooManyFunctions:JetBrainsMpsAccess.kt:JetBrainsMpsAccess$JetBrainsMpsRead : MpsRead</ID>
-    <ID>TooManyFunctions:ModelCreator.kt:ModelCreator</ID>
-    <ID>TooManyFunctions:ModuleCreator.kt:ModuleCreator</ID>
-    <ID>TooManyFunctions:ModuleLoadDiagnostics.kt:ModuleLoadDiagnostics</ID>
-    <ID>TooManyFunctions:MpsListExporter.kt:MpsListExporter</ID>
   </CurrentIssues>
 </SmellBaseline>
