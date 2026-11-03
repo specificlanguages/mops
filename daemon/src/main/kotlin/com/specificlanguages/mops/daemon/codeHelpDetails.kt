@@ -58,7 +58,7 @@ private fun member(type: String, name: String, valueType: String, summary: Strin
 
 internal val resultMembers = mapOf(
     "JavaParsingResult" to listOf(
-        member("JavaParsingResult", "nodes", "List<SNode>", "Inserted native nodes. Return a map of nodes/unresolved to serialize references at the CLI."),
+        member("JavaParsingResult", "nodes", "List<SNode>", "Inserted native nodes. Method and constructor calls in them are rebound to the overload their argument types select when MPS can decide it. Return a map of nodes/unresolved to serialize references at the CLI."),
         member("JavaParsingResult", "unresolved", "List<SNode>", "Native nodes left unresolved after parsing; this does not replace a full model check."),
     ),
     "BuildModuleReloadResult" to listOf(
