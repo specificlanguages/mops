@@ -105,6 +105,7 @@ class FullClasspathDaemonLauncherTest {
         val mpsTool = mpsHome.resolve("lib/mpsant").createDirectories().resolve("mps-tool.jar")
             .also { JarOutputStream(Files.newOutputStream(it)).use { } }
         val fakeJava = fakeJavaHome("property-java")
+        val macroValue = tempDir.resolve("macro value").createDirectories().toRealPath()
 
         val configuredClasspath = listOf(
             tempDir.resolve("configured-daemon-a.jar"),
@@ -126,6 +127,7 @@ class FullClasspathDaemonLauncherTest {
                         projectPath = project,
                         mpsHome = mpsHome,
                         javaHome = fakeJava.home,
+                        macros = mapOf("repo.root" to macroValue),
                     ),
                 )
             }
@@ -133,6 +135,7 @@ class FullClasspathDaemonLauncherTest {
 
         assertContains(exception.message!!, "daemon exited before writing its project record")
         assertContains(fakeJava.commandArgsFile.readText(), "-Didea.force.use.core.classloader=false")
+        assertContains(fakeJava.commandArgsFile.readText(), "\n--macro\nrepo.root=$macroValue\n")
         assertEquals(
             listOf(configuredClasspath, mpsTool.pathString).joinToString(File.pathSeparator),
             launchedClasspath(fakeJava.argsFile),

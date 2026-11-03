@@ -241,6 +241,27 @@ class TestRunningIntegrationTest {
         } finally { stopDaemons(project, home) }
     }
 
+    @Test
+    fun `a path macro given with --macro reaches the test worker and pins the daemon`() {
+        val project = copyTestProject("project-library", tempDir.resolve("project"))
+        val home = tempDir.resolve("daemon-home").createDirectories()
+        fun cli(vararg args: String) = runCommandLine(project, "--daemon-home", home.pathString, *javaAndMpsHomeArgs(), *args)
+        try {
+            val passing = cli("--macro", "mops.fixture.project=.", "test", "--json")
+            assertEquals(0, passing.exitCode, passing.output)
+            val report = ProtocolJson.testReport.decode(passing.stdout)
+            assertEquals("SUCCESS", report.outcome, passing.output)
+            assertTrue(report.results.any { it.kind == "TEST" && it.status == "PASSED" }, passing.output)
+
+            // The running daemon has the macro, so a command without it does not reuse that daemon.
+            val withoutMacro = cli("test", "--no-build", "--json")
+            assertEquals(1, withoutMacro.exitCode, withoutMacro.output)
+            assertContains(withoutMacro.stderr, "different context")
+            assertContains(withoutMacro.stderr, "mops.fixture.project=${project.toRealPath()}")
+            assertContains(withoutMacro.stderr, "mops daemon stop")
+        } finally { stopDaemons(project, home) }
+    }
+
     // Starts the installed CLI without waiting for it, so a test can interrupt the command while it runs.
     private fun startCli(project: Path, home: Path, name: String, vararg args: String): Process {
         val install = Path.of(System.getProperty("test.cliInstall"))

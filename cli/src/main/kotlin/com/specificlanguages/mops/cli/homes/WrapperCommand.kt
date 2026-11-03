@@ -21,6 +21,7 @@ import java.util.concurrent.Callable
         "No CLI-configured MPS home or daemon is required; Java must be available to run Gradle.",
         "Querying configured providers may download and extract MPS or JBR distributions; it does not run preparation or language build task actions.",
         "Partial discoveries print available values without writing a wrapper and exit with status 1; known pairs write the wrapper and exit with status 0, with warnings when their paths are not usable yet.",
+        "The wrapper passes each --macro NAME=PATH given to this command. A path macro that .mps/libraries.xml or .mps/modules.xml uses without a --macro value gets the root of the project's Git repository, with a warning; outside a Git repository, the command fails naming the macro. Project-relative paths (\$PROJECT_DIR\$) need no macro.",
     ],
 )
 class WrapperCommand(
@@ -83,21 +84,32 @@ class WrapperCommand(
         } else if (targets.isEmpty()) {
             out.println("No MPS projects were found; no wrapper was written.")
         } else {
-            val windows = System.getProperty("os.name").lowercase().contains("win")
-            check(output == null || targets.size == 1) {
-                "--output requires --project-root when discovery finds multiple MPS projects."
-            }
-            val executable = mopsExecutable()
-            targets.forEach { (owner, projectRoot) ->
-                val wrapper = output
-                    ?.let { root.workingDirectory.resolve(it).normalize() }
-                    ?: defaultWrapperPath(owner, projectRoot, windows)
-                out.println("Project root: ${displayPath(projectRoot, root.workingDirectory)}")
-                out.println("Wrapper: ${displayPath(runtime.writeWrapper(wrapper, projectRoot, executable, windows), root.workingDirectory)}")
-            }
+            writeWrappers(runtime, targets)
         }
         out.flush()
         return if (runtime.hasKnownHomes && targets.isNotEmpty()) 0 else 1
+    }
+
+    /** Writes a wrapper for each target project; all path macros are settled before the first wrapper is written. */
+    private fun writeWrappers(runtime: HomeGuess, targets: List<Pair<HomeGuess, Path>>) {
+        val out = spec.commandLine().out
+        val windows = System.getProperty("os.name").lowercase().contains("win")
+        check(output == null || targets.size == 1) {
+            "--output requires --project-root when discovery finds multiple MPS projects."
+        }
+        val executable = mopsExecutable()
+        val givenMacros = root.resolveMacros()
+        val macros = targets.associate { (_, projectRoot) ->
+            projectRoot to WrapperMacros.complete(projectRoot, givenMacros, spec.commandLine().err)
+        }
+        targets.forEach { (owner, projectRoot) ->
+            val wrapper = output
+                ?.let { root.workingDirectory.resolve(it).normalize() }
+                ?: defaultWrapperPath(owner, projectRoot, windows)
+            val written = runtime.writeWrapper(wrapper, projectRoot, executable, windows, macros.getValue(projectRoot))
+            out.println("Project root: ${displayPath(projectRoot, root.workingDirectory)}")
+            out.println("Wrapper: ${displayPath(written, root.workingDirectory)}")
+        }
     }
 
     private fun defaultWrapperPath(guess: HomeGuess, projectRoot: Path, windows: Boolean): Path {

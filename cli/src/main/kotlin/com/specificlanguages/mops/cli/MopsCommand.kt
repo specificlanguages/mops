@@ -8,9 +8,11 @@ import com.specificlanguages.mops.daemoncomms.DefaultDaemonPool
 import com.specificlanguages.mops.launcher.MpsDistributionLayout
 import com.specificlanguages.mops.protocol.DaemonContext
 import java.nio.file.Path
+import java.util.Stack
 import kotlin.io.path.isDirectory
 import picocli.CommandLine
 import picocli.CommandLine.Command
+import picocli.CommandLine.Model.ArgSpec
 import picocli.CommandLine.Option
 import picocli.CommandLine.ScopeType
 import picocli.CommandLine.Spec
@@ -65,6 +67,42 @@ class MopsCommand(
     )
     var javaHome: String? = null
 
+    @Option(
+        names = ["--macro"],
+        scope = ScopeType.INHERIT,
+        paramLabel = "NAME=PATH",
+        description = [
+            "Path macro the daemon defines in MPS before it opens the project; repeatable. PATH is an existing " +
+                "directory, absolute or relative to the directory where mops was started. A running daemon with " +
+                "other macros is not reused; stop it with mops daemon stop.",
+        ],
+        parameterConsumer = MacroConsumer::class,
+    )
+    private var macroOption: String? = null
+
+    /** `--macro` values by name, as given. */
+    private val macros: MutableMap<String, String> = linkedMapOf()
+
+    /**
+     * Collects every `--macro` into the root command. A plain repeatable option would reject a repetition on one command
+     * level, and a collection field would restart at each subcommand that the option is inherited by.
+     */
+    private class MacroConsumer : CommandLine.IParameterConsumer {
+        override fun consumeParameters(args: Stack<String>, argSpec: ArgSpec, commandSpec: CommandLine.Model.CommandSpec) {
+            val commandLine = commandSpec.commandLine()
+            if (args.isEmpty()) throw CommandLine.ParameterException(commandLine, "--macro expects NAME=PATH")
+            val macro = args.pop()
+            val name = macro.substringBefore('=', missingDelimiterValue = "")
+            val path = macro.substringAfter('=')
+            if (name.isEmpty() || path.isEmpty()) {
+                throw CommandLine.ParameterException(commandLine, "--macro expects NAME=PATH, got: $macro")
+            }
+            (commandSpec.root().userObject() as MopsCommand).macros.put(name, path)?.let {
+                throw CommandLine.ParameterException(commandLine, "--macro $name is given twice: $it and $path")
+            }
+        }
+    }
+
     override var nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED
 
     @Option(names = ["--refs-as-urls"], scope = ScopeType.INHERIT, description = ["Render node references as MPS URLs in text output."])
@@ -109,11 +147,22 @@ class MopsCommand(
         return DaemonContext.fromLivePaths(
             projectPath = projectPath,
             mpsHome = resolvedMpsHome,
-            javaHome = resolvedJavaHome
+            javaHome = resolvedJavaHome,
+            macros = resolveMacros(),
         )
     }
 
     fun resolveMpsHome(): Path? = mpsHome?.let(workingDirectory::resolve)
+
+    /** The `--macro` values as absolute paths, checked to be directories, since MPS ignores a macro that is not one. */
+    fun resolveMacros(): Map<String, Path> = macros.mapValues { (name, value) ->
+        require(name !in mpsBuiltInPathMacros) {
+            "--macro $name=$value: $name is a path macro MPS defines itself and cannot be set"
+        }
+        workingDirectory.resolve(value).normalize().also {
+            require(it.isDirectory()) { "--macro $name=$value: $it is not a directory" }
+        }
+    }
 
     override fun projectPath(start: Path): Path {
         projectRoot?.let { configuredProjectRoot ->

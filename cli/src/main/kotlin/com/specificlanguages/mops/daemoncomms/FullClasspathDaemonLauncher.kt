@@ -96,6 +96,10 @@ class FullClasspathDaemonLauncher(
         add(mpsPlugin.pathString)
         add("--token")
         add(token)
+        context.macros.forEach { (name, path) ->
+            add("--macro")
+            add("$name=$path")
+        }
     }
 
     /**
