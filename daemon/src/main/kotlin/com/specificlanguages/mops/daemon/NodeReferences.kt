@@ -17,15 +17,14 @@ class NodeReferences(private val node: SNode) : NodeAccessor<SReference>("refere
 
     fun getAt(role: String): SReference? {
         requireRead("SNode.references[]")
-        val link = node.concept.referenceLinks.firstOrNull { it.name == role } ?: return null
+        val link = node.requireReferenceLink(role)
         return node.getReference(link)
     }
 
     /** Resolves and assigns a target through MPS reference setters, or clears it with null. */
     fun putAt(role: String, value: Any?) {
         requireCommand("SNode.references[] assignment")
-        val link = node.concept.referenceLinks.firstOrNull { it.name == role }
-            ?: throw IllegalArgumentException("unknown reference role: $role")
+        val link = node.requireReferenceLink(role)
         val target = when (value) {
             null -> null
             is SNode -> value

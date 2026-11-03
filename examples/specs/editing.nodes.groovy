@@ -4,7 +4,7 @@
             [
                 title: 'List root names and references',
                 kind: 'groovy',
-                code: '''project.read { mops.lookup.requireModel('sample.model').rootNodes.collect { [name: it.properties['name'], node: it] } }''',
+                code: '''project.read { mops.lookup.requireModel('sample.model').rootNodes.collect { [name: it.name, node: it] } }''',
                 verify: '''
                     assert result == [[name: 'Example', node: fixture.root]]
                 ''',
@@ -21,7 +21,7 @@
             [
                 title: 'Find a root with an exact name',
                 kind: 'groovy',
-                code: '''project.read { mops.lookup.requireModel('sample.model').rootNodes.find { it.properties['name'] == 'Example' } }''',
+                code: '''project.read { mops.lookup.requireModel('sample.model').rootNodes.find { it.name == 'Example' } }''',
                 verify: '''
                     assert result == fixture.root
                 ''',

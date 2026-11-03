@@ -11,7 +11,7 @@ contents you need:
 
   return project.read {
     def model = mops.lookup.requireModel('my.model')
-    [model: model, roots: model.rootNodes.collect { [node: it, name: it.properties['name']] }]
+    [model: model, roots: model.rootNodes.collect { [node: it, name: it.name] }]
   }
 
 MakeResponse and TestRunReport results serialize as JSON objects, including when nested in maps or collections.
@@ -33,7 +33,7 @@ thread fails on `mops.*` and on access blocks, and it outlives the request insid
 
 Native nodes support indexed access by property name or link role, including inherited features:
 
-  node.properties['name']    — property getter value as a string, or null for an unknown property
+  node.properties['name']    — property getter value as a string, or null when unset
   node.child['role']         — one child or null; throws when several children occupy the role
   node.children['role']      — immutable list of current children in order, possibly empty
   node.references['role']    — native SReference or null; .targetNode resolves its target
@@ -51,8 +51,11 @@ Reads require project.read or project.command. Assignments require project.comma
   node.children['role'] = [a, b]       // replaces all children of the role; [] clears
   node.references['role'] = target    // SNode, SNodeReference, or SReference; null clears
 
-Unknown names or roles return null (an empty list for children) on reads and fail on writes. Child assignments accept
-detached nodes or existing children of that same role. Property reads and writes invoke MPS property getter/setter
+A name or role that the node's concept does not have fails on reads and writes alike with IllegalArgumentException,
+whose message lists the concept's names of that kind. A node whose concept did not load (its language is not compiled)
+fails with IllegalStateException naming the language to make. node.name is the native SNode.getName(): null, not a
+failure, for a concept without a name property. Child assignments accept detached nodes or existing children of that
+same role. Property reads and writes invoke MPS property getter/setter
 handlers and use persisted string values. Enumeration properties are the exception: they read as the literal name
 (`_1`, not the persisted `fLJekj4/_1`) and accept a literal name or a presentation (such as `0..1`) that only one literal
 has; any other value fails and lists the literals. Unset property values follow MPS getter and data type defaults. Child

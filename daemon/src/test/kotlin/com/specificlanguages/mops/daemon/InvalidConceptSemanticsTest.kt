@@ -2,6 +2,7 @@ package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
+import com.specificlanguages.mops.protocol.CodeRunRequest
 import com.specificlanguages.mops.protocol.ConstraintEnforcement
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
@@ -91,6 +92,40 @@ class InvalidConceptSemanticsTest {
             assertTrue(response.warnings.any { it.contains("com.example.uncompiled") && it.contains("not loaded") })
             // The node was deleted despite its unloaded language: the placeholder concept is gone from the saved model.
             assertFalse(projectPath.resolve(STRUCTURE_MODEL_PATH).readText().contains("com.example.uncompiled"))
+        }
+    }
+
+    @Test
+    fun `Code Mode role and property lookups name the unloaded language instead of calling the name unknown`() {
+        SharedMpsEnvironment.withOpenProjectCopy(prepare = ::injectUncompiledConceptNode) { project, _ ->
+            val reference = uncompiledNodeReference(project)
+            val response = CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform).execute(
+                CodeRunRequest("", """
+                    def notLoaded = { String kind, Closure action ->
+                        try { action(); assert false: 'Expected a failure for ' + kind }
+                        catch (IllegalStateException failure) {
+                            assert failure.message.contains("cannot look up ${'$'}{kind} 'name'"): failure.message
+                            assert failure.message.contains('com.example.uncompiled.structure.Widget'): failure.message
+                            assert failure.message.contains('not loaded'): failure.message
+                            assert failure.message.contains('mops make module com.example.uncompiled'): failure.message
+                        }
+                    }
+                    def node = project.read { mops.lookup.requireNode('$reference') }
+                    project.read {
+                        notLoaded('property') { node.properties['name'] }
+                        notLoaded('child role') { node.children['name'] }
+                        notLoaded('child role') { node.child['name'] }
+                        notLoaded('reference role') { node.references['name'] }
+                    }
+                    project.command {
+                        notLoaded('property') { node.properties['name'] = 'x' }
+                        notLoaded('child role') { node.children['name'] = [] }
+                        notLoaded('reference role') { node.references['name'] = null }
+                    }
+                    return 'ok'
+                """.trimIndent(), "unloaded-concept-lookup.groovy"),
+            )
+            assertEquals("ok", response.output)
         }
     }
 
