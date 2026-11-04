@@ -43,9 +43,9 @@ Text output is one qualified concept name per line; --json prints a `concepts`
 array of qualified names. Build project languages before querying their
 hierarchy. CONCEPT resolves the same way as in `mops find instances`.
 
-In Code Mode, mops.search.subConceptsOf(concept, concreteOnly, direct) applies
-the same filters, with the booleans passed positionally; see `mops code help
-mops.search.subConceptsOf`.
+In Code Mode, mops.search.subConceptsOf(concept, concreteOnly, direct) returns
+a sorted list of SAbstractConcept objects with the same filters; pass the
+booleans positionally. See `mops code help mops.search.subConceptsOf`.
 ```
 
 ## mops find instances

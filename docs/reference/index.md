@@ -54,8 +54,9 @@ Global options:
       --java-home=PATH      Java home used to start daemon-backed commands.
       --macro=NAME=PATH     Path macro for MPS, such as one used as ${NAME} in
                               .mps/libraries.xml or .mps/modules.xml;
-                              repeatable. $PROJECT_DIR$ needs no macro. See
-                              mops wrapper --help.
+                              repeatable. $PROJECT_DIR$ needs no macro. A
+                              running daemon started with other macros is not
+                              reused. See mops wrapper --help.
       --mps-home=PATH       MPS home used by daemon-backed commands.
       --project-root=PATH   Explicit MPS project root, absolute or relative to
                               the directory where mops was started. Overrides

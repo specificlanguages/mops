@@ -15,7 +15,7 @@ class CreateLanguageCommand(environment: CommandEnvironment) : CreateModuleComma
     @Option(
         names = ["--descriptor"],
         paramLabel = "FILE",
-        description = ["Descriptor file to write instead of the conventional location."],
+        description = [DESCRIPTOR_OPTION_HELP],
     )
     var descriptor: String? = null
     @Option(names = ["--with-generator"]) var withGenerator = false

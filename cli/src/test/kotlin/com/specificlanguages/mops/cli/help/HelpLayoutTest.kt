@@ -45,6 +45,15 @@ class HelpLayoutTest {
         assertContains(help, "a\n${"y".repeat(80)}\n${"y".repeat(20)} b\n")
     }
 
+    @Test
+    fun `a line after a cut word does not start with a space`() {
+        val spec = CommandSpec.create().name("demo")
+        spec.usageMessage().description("${"u".repeat(80)} end")
+        val help = helpOf(spec)
+
+        assertContains(help, "${"u".repeat(80)}\nend\n")
+    }
+
     private fun helpOf(spec: CommandSpec): String {
         val commandLine = CommandLine(spec)
         HelpLayout.apply(commandLine)

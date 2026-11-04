@@ -19,10 +19,11 @@ import org.junit.jupiter.api.parallel.ResourceLock
 
 @ResourceLock("system-streams")
 class ExplainCommandTest {
-    private val topLevelTopics =
-        listOf("edit", "inline-subtree", "target", "position", "node-ref", "name-pattern", "scope", "output")
     private val operationTopics = EditNotation.operationNames.map { "edit.$it" }
-    private val allTopics = topLevelTopics + operationTopics
+
+    // The notation pages. The `code` page describes Code Mode: it has no drill-down paths and no edit-batch example.
+    private val allTopics = ExplainTopics.topics - "code"
+    private val topLevelTopics = allTopics - operationTopics.toSet()
 
     // Topics whose EXAMPLE is a shell command rather than an edit-batch JSON object; excluded from batch parsing.
     private val nonBatchTopics = setOf("edit", "name-pattern", "scope", "output")

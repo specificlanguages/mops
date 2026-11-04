@@ -83,7 +83,8 @@ class MopsCommand(
         paramLabel = "NAME=PATH",
         description = [
             "Path macro for MPS, such as one used as \$\${NAME} in .mps/libraries.xml or .mps/modules.xml; " +
-                "repeatable. \$PROJECT_DIR\$ needs no macro. See mops wrapper --help.",
+                "repeatable. \$PROJECT_DIR\$ needs no macro. A running daemon started with other macros is not " +
+                "reused. See mops wrapper --help.",
         ],
         parameterConsumer = MacroConsumer::class,
     )

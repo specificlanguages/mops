@@ -56,7 +56,8 @@ a `Report: <path>` line on stdout, and diagnostics such as a failed discovery
 or a crashed test worker on stderr, one line each. --json prints the report,
 with the diagnostics in its `diagnostics` field. No discovered tests,
 preparation failures, test or container failures, and incomplete runs exit 1; a
-run that discovers no tests reports which selection resolved to nothing. Skips
+run that discovers no tests reports which selection resolved to nothing (the
+project, or the module, model, or root test case named by the target). Skips
 and assumption aborts alone do not fail a run.
 
 In Code Mode, mops.testing.run(selection, options) runs the same operation

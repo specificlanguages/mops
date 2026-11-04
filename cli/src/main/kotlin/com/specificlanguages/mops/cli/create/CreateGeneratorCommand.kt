@@ -13,7 +13,7 @@ class CreateGeneratorCommand(environment: CommandEnvironment) : CreateModuleComm
     @Option(
         names = ["--descriptor"],
         paramLabel = "FILE",
-        description = ["Descriptor file to write instead of the conventional location. Requires --standalone."],
+        description = ["$DESCRIPTOR_OPTION_HELP Requires --standalone."],
     )
     var descriptor: String? = null
     override fun run() {

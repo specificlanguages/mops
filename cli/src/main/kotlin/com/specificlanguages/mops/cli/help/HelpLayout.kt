@@ -94,11 +94,12 @@ object HelpLayout {
             clusterBooleanOptions: Boolean,
         ): Ansi.Text = createDetailedSynopsisOptionsText(done, commandOptions(), optionSort, clusterBooleanOptions)
 
-        override fun description(vararg params: Any?): String = paragraphs(commandSpec().usageMessage().description())
+        override fun description(vararg params: Any?): String =
+            paragraphs(commandSpec().usageMessage().description(), params)
 
-        override fun header(vararg params: Any?): String = paragraphs(commandSpec().usageMessage().header())
+        override fun header(vararg params: Any?): String = paragraphs(commandSpec().usageMessage().header(), params)
 
-        override fun footer(vararg params: Any?): String = paragraphs(commandSpec().usageMessage().footer())
+        override fun footer(vararg params: Any?): String = paragraphs(commandSpec().usageMessage().footer(), params)
 
         override fun createDefaultLayout(
             options: List<OptionSpec>,
@@ -132,11 +133,11 @@ object HelpLayout {
             return table.toString()
         }
 
-        /** Each of [lines] as its own paragraph, wrapped at the usage width. */
-        private fun paragraphs(lines: Array<String>): String {
+        /** Each of [lines], formatted with [params], as its own paragraph wrapped at the usage width. */
+        private fun paragraphs(lines: Array<String>, params: Array<out Any?>): String {
             val table = SpaceWrappingTextTable(colorScheme(), arrayOf(Column(width(), 0, Column.Overflow.WRAP)))
             table.indentWrappedLines = 0
-            for (line in lines) table.addRowValues(String.format(line))
+            for (line in lines) table.addRowValues(String.format(line, *params))
             return table.toString()
         }
 
@@ -159,8 +160,9 @@ object HelpLayout {
             while (true) {
                 val end = lineEnd(text, start, column.width - column.indent - indent.length)
                 super.putValue(currentRow, col, colorScheme.text(indent).concat(value.substring(start, end)))
-                if (end == text.length) return Cell(col, currentRow)
                 start = end
+                while (start < text.length && text[start] == ' ') start++
+                if (start == text.length) return Cell(col, currentRow)
                 indent = " ".repeat(indentWrappedLines)
                 addEmptyRow()
                 currentRow++

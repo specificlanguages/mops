@@ -12,7 +12,7 @@ class CreateDevkitCommand(environment: CommandEnvironment) : CreateModuleCommand
     @Option(
         names = ["--descriptor"],
         paramLabel = "FILE",
-        description = ["Descriptor file to write instead of the conventional location."],
+        description = [DESCRIPTOR_OPTION_HELP],
     )
     var descriptor: String? = null
     override fun run() = render(environment.daemon().createDevkit(moduleName, descriptor, dryRun))
