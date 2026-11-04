@@ -32,6 +32,16 @@ repos:
         types:
           - markdown
 
+      # A change to the markdownlint configuration, custom rules, or hook versions can affect every Markdown file.
+      - id: markdownlint-cli2-all
+        name: Lint all Markdown with markdownlint-cli2
+        entry: markdownlint-cli2 "**/*.md"
+        language: node
+        additional_dependencies:
+          - markdownlint-cli2@0.23.2
+        files: ^(tools/markdownlint/|\.markdownlint-cli2\.yaml$|\.pre-commit-config\.yaml$)
+        pass_filenames: false
+
       - id: file-size
         name: Check Kotlin and Markdown file size
         entry: tools/pre-commit/check-file-size.py
