@@ -2,7 +2,11 @@ package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
+import com.specificlanguages.mops.protocol.FindNodeByIdResponse
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
+import com.specificlanguages.mops.protocol.NodeIdTargetJson
+import com.specificlanguages.mops.protocol.SearchScopeJson
+import com.specificlanguages.mops.protocol.SearchScopeKind
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -75,6 +79,29 @@ class FindNodeByIdSemanticsTest {
     }
 
     @Test
+    fun `an empty result names the id it looked for and the one model it searched`() {
+        val payload = SharedMpsEnvironment.sharedMpsAccess.read {
+            findNodeById(UNUSED_ID, limit = 0, scope = resolveScope(listOf(LANGUAGE_MODULE, STRUCTURE_MODEL)))
+        }
+
+        assertEquals(
+            FindNodeByIdResponse(
+                target = NodeIdTargetJson(UNUSED_ID),
+                scope = SearchScopeJson(
+                    kind = SearchScopeKind.MODEL,
+                    reference = STRUCTURE_MODEL_REFERENCE,
+                    name = STRUCTURE_MODEL,
+                    models = 1,
+                ),
+                limit = 0,
+                truncated = false,
+                nodes = emptyList(),
+            ),
+            payload,
+        )
+    }
+
+    @Test
     fun `fails with a parse error rather than an empty result on a malformed id`() {
         val exception = assertFailsWith<MpsRequestException> {
             SharedMpsEnvironment.sharedMpsAccess.read {
@@ -97,5 +124,7 @@ class FindNodeByIdSemanticsTest {
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
         // A well-formed decimal id that no node in the fixture carries.
         const val UNUSED_ID = "1234567890123456789"
+        const val STRUCTURE_MODEL_REFERENCE =
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
     }
 }

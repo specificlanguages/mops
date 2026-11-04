@@ -25,11 +25,26 @@ METADATA
     # truncated: showing <shown>; pass --limit 0 for all
     # 1 error, 2 warnings, 0 infos
     # no mops daemons
+    # no usages of foo (InstanceMethodDeclaration) in editable project sources (searched 12 models)
 
   A notice about a default the caller did not choose names the option that
   lifts it, as `pass --limit 0 for all` does. In JSON, metadata is fields of
   the object, such as `truncated`. In JSONL, it is a final record with its own
   `type`, such as `{"type":"summary",...}`.
+
+EMPTY SEARCH RESULTS
+  A `find` command that matches nothing prints one `# no ...` line naming the
+  resolved target and the searched scope. For a module, a model, or the
+  repository the line counts the models searched; a subtree is named by its
+  node, with no count. Under `--refs-only` the line goes to stderr, so stdout
+  stays empty.
+
+  JSON output adds no line; an empty result is an empty results array. Every
+  `find` JSON response carries `target`, echoing what was searched for, and
+  `scope`: its `kind` (`editable-project-sources`, `repository`, `module`,
+  `model`, `subtree`, or `loaded-languages`), the `reference` and `name` of an
+  explicit scope, and the number of `models` searched (absent for a subtree
+  and for loaded languages).
 
 DIAGNOSTICS
   Warnings, errors, and hints go to stderr. Output that has no row shape, such
@@ -39,7 +54,8 @@ MACHINE FORMATS
   `--json`, `--format jsonl`, and `--refs-only` print stdout that can be piped
   without filtering. `--refs-only` prints one serialized node reference per
   line and nothing else, so results pipe straight into `mops get node`. It
-  cannot be combined with `--json` and reports truncation on stderr.
+  cannot be combined with `--json` and reports truncation and an empty result
+  on stderr.
 
 NAMES AND REFERENCES
   Text output shows short concept names; `--full-concept` restores the fully
@@ -53,7 +69,7 @@ EXIT CODES
   A non-zero exit code means the command did not do what was asked: an error,
   a `check` that found an error-severity problem, or a named selection that
   resolved to nothing, such as a test selection without tests. A search that
-  finds nothing succeeds and prints no rows.
+  finds nothing succeeds and prints a metadata line instead of rows.
 
 SEE ALSO
   node-ref, scope

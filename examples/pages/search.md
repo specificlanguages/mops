@@ -10,8 +10,10 @@ prints decimal IDs, and the command accepts both.
 {{table:commands|Command}}
 
 `find` defaults to 100 matches and ends its text output in a `# truncated: ...` metadata line when more exist;
-`--limit 0` removes the cap. Lines starting with `#` are metadata, not results. `--refs-only` cannot be combined with
-`--json`. Use
+`--limit 0` removes the cap. Lines starting with `#` are metadata, not results. A `find` that matches nothing still
+exits 0 and prints one `# no ... in <scope>` line naming the resolved target and the scope it searched, with the number
+of models searched; with `--refs-only` that line goes to stderr, and `--json` instead carries `target` and `scope`
+fields next to an empty results array. `--refs-only` cannot be combined with `--json`. Use
 `{{name-pattern-help}}` for pattern matching rules.
 
 ## Code Mode: concepts and instances

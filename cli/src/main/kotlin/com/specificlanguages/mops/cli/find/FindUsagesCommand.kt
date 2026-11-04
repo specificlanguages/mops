@@ -3,6 +3,7 @@ package com.specificlanguages.mops.cli.find
 import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
+import com.specificlanguages.mops.cli.output.displayConcept
 import com.specificlanguages.mops.cli.output.renderJson
 import com.specificlanguages.mops.cli.output.renderNodeReference
 import com.specificlanguages.mops.cli.output.truncationLine
@@ -29,7 +30,8 @@ import picocli.CommandLine.Parameters
         "Text output is one tab-separated row per reference: `usage`, the reference role, and the owning node's " +
             "name (or <unnamed>), concept, and reference. The owner is typed `root` or `node` by its position in its " +
             "model; a non-root owner appends `parent` and the parent's name (or <unnamed>), concept, and reference. " +
-            "--json prints an object with `limit`, `truncated`, and a `usages` array. Each entry carries the " +
+            "--json prints an object with `target` (the resolved node's summary), `scope`, `limit`, `truncated`, and " +
+            "a `usages` array. Each entry carries the " +
             "reference `role` and a nested `owner` node summary; a non-root owner carries a nested `parent` " +
             "summary. --refs-only prints one reference per referencing node. See `mops explain output`.",
     ],
@@ -53,7 +55,7 @@ class FindUsagesCommand(private val environment: CommandEnvironment) : CliComman
         names = ["--refs-only"],
         description = [
             "Print one serialized node reference per line and nothing else, for piping. Cannot combine with --json; " +
-                "truncation is reported on stderr.",
+                "truncation and an empty result are reported on stderr.",
         ],
     )
     var refsOnly: Boolean = false
@@ -81,6 +83,12 @@ class FindUsagesCommand(private val environment: CommandEnvironment) : CliComman
         val (targetTokens, scope) = splitUsagesArguments(arguments.toList())
         val client = environment.daemon()
         val response = client.findUsages(target = nodeTarget(targetTokens), limit = limit, scope = scope)
+        if (!json && response.usages.isEmpty()) {
+            val target = response.target
+            val subject = "usages of ${target.name ?: "<unnamed>"} (${displayConcept(target.concept, fullConcept)})"
+            printMetadata(emptyResultLine(subject, response.scope, environment.nodeReferenceFormat), refsOnly)
+            return
+        }
         when {
             json -> println(renderJson(response))
             refsOnly -> {
