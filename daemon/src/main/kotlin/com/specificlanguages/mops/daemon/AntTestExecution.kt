@@ -17,10 +17,9 @@ class AntTestExecution(
 ) {
     private val antLog = directory.resolve("ant.log")
     private val testLog = directory.resolve("test-log")
-    private val mpsVersion by lazy {
-        Properties().also { properties -> Files.newInputStream(mps.resolve("build.properties")).use { properties.load(it) } }
-            .getProperty("mpsBootstrapCore.version")
-    }
+    private val mpsVersion = Properties()
+        .also { properties -> Files.newInputStream(mps.resolve("build.properties")).use { properties.load(it) } }
+        .getProperty("mpsBootstrapCore.version")
 
     fun run(project: Path, selection: AntTestSelection) {
         report.beginTiming("antStartupAndDiscovery")

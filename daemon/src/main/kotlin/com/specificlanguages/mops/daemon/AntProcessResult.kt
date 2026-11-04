@@ -20,19 +20,19 @@ class AntProcessResult(
      * Concludes a run whose report is [snapshot], naming the Test Selection by [selectionDescription] when the run
      * discovered no tests.
      */
-    fun conclude(snapshot: TestRunReport, selectionDescription: String): TestRunConclusion {
-        val conclusion = when {
-            finished && snapshot.discovered == 0 ->
-                TestRunConclusion("DISCOVERY_FAILED", complete = true, listOf("No tests discovered for selection: $selectionDescription"))
-            finished && snapshot.hasFailedTests -> TestRunConclusion("TEST_FAILED", complete = true)
-            finished && exitCode != 0 -> TestRunConclusion("WORKER_FAILED", complete = true, listOf(workerExitDiagnostic()))
-            finished -> TestRunConclusion("SUCCESS", complete = true)
-            snapshot.phase == "EXECUTION" -> TestRunConclusion("WORKER_FAILED", complete = false, listOf(workerExitDiagnostic()))
-            else -> TestRunConclusion("DISCOVERY_FAILED", complete = true, listOf(workerExitDiagnostic()))
-        }
-        return if (conclusion.outcome == "SUCCESS") conclusion
-            else conclusion.copy(diagnostics = conclusion.diagnostics + listOfNotNull(classLoadingDiagnostic()))
+    fun conclude(snapshot: TestRunReport, selectionDescription: String): TestRunConclusion = when {
+        finished && snapshot.discovered == 0 ->
+            failure("DISCOVERY_FAILED", complete = true, "No tests discovered for selection: $selectionDescription")
+        finished && snapshot.hasFailedTests -> failure("TEST_FAILED", complete = true, runDiagnostic = null)
+        finished && exitCode != 0 -> failure("WORKER_FAILED", complete = true, workerExitDiagnostic())
+        finished -> TestRunConclusion("SUCCESS", complete = true)
+        snapshot.phase == "EXECUTION" -> failure("WORKER_FAILED", complete = false, workerExitDiagnostic())
+        else -> failure("DISCOVERY_FAILED", complete = true, workerExitDiagnostic())
     }
+
+    /** A failed run's conclusion: [runDiagnostic], if any, followed by the class-loading diagnostic, if any. */
+    private fun failure(outcome: String, complete: Boolean, runDiagnostic: String?) =
+        TestRunConclusion(outcome, complete, listOfNotNull(runDiagnostic, classLoadingDiagnostic()))
 
     private fun workerExitDiagnostic() = "Ant test worker exited $exitCode; see $antLog\n${antLog.readText().takeLast(MAX_ANT_LOG_CHARS)}"
 
