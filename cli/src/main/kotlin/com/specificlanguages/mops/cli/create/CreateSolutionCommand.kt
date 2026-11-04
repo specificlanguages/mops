@@ -10,11 +10,20 @@ import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 import picocli.CommandLine.TypeConversionException
 
-@Command(name = "solution", description = ["Create a solution project module."])
+@Command(
+    name = "solution",
+    description = ["Create a solution project module."],
+    footer = [
+        "",
+        "The preset configures facets only; dependencies, used languages, devkits, and model contents are separate " +
+            "steps. Both the plan and the report name the preset applied and list every facet it produced, so the " +
+            "default is visible in the output.",
+    ],
+)
 class CreateSolutionCommand(environment: CommandEnvironment) : CreateModuleCommand(environment) {
     constructor(client: DaemonClient) : this(DaemonClientCommandEnvironment(client))
     @Parameters(index = "0", paramLabel = "MODULE_NAME") lateinit var moduleName: String
-    @Option(names = ["--descriptor"], paramLabel = "FILE") var descriptor: String? = null
+    @Option(names = ["--descriptor"], paramLabel = "FILE", description = ["Descriptor file to write instead of the conventional location."]) var descriptor: String? = null
     @Option(
         names = ["--usage-preset"], paramLabel = "PRESET", defaultValue = "not-generated", converter = [UsagePresetConverter::class],
         description = [

@@ -8,7 +8,7 @@ import picocli.CommandLine.Option
 abstract class CreateModuleCommand(protected val environment: CommandEnvironment) : CliCommand() {
     @Option(names = ["--dry-run"], description = ["Validate and describe creation without changing the project."])
     var dryRun = false
-    @Option(names = ["--json"], description = ["Print structured JSON."])
+    @Option(names = ["--json"], description = ["Print the plan or report as JSON."])
     var json = false
     protected fun render(response: ModuleCreationResponse) {
         val plan = response.plan; val report = response.report

@@ -13,7 +13,7 @@ import picocli.CommandLine.Option
  */
 @Command(
     name = "project",
-    description = ["Make every generatable module in the project."],
+    description = ["Make every generatable module in the project."],    footer = ["", MAKE_OUTPUT_HELP],
 )
 class MakeProjectCommand(private val environment: CommandEnvironment) : CliCommand(), IExitCodeGenerator {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))

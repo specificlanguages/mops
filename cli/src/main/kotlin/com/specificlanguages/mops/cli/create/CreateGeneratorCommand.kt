@@ -10,7 +10,7 @@ class CreateGeneratorCommand(environment: CommandEnvironment) : CreateModuleComm
     @Option(names = ["--language"], required = true) lateinit var language: String
     @Option(names = ["--alias"], required = true) lateinit var alias: String
     @Option(names = ["--standalone"]) var standalone = false
-    @Option(names = ["--descriptor"], paramLabel = "FILE") var descriptor: String? = null
+    @Option(names = ["--descriptor"], paramLabel = "FILE", description = ["Descriptor file to write instead of the conventional location. Requires --standalone."]) var descriptor: String? = null
     override fun run() {
         require(standalone || descriptor == null) { "--descriptor requires --standalone" }
         render(environment.daemon().createGenerator(language, alias, standalone, descriptor, dryRun))

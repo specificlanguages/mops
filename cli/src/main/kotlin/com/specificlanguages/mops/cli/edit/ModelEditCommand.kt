@@ -17,7 +17,15 @@ import picocli.CommandLine.Option
 @Command(
     name = "model",
     description = ["Apply a JSON batch of edit operations."],
-    footer = ["Operation reference: mops explain edit"],
+    footer = [
+        "",
+        "An operation that names a concept resolves it the same way `mops find instances` does: a dropped " +
+            "`.structure.` infix is forgiven, and a name that does not resolve fails the batch, changing nothing, " +
+            "with the same diagnosis (unknown language, unloaded language, or a \"did you mean\" among a loaded " +
+            "language's concepts).",
+        "",
+        "Operation reference: mops explain edit",
+    ],
 )
 class ModelEditCommand(private val environment: CommandEnvironment) : CliCommand() {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))

@@ -13,7 +13,7 @@ class CreateModelCommand(private val environment: CommandEnvironment) : CliComma
     @Option(names = ["--module"], required = true, paramLabel = "MODULE") lateinit var module: String
     @Option(names = ["--file-per-root"], description = ["Use file-per-root XML persistence."]) var filePerRoot = false
     @Option(names = ["--dry-run"], description = ["Validate and describe creation without changing the project."]) var dryRun = false
-    @Option(names = ["--json"], description = ["Print structured JSON."]) var json = false
+    @Option(names = ["--json"], description = ["Print the plan or report as JSON."]) var json = false
 
     override fun run() {
         val response = environment.daemon().createModel(modelName, module, filePerRoot, dryRun)
