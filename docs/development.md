@@ -122,16 +122,18 @@ Release validation runs the complete `check`, including the full integration mat
 
 A docs-only run skips the test jobs, and its verification job runs only the `prek` hooks, without Gradle. A run is
 docs-only when every changed file is under `docs/` or is a Markdown file in the repository root, and none is under
-`docs/reference/`, which is kept for generated pages that a Gradle check compares with their source. No build task or
-test reads the other files. A pull request compares its merge commit with the base branch, a merge queue run with the
-queue's base commit, and a push to `main` with the previous head. A force push, a push without a previous head, and a
-manual dispatch run everything.
+`docs/reference/`, which is kept for generated pages that need the build's checks. A renamed file counts as changed at
+both paths. No build task or test reads the other files. A pull request compares its merge commit with the base branch,
+a merge queue run with the queue's base commit, and a push to `main` with the previous head. Pushes to `main` do not
+cancel each other, so every push is compared with a head that CI also checks. A force push, a push without a previous
+head, and a manual dispatch run everything.
 
 When every planned job succeeds and the test jobs ran, `CI passed` saves a cache entry for the tested git tree:
 `ci-passed-<tree>` in the full tier, `ci-passed-pr-<tree>` in the pull request tier. A docs-only run saves no entry. For
 a pull request the tested tree is the tree of the merge commit, and the `plan` job prints it in its summary. A pull
-request run that finds either entry for its tree skips the test jobs, and `CI passed` still succeeds, for example after
-a stacked pull request is rebased onto `main` without changing its code. Re-running a skipped run skips again.
+request run that finds either entry for its tree skips the verification and test jobs, and `CI passed` still succeeds,
+for example after a stacked pull request is rebased onto `main` without changing its code. Re-running a skipped run
+skips again.
 
 Entries saved by a pull request run are visible only to later runs of the same pull request; entries saved by runs on
 `main` are visible to all pull requests. Merge queue runs, pushes to `main`, and manual dispatches never look up an

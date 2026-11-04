@@ -11,8 +11,10 @@ on:
 permissions:
   contents: read
 
+# Each push to main gets its own group: the next push compares with its head, so a cancelled push would leave its changes
+# untested.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: true
 
 jobs:

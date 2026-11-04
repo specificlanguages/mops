@@ -10,8 +10,9 @@
 set -euo pipefail
 
 # Prints "true" when every changed path is documentation that no build task, test, or generated-page check reads:
-# files under docs/ (except the generated command reference in docs/reference/) and Markdown files in the repository
-# root. Prints "false" when the base is unknown, cannot be fetched, or nothing changed.
+# files under docs/ (except docs/reference/, kept for generated pages that need the build's checks) and Markdown files
+# in the repository root. Prints "false" when the base is unknown, cannot be fetched, or nothing changed. Renames count
+# as changes to both paths.
 docs_only() {
   local base="$1"
   if [ -z "$base" ] || [ "$base" = 0000000000000000000000000000000000000000 ]; then
@@ -24,7 +25,7 @@ docs_only() {
     return
   fi
   local changed
-  changed="$(git diff --name-only "$base" HEAD)"
+  changed="$(git diff --no-renames --name-only "$base" HEAD)"
   if [ -n "$changed" ] && ! grep -qvE '^(docs/.+|[^/]+\.md)$' <<< "$changed" && ! grep -qE '^docs/reference/' <<< "$changed"; then
     echo true
   else
