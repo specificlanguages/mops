@@ -23,6 +23,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       tier: ${{ steps.plan.outputs.tier }}
+      docs-only: ${{ steps.plan.outputs.docs-only }}
       daemon-versions: ${{ steps.plan.outputs.daemon-versions }}
       integration-versions: ${{ steps.plan.outputs.integration-versions }}
       marker-key: ${{ steps.plan.outputs.marker-key }}
@@ -39,41 +40,12 @@ jobs:
         id: plan
         env:
           EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.merge_group.base_sha || github.event.before }}
+          FORCED: ${{ github.event.forced }}
         run: |
-          tree="$(git rev-parse 'HEAD^{tree}')"
-          versions="$(sed -n 's/^supportedMpsVersions=//p' gradle.properties | jq -Rc 'split(",") | map(gsub("^\\s+|\\s+$"; ""))')"
-          docs_only=false
-          if [ "$EVENT_NAME" = pull_request ]; then
-            tier='pr'
-            marker_key="ci-passed-pr-$tree"
-            daemon_versions="$(jq -c 'map(select(. != "Prerelease")) | [first, last] | unique' <<< "$versions")"
-            integration_versions="$(jq -c 'map(select(. != "Prerelease")) | [last]' <<< "$versions")"
-            # HEAD is the merge commit of the pull request and HEAD^1 is the base branch.
-            changed="$(git diff --name-only 'HEAD^1' HEAD)"
-            if [ -n "$changed" ] && ! grep -qvE '^(docs/.+|[^/]+\.md)$' <<< "$changed"; then
-              docs_only=true
-            fi
-          else
-            tier='full'
-            marker_key="ci-passed-$tree"
-            daemon_versions="$versions"
-            integration_versions="$versions"
-          fi
-          {
-            echo "Tree: $tree"
-            echo "Tier: $tier"
-            echo "Docs only: $docs_only"
-            echo "Daemon test versions: $daemon_versions"
-            echo "Integration test versions: $integration_versions"
-          } | tee -a "$GITHUB_STEP_SUMMARY"
-          {
-            echo "tree=$tree"
-            echo "tier=$tier"
-            echo "docs-only=$docs_only"
-            echo "marker-key=$marker_key"
-            echo "daemon-versions=$daemon_versions"
-            echo "integration-versions=$integration_versions"
-          } >> "$GITHUB_OUTPUT"
+          plan="$(.github/scripts/plan.sh)"
+          echo "$plan" >> "$GITHUB_OUTPUT"
+          printf '```text\n%s\n```\n' "$plan" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Look up a full-tier passed marker for this tree
         id: full-marker
         if: steps.plan.outputs.tier == 'pr'
@@ -91,6 +63,7 @@ jobs:
           key: ci-passed-pr-${{ steps.plan.outputs.tree }}
           lookup-only: true
 
+  # A docs-only run skips the Gradle steps and runs only the prek hooks.
   verification:
     needs: plan
     if: needs.plan.outputs.already-passed != 'true'
@@ -101,11 +74,14 @@ jobs:
         with:
           persist-credentials: false
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        if: needs.plan.outputs.docs-only != 'true'
         with:
           distribution: temurin
           java-version: 25
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
+        if: needs.plan.outputs.docs-only != 'true'
       - name: Run unit tests and verification checks
+        if: needs.plan.outputs.docs-only != 'true'
         # The daemon-versions matrix runs the MPS-backed daemon tests, one job per supported MPS version.
         run: xvfb-run -a ./gradlew --continue check -x :cli:integrationTest -x :daemon:test -x :daemon:testOtherMpsVersions
       - uses: j178/prek-action@44924fe9ef4a6f88253c4b6b1bf11c689d3ce53d # v3.1.0
@@ -114,7 +90,7 @@ jobs:
           prek-version: v0.5.9
           extra-args: --all-files
       - name: Upload test reports
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.plan.outputs.docs-only != 'true' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: verification-test-reports
@@ -222,18 +198,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      # The full tier skips no jobs. In the pull request tier, jobs are skipped only by their own conditions or after a
-      # failed plan job, which this check rejects.
-      - name: Require all jobs to succeed
+      # Jobs are skipped only by their own conditions or after a failed plan job, which this check rejects.
+      - name: Require all jobs to succeed or be skipped by the plan
         env:
           JOB_RESULTS: ${{ toJSON(needs) }}
-          TIER: ${{ needs.plan.outputs.tier }}
-        run: |
-          if [ "$TIER" = full ]; then
-            echo "$JOB_RESULTS" | jq -e 'all(.[]; .result == "success")'
-          else
-            echo "$JOB_RESULTS" | jq -e 'all(.[]; .result == "success" or .result == "skipped")'
-          fi
+        run: echo "$JOB_RESULTS" | jq -e 'all(.[]; .result == "success" or .result == "skipped")'
       - name: Create the passed marker
         if: needs.plan.outputs.run-tests == 'true'
         run: touch ci-passed-marker
