@@ -111,6 +111,12 @@ language, unloaded language, or a "did you mean" among a loaded language's conce
   did not load is skipped and reported as a warning.
 - `strict` - like `best-effort` for violations, but a concept that cannot be checked aborts the batch.
 
+When an operation creates or copies a structure-language declaration (a concept, interface, property, link, datatype, or
+enumeration member), mops gives it a meta-id (`conceptId`, `propertyId`, `linkId`, `datatypeId`, or `memberId`) the way
+MPS does: the declaration's own node ID, or a random number when another declaration in the same scope already has that
+ID. A copy always gets a new meta-id; a created declaration keeps a meta-id set in the operation. The response's `hints`
+list each assignment, and a later `setProperty` in the same batch overrides it.
+
 ```sh
 mops --mps-home <path> get node [--ancestry] [--depth N | --summary] [--compact] <node-reference>
 mops --mps-home <path> get node [--ancestry] [--depth N | --summary] [--compact] <model-target> <node-id>

@@ -137,6 +137,9 @@ data class ModelEditResponse(
     // Non-fatal notices, e.g. constraints skipped because a concept's language was not loaded. One line per language,
     // capped, with a final summary line when more languages were affected.
     val warnings: List<String> = emptyList(),
+    // Hints: one line per adjustment the edit made on the caller's behalf, e.g. a meta-id assigned to a created or
+    // copied structure declaration. Empty when the batch was blocked, since nothing was applied.
+    val hints: List<String> = emptyList(),
 ) : DaemonResponse
 
 /**

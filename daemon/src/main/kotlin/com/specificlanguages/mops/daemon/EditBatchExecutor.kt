@@ -79,6 +79,10 @@ class EditBatchExecutor(
         val uncheckable = UncheckableLanguages()
         val conceptResolver = ConceptResolver(project)
         val moduleLoadDiagnostics = ModuleLoadDiagnostics(project)
+        val structureMetaIds = StructureMetaIds(persistence)
+        // The nodes the current operation materialized, in creation order, handed to [StructureMetaIds] after it.
+        val materialized = mutableListOf<MaterializedNode>()
+        val hints = mutableListOf<String>()
 
         fun fail(code: MpsErrorCode, message: String): Nothing =
             throw MpsRequestException(code = code, message = message)
@@ -359,6 +363,14 @@ class EditBatchExecutor(
             placements.add(Placement(index, parent, link, source))
         }
 
+        fun materializedFresh(node: SNode) {
+            materialized.add(MaterializedNode(node, copied = false))
+        }
+
+        fun materializedCopy(copy: SNode) {
+            SNodeUtil.getDescendants(copy).mapTo(materialized) { MaterializedNode(it, copied = true) }
+        }
+
         fun setPropertyOrFail(index: Int, node: SNode, property: SProperty, value: String?) {
             try {
                 writePropertyText(node, property, value)
@@ -396,6 +408,7 @@ class EditBatchExecutor(
                         val childNode = model.createNode(resolveConceptOrFail(index, child.concept))
                         node.addChild(link, childNode)
                         placements.add(Placement(index, node, link, childNode))
+                        materializedFresh(childNode)
                         populate(index, model, childNode, child.properties, child.references, child.children)
                     }
                     is InlineChild.Move -> {
@@ -407,6 +420,7 @@ class EditBatchExecutor(
                         val copy = CopyUtil.copy(source)
                         node.addChild(link, copy)
                         placements.add(Placement(index, node, link, copy))
+                        materializedCopy(copy)
                     }
                 }
             }
@@ -479,6 +493,7 @@ class EditBatchExecutor(
                     val child = model.createNode(concept)
                     attach(index, node, link, child, operation.position)
                     placements.add(Placement(index, node, link, child))
+                    materializedFresh(child)
                     populate(index, model, child, operation.properties, operation.references, operation.children)
                     bindAlias(index, operation.alias, child)
                 }
@@ -511,6 +526,7 @@ class EditBatchExecutor(
                     val copy = CopyUtil.copy(source)
                     attach(index, node, link, copy, operation.position)
                     placements.add(Placement(index, node, link, copy))
+                    materializedCopy(copy)
                     bindAlias(index, operation.alias, copy)
                 }
 
@@ -520,6 +536,7 @@ class EditBatchExecutor(
                     val root = model.createNode(concept)
                     model.addRootNode(root)
                     rootPlacements.add(RootPlacement(index, model, root))
+                    materializedFresh(root)
                     populate(index, model, root, operation.properties, operation.references, operation.children)
                     bindAlias(index, operation.alias, root)
                 }
@@ -530,6 +547,7 @@ class EditBatchExecutor(
                     val copy = CopyUtil.copy(source)
                     model.addRootNode(copy)
                     rootPlacements.add(RootPlacement(index, model, copy))
+                    materializedCopy(copy)
                     bindAlias(index, operation.alias, copy)
                 }
 
@@ -550,6 +568,7 @@ class EditBatchExecutor(
                         is InlineChild.Fresh -> {
                             val concept = resolveConceptOrFail(index, with.concept)
                             val node = model.createNode(concept)
+                            materializedFresh(node)
                             populate(index, model, node, with.properties, with.references, with.children)
                             node
                         }
@@ -562,7 +581,7 @@ class EditBatchExecutor(
                         }
                         is InlineChild.Copy -> {
                             val source = resolveNode(index, with.source)
-                            CopyUtil.copy(source)
+                            CopyUtil.copy(source).also(::materializedCopy)
                         }
                     }
                     replaceInPlace(index, target, replacement)
@@ -574,6 +593,7 @@ class EditBatchExecutor(
                     val model = target.model!!
                     val concept = resolveConceptOrFail(index, operation.concept)
                     val wrapper = model.createNode(concept)
+                    materializedFresh(wrapper)
                     val link = resolveContainmentOrFail(index, wrapper, operation.role)
                     // Build the wrapper's other inline structure first, then swap it into the target's slot, then adopt
                     // the target under the wrapper's role among any inline-built siblings.
@@ -593,6 +613,8 @@ class EditBatchExecutor(
                     replaceInPlace(index, target, keep)
                 }
             }
+            hints += structureMetaIds.assign(materialized)
+            materialized.clear()
         }
 
         val violations = evaluateConstraints(placements, rootPlacements, referencePlacements, uncheckable)
@@ -622,6 +644,7 @@ class EditBatchExecutor(
                 created = aliases.mapValues { (_, node) -> persistence.asString(node.reference) },
                 violations = violations,
                 warnings = warnings,
+                hints = hints,
             )
             is SaveOutcome.SaveFailed -> fail(
                 MpsErrorCode.SAVE_FAILED,

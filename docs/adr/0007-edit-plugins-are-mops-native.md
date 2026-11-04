@@ -1,8 +1,10 @@
 # Edit Plugins are mops-native; MPS-registered editing behaviors are not invoked
 
 > **Status: PLANNED — NOT IMPLEMENTED.** This ADR records a design decision that has not been built. There is no
-> `mops-plugin-api` artifact, no plugin dispatch in the write-executor, and no `hints` field in the edit response. The
-> design below stands as the intended direction, not a description of current behavior.
+> `mops-plugin-api` artifact and no plugin dispatch in the write-executor. The edit response has a `hints` field, and
+> the structure language's meta-id handling is built directly into the write-executor (`StructureMetaIds`), called after
+> each operation with the nodes it materialized. The design below stands as the intended direction, not a description of
+> current behavior.
 
 When an **Edit Operation** **Materializes** nodes — creates them fresh or as copies — mops dispatches **Edit Plugins**:
 JVM implementations of a mops-owned SPI published as `mops-plugin-api` (the SPI interface and context object are mops's
