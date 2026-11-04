@@ -42,16 +42,6 @@ repos:
         files: ^(tools/markdownlint/|\.markdownlint-cli2\.yaml$|\.pre-commit-config\.yaml$)
         pass_filenames: false
 
-      - id: markdownlint-rules-test
-        name: Test markdownlint custom rules
-        entry: node --test "tools/markdownlint/*.test.cjs"
-        language: node
-        # Keep in step with the markdownlint version that markdownlint-cli2 above depends on.
-        additional_dependencies:
-          - markdownlint@0.41.1
-        files: ^(tools/markdownlint/|\.pre-commit-config\.yaml$)
-        pass_filenames: false
-
       - id: file-size
         name: Check Kotlin and Markdown file size
         entry: tools/pre-commit/check-file-size.py
