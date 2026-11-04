@@ -7,42 +7,40 @@ import kotlin.io.path.readText
 import kotlin.io.path.useLines
 
 /**
- * How the Ant process of a test run in [directory] ended: whether the worker published its finished event, and the Ant
- * exit code. [finish] maps it to the report's outcome, completeness, and diagnostics.
+ * How the Ant process of a test run ended: whether the worker published its finished event, and the Ant exit code.
+ * [antLog] is the Ant process output and [ideaLog] the test worker's IDE log.
  */
-class AntProcessResult(private val finished: Boolean, private val exitCode: Int, private val directory: Path) {
-    /** Finishes [report], naming the Test Selection by [selectionDescription] when the run discovered no tests. */
-    fun finish(report: TestReportStore, selectionDescription: String) {
-        val snapshot = report.snapshot()
-        val outcome = outcome(snapshot)
-        val runDiagnostic = when {
-            finished && snapshot.discovered == 0 -> "No tests discovered for selection: $selectionDescription"
-            !finished || exitCode != 0 && snapshot.results.none { it.status == "FAILED" } -> workerExitDiagnostic()
-            else -> null
+class AntProcessResult(
+    private val finished: Boolean,
+    private val exitCode: Int,
+    private val antLog: Path,
+    private val ideaLog: Path,
+) {
+    /**
+     * Concludes a run whose report is [snapshot], naming the Test Selection by [selectionDescription] when the run
+     * discovered no tests.
+     */
+    fun conclude(snapshot: TestRunReport, selectionDescription: String): TestRunConclusion {
+        val conclusion = when {
+            finished && snapshot.discovered == 0 ->
+                TestRunConclusion("DISCOVERY_FAILED", complete = true, listOf("No tests discovered for selection: $selectionDescription"))
+            finished && snapshot.hasFailedTests -> TestRunConclusion("TEST_FAILED", complete = true)
+            finished && exitCode != 0 -> TestRunConclusion("WORKER_FAILED", complete = true, listOf(workerExitDiagnostic()))
+            finished -> TestRunConclusion("SUCCESS", complete = true)
+            snapshot.phase == "EXECUTION" -> TestRunConclusion("WORKER_FAILED", complete = false, listOf(workerExitDiagnostic()))
+            else -> TestRunConclusion("DISCOVERY_FAILED", complete = true, listOf(workerExitDiagnostic()))
         }
-        val classLoading = if (outcome == "SUCCESS") null else classLoadingDiagnostic(directory.resolve("test-log/idea.log"))
-        report.finish(TestRunConclusion(outcome, complete = finished || snapshot.phase != "EXECUTION", listOfNotNull(runDiagnostic, classLoading)))
+        return if (conclusion.outcome == "SUCCESS") conclusion
+            else conclusion.copy(diagnostics = conclusion.diagnostics + listOfNotNull(classLoadingDiagnostic()))
     }
 
-    private fun outcome(snapshot: TestRunReport): String = when {
-        finished && snapshot.discovered == 0 -> "DISCOVERY_FAILED"
-        finished && snapshot.results.any { it.status == "FAILED" } -> "TEST_FAILED"
-        finished && exitCode != 0 -> "WORKER_FAILED"
-        finished -> "SUCCESS"
-        snapshot.phase == "EXECUTION" -> "WORKER_FAILED"
-        else -> "DISCOVERY_FAILED"
-    }
-
-    private fun workerExitDiagnostic(): String {
-        val antLog = directory.resolve("ant.log")
-        return "Ant test worker exited $exitCode; see $antLog\n${antLog.readText().takeLast(MAX_ANT_LOG_CHARS)}"
-    }
+    private fun workerExitDiagnostic() = "Ant test worker exited $exitCode; see $antLog\n${antLog.readText().takeLast(MAX_ANT_LOG_CHARS)}"
 
     /**
      * Summarizes the worker's warnings about modules it marked invalid for class loading, which otherwise surface only as
      * a ClassNotFoundException for the test classes of a dependent module. Null when the worker logged none.
      */
-    private fun classLoadingDiagnostic(ideaLog: Path): String? {
+    private fun classLoadingDiagnostic(): String? {
         if (!ideaLog.exists()) return null
         val warnings = ideaLog.useLines { lines -> lines.mapNotNull { CLASS_LOADING_WARNING.find(it)?.groupValues?.get(1) }.toList() }
         if (warnings.isEmpty()) return null

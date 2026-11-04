@@ -15,14 +15,21 @@ class AntTestExecution(
     private val report: TestReportStore,
     private val limits: TestRunLimits,
 ) {
+    private val antLog = directory.resolve("ant.log")
+    private val testLog = directory.resolve("test-log")
+    private val mpsVersion by lazy {
+        Properties().also { properties -> Files.newInputStream(mps.resolve("build.properties")).use { properties.load(it) } }
+            .getProperty("mpsBootstrapCore.version")
+    }
+
     fun run(project: Path, selection: AntTestSelection) {
         report.beginTiming("antStartupAndDiscovery")
         val adapters = copyAdapters()
         val events = directory.resolve("events").createDirectories()
-        val antFile = writeAntFile(project, selection, adapters.resolve("boot.jar"), testJvmArgs(project, selection, adapters, events))
-        val collector = WorkerEventCollector(events, report, limits)
-        val exitCode = runAnt(antFile, collector)
-        AntProcessResult(collector.finished, exitCode, directory).finish(report, selection.description)
+        val jvmArgs = testJvmArgs(project, selection, writeTestConfig(), adapters, events)
+        val antFile = writeAntFile(project, selection, adapters.resolve("boot.jar"), jvmArgs)
+        val result = runAnt(antFile, WorkerEventCollector(events, report, limits))
+        report.finish(result.conclude(report.snapshot(), selection.description))
     }
 
     /** Copies the packaged boot and launcher adapter JARs into the run directory and returns their directory. */
@@ -36,14 +43,17 @@ class AntTestExecution(
         return adapters
     }
 
-    /** The arguments of the test-mode JVM that Ant starts. Creates the run's test configuration directory. */
-    private fun testJvmArgs(project: Path, selection: AntTestSelection, adapters: Path, events: Path): List<String> {
-        val properties = Properties().also { properties -> Files.newInputStream(mps.resolve("build.properties")).use { properties.load(it) } }
-        val version = properties.getProperty("mpsBootstrapCore.version")
+    /** Creates the configuration directory of the test-mode JVM and returns it. */
+    private fun writeTestConfig(): Path {
         val config = directory.resolve("test-config").createDirectories()
         // The 2025.1 SVG parser is on Ant's application classpath, but its language is in the Images plugin loader.
-        if (version.startsWith("2025.1"))
+        if (mpsVersion.startsWith("2025.1"))
             config.resolve("disabled_plugins.txt").writeText("com.intellij.platform.images\n")
+        return config
+    }
+
+    /** The arguments of the test-mode JVM that Ant starts, with [config] as its configuration directory. */
+    private fun testJvmArgs(project: Path, selection: AntTestSelection, config: Path, adapters: Path, events: Path): List<String> {
         val jnaArch = if (System.getProperty("os.arch") in listOf("aarch64", "arm64")) "aarch64" else "amd64"
         val pluginPath = Files.list(mps.resolve("plugins")).use { paths ->
             paths.filter { it.isDirectory() || it.extension == "jar" }.sorted().toList().joinToString(File.pathSeparator)
@@ -51,13 +61,13 @@ class AntTestExecution(
         return listOf(
             "-ea", "-Xmx2048m", "-Dplugin.path=$pluginPath", "-Djava.awt.headless=true", "-Didea.config.path=$config",
             // MPS 2026.3 deletes the test-mode system directory at startup unless mps.test.keep.system.dir is set.
-            "-Didea.system.path=$systemDirectory", "-Dmps.test.keep.system.dir=true", "-Didea.log.path=${directory.resolve("test-log")}",
+            "-Didea.system.path=$systemDirectory", "-Dmps.test.keep.system.dir=true", "-Didea.log.path=$testLog",
             "-Djna.boot.library.path=${mps.resolve("lib/jna/$jnaArch")}",
             "-Dmops.test.modules=${selection.testModuleIds.joinToString(",")}",
             "-Dmops.test.sources=${selection.sourceFolders(project).joinToString(File.pathSeparator)}",
             "-Dmops.test.adapters=$adapters", "-Dmops.test.events=$events",
         ) + listOfNotNull(selection.model?.let { "-Dmops.test.model=$it" }, selection.node?.let { "-Dmops.test.node=$it" }) +
-            if (version.startsWith("2024.1")) listOf("-Djava.system.class.loader=com.intellij.util.lang.PathClassLoader") else emptyList()
+            if (mpsVersion.startsWith("2024.1")) listOf("-Djava.system.class.loader=com.intellij.util.lang.PathClassLoader") else emptyList()
     }
 
     /** Writes the Ant file that runs the `launchtests` task for [selection] and returns its path. */
@@ -86,19 +96,19 @@ class AntTestExecution(
         return antFile
     }
 
-    /** Runs Ant on [antFile], recording the worker's events until Ant exits, and returns the Ant exit code. */
-    private fun runAnt(antFile: Path, collector: WorkerEventCollector): Int {
+    /** Runs Ant on [antFile], recording the worker's events with [collector] until Ant exits. */
+    private fun runAnt(antFile: Path, collector: WorkerEventCollector): AntProcessResult {
         val java = Path.of(System.getProperty("java.home")).resolve("bin/java").toString()
         val antClasspath = listOf(mps.resolve("lib/ant/lib/ant.jar"), mps.resolve("lib/ant/lib/ant-launcher.jar")).joinToString(File.pathSeparator)
         val ant = ProcessBuilder(java, "-cp", antClasspath, "org.apache.tools.ant.Main", "-f", antFile.toString())
-            .redirectErrorStream(true).redirectOutput(directory.resolve("ant.log").toFile()).start()
+            .redirectErrorStream(true).redirectOutput(antLog.toFile()).start()
         try {
             while (!ant.waitFor(50, TimeUnit.MILLISECONDS)) collector.collect()
             collector.collect()
         } finally {
             if (ant.isAlive) destroyProcessTree(ant.toHandle())
         }
-        return ant.exitValue()
+        return AntProcessResult(collector.finished, ant.exitValue(), antLog, testLog.resolve("idea.log"))
     }
 
     private companion object {
