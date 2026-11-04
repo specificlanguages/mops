@@ -16,7 +16,8 @@ import picocli.CommandLine.Parameters
 @Command(
     name = "module",
     header = ["Make the named modules and their dependency closure."],
-    description = ["Make the named modules and their dependency closure, so an un-made dependency is made too."],    footer = ["", MAKE_OUTPUT_HELP],
+    description = ["Make the named modules and their transitive dependency closure, so an un-made dependency is made too."],
+    footer = ["", MAKE_OUTPUT_HELP],
 )
 class MakeModulesCommand(private val environment: CommandEnvironment) : CliCommand(), IExitCodeGenerator {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))

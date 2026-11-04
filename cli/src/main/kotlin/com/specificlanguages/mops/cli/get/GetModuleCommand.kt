@@ -18,7 +18,7 @@ import picocli.CommandLine.Parameters
         "",
         "The module is found anywhere in the repository. Text output is one `key<TAB>value` row per location MPS " +
             "reports, keyed by the JSON field name: `kind`, `name`, `reference`, `packaged`, then `descriptor` (the " +
-            ".mpl/.msd/.devkit of a source module, or `name.jar!/META-INF/module.xml` of a deployed one), `jar` and " +
+            ".mpl, .msd, or .devkit file of a source module, or `name.jar!/META-INF/module.xml` of a deployed one), `jar` and " +
             "`sourcesJar` (the deployed module's archive and the sources archive its deployment descriptor names), " +
             "`sourceDescriptor` (the source descriptor inside that archive), `sourceDirectory` (a source module's " +
             "descriptor directory), `classesGen` (a source module's compiled-class output, when its Java facet " +

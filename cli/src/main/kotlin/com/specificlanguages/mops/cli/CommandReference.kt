@@ -91,7 +91,9 @@ object CommandReference {
     private fun commandPage(command: CommandLine) = buildString {
         appendLine("# ${qualifiedName(command)}")
         appendLine()
-        appendWrapped(generatedNote("`${qualifiedName(command)} --help`") + " Global options are listed in the [index]($INDEX).")
+        appendWrapped(
+            generatedNote("`${qualifiedName(command)} --help`") + " Global options are listed in the [index]($INDEX).",
+        )
         appendCommand(command)
         for (subcommand in command.documentedSubcommands()) {
             appendLine()
@@ -132,7 +134,7 @@ object CommandReference {
     private fun generatedNote(source: String) =
         "Generated from $source by `./gradlew :cli:updateReference`. Do not edit this page."
 
-    /** The one-line description the parent's command list shows: the first header line, else the first description line. */
+    /** The line the parent's command list shows: the first header line, else the first description line. */
     private fun summary(command: CommandLine): String {
         val usage = command.commandSpec.usageMessage()
         val line = usage.header().firstOrNull() ?: usage.description().first()
@@ -149,7 +151,7 @@ object CommandReference {
     private fun CommandLine.documentedSubcommands(): List<CommandLine> =
         subcommands.values.distinct().filterNot { it.commandSpec.helpCommand() }
 
-    /** Writes the reference into the directory `args[0]`, linking the skill pages found in the `skills/` directory `args[1]`. */
+    /** Writes the reference into the directory `args[0]`, linking the skill pages in the `skills/` directory `args[1]`. */
     @JvmStatic
     fun main(args: Array<String>) {
         val outputDir = Path.of(args[0])

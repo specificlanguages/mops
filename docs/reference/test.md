@@ -23,8 +23,8 @@ Options:
 The target selects the project (omit it), a module, a model, or a root test
 case; individual test methods are unsupported. The default build includes the
 owning modules and their required dependencies; --no-build requires existing
-compiled classes. Ctrl-C cancels the worker. Cancellation and timeouts leave
-the daemon usable.
+compiled classes. Ctrl-C cancels the worker. Cancelling a CLI run and test
+timeouts leave the daemon usable.
 
 Execution uses the distribution's Ant `launchtests` machinery in IDEA test
 mode, including its test session, failure detection, and XML reports. The test

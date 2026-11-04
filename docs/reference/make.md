@@ -22,8 +22,8 @@ Make the named modules and their dependency closure.
 
 ```text
 Usage: mops make module [-h] [--json] MODULE...
-Make the named modules and their dependency closure, so an un-made dependency
-is made too.
+Make the named modules and their transitive dependency closure, so an un-made
+dependency is made too.
 Parameters:
       MODULE...             Module name or serialized module reference.
 Options:

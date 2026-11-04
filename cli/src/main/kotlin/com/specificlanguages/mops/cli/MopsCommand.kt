@@ -81,7 +81,8 @@ class MopsCommand(
         description = [
             "Path macro the daemon defines in MPS before it opens the project; repeatable. PATH is an existing " +
                 "directory, absolute or relative to the directory where mops was started. Test runs pass the macros " +
-                "to the test worker. A running daemon with other macros is not reused; stop it with mops daemon stop.",
+                "to the test worker. A running daemon with other macros is not reused: the command fails, and after mops daemon stop the next " +
+                "command starts a daemon with the new macros.",
         ],
         parameterConsumer = MacroConsumer::class,
     )
@@ -112,7 +113,11 @@ class MopsCommand(
 
     override var nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED
 
-    @Option(names = ["--refs-as-urls"], scope = ScopeType.INHERIT, description = ["Render node references as MPS URLs in text output; JSON output is unchanged."])
+    @Option(
+        names = ["--refs-as-urls"],
+        scope = ScopeType.INHERIT,
+        description = ["Render node references as MPS URLs in text output; JSON output is unchanged."],
+    )
     fun setRefsAsUrls(enabled: Boolean) {
         nodeReferenceFormat = if (enabled) NodeReferenceFormat.URL else NodeReferenceFormat.SERIALIZED
     }

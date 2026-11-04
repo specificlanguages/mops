@@ -18,10 +18,8 @@ object ExplainTopics {
 
     private val operationTopics: List<String> = EditNotation.operationNames.map { "edit.$it" }
 
-    private val allTopics: List<String> = topLevelTopics + operationTopics
-
     /** Every canonical topic path: the top-level topics, then the `edit.<op>` operation pages. */
-    val topics: List<String> get() = allTopics
+    val topics: List<String> = topLevelTopics + operationTopics
 
     /** Renders the topic index: the [topicList] framed by what the pages are and how to open one. */
     fun index(): String = buildString {
@@ -75,12 +73,12 @@ object ExplainTopics {
      * `edit.*` page naturally qualify those names with the namespace they are in.
      */
     private fun resolve(path: String): String? {
-        if (path in allTopics) return path
+        if (path in topics) return path
         val lastDot = path.lastIndexOf('.')
         if (lastDot < 0) return null
         val prefix = path.substring(0, lastDot)
         val leaf = path.substring(lastDot + 1)
-        return leaf.takeIf { prefix in allTopics && leaf in topLevelTopics }
+        return leaf.takeIf { prefix in topics && leaf in topLevelTopics }
     }
 
     /** Returns the build-generated JSON Schema for the edit-batch Notation, embedded as a classpath resource. */
@@ -101,12 +99,12 @@ object ExplainTopics {
     private fun unknownTopic(path: String): UnknownTopicException {
         val parts = path.split(".")
         val parentPrefix = parts.dropLast(1).joinToString(".")
-        val siblings = allTopics.filter { candidate ->
+        val siblings = topics.filter { candidate ->
             val candidateParts = candidate.split(".")
             candidateParts.size == parts.size && candidateParts.dropLast(1).joinToString(".") == parentPrefix
-        }.ifEmpty { allTopics }
+        }.ifEmpty { topics }
         // Qualified top-level aliases (see resolve) are invocable too, so offer them as suggestions.
-        val aliases = if (parentPrefix in allTopics) topLevelTopics.map { "$parentPrefix.$it" } else emptyList()
+        val aliases = if (parentPrefix in topics) topLevelTopics.map { "$parentPrefix.$it" } else emptyList()
         // Nearest sibling by edit distance, but credit a shared prefix so `edit.addNode` suggests `edit.addChild`
         // (which shares the `edit.add` prefix) over an equidistant `edit.moveAsChild`.
         val suggestion = (siblings + aliases).minByOrNull { levenshteinDistance(path, it) - commonPrefixLength(path, it) }

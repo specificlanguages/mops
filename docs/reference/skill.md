@@ -22,7 +22,8 @@ Print the absolute path to a bundled SKILL.md.
 ```text
 Usage: mops skill path [-h] [NAME]
 Print the absolute path to a bundled SKILL.md. Load it directly or symlink its
-directory into your agent's skills directory.
+directory into your agent's skills directory. Works without an MPS project or
+daemon.
 Parameters:
       [NAME]                Skill name: mops (default), mops-daemon (alias:
                               daemon).

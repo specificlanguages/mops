@@ -223,6 +223,16 @@ schema, and checks bundled reference links. These checks catch syntax and protoc
 lint checks the checked-in references, not the generated build output. Line-length checks apply to prose, excluding code
 blocks and tables globally.
 
+`BundledExamplesIntegrationTest` creates a named JUnit dynamic test for each executable Groovy spec. It starts one
+daemon and gives every example fresh models in a disposable BaseLanguage project. Each spec declares its placeholder
+bindings, optional preparation, and assertions on CLI output or saved model data. The runner executes the same snippet
+used to generate the Markdown. Examples requiring other fixtures declare an explicit `untested` reason. The PR smoke
+suite uses the last supported MPS version, and the full integration matrix runs the specs on each version.
+
+```sh
+./gradlew :cli:smokeIntegrationTest --tests '*BundledExamplesIntegrationTest'
+```
+
 ### Command reference
 
 `docs/reference/` is generated output: one page per top-level command with the `--help` output of the command and its
@@ -232,16 +242,6 @@ runs in `check`. Change the command's help text or the explain page, never the g
 
 ```sh
 ./gradlew :cli:updateReference :cli:checkReference
-```
-
-`BundledExamplesIntegrationTest` creates a named JUnit dynamic test for each executable Groovy spec. It starts one
-daemon and gives every example fresh models in a disposable BaseLanguage project. Each spec declares its placeholder
-bindings, optional preparation, and assertions on CLI output or saved model data. The runner executes the same snippet
-used to generate the Markdown. Examples requiring other fixtures declare an explicit `untested` reason. The PR smoke
-suite uses the last supported MPS version, and the full integration matrix runs the specs on each version.
-
-```sh
-./gradlew :cli:smokeIntegrationTest --tests '*BundledExamplesIntegrationTest'
 ```
 
 ### Test-running integration tests

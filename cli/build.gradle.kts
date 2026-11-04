@@ -158,7 +158,8 @@ val checkReference by tasks.registering {
     inputs.dir(generated)
     inputs.dir(checkedInReference)
     doLast {
-        fun pages(dir: File) = fileTree(dir).files.associate { it.relativeTo(dir).invariantSeparatorsPath to it.readText() }
+        fun pages(dir: File) =
+            fileTree(dir).files.associate { it.relativeTo(dir).invariantSeparatorsPath to it.readText() }
         val expected = pages(generated.get())
         val actual = pages(checkedInReference.asFile)
         check(expected == actual) { "The command reference is stale. Run ./gradlew :cli:updateReference." }

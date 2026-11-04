@@ -9,7 +9,7 @@ internal const val CHECK_OUTPUT_HELP =
         "`# truncated: showing <shown> of <total> findings; pass --limit 0 for all`. See `mops explain output`."
 
 internal const val CHECK_JSONL_HELP =
-    "--format jsonl prints one finding object per line and ends with a {\"type\":\"summary\",...} record carrying " +
-        "shown, total, errors, warnings, infos, limit, truncated, and, when truncated, a hint naming --limit 0. " +
+    "--format jsonl prints one finding object per line and ends with a summary record, " +
+        "{\"type\":\"summary\",...}, carrying shown, total, errors, warnings, infos, limit, truncated, and, when truncated, a hint naming --limit 0. " +
         "Findings have no type field. The totals and the exit code cover every finding, not only the shown ones, " +
         "in both formats."

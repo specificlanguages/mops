@@ -21,7 +21,7 @@ import java.util.concurrent.Callable
         "Wrappers go directly in each Gradle project's build directory when it has one detected MPS project; with multiple MPS projects, they go in mops/<MPS-project-name> beneath it. Reported paths are relative to the working directory.",
         "No CLI-configured MPS home or daemon is required; Java must be available to run Gradle.",
         "Querying configured providers may download and extract MPS or JBR distributions; it does not run preparation or language build task actions.",
-        "Partial discoveries print available values without writing a wrapper and exit with status 1; known pairs write the wrapper and exit with status 0, with warnings when their paths are not usable yet.",
+        "Partial discoveries print available values without writing a wrapper and exit with status 1; known pairs write the wrapper and exit with status 0, with warnings when their paths are not usable yet, so wrappers can be written before the project's preparation steps.",
         "The wrapper passes each --macro NAME=PATH given to this command. A path macro that .mps/libraries.xml or .mps/modules.xml uses without a --macro value gets the root of the project's Git repository, with a warning; outside a Git repository, the command fails naming the macro. Project-relative paths (\$PROJECT_DIR\$) need no macro.",
     ],
     footer = [

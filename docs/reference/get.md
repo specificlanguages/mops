@@ -29,8 +29,9 @@ Parameters:
                             Serialized node reference, or model target followed
                               by node ID.
 Options:
-      --ancestry            Nest the node's full containment chain up to the
-                              root node, not just its immediate parent.
+      --ancestry            Nest `parent` recursively up to the root node,
+                              giving the full containment chain, not just the
+                              immediate parent.
       --compact             Print single-line JSON instead of the
                               pretty-printed default.
       --depth=N             Export N containment levels below the node in full
@@ -78,11 +79,11 @@ Options:
 
 The module is found anywhere in the repository. Text output is one
 `key<TAB>value` row per location MPS reports, keyed by the JSON field name:
-`kind`, `name`, `reference`, `packaged`, then `descriptor` (the .mpl/.msd/.
-devkit of a source module, or `name.jar!/META-INF/module.xml` of a deployed
-one), `jar` and `sourcesJar` (the deployed module's archive and the sources
-archive its deployment descriptor names), `sourceDescriptor` (the source
-descriptor inside that archive), `sourceDirectory` (a source module's
+`kind`, `name`, `reference`, `packaged`, then `descriptor` (the .mpl, .msd, or .
+devkit file of a source module, or `name.jar!/META-INF/module.xml` of a
+deployed one), `jar` and `sourcesJar` (the deployed module's archive and the
+sources archive its deployment descriptor names), `sourceDescriptor` (the
+source descriptor inside that archive), `sourceDirectory` (a source module's
 descriptor directory), `classesGen` (a source module's compiled-class output,
 when its Java facet declares one), `classPath` (one row per entry of the Java
 facet's runtime classpath), and `modelRoots` (one row per file-based model

@@ -22,7 +22,8 @@ Querying configured providers may download and extract MPS or JBR
 distributions; it does not run preparation or language build task actions.
 Partial discoveries print available values without writing a wrapper and exit
 with status 1; known pairs write the wrapper and exit with status 0, with
-warnings when their paths are not usable yet.
+warnings when their paths are not usable yet, so wrappers can be written before
+the project's preparation steps.
 The wrapper passes each --macro NAME=PATH given to this command. A path macro
 that .mps/libraries.xml or .mps/modules.xml uses without a --macro value gets
 the root of the project's Git repository, with a warning; outside a Git

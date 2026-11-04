@@ -39,7 +39,10 @@ class ModelGetNodeCommand(private val environment: CommandEnvironment) : CliComm
 
     @Option(
         names = ["--ancestry"],
-        description = ["Nest the node's full containment chain up to the root node, not just its immediate parent."],
+        description = [
+            "Nest `parent` recursively up to the root node, giving the full containment chain, not just the " +
+                "immediate parent.",
+        ],
     )
     var ancestry: Boolean = false
 

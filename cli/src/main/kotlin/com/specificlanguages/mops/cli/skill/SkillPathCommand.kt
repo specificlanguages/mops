@@ -7,7 +7,7 @@ import picocli.CommandLine.Parameters
 @Command(
     name = "path",
     header = ["Print the absolute path to a bundled SKILL.md."],
-    description = ["Print the absolute path to a bundled SKILL.md. Load it directly or symlink its directory into your agent's skills directory."],
+    description = ["Print the absolute path to a bundled SKILL.md. Load it directly or symlink its directory into your agent's skills directory. Works without an MPS project or daemon."],
 )
 class SkillPathCommand : CliCommand() {
     @Parameters(index = "0", arity = "0..1", paramLabel = "NAME", description = ["Skill name: mops (default), mops-daemon (alias: daemon)."])

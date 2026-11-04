@@ -57,8 +57,9 @@ Global options:
                               existing directory, absolute or relative to the
                               directory where mops was started. Test runs pass
                               the macros to the test worker. A running daemon
-                              with other macros is not reused; stop it with
-                              mops daemon stop.
+                              with other macros is not reused: the command
+                              fails, and after mops daemon stop the next
+                              command starts a daemon with the new macros.
       --mps-home=PATH       MPS home used by daemon-backed commands.
       --project-root=PATH   Explicit MPS project root, absolute or relative to
                               the directory where mops was started. Overrides
