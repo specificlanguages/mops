@@ -38,4 +38,23 @@ Options:
                               selected, absolute or relative to the directory
                               where mops was started.
   -V, --version             Print version information and exit.
+
+Discovery reads mpsDefaults of the com.specificlanguages.mps Gradle plugin, or
+RunAntScript tasks of the de.itemis.mps.gradle.common plugin, in every Gradle
+project of the build, for the shared MPS and Java homes. MPS projects come from
+configured mpsBuilds entries and .mps project markers in the build. Task-action
+overrides, included builds, and custom Ant property loading are outside this
+heuristic; Specific Languages values are project defaults.
+
+Each wrapper supplies the shared MPS and Java homes and its MPS project
+directory, and forwards its arguments to mops. It runs the full path of the
+mops installation that wrote it, so mops need not be in PATH. The POSIX
+wrappers are executable. --project-root can also precede `wrapper`.
+
+Path macros that MPS defines itself (project, mps_home, platform_lib, lib_ext)
+need no --macro value. Provider resolution failures stop discovery and keep
+Gradle's dependency diagnostics; check the configured runtime versions and
+repositories. If a pinned MPS prerelease is no longer available, update the
+project's MPS prerelease version to the newest available one; prerelease
+artifacts are deleted periodically.
 ```

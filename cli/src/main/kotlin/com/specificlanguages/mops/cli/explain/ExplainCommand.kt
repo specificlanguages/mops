@@ -14,7 +14,11 @@ import picocli.CommandLine.Parameters
 @Command(
     name = "explain",
     header = ["Explain mops notations such as node references and edit batches."],
-    description = ["Explain mops notations (the textual formats mops exchanges with agents)."],
+    description = [
+        "Explain mops notations (the textual formats mops exchanges with agents). The command is offline: it never " +
+            "starts a daemon, resolves a project root, or needs an MPS home. An unknown path exits non-zero with " +
+            "sibling suggestions.",
+    ],
 )
 class ExplainCommand : CliCommand() {
     @Parameters(

@@ -30,6 +30,10 @@ Options:
       --timeout=<timeoutSeconds>
                             Hard deadline in seconds; 0 disables it (default:
                               900).
+
+The mops distribution includes a pinned Groovy core runtime. The daemon uses
+MPS's Groovy runtime when present and the bundled core otherwise; no additional
+JAR or classpath override is required. See `mops explain code`.
 ```
 
 ## mops code help

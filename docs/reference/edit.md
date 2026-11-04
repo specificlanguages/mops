@@ -31,5 +31,12 @@ Options:
       --file=PATH           Read the edit batch from a JSON file instead of
                               stdin.
   -h, --help                Show this help message and exit.
+
+An operation that names a concept resolves it the same way `mops find
+instances` does: a dropped `.structure.` infix is forgiven, and a name that
+does not resolve fails the batch, changing nothing, with the same diagnosis
+(unknown language, unloaded language, or a "did you mean" among a loaded
+language's concepts).
+
 Operation reference: mops explain edit
 ```

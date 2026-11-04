@@ -55,14 +55,21 @@ Global options:
       --macro=NAME=PATH     Path macro the daemon defines in MPS before it
                               opens the project; repeatable. PATH is an
                               existing directory, absolute or relative to the
-                              directory where mops was started. A running
-                              daemon with other macros is not reused; stop it
-                              with mops daemon stop.
+                              directory where mops was started. Test runs pass
+                              the macros to the test worker. A running daemon
+                              with other macros is not reused; stop it with
+                              mops daemon stop.
       --mps-home=PATH       MPS home used by daemon-backed commands.
       --project-root=PATH   Explicit MPS project root, absolute or relative to
                               the directory where mops was started. Overrides
                               upward inference from the working directory.
-      --refs-as-urls        Render node references as MPS URLs in text output.
+      --refs-as-urls        Render node references as MPS URLs in text output;
+                              JSON output is unchanged.
+
+Global options can appear before, between, or after command names; command
+options belong after their command name. mops explain output describes how
+output separates results, metadata, and diagnostics.
+
 Start with mops examples for task recipes; mops examples editing helps choose
 an editing approach.
 ```
@@ -78,6 +85,7 @@ an editing approach.
 - [mops explain node-ref](explain/node-ref.md): the node reference notation.
 - [mops explain name-pattern](explain/name-pattern.md): the Name Pattern notation for `mops find root-by-name`.
 - [mops explain scope](explain/scope.md): the search scope clause on `mops find`.
+- [mops explain output](explain/output.md): how command output separates results, metadata, and diagnostics.
 - [mops explain edit.addChild](explain/edit.addChild.md): create a new child node under a containment role.
 - [mops explain edit.addRoot](explain/edit.addRoot.md): create a new root node directly in a model.
 - [mops explain edit.copyAsChild](explain/edit.copyAsChild.md): copy a node subtree under a containment role.

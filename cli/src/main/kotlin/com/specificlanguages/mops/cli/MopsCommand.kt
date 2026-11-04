@@ -23,7 +23,13 @@ import picocli.CommandLine.Spec
     mixinStandardHelpOptions = true,
     versionProvider = MopsVersionProvider::class,
     description = ["Kotlin CLI for the daemon-backed MPS prototype."],
-    footer = ["Start with mops examples for task recipes; mops examples editing helps choose an editing approach."],
+    footer = [
+        "",
+        "Global options can appear before, between, or after command names; command options belong after their " +
+            "command name. mops explain output describes how output separates results, metadata, and diagnostics.",
+        "",
+        "Start with mops examples for task recipes; mops examples editing helps choose an editing approach.",
+    ],
 )
 class MopsCommand(
     /**
@@ -74,8 +80,8 @@ class MopsCommand(
         paramLabel = "NAME=PATH",
         description = [
             "Path macro the daemon defines in MPS before it opens the project; repeatable. PATH is an existing " +
-                "directory, absolute or relative to the directory where mops was started. A running daemon with " +
-                "other macros is not reused; stop it with mops daemon stop.",
+                "directory, absolute or relative to the directory where mops was started. Test runs pass the macros " +
+                "to the test worker. A running daemon with other macros is not reused; stop it with mops daemon stop.",
         ],
         parameterConsumer = MacroConsumer::class,
     )
@@ -106,7 +112,7 @@ class MopsCommand(
 
     override var nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED
 
-    @Option(names = ["--refs-as-urls"], scope = ScopeType.INHERIT, description = ["Render node references as MPS URLs in text output."])
+    @Option(names = ["--refs-as-urls"], scope = ScopeType.INHERIT, description = ["Render node references as MPS URLs in text output; JSON output is unchanged."])
     fun setRefsAsUrls(enabled: Boolean) {
         nodeReferenceFormat = if (enabled) NodeReferenceFormat.URL else NodeReferenceFormat.SERIALIZED
     }

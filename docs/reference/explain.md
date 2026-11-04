@@ -7,7 +7,9 @@ Explain mops notations such as node references and edit batches.
 
 ```text
 Usage: mops explain [-h] [--schema] [PATH]
-Explain mops notations (the textual formats mops exchanges with agents).
+Explain mops notations (the textual formats mops exchanges with agents). The
+command is offline: it never starts a daemon, resolves a project root, or needs
+an MPS home. An unknown path exits non-zero with sibling suggestions.
 
 Topics:
   code            execute Groovy code over an open MPS project
@@ -20,6 +22,8 @@ Topics:
   node-ref        the node reference notation.
   name-pattern    the Name Pattern notation for `mops find root-by-name`.
   scope           the search scope clause on `mops find`.
+  output          how command output separates results, metadata, and
+                  diagnostics.
 Parameters:
       [PATH]                Topic dot-path, e.g. edit or edit.copyAsChild. Omit
                               to list topics.

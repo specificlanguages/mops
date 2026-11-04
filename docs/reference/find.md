@@ -36,6 +36,13 @@ Options:
                               relationships.
   -h, --help                Show this help message and exit.
       --json                Print the qualified concept names as JSON.
+
+Text output is one qualified concept name per line; --json prints a `concepts`
+array of qualified names. Build project languages before querying their
+hierarchy. CONCEPT resolves the same way as in `mops find instances`.
+
+In Code Mode, mops.search.subConceptsOf(concept, concreteOnly, direct) applies
+the same filters; see `mops code help mops.search.subConceptsOf`.
 ```
 
 ## mops find instances
@@ -67,7 +74,7 @@ Options:
   -h, --help                Show this help message and exit.
       --json                Print results as JSON.
       --limit=N             Maximum nodes to return. Defaults to 100; 0 means
-                              unlimited.
+                              unlimited; negative values are rejected.
       --named=PATTERN       Keep only instances whose node name matches this
                               Go-to-Node pattern; supports camel-hump and '*'
                               wildcards. See `mops explain name-pattern`.
@@ -76,6 +83,26 @@ Options:
                               --json; truncation is reported on stderr.
       --role=ROLE           Keep only instances filling this containment role
                               in their parent.
+
+A CONCEPT that does not resolve fails with CONCEPT_NOT_FOUND and names the
+cause: the name is not well formed; the owning language is unknown to the
+project; the language is present but not loaded (with its load diagnosis and a
+pointer at `mops diagnose module`, since only loaded languages contribute
+concepts to name lookup); or the loaded language has no such concept (with
+similarly named concepts from it).
+
+A bare short name that names concepts in several languages fails with
+AMBIGUOUS_TARGET and lists the qualified candidates. While a project language
+is unbuilt, a bare short name fails with LANGUAGE_NOT_LOADED instead of
+guessing, since the unbuilt language could define it too. An existing concept
+with no matches succeeds with no rows.
+
+Text output is one tab-separated row per node: `root` or `node`, the node name
+(or <unnamed>), the node's concept, and its serialized reference. A non-root
+node appends `parent` and the parent's name (or <unnamed>), concept, and
+reference. --json prints an object with `limit`, `truncated`, and a `nodes`
+array whose non-root entries carry a nested `parent` summary. See `mops explain
+output`.
 ```
 
 ## mops find usages
@@ -99,10 +126,22 @@ Options:
   -h, --help                Show this help message and exit.
       --json                Print usage results as JSON.
       --limit=N             Maximum usages to return. Defaults to 100; 0 means
-                              unlimited.
+                              unlimited; negative values are rejected.
       --refs-only           Print one serialized node reference per line and
                               nothing else, for piping. Cannot combine with
                               --json; truncation is reported on stderr.
+
+The target is addressed the same way as in `mops get node`; an unresolved
+target fails with NODE_NOT_FOUND.
+
+Text output is one tab-separated row per reference: `usage`, the reference
+role, and the owning node's name (or <unnamed>), concept, and reference. The
+owner is typed `root` or `node` by its position in its model; a non-root owner
+appends `parent` and the parent's name (or <unnamed>), concept, and reference.
+--json prints an object with `limit`, `truncated`, and a `usages` array whose
+entries carry the reference `role` and a nested `owner` node summary, which
+carries a nested `parent` summary for a non-root owner. --refs-only prints one
+reference per referencing node. See `mops explain output`.
 ```
 
 ## mops find root-by-name
@@ -128,10 +167,13 @@ Options:
   -h, --help                Show this help message and exit.
       --json                Print results as JSON.
       --limit=N             Maximum nodes to return. Defaults to 100; 0 means
-                              unlimited.
+                              unlimited; negative values are rejected.
       --refs-only           Print one serialized node reference per line and
                               nothing else, for piping. Cannot combine with
                               --json; truncation is reported on stderr.
+
+Text output has the same rows as `mops find instances`; --json prints the
+structured response.
 ```
 
 ## mops find node-by-id
@@ -160,7 +202,7 @@ Options:
   -h, --help                Show this help message and exit.
       --json                Print results as JSON.
       --limit=N             Maximum nodes to return. Defaults to 100; 0 means
-                              unlimited.
+                              unlimited; negative values are rejected.
       --refs-only           Print one serialized node reference per line and
                               nothing else, for piping. Cannot combine with
                               --json; truncation is reported on stderr.

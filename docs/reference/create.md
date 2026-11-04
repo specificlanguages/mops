@@ -7,7 +7,11 @@ Create a project module or model.
 
 ```text
 Usage: mops create [-h] [COMMAND]
-Create a project module or model.
+Create a project module or model through the daemon and register it with the
+project. Each module lands under the conventional directory for its kind
+(languages/<name>/<name>.mpl, solutions/<name>/<name>.msd, and so on) unless
+--descriptor names the descriptor file. --dry-run validates and prints what
+would be created without changing the project.
 Commands:
   language   Create a language project module.
   solution   Create a solution project module.
@@ -30,11 +34,12 @@ Create a language project module.
 Parameters:
       MODULE_NAME
 Options:
-      --descriptor=FILE
+      --descriptor=FILE     Descriptor file to write instead of the
+                              conventional location.
       --dry-run             Validate and describe creation without changing the
                               project.
   -h, --help                Show this help message and exit.
-      --json                Print structured JSON.
+      --json                Print the plan or report as JSON.
       --with-generator
 ```
 
@@ -49,11 +54,12 @@ Create a solution project module.
 Parameters:
       MODULE_NAME
 Options:
-      --descriptor=FILE
+      --descriptor=FILE     Descriptor file to write instead of the
+                              conventional location.
       --dry-run             Validate and describe creation without changing the
                               project.
   -h, --help                Show this help message and exit.
-      --json                Print structured JSON.
+      --json                Print the plan or report as JSON.
       --usage-preset=PRESET Generation-target facets for the solution's
                               intended use: not-generated (no facets, models
                               are only analyzed), text (generates plain text),
@@ -61,6 +67,11 @@ Options:
                               java-tests (java plus the tests facet),
                               java-mps-plugin (java whose classes extend MPS as
                               a plugin). Default: not-generated.
+
+The preset configures facets only; dependencies, used languages, devkits, and
+model contents are separate steps. Both the plan and the report name the preset
+applied and list every facet it produced, so the default is visible in the
+output.
 ```
 
 ## mops create devkit
@@ -74,11 +85,12 @@ Create a devkit project module.
 Parameters:
       MODULE_NAME
 Options:
-      --descriptor=FILE
+      --descriptor=FILE     Descriptor file to write instead of the
+                              conventional location.
       --dry-run             Validate and describe creation without changing the
                               project.
   -h, --help                Show this help message and exit.
-      --json                Print structured JSON.
+      --json                Print the plan or report as JSON.
 ```
 
 ## mops create generator
@@ -92,11 +104,12 @@ Usage: mops create generator [-h] [--dry-run] [--json] [--standalone]
 Create a generator for a language.
 Options:
       --alias=<alias>
-      --descriptor=FILE
+      --descriptor=FILE     Descriptor file to write instead of the
+                              conventional location. Requires --standalone.
       --dry-run             Validate and describe creation without changing the
                               project.
   -h, --help                Show this help message and exit.
-      --json                Print structured JSON.
+      --json                Print the plan or report as JSON.
       --language=<language>
       --standalone
 ```
@@ -116,6 +129,6 @@ Options:
                               project.
       --file-per-root       Use file-per-root XML persistence.
   -h, --help                Show this help message and exit.
-      --json                Print structured JSON.
+      --json                Print the plan or report as JSON.
       --module=MODULE
 ```

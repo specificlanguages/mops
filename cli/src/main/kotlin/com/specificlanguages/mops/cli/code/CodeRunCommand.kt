@@ -13,6 +13,12 @@ import picocli.CommandLine.Parameters
     name = "run",
     header = ["Run a trusted Groovy program from FILE or stdin."],
     description = ["Run a trusted Groovy program. FILE and - both mean stdin when omitted or set to -."],
+    footer = [
+        "",
+        "The mops distribution includes a pinned Groovy core runtime. The daemon uses MPS's Groovy runtime when " +
+            "present and the bundled core otherwise; no additional JAR or classpath override is required. See " +
+            "`mops explain code`.",
+    ],
 )
 class CodeRunCommand(private val environment: CommandEnvironment) : CliCommand() {
     @Parameters(index = "0", arity = "0..1", paramLabel = "FILE")
