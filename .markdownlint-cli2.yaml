@@ -7,5 +7,3 @@ config:
     max_words: 150
 customRules:
   - ./tools/markdownlint/paragraph-length.cjs
-globs:
-  - cli/build/generated/examples/pages/*.md

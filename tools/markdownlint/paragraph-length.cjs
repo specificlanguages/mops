@@ -1,22 +1,22 @@
-// markdownlint custom rule: reports paragraphs with more words than `max_words` (default 150).
+// markdownlint custom rule: reports paragraphs with more words than `max_words`, which the configuration must set.
 //
 // Counted: the visible text of a paragraph, including paragraphs in list items and blockquotes. Inline code, link
-// text, image alt text, and autolinks count as words. Link destinations, link titles, reference labels, and inline
-// HTML tags do not. A word is a run of non-whitespace characters that contains at least one letter or digit.
+// text, image alt text, inline math, and autolinks count as words. Link destinations, link titles, reference labels,
+// footnote markers, and inline HTML tags and comments do not. A word is a run of non-whitespace characters that
+// contains at least one letter or digit.
 //
-// Headings, code blocks, tables, and HTML blocks are not paragraphs and are not checked.
+// Headings, code blocks, math blocks, tables, and HTML blocks are not paragraphs and are not checked.
 
 "use strict";
 
-const DEFAULT_MAX_WORDS = 150;
-
-// Subtrees whose text is not shown to the reader.
-const HIDDEN_TYPES = new Set(["resource", "reference", "htmlText"]);
+// Subtrees that hold no counted words.
+const HIDDEN_TYPES = new Set(["resource", "reference", "htmlText", "gfmFootnoteCall"]);
 
 // Leaf tokens that hold visible text.
 const TEXT_TYPES = new Set([
   "data",
   "codeTextData",
+  "mathTextData",
   "characterEscapeValue",
   "autolinkProtocol",
   "autolinkEmail",
@@ -64,7 +64,7 @@ module.exports = {
   tags: ["paragraphs"],
   parser: "micromark",
   function: (params, onError) => {
-    const maxWords = Number(params.config.max_words ?? DEFAULT_MAX_WORDS);
+    const maxWords = params.config.max_words;
     for (const paragraph of collectParagraphs(params.parsers.micromark.tokens, [])) {
       const words = countWords(paragraph);
       if (words <= maxWords) {
@@ -74,7 +74,8 @@ module.exports = {
         lineNumber: paragraph.startLine,
         detail:
           `${words} words, limit is ${maxWords}. Do not add more sentences to this paragraph. Reread it, cut what ` +
-          "repeats or no longer matters, and split it only where the topic really changes, not in the middle.",
+          "repeats or no longer matters, and split it only where the topic really changes, not in the middle. A list or " +
+          "table may fit enumerations better.",
       });
     }
   },

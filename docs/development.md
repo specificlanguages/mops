@@ -47,8 +47,9 @@ The `file-size` pre-commit hook rejects `.kt` and `.md` files larger than 20000 
 Files that were already larger are listed in the hook's `exclude` pattern in `.pre-commit-config.yaml`. Remove a file
 from that list after splitting it.
 
-The custom markdownlint rule `paragraph-length` in `tools/markdownlint/` rejects Markdown paragraphs with more than 150
-words (`max_words` in `.markdownlint-cli2.yaml`). The `markdownlint-rules-test` hook runs its tests.
+The custom markdownlint rule `paragraph-length` in `tools/markdownlint/` rejects Markdown paragraphs with more words
+than `max_words` in `.markdownlint-cli2.yaml`. The `markdownlint-rules-test` hook runs the tests in that folder. When
+the rule or `.markdownlint-cli2.yaml` changes, the `markdownlint-cli2-all` hook lints every tracked Markdown file.
 
 ## Daemon tests on each MPS version
 

@@ -157,7 +157,7 @@ location MPS reports, keyed by the JSON field name:
 
 A location that MPS does not record for the module is omitted, not guessed from a naming convention. `--json` prints the
 daemon response, with the same fields under `module`. An unknown module fails with `MODULE_NOT_FOUND`. A name shared by
-several modules fails and lists their serialized references; pass one of the references instead.
+several modules fails and lists their serialized references, so a reference disambiguates it.
 
 ```sh
 mops --mps-home <path> list [--depth N] [--limit N] [--summary] [--role ROLE] [--full-concept] [--json] [TARGET_SEGMENT...]
@@ -260,11 +260,11 @@ mops --mps-home <path> find usages [--limit N] [--full-concept] [--refs-only] [-
 Searches **editable project sources** for references to one resolved target node, addressed the same way as `get node`.
 An unresolved target fails with `NODE_NOT_FOUND`. Text output is tab-separated rows of `usage`, the reference role, and
 the owning node's name (or `<unnamed>`), concept, and reference; the owner is typed `root` or `node` by its position in
-its model. A non-root owner appends its immediate parent as trailing `parent`, parent name (or `<unnamed>`), parent
-concept, and parent reference columns. `--json` prints an object with `limit`, `truncated`, and a `usages` array. Each
-entry carries the reference `role` and a nested `owner` node summary; a non-root owner carries a nested `parent`
-summary. Concept columns follow the same short-name default, `--full-concept`, and JSON-keeps-qualified rules as
-`find instances`; `--refs-only` prints one serialized reference per referencing node.
+its model. A non-root owner appends `parent` and its immediate parent's name (or `<unnamed>`), concept, and reference.
+`--json` prints an object with `limit`, `truncated`, and a `usages` array of entries with the reference `role` and a
+nested `owner` summary, which has a nested `parent` for a non-root owner. Concept columns follow the same short-name
+default, `--full-concept`, and JSON-keeps-qualified rules as `find instances`; `--refs-only` prints one serialized
+reference per referencing node.
 
 Both `find` modes default to `--limit 100`, treat `--limit 0` as unlimited, and reject negative limits. They append a
 `# truncated: showing <shown>; pass --limit 0 for all` line (in text) or set `truncated` (in JSON) only when more
@@ -286,14 +286,14 @@ output is tab-separated rows in the same shape as `find instances`, including th
 mops --mps-home <path> diagnose project [--all] [--json]
 ```
 
-Reports the load state of the project's languages and of every other project module that has a Java facet. Use it to
-trace a `CONCEPT_NOT_FOUND` from `find instances` to its cause: a concept resolves by name only if its owning language's
-runtime is loaded. Text output starts with a `modules\t<loaded>/<total> loaded\t<failed> failed` summary row, which is a
-result row, not metadata. Then comes one tab-separated row per failed module: its name, `kind`, and a reason code. For
-the reason `BROKEN_DEPENDENCIES`, indented rows below it name the root-cause modules to fix. A final `#` metadata line
-says that modules without a Java facet are not listed; inspect them with `diagnose module`. Lines starting with `#` are
-metadata, never results, so `grep -v '^#'` leaves only rows. `--all` also lists the modules that loaded; `--json` prints
-the full structured diagnosis.
+Reports the load state of the project's languages and of every other project module with a Java facet, to trace a
+`CONCEPT_NOT_FOUND` from `find instances` to its cause: a concept resolves by name only if its owning language's runtime
+is loaded. Text output starts with a `modules\t<loaded>/<total> loaded\t<failed> failed` summary row, a result row
+because it is part of the report. A tab-separated row per failed module follows: name, `kind`, and reason code; under
+`BROKEN_DEPENDENCIES`, indented rows name the root-cause modules to fix. A final `#` metadata line says that modules
+without a Java facet are not listed; inspect them individually with `diagnose module`. Lines starting with `#` are
+metadata, never results, so `grep -v '^#'` leaves only rows. `--all` also lists loaded modules; `--json` prints the full
+structured diagnosis.
 
 ```sh
 mops --mps-home <path> diagnose module [--json] <module>
@@ -380,16 +380,16 @@ worker. Standalone cancellation and timeouts leave the daemon usable.
 
 Execution uses the distribution's Ant `launchtests` machinery in IDEA test mode, including its test session, failure
 detection, and XML reports. The test JVM's classpath is constructed independently of the normal daemon's boot classpath.
+A matching JBR with `javac` is required to compile the version-specific adapter. Plugins are discovered automatically.
+On MPS 2025.1 only, Images (`com.intellij.platform.images`) is disabled to avoid its SVG parser classloader defect;
+tests requiring Images are unsupported on that version.
+
 The worker's module repository holds the project modules and the folders of the project libraries (`.mps/libraries.xml`)
 as the daemon loaded them, and the worker gets the path macros the daemon defines, including those given with `--macro`.
-A project library whose path uses a macro the daemon does not define is left out, with a diagnostic. Plugins are
-discovered automatically. A matching JBR with `javac` is required to compile the version-specific adapter.
-
-When the worker cannot load classes of some modules, for example because a dependency is absent from its repository, the
-report's diagnostics list the modules from the worker's log. Model and test-case filtering occurs after module-wide
-class discovery, so broken unselected classes can also fail a run, particularly with `--no-build`. On MPS 2025.1 only,
-Images (`com.intellij.platform.images`) is disabled to avoid its SVG parser classloader defect; tests requiring Images
-are unsupported on that version.
+A project library whose path uses a macro the daemon does not define is left out, with a diagnostic. When the worker
+cannot load classes of some modules, for example because a dependency is absent from its repository, the report's
+diagnostics list the modules from the worker's log. Model and test-case filtering occurs after module-wide class
+discovery, so broken unselected classes can also fail a run, particularly with `--no-build`.
 
 Every run saves `report.json` under the daemon workspace's `test-runs/<run-id>/` directory and updates it as results
 arrive. Text output prints the action report on stdout: an `<outcome>: <N> passed, <N> failed, ...` summary line and a

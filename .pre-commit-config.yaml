@@ -32,9 +32,19 @@ repos:
         types:
           - markdown
 
+      # A change to the markdownlint configuration or custom rules can affect every Markdown file.
+      - id: markdownlint-cli2-all
+        name: Lint all Markdown with markdownlint-cli2
+        entry: sh -c 'git ls-files -z -- "*.md" | xargs -0 markdownlint-cli2'
+        language: node
+        additional_dependencies:
+          - markdownlint-cli2@0.23.2
+        files: ^(tools/markdownlint/|\.markdownlint-cli2\.yaml$)
+        pass_filenames: false
+
       - id: markdownlint-rules-test
         name: Test markdownlint custom rules
-        entry: node --test tools/markdownlint/paragraph-length.test.cjs
+        entry: node --test tools/markdownlint/
         language: node
         # Keep in step with the markdownlint version that markdownlint-cli2 above depends on.
         additional_dependencies:
