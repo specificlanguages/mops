@@ -19,7 +19,7 @@ fun main(args: Array<String>) {
     // The daemon owns the write end of this pipe. EOF also detects a killed parent that remains a zombie.
     thread(name = "test-worker-parent", isDaemon = true) {
         while (System.`in`.read() != -1) { }
-        report.finish("PARENT_TERMINATED", false)
+        report.finish(TestRunConclusion("PARENT_TERMINATED", false))
         destroyProcessTree(ProcessHandle.current())
         Runtime.getRuntime().halt(1)
     }
@@ -27,7 +27,7 @@ fun main(args: Array<String>) {
     thread(name = "test-worker-watchdog", isDaemon = true) {
         val reason = requireNotNull(limits.watch(running = { true }))
         // Record the interruption before killing the Ant JVM, so the execution thread cannot finish the run first.
-        report.finish(reason, false)
+        report.finish(TestRunConclusion(reason, false))
         destroyProcessTree(ProcessHandle.current())
         Runtime.getRuntime().halt(1)
     }
@@ -70,7 +70,8 @@ fun main(args: Array<String>) {
                 val build = ProjectMake(project).makeModules(names)
                 report.update { it.copy(build = build) }
                 if (build.outcome == MakeOutcome.FAILED) {
-                    report.finish("BUILD_FAILED", true, "Build failed for selection: ${project.modelAccess.computeReadAction { AntTestSelection.describe(selection) }}")
+                    val description = project.modelAccess.computeReadAction { AntTestSelection.describe(selection) }
+                    report.finish(TestRunConclusion("BUILD_FAILED", true, listOf("Build failed for selection: $description")))
                     return@executeWithProject
                 }
                 saveProjectSettings(project)
@@ -82,8 +83,8 @@ fun main(args: Array<String>) {
     } catch (failure: Throwable) {
         failure.printStackTrace()
         val phase = report.snapshot().phase
-        report.finish(if (phase == "BUILD") "BUILD_FAILED" else if (phase == "EXECUTION") "WORKER_FAILED" else "DISCOVERY_FAILED",
-            phase != "EXECUTION", failure.stackTraceToString())
+        val outcome = if (phase == "BUILD") "BUILD_FAILED" else if (phase == "EXECUTION") "WORKER_FAILED" else "DISCOVERY_FAILED"
+        report.finish(TestRunConclusion(outcome, phase != "EXECUTION", listOf(failure.stackTraceToString())))
     }
     Runtime.getRuntime().halt(if (report.snapshot().successful) 0 else 1)
 }
