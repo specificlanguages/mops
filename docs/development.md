@@ -130,6 +130,13 @@ docs-only when every changed file is under `docs/` or is a Markdown file in the 
 check compares with the CLI. A renamed file counts as changed at both paths. No build task or test reads the other
 files.
 
+Changes to the configuration that only the `prek` hooks read also count as docs-only: `.markdownlint-cli2.yaml`,
+`.pre-commit-config.yaml`, `.prettierrc.yaml`, `.prettierignore`, `.editorconfig`, and the hook scripts under
+`tools/markdownlint/` and `tools/pre-commit/`. The verification job runs the hooks on all files, so it checks the whole
+repository against the changed configuration. In a docs-only run the build does not generate the pages under
+`cli/build/generated/examples/pages/`, so markdownlint does not lint them, but it lints their checked-in copies under
+`skills/mops/references/`.
+
 A pull request compares its merge commit with the base branch. A merge queue run compares with the target branch, so the
 changes of earlier groups in the queue count too. A push to `main` compares with the previous head. Pushes to `main` do
 not cancel each other, so every push is compared with a head that CI also checks. Everything runs on a manual dispatch,

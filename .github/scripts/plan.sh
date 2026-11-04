@@ -9,10 +9,11 @@
 #   FORCED      "true" for a force push.
 set -euo pipefail
 
-# Prints "true" when every changed path is documentation that no build task, test, or generated-page check reads:
-# files under docs/ and Markdown files in the repository root. docs/reference/ is left out for the generated command
-# reference pages proposed in PR #175, which a Gradle check compares with the CLI. Renames count as changes to both
-# paths. Prints "false" when the base is missing or not in the history, or when nothing changed.
+# Prints "true" when every changed path is documentation that no build task, test, or generated-page check reads, or
+# configuration that only the prek hooks read: files under docs/, Markdown files in the repository root, and the lint
+# configuration files and hook scripts in lint_config. docs/reference/ is left out for the generated command reference
+# pages proposed in PR #175, which a Gradle check compares with the CLI. Renames count as changes to both paths. Prints
+# "false" when the base is missing or not in the history, or when nothing changed.
 docs_only() {
   local base="$1"
   if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
@@ -21,7 +22,8 @@ docs_only() {
   fi
   local changed
   changed="$(git diff --no-renames --name-only "$base" HEAD)"
-  if [ -n "$changed" ] && ! grep -qvE '^(docs/.+|[^/]+\.md)$' <<< "$changed" && ! grep -qE '^docs/reference/' <<< "$changed"; then
+  local lint_config='\.markdownlint-cli2\.yaml|\.pre-commit-config\.yaml|\.prettierrc\.yaml|\.prettierignore|\.editorconfig|tools/(markdownlint|pre-commit)/.+'
+  if [ -n "$changed" ] && ! grep -qvE "^(docs/.+|[^/]+\.md|$lint_config)$" <<< "$changed" && ! grep -qE '^docs/reference/' <<< "$changed"; then
     echo true
   else
     echo false
