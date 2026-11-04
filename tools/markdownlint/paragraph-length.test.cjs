@@ -40,6 +40,18 @@ test("uses the configured limit", () => {
   assert.deepEqual(errors(words(20), 20), []);
 });
 
+test("fails when max_words is not configured", () => {
+  assert.throws(
+    () =>
+      lint({
+        strings: { input: words(1) },
+        customRules: [paragraphLength],
+        config: { default: false, "paragraph-length": true },
+      }),
+    /max_words is not configured/,
+  );
+});
+
 test("checks paragraphs in list items, blockquotes, and footnote definitions", () => {
   const markdown = [`- ${words(11)}`, "", `> ${words(11)}`, "", "Text[^1].", "", `[^1]: ${words(11)}`, ""].join("\n");
   assert.deepEqual(

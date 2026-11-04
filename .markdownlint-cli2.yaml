@@ -7,3 +7,7 @@ config:
     max_words: 150
 customRules:
   - ./tools/markdownlint/paragraph-length.cjs
+gitignore: true
+# Agent worktrees are often ignored only by a global Git ignore file, which the gitignore option does not read.
+ignores:
+  - .claude/worktrees/**

@@ -48,9 +48,10 @@ Files that were already larger are listed in the hook's `exclude` pattern in `.p
 from that list after splitting it.
 
 The custom markdownlint rule `paragraph-length` in `tools/markdownlint/` rejects Markdown paragraphs with more words
-than `max_words` in `.markdownlint-cli2.yaml`. The `markdownlint-rules-test` hook runs the tests in that folder. When
-the rule, `.markdownlint-cli2.yaml`, or `.pre-commit-config.yaml` changes, the `markdownlint-cli2-all` hook lints every
-tracked Markdown file.
+than `max_words` in `.markdownlint-cli2.yaml`. Its tests run through prek, which installs markdownlint for them:
+`prek run markdownlint-rules-test --all-files`. A bare `node --test` fails because markdownlint is not installed in the
+repository. When the rule, `.markdownlint-cli2.yaml`, or `.pre-commit-config.yaml` changes, the `markdownlint-cli2-all`
+hook lints every Markdown file that Git does not ignore.
 
 ## Daemon tests on each MPS version
 

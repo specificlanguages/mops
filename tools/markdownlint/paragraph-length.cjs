@@ -65,6 +65,9 @@ module.exports = {
   parser: "micromark",
   function: (params, onError) => {
     const maxWords = params.config.max_words;
+    if (maxWords === undefined) {
+      throw new Error("paragraph-length: max_words is not configured");
+    }
     for (const paragraph of collectParagraphs(params.parsers.micromark.tokens, [])) {
       const words = countWords(paragraph);
       if (words <= maxWords) {

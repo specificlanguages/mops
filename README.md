@@ -260,11 +260,11 @@ mops --mps-home <path> find usages [--limit N] [--full-concept] [--refs-only] [-
 Searches **editable project sources** for references to one resolved target node, addressed the same way as `get node`.
 An unresolved target fails with `NODE_NOT_FOUND`. Text output is tab-separated rows of `usage`, the reference role, and
 the owning node's name (or `<unnamed>`), concept, and reference; the owner is typed `root` or `node` by its position in
-its model. A non-root owner appends `parent` and its immediate parent's name (or `<unnamed>`), concept, and reference.
-`--json` prints an object with `limit`, `truncated`, and a `usages` array of entries with the reference `role` and a
-nested `owner` summary, which has a nested `parent` for a non-root owner. Concept columns follow the same short-name
-default, `--full-concept`, and JSON-keeps-qualified rules as `find instances`; `--refs-only` prints one serialized
-reference per referencing node.
+its model. A non-root owner appends its immediate parent as trailing `parent`, parent name (or `<unnamed>`), parent
+concept, and parent reference columns. `--json` prints an object with `limit`, `truncated`, and a `usages` array. Each
+entry carries the reference `role` and a nested `owner` node summary; a non-root owner carries a nested `parent`
+summary. Concept columns follow the same short-name default, `--full-concept`, and JSON-keeps-qualified rules as
+`find instances`; `--refs-only` prints one serialized reference per referencing node.
 
 Both `find` modes default to `--limit 100`, treat `--limit 0` as unlimited, and reject negative limits. They append a
 `# truncated: showing <shown>; pass --limit 0 for all` line (in text) or set `truncated` (in JSON) only when more
@@ -288,12 +288,12 @@ mops --mps-home <path> diagnose project [--all] [--json]
 
 Reports the load state of the project's languages and of every other project module with a Java facet, to trace a
 `CONCEPT_NOT_FOUND` from `find instances` to its cause: a concept resolves by name only if its owning language's runtime
-is loaded. Text output starts with a `modules\t<loaded>/<total> loaded\t<failed> failed` summary row, a result row (not
-metadata) because it is part of the report. A tab-separated row per failed module follows: name, `kind`, and reason
-code; under `BROKEN_DEPENDENCIES`, indented rows name the root-cause modules to fix. A final `#` metadata line says that
-modules without a Java facet are not listed; inspect them individually with `diagnose module`. Lines starting with `#`
-are metadata, never results, so `grep -v '^#'` leaves only rows. `--all` also lists loaded modules; `--json` prints the
-full structured diagnosis.
+is loaded. Text output starts with a `modules\t<loaded>/<total> loaded\t<failed> failed` summary row. The summary is
+part of the report, so it is a result row, not metadata. Then comes one tab-separated row per failed module (name,
+`kind`, and reason code), followed, when the reason is `BROKEN_DEPENDENCIES`, by indented rows naming the root-cause
+modules to fix. A final `#` metadata line says that modules without a Java facet are not listed; inspect them
+individually with `diagnose module`. Lines starting with `#` are metadata, never results, so `grep -v '^#'` leaves only
+rows. `--all` also lists loaded modules; `--json` prints the full structured diagnosis.
 
 ```sh
 mops --mps-home <path> diagnose module [--json] <module>
