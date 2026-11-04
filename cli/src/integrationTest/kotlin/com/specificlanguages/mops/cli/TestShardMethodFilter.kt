@@ -16,13 +16,14 @@ class TestShardMethodFilter : PostDiscoveryFilter {
     private val splitClasses = System.getProperty("mops.testShard.splitClasses").orEmpty().split(',').toSet()
 
     override fun apply(descriptor: TestDescriptor): FilterResult {
-        val source = descriptor.source.orElse(null)
-        if (shard == null || source !is MethodSource || source.className !in splitClasses) {
+        val source = descriptor.source.orElse(null) as? MethodSource
+        // Nested classes (`Outer$Inner`) are split with their outer class.
+        val className = source?.className?.substringBefore('$')
+        if (shard == null || source == null || className !in splitClasses) {
             return FilterResult.included(null)
         }
         val (index, count) = shard
-        val name = "${source.className}.${source.methodName}"
-        return FilterResult.includedIf(testShardOf(name, count) == index - 1)
+        return FilterResult.includedIf(testShardOf("$className.${source.methodName}", count) == index - 1)
     }
 
     // The same hash as testShardOf in build-logic/src/main/kotlin/testShards.kt.

@@ -45,6 +45,8 @@ dependencies {
     // Test-only guard that the generated schema matches what the serializer accepts. Never shipped in the CLI runtime.
     testImplementation(libs.json.schema.validator)
     testRuntimeOnly(libs.junit.platform.launcher)
+    // TestShardMethodFilter implements a JUnit Platform launcher interface.
+    integrationTest.implementationConfigurationName(libs.junit.platform.launcher)
 
     testImplementation(libs.groovy)
     testImplementation("org.apache.groovy:groovy-json:${libs.versions.groovy.get()}")
@@ -59,11 +61,6 @@ configurations.named(integrationTest.implementationConfigurationName) {
         configurations.implementation.get(),
         configurations.testImplementation.get(),
     )
-}
-
-dependencies {
-    // TestShardMethodFilter implements a JUnit Platform launcher interface.
-    integrationTest.implementationConfigurationName(libs.junit.platform.launcher)
 }
 
 configurations.named(integrationTest.runtimeOnlyConfigurationName) {
