@@ -40,7 +40,7 @@ abstract class NodeSearchCommand(protected val environment: CommandEnvironment) 
     @Option(
         names = ["--limit"],
         paramLabel = "N",
-        description = ["Maximum nodes to return. Defaults to 100; 0 means unlimited."],
+        description = ["Maximum nodes to return. Defaults to 100; 0 means unlimited; negative values are rejected."],
     )
     var limit: Int = 100
 

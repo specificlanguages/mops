@@ -18,6 +18,23 @@ import picocli.CommandLine.Parameters
             "search a module, model, or subtree exhaustively, or `in /` for the whole repository. See " +
             "`mops explain scope`.",
     ],
+    footer = [
+        "",
+        "A CONCEPT that does not resolve fails with CONCEPT_NOT_FOUND and names the cause: the name is not well " +
+            "formed; the owning language is unknown to the project; the language is present but not loaded (with its " +
+            "load diagnosis and a pointer at `mops diagnose module`, since only loaded languages contribute concepts " +
+            "to name lookup); or the loaded language has no such concept (with similarly named concepts from it).",
+        "",
+        "A bare short name that names concepts in several languages fails with AMBIGUOUS_TARGET and lists the " +
+            "qualified candidates. While a project language is unbuilt, a bare short name fails with " +
+            "LANGUAGE_NOT_LOADED instead of guessing, since the unbuilt language could define it too. An existing " +
+            "concept with no matches succeeds with no rows.",
+        "",
+        "Text output is one tab-separated row per node: `root` or `node`, the node name (or <unnamed>), the node's " +
+            "concept, and its serialized reference. A non-root node appends `parent` and the parent's name (or " +
+            "<unnamed>), concept, and reference. --json prints an object with `limit`, `truncated`, and a `nodes` " +
+            "array whose non-root entries carry a nested `parent` summary. See `mops explain output`.",
+    ],
 )
 class FindInstancesCommand(environment: CommandEnvironment) : NodeSearchCommand(environment) {
     constructor(

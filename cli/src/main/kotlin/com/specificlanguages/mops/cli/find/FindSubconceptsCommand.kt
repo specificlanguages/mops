@@ -16,6 +16,15 @@ import picocli.CommandLine.Parameters
         "Find extending concepts and interface implementors in all loaded language runtimes, including libraries. " +
             "Excludes the queried concept; prints qualified names in sorted order. Unloaded languages contribute no results.",
     ],
+    footer = [
+        "",
+        "Text output is one qualified concept name per line; --json prints a `concepts` array of qualified names. " +
+            "Build project languages before querying their hierarchy. CONCEPT resolves the same way as in " +
+            "`mops find instances`.",
+        "",
+        "In Code Mode, mops.search.subConceptsOf(concept, concreteOnly, direct) applies the same filters; see " +
+            "`mops code help mops.search.subConceptsOf`.",
+    ],
 )
 class FindSubconceptsCommand(private val environment: CommandEnvironment) : CliCommand() {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
