@@ -20,8 +20,8 @@ object HelpLayout {
     private const val SECTION_KEY_GLOBAL_OPTION_LIST_HEADING = "globalOptionListHeading"
     private const val SECTION_KEY_GLOBAL_OPTION_LIST = "globalOptionList"
 
-    /** Applies the layout to [root] and every subcommand registered so far. */
-    fun apply(root: CommandLine) {
+    /** Applies the layout to [root] and every subcommand registered so far; only [root]'s help starts with [rootHeader]. */
+    fun apply(root: CommandLine, rootHeader: String) {
         val sections = root.helpSectionMap.toMutableMap()
         sections[UsageMessageSpec.SECTION_KEY_PARAMETER_LIST_HEADING] = heading("Parameters:%n") { help ->
             help.commandSpec().positionalParameters().any { !it.hidden() }
@@ -39,11 +39,17 @@ object HelpLayout {
         root.setHelpSectionMap(sections)
         root.setHelpSectionKeys(sectionKeys(root.helpSectionKeys))
         root.setHelpFactory { spec, colorScheme -> SynopsisWithoutGlobalOptions(spec, colorScheme) }
+        val rootUsage = root.commandSpec.usageMessage()
+        rootUsage.header(rootHeader)
+        rootUsage.sectionKeys(
+            listOf(UsageMessageSpec.SECTION_KEY_HEADER_HEADING, UsageMessageSpec.SECTION_KEY_HEADER) +
+                rootUsage.sectionKeys(),
+        )
     }
 
     /**
      * Picocli's default order with the command list moved up after the description, the global options added before
-     * the footer, and the header left out (it only serves the parent's command list).
+     * the footer, and the header left out (on a subcommand it only serves the parent's command list).
      */
     private fun sectionKeys(defaults: List<String>): List<String> {
         val keys = defaults.toMutableList()

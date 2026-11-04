@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.cli.homes
 
 import com.specificlanguages.mops.cli.MopsCommand
+import com.specificlanguages.mops.protocol.MopsBuild
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
@@ -45,6 +46,7 @@ class WrapperCommand(
     private lateinit var spec: CommandSpec
 
     override fun call(): Int {
+        spec.commandLine().out.println("mops version: ${MopsBuild.fullVersion}")
         val start = root.workingDirectory.resolve(path ?: root.projectRoot ?: ".").toRealPath()
         val discovery = GradleHomeDiscovery()
         val guesses = discovery.discover(start, spec.commandLine().err)

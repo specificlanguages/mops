@@ -192,7 +192,14 @@ fun Test.configureIntegrationTest(mpsHome: Provider<File>, jbrHome: Provider<Fil
     dependsOn(daemonMpsPlugin)
     inputs.property("mpsHome", mpsHome.map { it.absolutePath })
     inputs.property("jbrHome", jbrHome.map { it.absolutePath })
-    inputs.dir(tasks.installDist.map { it.destinationDir })
+    // The jars are compared as a classpath, so runtime classpath normalization drops the git revision from the check.
+    val cliInstall = files(tasks.installDist.map { it.destinationDir }).asFileTree
+    inputs.files(cliInstall.matching { exclude("lib/*.jar") })
+        .withPropertyName("cliInstall")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(cliInstall.matching { include("lib/*.jar") })
+        .withPropertyName("cliInstallJars")
+        .withNormalizer(ClasspathNormalizer::class)
 
     inputs.files(daemonRuntimeClasspath)
         .withPropertyName("daemonRuntimeClasspath")

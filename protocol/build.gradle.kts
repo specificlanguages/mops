@@ -25,6 +25,13 @@ val relocatedPackage = "com.specificlanguages.mops.shaded.kotlinx.serialization"
 val generateMopsVersion = tasks.register<WriteProperties>("generateMopsVersion") {
     destinationFile = layout.buildDirectory.file("generated/mops-version/mops-version.properties").get().asFile
     property("version", project.version.toString())
+    // Read by git at execution time, so a commit or an edit does not invalidate the configuration cache. An empty
+    // revision means the source tree has no git metadata or git could not run.
+    property(
+        "revision",
+        providers.of(GitRevision::class) { parameters.rootDirectory = isolated.rootProject.projectDirectory }
+            .orElse(""),
+    )
 }
 
 sourceSets.main {

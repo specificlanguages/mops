@@ -2,6 +2,7 @@ package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.protocol.DaemonContext
+import com.specificlanguages.mops.protocol.MopsBuild
 import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.DaemonRecord
 import com.specificlanguages.mops.protocol.DaemonWorkspace
@@ -58,7 +59,7 @@ class ProjectDaemon(
                     port = server.localPort,
                     token = token,
                     pid = ProcessHandle.current().pid(),
-                    daemonVersion = "0.3.0-SNAPSHOT",
+                    daemonVersion = MopsBuild.fullVersion,
                     context = context,
                     workspace = workspace.path,
                     startupTime = Instant.now().toString(),
