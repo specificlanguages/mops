@@ -25,9 +25,10 @@ Apply a JSON batch of edit operations.
 Options:
       --constraints=MODE    How to enforce constraints: advisory (evaluate,
                               report, and apply anyway), best-effort (block on
-                              violations, warn about concepts that could not be
-                              checked; default), or strict (fail on violations
-                              or on a concept that could not be checked).
+                              violations and save nothing, warn about concepts
+                              that could not be checked; default), or strict
+                              (fail on violations or on a concept that could
+                              not be checked).
       --file=PATH           Read the edit batch from a JSON file instead of
                               stdin.
   -h, --help                Show this help message and exit.

@@ -23,6 +23,11 @@ installed distribution needs no git checkout. A build with uncommitted changes t
 A source tree without its own `.git`, or a machine without git, builds normally and reports `(unknown revision)`. Test
 tasks ignore the commit on their classpath, so a new commit alone does not rerun them.
 
+## Command names
+
+Commands that operate on MPS data use a verb-first shape: `mops <verb> <object>`, such as `mops find instances`.
+Operational commands use a concrete subsystem or artifact name, such as `daemon`, `code`, and `wrapper`.
+
 ## Commits and pull requests
 
 Pull request titles follow [Conventional Commits](https://www.conventionalcommits.org/). Pull requests are

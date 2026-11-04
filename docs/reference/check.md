@@ -37,12 +37,12 @@ Options:
                               Defaults to 20 so a broken model does not flood
                               the output; 0 means unlimited.
 
-Findings print most severe first. Text output is one tab-separated row per
-finding (severity, message, and for a node-level finding the node's name,
-concept, and reference), followed by `#` metadata lines: `# <errors>,
-<warnings>, <infos>` (or `# no findings`) and, when --limit cut the list, `#
-truncated: showing <shown> of <total> findings; pass --limit 0 for all`. See
-`mops explain output`.
+The check covers typesystem, model, module, and checking rules. Findings print
+most severe first. Text output is one tab-separated row per finding (severity,
+message, and for a node-level finding the node's name, concept, and reference),
+followed by `#` metadata lines: `# <errors>, <warnings>, <infos>` (or `# no
+findings`) and, when --limit cut the list, `# truncated: showing <shown> of
+<total> findings; pass --limit 0 for all`. See `mops explain output`.
 
 --format jsonl prints one finding object per line and ends with a {"type":"
 summary",...} record carrying shown, total, errors, warnings, infos, limit,
@@ -71,12 +71,12 @@ Options:
                               Defaults to 20 so a broken model does not flood
                               the output; 0 means unlimited.
 
-Findings print most severe first. Text output is one tab-separated row per
-finding (severity, message, and for a node-level finding the node's name,
-concept, and reference), followed by `#` metadata lines: `# <errors>,
-<warnings>, <infos>` (or `# no findings`) and, when --limit cut the list, `#
-truncated: showing <shown> of <total> findings; pass --limit 0 for all`. See
-`mops explain output`.
+The check covers typesystem, model, module, and checking rules. Findings print
+most severe first. Text output is one tab-separated row per finding (severity,
+message, and for a node-level finding the node's name, concept, and reference),
+followed by `#` metadata lines: `# <errors>, <warnings>, <infos>` (or `# no
+findings`) and, when --limit cut the list, `# truncated: showing <shown> of
+<total> findings; pass --limit 0 for all`. See `mops explain output`.
 
 --format jsonl prints one finding object per line and ends with a {"type":"
 summary",...} record carrying shown, total, errors, warnings, infos, limit,
@@ -103,12 +103,12 @@ Options:
                               Defaults to 20 so a broken model does not flood
                               the output; 0 means unlimited.
 
-Findings print most severe first. Text output is one tab-separated row per
-finding (severity, message, and for a node-level finding the node's name,
-concept, and reference), followed by `#` metadata lines: `# <errors>,
-<warnings>, <infos>` (or `# no findings`) and, when --limit cut the list, `#
-truncated: showing <shown> of <total> findings; pass --limit 0 for all`. See
-`mops explain output`.
+The check covers typesystem, model, module, and checking rules. Findings print
+most severe first. Text output is one tab-separated row per finding (severity,
+message, and for a node-level finding the node's name, concept, and reference),
+followed by `#` metadata lines: `# <errors>, <warnings>, <infos>` (or `# no
+findings`) and, when --limit cut the list, `# truncated: showing <shown> of
+<total> findings; pass --limit 0 for all`. See `mops explain output`.
 
 --format jsonl prints one finding object per line and ends with a {"type":"
 summary",...} record carrying shown, total, errors, warnings, infos, limit,

@@ -2,8 +2,9 @@ package com.specificlanguages.mops.cli.check
 
 /** How the check commands report their findings, for their help footers. */
 internal const val CHECK_OUTPUT_HELP =
-    "Findings print most severe first. Text output is one tab-separated row per finding (severity, message, and " +
-        "for a node-level finding the node's name, concept, and reference), followed by `#` metadata lines: " +
+    "The check covers typesystem, model, module, and checking rules. Findings print most severe first. Text " +
+        "output is one tab-separated row per finding (severity, message, and for a node-level finding the " +
+        "node's name, concept, and reference), followed by `#` metadata lines: " +
         "`# <errors>, <warnings>, <infos>` (or `# no findings`) and, when --limit cut the list, " +
         "`# truncated: showing <shown> of <total> findings; pass --limit 0 for all`. See `mops explain output`."
 

@@ -22,7 +22,7 @@ import picocli.CommandLine.Parameters
             "Build project languages before querying their hierarchy. CONCEPT resolves the same way as in " +
             "`mops find instances`.",
         "",
-        "In Code Mode, mops.search.subConceptsOf(concept, concreteOnly, direct) applies the same filters; see " +
+        "In Code Mode, mops.search.subConceptsOf(concept, concreteOnly, direct) applies the same filters, with the booleans passed positionally; see " +
             "`mops code help mops.search.subConceptsOf`.",
     ],
 )
