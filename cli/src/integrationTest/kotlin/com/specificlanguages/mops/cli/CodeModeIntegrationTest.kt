@@ -38,6 +38,8 @@ class CodeModeIntegrationTest {
                     } else {
                         // Hard links avoid duplicating the MPS distribution. Besides its JARs, the distribution can
                         // hold gigabytes of other files, such as the per-platform archives in platform-plugins/.
+                        // Sharing the files is safe because the daemon writes only to its own config and system
+                        // directories, never into the MPS home.
                         try {
                             Files.createLink(destination, path)
                         } catch (_: IOException) {
