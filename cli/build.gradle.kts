@@ -323,6 +323,7 @@ val integrationTests = supportedMpsVersions.map { mpsVersion ->
     tasks.register<Test>("integrationTestMps$mpsVersion") {
         description = "Runs CLI integration tests against MPS $mpsVersion and its matching JBR."
         configureIntegrationTest(mpsHome, jbrHome)
+        shardTests(file("integration-test-durations.txt"))
     }
 }
 

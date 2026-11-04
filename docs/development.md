@@ -86,7 +86,7 @@ changes, the `markdownlint-cli2-all` hook lints every Markdown file that Git doe
 mps-platform-cache. `./gradlew :daemon:testAllMpsVersions` runs all of them. Each task keeps its MPS state under
 `daemon/build/mps-test-<version>/` and its reports under `daemon/build/reports/tests/<task-name>/`, so the tasks can run
 side by side. `check` runs `:daemon:test` and, through `testOtherMpsVersions`, the tasks for the other supported
-versions. CI runs every version's task in its own `daemon-versions` matrix job instead.
+versions. CI runs these tasks in `daemon-versions` matrix jobs instead.
 
 ## Integration tests
 
@@ -135,12 +135,27 @@ only. To run the full tier on a branch before it enters the merge queue, dispatc
 gh workflow run ci.yml --ref <branch>
 ```
 
+The pull request tier splits the integration suite and the daemon tests on the newest release into shards, with the
+counts set in `plan.sh`. Each shard is its own job, so the shards run side by side. The full tier runs each version's
+tests in one job. The `testShard` Gradle property picks one shard of a `:cli:integrationTestMps<version>` or
+`:daemon:testMps<version>` task, for example `-PtestShard=3/8`. A shard runs its tests in a fresh Gradle build, so no
+test class may depend on another class running before it in the same JVM.
+
+`shardTests` in `build-logic/src/main/kotlin/testShards.kt` assigns tests to shards by the measured durations in
+`cli/integration-test-durations.txt` and `daemon/test-durations.txt`. It takes the longest test first and puts each test
+in the shard with the smallest total. Tests that a file does not list, such as new test classes, run in the shard with
+the smallest total, so each test runs in exactly one shard. The files list test classes, and test methods of the classes
+whose methods do not depend on each other. A renamed test runs in the shard for unlisted tests, but its old line stays,
+and a shard whose listed tests are all gone fails with no matching tests. Update the files after renaming or removing a
+listed test. When the shards become unbalanced, download the test report artifacts of a recent pull request run and
+write the files again with `.github/scripts/test-durations.sh`. The header of each file shows the options.
+
 The verification job runs `check -x :cli:integrationTest -x :daemon:test -x :daemon:testOtherMpsVersions`, covering all
 subprojects' unit tests, daemon checks, Gradle discovery tests, and packaging checks, and then runs the `prek` hooks on
 all files. The separate `daemon-versions` and integration matrices cover the excluded daemon tests and CLI integration
-suite. The `plan` job (`.github/scripts/plan.sh`) picks the tier and the versions and prints them in its summary. The
-`CI passed` job requires every job to succeed or to be skipped by the plan. It is the required check in both tiers.
-Release validation runs the complete `check`, including the full integration matrix.
+suite. The `plan` job (`.github/scripts/plan.sh`) picks the tier, the versions, and the shards and prints them in its
+summary. The `CI passed` job requires every job to succeed or to be skipped by the plan. It is the required check in
+both tiers. Release validation runs the complete `check`, including the full integration matrix.
 
 A docs-only run skips the test jobs, and its verification job runs only the `prek` hooks, without Gradle. A run is
 docs-only when every changed file is under `docs/` or is a Markdown file in the repository root, and none is under
