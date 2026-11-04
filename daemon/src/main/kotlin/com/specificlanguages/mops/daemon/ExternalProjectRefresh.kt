@@ -15,16 +15,14 @@ import jetbrains.mps.vfs.refresh.DefaultCachingContext
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.mps.openapi.module.SModuleReference
 import java.nio.file.Files
-import java.nio.file.FileVisitOption.FOLLOW_LINKS
 import java.nio.file.Path
-import java.security.MessageDigest
-import java.util.HexFormat
 
 /**
  * Refreshes project files, the folders of source modules, and the archives of packaged modules, and replaces runtimes
  * whose Java classpath contents changed between requests.
  */
 internal class ExternalProjectRefresh(private val project: Project) {
+    private val classPathFingerprints = ClassPathFingerprints()
     private var outputs = snapshot()
     private var archiveStamps: Map<Path, ArchiveStamp?>? = null
     private val foldersWithStoredFilesLoaded = mutableSetOf<Path>()
@@ -97,44 +95,18 @@ internal class ExternalProjectRefresh(private val project: Project) {
         }
     }
 
-    // Replaced classes and libraries can retain both their timestamps and sizes.
-    private fun snapshot(): Map<SModuleReference, List<Pair<Path, String>>> =
-        project.modelAccess.computeReadAction {
-            val fingerprints = mutableMapOf<Path, String>()
+    private fun snapshot(): Map<SModuleReference, List<Pair<Path, String>>> {
+        val classPaths = project.modelAccess.computeReadAction {
             val modules = GlobalModuleDependenciesManager(project.projectModulesWithGenerators)
                 .getModules(GlobalModuleDependenciesManager.Deptype.EXECUTE)
             modules.mapNotNull { module ->
                 val facet = module.getFacet(JavaModuleFacet::class.java)
                 if (facet == null || facet.loadClasses != JavaModuleFacet.LoadClasses.ManagedByMPS) return@mapNotNull null
-                val files = facet.classPath.map { entry ->
-                    // A nested archive entry is replaced when its containing archive changes.
-                    val path = Path.of(entry.substringBefore("!/"))
-                    path to fingerprints.getOrPut(path) { fingerprint(path) }
-                }
-                module.moduleReference to files
+                // A nested archive entry is replaced when its containing archive changes.
+                module.moduleReference to facet.classPath.map { entry -> Path.of(entry.substringBefore("!/")) }
             }.toMap()
         }
-
-    private fun fingerprint(root: Path): String {
-        if (!Files.exists(root)) return "missing"
-        val digest = MessageDigest.getInstance("SHA-256")
-        val files = if (Files.isDirectory(root)) {
-            Files.walk(root, FOLLOW_LINKS).use { paths -> paths.filter(Files::isRegularFile).sorted().toList() }
-        } else listOf(root)
-        val buffer = ByteArray(8192)
-        for (file in files) {
-            digest.update(root.relativize(file).toString().toByteArray(Charsets.UTF_8))
-            digest.update(0.toByte())
-            digest.update(Files.size(file).toString().toByteArray(Charsets.UTF_8))
-            digest.update(0.toByte())
-            Files.newInputStream(file).use { input ->
-                var count = input.read(buffer)
-                while (count != -1) {
-                    digest.update(buffer, 0, count)
-                    count = input.read(buffer)
-                }
-            }
-        }
-        return HexFormat.of().formatHex(digest.digest())
+        val fingerprints = classPathFingerprints.compute(classPaths.values.flatten())
+        return classPaths.mapValues { (_, roots) -> roots.map { it to fingerprints.getValue(it) } }
     }
 }
