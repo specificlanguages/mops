@@ -265,6 +265,7 @@ val mpsVersionTests = supportedMpsVersions.map { mpsVersion ->
         testClassesDirs = sourceSets.test.get().output.classesDirs
         classpath = sourceSets.test.get().runtimeClasspath
         configureMpsTest(mpsRoot, "mps-test-$mpsVersion")
+        shardTests()
         // Test derives its default javaLauncher from a custom executable. Gradle reads the executable through
         // toString(), so the JBR is resolved only when the task runs, not on every build that configures it.
         setExecutable(object {
