@@ -1,5 +1,12 @@
 # Developing mops
 
+## Setup
+
+Install [prek](https://prek.j178.dev/) and run `prek install` once in your clone. It installs a Git `pre-commit` hook
+that runs the hooks from `.pre-commit-config.yaml` on each commit. The hook goes into the hooks directory of the shared
+Git directory (`git rev-parse --git-common-dir`), so one `prek install` covers the main clone and all its worktrees.
+Each worktree runs the hooks from its own `.pre-commit-config.yaml`.
+
 ## Build and test
 
 ```sh
@@ -36,6 +43,15 @@ with the `conventional-pre-commit` hook from `.pre-commit-config.yaml`, which ru
 the allowed types when it rejects one. GitHub release notes list the merged pull requests by title.
 
 Commit messages on pull request branches are free-form.
+
+Before you open a pull request:
+
+- Run `prek run --all-files`. CI runs the same hooks on all files.
+- Run `./gradlew detektMain` (see [Code structure checks](#code-structure-checks)).
+- Run the focused tests for what you changed, for example one test class on one MPS version.
+- After changing anything under `examples/`, run `./gradlew :cli:updateExamples` and commit the regenerated
+  `skills/mops/references/` pages.
+- Keep `.kt` and `.md` files under the `file-size` hook's limit. Split a file instead of growing it.
 
 ## Release
 
