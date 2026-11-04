@@ -31,8 +31,9 @@ use.
   [node creation research](https://github.com/specificlanguages/mps-api-research/blob/main/node-creation-factories-and-paste.md).
 - **Node factories (`NodeFactoryManager.setupNode`) to fix up copies** — rejected: factories assume a blank node and
   clobber real data; the structure language's own factory unconditionally resets a concept's `extends`.
-- **Hardcode `conceptId` handling in the write-executor** — rejected: solves one built-in language and leaves every user
-  DSL unserved.
+- **Hardcode `conceptId` handling in the write-executor** — rejected as the end state: solves one built-in language and
+  leaves every user DSL unserved. It is built as an interim step (#149) until the mechanism exists; `StructureMetaIds`
+  takes the operation's materialized nodes and returns **Hints**, the shape the bundled Edit Plugin will take.
 - **Code Mode plugins (ADR-0008)** — deferred: the Edit Plugin mechanism must not wait for Code Mode or its separate
   classpath-provider follow-up.
 - **MPS-aspect-discovered plugins** (a `mops`/`hooks` aspect on a language) — deferred: a possible future front end that

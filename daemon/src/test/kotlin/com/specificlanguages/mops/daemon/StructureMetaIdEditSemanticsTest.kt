@@ -166,7 +166,14 @@ class StructureMetaIdEditSemanticsTest {
             assertEquals(copy.id, propertyValue(copy, "datatypeId"))
             val copiedMember = childrenInRole(copy, "members").single()
             assertEquals(copiedMember.id, propertyValue(copiedMember, "memberId"))
-            assertEquals(3, response.hints.size, "expected the created member and both copies: ${response.hints}")
+            assertEquals(
+                listOf(
+                    "set memberId of EnumerationMemberDeclaration red $STRUCTURE_MODEL/${createdMember.id} to ${createdMember.id}",
+                    "set datatypeId of EnumerationDeclaration Color $STRUCTURE_MODEL/${copy.id} to ${copy.id}",
+                    "set memberId of EnumerationMemberDeclaration red $STRUCTURE_MODEL/${copiedMember.id} to ${copiedMember.id}",
+                ),
+                response.hints,
+            )
         }
     }
 
@@ -196,6 +203,30 @@ class StructureMetaIdEditSemanticsTest {
         }
     }
 
+    @Test
+    fun `replace with a copy leaf reassigns the meta-id of the copy`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
+            val response = mpsAccess.write {
+                modelEdit(
+                    batchOf(
+                        EditOperation.Replace(
+                            target = EditTarget.NodeReference(JSON_ARRAY_ITEMS_LINK_REF),
+                            with = InlineChild.Copy(role = null, source = EditTarget.NodeReference(JSON_ARRAY_ITEMS_LINK_REF)),
+                            alias = "\$copy",
+                        ),
+                    ),
+                )
+            }
+
+            val copy = mpsAccess.read { getNode(NodeTarget.NodeReference(response.created.getValue("copy"))) }
+            assertEquals(copy.id, propertyValue(copy, "linkId"))
+            assertEquals(
+                listOf("set linkId of LinkDeclaration $STRUCTURE_MODEL/${copy.id} to ${copy.id}"),
+                response.hints,
+            )
+        }
+    }
+
     private fun batchOf(vararg operations: EditOperation): EditBatch = EditBatch(operations.toList())
 
     private fun childrenInRole(node: MpsNodeJson, role: String): List<MpsNodeJson> =
@@ -213,5 +244,8 @@ class StructureMetaIdEditSemanticsTest {
         const val IJSON_VALUE_REF = "$STRUCTURE_MODEL/2110045694544566909"
         const val JSON_ARRAY_REF = "$STRUCTURE_MODEL/2110045694544569357"
         const val JSON_STRING_VALUE_REF = "$STRUCTURE_MODEL/2110045694544569338"
+
+        // JsonArray's `items` LinkDeclaration child.
+        const val JSON_ARRAY_ITEMS_LINK_REF = "$STRUCTURE_MODEL/2110045694544569360"
     }
 }

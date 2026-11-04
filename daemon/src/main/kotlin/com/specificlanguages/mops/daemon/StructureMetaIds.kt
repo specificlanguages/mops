@@ -8,9 +8,6 @@ import org.jetbrains.mps.openapi.model.SNode
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import kotlin.random.Random
 
-/** A node that an Edit Operation materialized: created fresh, or ([copied]) as part of a copied subtree. */
-internal data class MaterializedNode(val node: SNode, val copied: Boolean)
-
 /**
  * Gives materialized structure-language declarations a meta-id (`conceptId`, `datatypeId`, `propertyId`, `linkId`,
  * `memberId`), the way MPS's `ConceptIdSetter` does on paste. A copied declaration always gets a new meta-id; a fresh one
