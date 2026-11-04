@@ -46,7 +46,9 @@ Every command's output has three kinds of content, and each has a fixed home:
   text it is `#`-prefixed lines on stdout; in JSON it is fields of the envelope; in JSONL it is a final record with its
   own type; free text such as a rendered node has no such shape, so there it goes to stderr. A notice caused by a
   default the caller did not choose names the option that lifts it.
-- **Diagnostics go to stderr.** Warnings, errors, and hints.
+- **Diagnostics go to stderr.** Warnings, errors, and advice such as a suggested option. An edit's **Hints** are not
+  diagnostics: they disclose what mops did on the caller's behalf (principle 3), so they travel with the result as a
+  field of its JSON envelope.
 
 **Composability is a value**, and automation is its persona. Every data-producing command offers a machine format
 (`--json`, `--refs-only`, JSONL) whose stdout can be piped without filtering.

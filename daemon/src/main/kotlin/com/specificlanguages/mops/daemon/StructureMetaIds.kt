@@ -1,10 +1,12 @@
 package com.specificlanguages.mops.daemon
 
+import com.specificlanguages.mops.daemon.MaterializedNode.Origin
 import jetbrains.mps.smodel.SNodeId
 import jetbrains.mps.smodel.adapter.structure.MetaAdapterFactory
 import org.jetbrains.mps.openapi.language.SConcept
 import org.jetbrains.mps.openapi.language.SProperty
 import org.jetbrains.mps.openapi.model.SNode
+import org.jetbrains.mps.openapi.model.SNodeUtil
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import kotlin.random.Random
 
@@ -19,19 +21,49 @@ import kotlin.random.Random
  * is its siblings under the same parent and role.
  *
  * Matching is subconcept-inclusive, so it covers interface concepts and every kind of datatype declaration.
+ *
+ * One instance serves one edit batch: [recordFresh] and [recordCopy] collect the nodes an Edit Operation materializes,
+ * [assignRecorded] runs after each operation, and [hints] reports the assignments at the end of the batch.
  */
 internal class StructureMetaIds(private val persistence: PersistenceFacade) {
+    private val recorded = mutableListOf<MaterializedNode>()
+    private val assignments = mutableListOf<Assignment>()
 
-    /** Assigns meta-ids to [materialized] nodes in order and returns one hint per assignment. */
-    fun assign(materialized: List<MaterializedNode>): List<String> =
-        materialized.mapNotNull { (node, copied) ->
-            val kind = KINDS.firstOrNull { node.concept.isSubConceptOf(it.declaration) } ?: return@mapNotNull null
-            if (!copied && !node.getProperty(kind.metaId).isNullOrEmpty()) return@mapNotNull null
+    /** Records [node], created fresh by the current operation. */
+    fun recordFresh(node: SNode) {
+        recorded.add(MaterializedNode(node, Origin.FRESH))
+    }
+
+    /** Records every node of [copy], a subtree the current operation copied. */
+    fun recordCopy(copy: SNode) {
+        SNodeUtil.getDescendants(copy).mapTo(recorded) { MaterializedNode(it, Origin.COPY) }
+    }
+
+    /** Assigns meta-ids to the nodes recorded since the previous call, in the order they were recorded. */
+    fun assignRecorded() {
+        for ((node, origin) in recorded) {
+            val kind = KINDS.firstOrNull { node.concept.isSubConceptOf(it.declaration) } ?: continue
+            if (origin == Origin.FRESH && !node.getProperty(kind.metaId).isNullOrEmpty()) continue
             val id = kind.generate(node).toString()
             node.setProperty(kind.metaId, id)
-            val name = node.name?.let { " $it" }.orEmpty()
-            "set ${kind.metaId.name} of ${node.concept.name}$name ${persistence.asString(node.reference)} to $id"
+            assignments.add(Assignment(node, kind.metaId, id))
         }
+        recorded.clear()
+    }
+
+    /**
+     * Returns one hint per assigned meta-id that is still in place: an assignment that a later operation overwrote, or
+     * whose node it deleted, is left out. The hint names the node by its current name and reference.
+     */
+    fun hints(): List<String> =
+        assignments
+            .filter { (node, metaId, id) -> node.model != null && node.getProperty(metaId) == id }
+            .map { (node, metaId, id) ->
+                val name = node.name?.let { " $it" }.orEmpty()
+                "set ${metaId.name} of ${node.concept.name}$name ${persistence.asString(node.reference)} to $id"
+            }
+
+    private data class Assignment(val node: SNode, val metaId: SProperty, val id: String)
 
     private class MetaIdKind(
         val declaration: SConcept,

@@ -65,9 +65,9 @@ NOTES
   interface, property, link, datatype, enumeration member) gets a meta-id
   (conceptId, propertyId, linkId, datatypeId, memberId), as MPS does: its own node
   ID, or a random number if another declaration in the same scope already has that
-  ID. A copy always gets a new one; a created node keeps one it was given. Each
-  assignment is listed in the response's "hints". A later setProperty in the batch
-  overrides it.
+  ID. A copy always gets a new one; a created node keeps one it was given. The
+  response's "hints" list each assigned meta-id still in place when the batch
+  ends; a later setProperty in the batch overrides it and drops its hint.
 
 DRILL DOWN
   edit.setProperty, edit.setReference, edit.addChild, edit.copyAsChild,

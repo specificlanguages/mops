@@ -115,7 +115,8 @@ When an operation creates or copies a structure-language declaration (a concept,
 enumeration member), mops gives it a meta-id (`conceptId`, `propertyId`, `linkId`, `datatypeId`, or `memberId`) the way
 MPS does: the declaration's own node ID, or a random number when another declaration in the same scope already has that
 ID. A copy always gets a new meta-id; a created declaration keeps a meta-id set in the operation. The response's `hints`
-list each assignment, and a later `setProperty` in the same batch overrides it.
+list each assigned meta-id that is still in place when the batch ends: a later `setProperty` in the same batch overrides
+it, and then no hint is reported for it.
 
 ```sh
 mops --mps-home <path> get node [--ancestry] [--depth N | --summary] [--compact] <node-reference>

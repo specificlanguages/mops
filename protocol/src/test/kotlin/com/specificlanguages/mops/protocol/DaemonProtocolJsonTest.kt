@@ -167,11 +167,13 @@ class DaemonProtocolJsonTest {
                     message = "not checked in this slice",
                 ),
             ),
+            hints = listOf("set conceptId of ConceptDeclaration Copy $nodeReference-copy to 42"),
         )
         val serializedResponse = ProtocolJson.encodeResponse(response)
 
         assertContains(serializedResponse, """"type":"model-edit"""")
         assertContains(serializedResponse, "\"created\":{\"\$new\":\"$nodeReference-copy\"}")
+        assertContains(serializedResponse, """"hints":["set conceptId of ConceptDeclaration Copy $nodeReference-copy to 42"]""")
         assertEquals(
             response,
             ProtocolJson.decodeResponse(serializedResponse),
