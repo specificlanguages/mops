@@ -122,18 +122,21 @@ Release validation runs the complete `check`, including the full integration mat
 
 A docs-only run skips the test jobs, and its verification job runs only the `prek` hooks, without Gradle. A run is
 docs-only when every changed file is under `docs/` or is a Markdown file in the repository root, and none is under
-`docs/reference/`, which is kept for generated pages that need the build's checks. A renamed file counts as changed at
-both paths. No build task or test reads the other files. A pull request compares its merge commit with the base branch,
-a merge queue run with the queue's base commit, and a push to `main` with the previous head. Pushes to `main` do not
-cancel each other, so every push is compared with a head that CI also checks. A force push, a push without a previous
-head, and a manual dispatch run everything.
+`docs/reference/`. That folder is left out for the generated command reference pages proposed in PR #175, which a Gradle
+check compares with the CLI. A renamed file counts as changed at both paths. No build task or test reads the other
+files.
+
+A pull request compares its merge commit with the base branch. A merge queue run compares with the target branch, so the
+changes of earlier groups in the queue count too. A push to `main` compares with the previous head. Pushes to `main` do
+not cancel each other, so every push is compared with a head that CI also checks. Everything runs on a manual dispatch,
+a force push, a push without a previous head, a base that is not in the history, and an empty diff.
 
 When every planned job succeeds and the test jobs ran, `CI passed` saves a cache entry for the tested git tree:
-`ci-passed-<tree>` in the full tier, `ci-passed-pr-<tree>` in the pull request tier. A docs-only run saves no entry. For
-a pull request the tested tree is the tree of the merge commit, and the `plan` job prints it in its summary. A pull
-request run that finds either entry for its tree skips the verification and test jobs, and `CI passed` still succeeds,
-for example after a stacked pull request is rebased onto `main` without changing its code. Re-running a skipped run
-skips again.
+`ci-passed-<tree>` in the full tier, `ci-passed-pr-<tree>` in the pull request tier. Docs-only runs and merge queue runs
+save no entry; pull request runs cannot read entries saved on merge queue refs. For a pull request the tested tree is
+the tree of the merge commit, and the `plan` job prints it in its summary. A pull request run that finds either entry
+for its tree skips the verification and test jobs, and `CI passed` still succeeds, for example after a stacked pull
+request is rebased onto `main` without changing its code. Re-running a skipped run skips again.
 
 Entries saved by a pull request run are visible only to later runs of the same pull request; entries saved by runs on
 `main` are visible to all pull requests. Merge queue runs, pushes to `main`, and manual dispatches never look up an

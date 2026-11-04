@@ -37,12 +37,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-          fetch-depth: 2
+          fetch-depth: 0
       - name: Plan the run
         id: plan
         env:
           EVENT_NAME: ${{ github.event_name }}
-          BASE_SHA: ${{ github.event.merge_group.base_sha || github.event.before }}
+          BASE_REF: ${{ github.event.merge_group.base_ref }}
+          BASE_SHA: ${{ github.event.before }}
           FORCED: ${{ github.event.forced }}
         run: |
           plan="$(.github/scripts/plan.sh)"
@@ -206,10 +207,10 @@ jobs:
           JOB_RESULTS: ${{ toJSON(needs) }}
         run: echo "$JOB_RESULTS" | jq -e 'all(.[]; .result == "success" or .result == "skipped")'
       - name: Create the passed marker
-        if: needs.plan.outputs.run-tests == 'true'
+        if: needs.plan.outputs.run-tests == 'true' && needs.plan.outputs.marker-key != ''
         run: touch ci-passed-marker
       - name: Save the passed marker for this tree
-        if: needs.plan.outputs.run-tests == 'true'
+        if: needs.plan.outputs.run-tests == 'true' && needs.plan.outputs.marker-key != ''
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ci-passed-marker
