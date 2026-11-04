@@ -19,9 +19,8 @@ import java.nio.file.Path
  * VFS records and file content from earlier runs, and the headless platform does not synchronously refresh them when
  * it opens a project. The archives of the distribution are left out: the system directory is used by one MPS build only.
  *
- * A recursive VFS refresh compares with the disk only the files the VFS has loaded into memory. A file that is loaded
- * later comes from its stored record, with the timestamp, length, and content of an earlier run, and nothing compares it
- * with the disk. So the files stored under [folders] are loaded into memory before the refresh.
+ * The files the VFS has stored under [folders] are loaded into memory before the refresh; docs/test-running-design.md
+ * explains why. `AntTestWorker` in ant-test-adapters does the same in the test worker: keep the two in step.
  */
 fun refreshFromDisk(project: MPSProject, folders: List<Path>, mpsHome: Path) {
     val files = folders.mapNotNull { LocalFileSystem.getInstance().findFileByNioFile(it) }
@@ -39,6 +38,7 @@ fun refreshFromDisk(project: MPSProject, folders: List<Path>, mpsHome: Path) {
 /** Loads into memory the files the VFS has stored under [folder], without listing folders on disk. */
 private fun loadStoredFiles(folder: VirtualFile) {
     VfsUtilCore.visitChildrenRecursively(folder, object : VirtualFileVisitor<Unit>() {
-        override fun getChildrenIterable(file: VirtualFile): Iterable<VirtualFile> = (file as NewVirtualFile).iterInDbChildren()
+        override fun getChildrenIterable(file: VirtualFile): Iterable<VirtualFile> =
+            (file as NewVirtualFile).iterInDbChildren()
     })
 }

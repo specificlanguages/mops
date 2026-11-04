@@ -126,13 +126,17 @@ directory. MPS 2026.3 deletes the test-mode system directory at startup unless `
 worker sets it.
 
 A reused VFS keeps file records and content from earlier runs, and the headless platform does not refresh them
-synchronously when it opens a project; the test-mode platform skips that refresh. So both processes refresh the project
-folder, the repository folders, and the module folders of the selection from disk before they use them, the preparation
-environment also the archives of packaged modules outside the distribution, and MPS reloads what changed. A recursive
-VFS refresh compares with the disk only the files the VFS has loaded into memory, and a file loaded later keeps the
-timestamp, length, and content of its stored record, so the refresh first loads the files the VFS has stored under these
-folders into memory. IntelliJ's own version and corruption checks rebuild outdated or broken storage. mops adds no check
-of its own: deleting the cache is the way out, documented for users, and costs one cold run.
+synchronously when it opens a project; the test-mode platform skips that refresh. So before use, both processes refresh
+from disk the project folder, the repository folders, and the module folders of the selection that are not inside
+another of these folders, and MPS reloads what changed. The preparation environment also refreshes the archives of
+packaged modules outside the distribution. A recursive refresh checks only files loaded into memory, and a file loaded
+later keeps its stored timestamp, length, and content (IJPL-219404), so both processes first load every file the VFS has
+stored under these folders. IntelliJ's own version and corruption checks rebuild outdated or broken storage. mops adds
+no check of its own: deleting the cache is the documented way out and costs one cold run.
+
+The load includes generated output folders: generation compares new output with the content the VFS holds and skips
+unchanged files, and it finds and deletes stale files through the VFS. Test-worker class loading reads `deps.cp` from
+the generator caches through the VFS.
 
 Automatic plugin discovery loads installed plugins through normal plugin loading. MPS 2025.1 disables
 `com.intellij.platform.images` in the isolated test configuration because its SVG parser on the Ant application
