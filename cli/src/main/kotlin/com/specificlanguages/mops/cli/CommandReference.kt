@@ -134,12 +134,9 @@ object CommandReference {
     private fun generatedNote(source: String) =
         "Generated from $source by `./gradlew :cli:updateReference`. Do not edit this page."
 
-    /** The line the parent's command list shows: the first header line, else the first description line. */
-    private fun summary(command: CommandLine): String {
-        val usage = command.commandSpec.usageMessage()
-        val line = usage.header().firstOrNull() ?: usage.description().first()
-        return line.replace("%n", " ").replace("%%", "%").trim()
-    }
+    /** The line the parent's command list shows, joined into one line. */
+    private fun summary(command: CommandLine): String =
+        HelpLayout.summary(command.commandSpec).lines().joinToString(" ") { it.trim() }.trim()
 
     private fun qualifiedName(command: CommandLine) = command.commandSpec.qualifiedName()
 

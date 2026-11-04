@@ -51,6 +51,15 @@ object HelpLayout {
         )
     }
 
+    /**
+     * The line a parent's command list shows for [spec]: the first header line, else the first description line,
+     * with format specifiers such as `%n` applied.
+     */
+    fun summary(spec: CommandSpec): String {
+        val usage = spec.usageMessage()
+        return String.format(usage.header().firstOrNull() ?: usage.description().firstOrNull() ?: "")
+    }
+
     /** Leaves the global options out of the help of [command] alone; its subcommands keep them. */
     fun omitGlobalOptions(command: CommandLine) {
         val usage = command.commandSpec.usageMessage()
@@ -116,9 +125,7 @@ object HelpLayout {
             )
             val table = SpaceWrappingTextTable(colorScheme(), columns)
             for (help in subcommands.values) {
-                val usage = help.commandSpec().usageMessage()
-                val summary = usage.header().firstOrNull() ?: usage.description().firstOrNull() ?: ""
-                colorScheme().text(String.format(summary)).splitLines().forEachIndexed { i, line ->
+                colorScheme().text(summary(help.commandSpec())).splitLines().forEachIndexed { i, line ->
                     table.addRowValues(if (i == 0) help.commandNamesText(", ") else colorScheme().text(""), line)
                 }
             }

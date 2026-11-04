@@ -26,8 +26,10 @@ Find subconcepts of one MPS concept.
 ```text
 Usage: mops find subconcepts [-h] [--concrete] [--direct] [--json] CONCEPT
 Find extending concepts and interface implementors in all loaded language
-runtimes, including libraries. Excludes the queried concept; prints qualified
-names in sorted order. Unloaded languages contribute no results.
+runtimes, including libraries. By default the results include transitive
+descendants, abstract concepts, and interfaces. Excludes the queried concept;
+prints qualified names in sorted order. Unloaded languages contribute no
+results.
 Parameters:
       CONCEPT               Concept name to resolve.
 Options:
