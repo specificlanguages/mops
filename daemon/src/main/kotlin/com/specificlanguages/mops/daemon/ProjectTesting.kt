@@ -23,7 +23,7 @@ class ProjectTesting(private val access: JetBrainsMpsAccess, private val workspa
             selection.save(selectionPath)
             report.update { it.copy(diagnostics = it.diagnostics + selection.diagnostics) }
         } catch (failure: Exception) {
-            report.finish(TestRunConclusion("DISCOVERY_FAILED", true, listOf(failure.stackTraceToString())))
+            report.finish(TestRunConclusion("DISCOVERY_FAILED", complete = true, listOf(failure.stackTraceToString())))
             return report.snapshot()
         }
         val mpsHome = Path.of(jetbrains.mps.util.PathManager.getHomePath())
@@ -73,7 +73,7 @@ class ProjectTesting(private val access: JetBrainsMpsAccess, private val workspa
         val worker = try {
             ProcessBuilder(command).redirectErrorStream(true).redirectOutput(directory.resolve("worker.log").toFile()).start()
         } catch (failure: Exception) {
-            report.finish(TestRunConclusion("WORKER_FAILED", false, listOf(failure.toString())))
+            report.finish(TestRunConclusion("WORKER_FAILED", complete = false, listOf(failure.toString())))
             return report.snapshot()
         }
         // Only the worker knows when test execution starts, so it enforces the time limit; the daemon handles
@@ -89,9 +89,9 @@ class ProjectTesting(private val access: JetBrainsMpsAccess, private val workspa
             worker.outputStream.close()
         }
         val saved = TestReportStore(reportPath)
-        if (interruption != null) saved.finish(TestRunConclusion(interruption, false))
+        if (interruption != null) saved.finish(TestRunConclusion(interruption, complete = false))
         else if (saved.snapshot().outcome == "RUNNING")
-            saved.finish(TestRunConclusion("WORKER_FAILED", false,
+            saved.finish(TestRunConclusion("WORKER_FAILED", complete = false,
                 listOf("Test worker exited ${worker.exitValue()}; see ${directory.resolve("worker.log")}")))
         saved.recordTiming("workerLifetime", (System.nanoTime() - workerStarted) / 1_000_000)
         return saved.snapshot()

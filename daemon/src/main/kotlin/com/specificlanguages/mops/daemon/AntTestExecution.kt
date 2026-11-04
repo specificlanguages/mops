@@ -115,7 +115,7 @@ class AntTestExecution(
         }
         val runDiagnostic = if (finished && snapshot.discovered == 0) "No tests discovered for selection: ${selection.description}" else if (!finished || ant.exitValue() != 0 && !snapshot.hasFailedTests) "Ant test worker exited ${ant.exitValue()}; see ${directory.resolve("ant.log")}\n${directory.resolve("ant.log").readText().takeLast(16000)}" else null
         val classLoading = if (outcome == "SUCCESS") null else classLoadingDiagnostic(directory.resolve("test-log/idea.log"))
-        report.finish(TestRunConclusion(outcome, finished || snapshot.phase != "EXECUTION", listOfNotNull(runDiagnostic, classLoading)))
+        report.finish(TestRunConclusion(outcome, complete = finished || snapshot.phase != "EXECUTION", listOfNotNull(runDiagnostic, classLoading)))
     }
 
     /**
