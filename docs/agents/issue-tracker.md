@@ -34,8 +34,8 @@ it infers the repo from the clone you run it in.
 
 - **A field-test report** is a parent issue labelled `field-test`, with the report in its body. It holds evidence, not
   decided work, so it carries no triage label. If the label is missing, create it with `gh label create field-test`.
-- **A record filed from a report** is a sub-issue of the report, labelled `needs-triage` like any new issue.
-- **Close the report** when every record in it is filed or dismissed.
+- **An issue opened from a report** is a sub-issue of the report, labelled `needs-triage` like any new issue.
+- **Close the report** when every cause in it has an issue or is dismissed.
 
 ## Pull requests as a triage surface
 
