@@ -19,13 +19,14 @@ import org.junit.jupiter.api.parallel.ResourceLock
 
 @ResourceLock("system-streams")
 class ExplainCommandTest {
-    private val topLevelTopics =
-        listOf("edit", "inline-subtree", "target", "position", "node-ref", "name-pattern", "scope")
     private val operationTopics = EditNotation.operationNames.map { "edit.$it" }
-    private val allTopics = topLevelTopics + operationTopics
+
+    // The notation pages. The `code` page describes Code Mode: it has no drill-down paths and no edit-batch example.
+    private val allTopics = ExplainTopics.topics - "code"
+    private val topLevelTopics = allTopics - operationTopics.toSet()
 
     // Topics whose EXAMPLE is a shell command rather than an edit-batch JSON object; excluded from batch parsing.
-    private val nonBatchTopics = setOf("edit", "name-pattern", "scope")
+    private val nonBatchTopics = setOf("edit", "name-pattern", "scope", "output")
     private val sectionHeaders =
         setOf("FIELDS", "SEMANTICS", "EXAMPLE", "SEE ALSO", "SHAPE", "OPERATIONS", "CHOOSING AN OPERATION", "NOTES",
             "DRILL DOWN", "FORMS")
@@ -49,6 +50,18 @@ class ExplainCommandTest {
         assertEquals(listOf("code") + topLevelTopics, entries.map { it.trim().substringBefore(' ') })
         assertContains(entries.single { it.trim().startsWith("edit ") }, "edit-batch notation")
         for (line in block) assertTrue(line.length <= 80, "topic line exceeds 80 columns: '$line'")
+    }
+
+    @Test
+    fun `a topic summary is the whole first paragraph of its page`() {
+        assertEquals(
+            "the edit-batch notation: an ordered batch of edit operations applied as a unit, with best-effort " +
+                "atomicity.",
+            ExplainTopics.summaryOf("edit"),
+        )
+        for (topic in ExplainTopics.topics) {
+            assertTrue(ExplainTopics.summaryOf(topic).endsWith("."), "summary of $topic is not a sentence")
+        }
     }
 
     @Test

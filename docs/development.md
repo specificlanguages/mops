@@ -23,6 +23,11 @@ installed distribution needs no git checkout. A build with uncommitted changes t
 A source tree without its own `.git`, or a machine without git, builds normally and reports `(unknown revision)`. Test
 tasks ignore the commit on their classpath, so a new commit alone does not rerun them.
 
+## Command names
+
+Commands that operate on MPS data use a verb-first shape: `mops <verb> <object>`, such as `mops find instances`.
+Operational commands use a concrete subsystem or artifact name, such as `daemon`, `code`, and `wrapper`.
+
 ## Commits and pull requests
 
 Pull request titles follow [Conventional Commits](https://www.conventionalcommits.org/). Pull requests are
@@ -31,6 +36,19 @@ with the `conventional-pre-commit` hook from `.pre-commit-config.yaml`, which ru
 the allowed types when it rejects one. GitHub release notes list the merged pull requests by title.
 
 Commit messages on pull request branches are free-form.
+
+## Release
+
+Releases are published from explicit release commits on `main`:
+
+1. Change `version` in `gradle.properties` from the development snapshot to the exact release version and merge the
+   release commit.
+2. Run the **Release mops** workflow from `main`, entering the version without the `v` prefix.
+3. After publication, change `gradle.properties` to the next development `-SNAPSHOT` version.
+
+The workflow verifies the version, runs all checks, smoke-tests the ZIP distribution, generates its SHA-256 checksum,
+and publishes both files in a GitHub Release with notes generated from the merged pull requests. It creates the
+`v<version>` tag at the tested release commit; release tags must not be created manually.
 
 ## Code structure checks
 
@@ -220,6 +238,17 @@ suite uses the last supported MPS version, and the full integration matrix runs 
 
 ```sh
 ./gradlew :cli:smokeIntegrationTest --tests '*BundledExamplesIntegrationTest'
+```
+
+### Command reference
+
+`docs/reference/` is generated output: one page per top-level command with the `--help` output of the command and its
+subcommands, one page per `mops explain` topic, and an index that also links the bundled skills. `updateReference`
+renders it in-process from the command tree, without a daemon or MPS. `checkReference` rejects a stale reference and
+runs in `check`. Change the command's help text or the explain page, never the generated page.
+
+```sh
+./gradlew :cli:updateReference :cli:checkReference
 ```
 
 ### Test-running integration tests

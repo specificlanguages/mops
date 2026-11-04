@@ -1,0 +1,33 @@
+# mops explain position
+
+Generated from `mops explain position` by `./gradlew :cli:updateReference`. Do not edit this page. Back to the
+[index](../index.md).
+
+```text
+position — where a child sits among the children of a containment role.
+
+FORMS
+  "first"   before all existing children
+  "last"    after all existing children
+  "only"    the single child of a single-valued role
+  3         a bare integer: the zero-based index among existing children
+
+  Accepted by addChild, copyAsChild and moveAsChild (default "last") and by
+  deleteChild (default "only").
+
+EXAMPLE
+{
+  "operations": [
+    {
+      "op": "addChild",
+      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+      "role": "members",
+      "concept": "com.specificlanguages.json.structure.JsonMember",
+      "position": "first"
+    }
+  ]
+}
+
+SEE ALSO
+  edit.addChild, edit.copyAsChild, edit.moveAsChild, edit.deleteChild
+```

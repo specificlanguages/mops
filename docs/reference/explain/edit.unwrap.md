@@ -1,0 +1,40 @@
+# mops explain edit.unwrap
+
+Generated from `mops explain edit.unwrap` by `./gradlew :cli:updateReference`. Do not edit this page. Back to the
+[index](../index.md).
+
+```text
+edit.unwrap — strip a wrapper, keeping one descendant in its place.
+
+FIELDS
+  op      "unwrap"
+  target  (required) the wrapper node to strip — see target
+  keep    (required) an edit target that must resolve to a proper descendant of
+          target; it rises into the target's place — see target
+
+SEMANTICS
+  The kept descendant, with its whole subtree, takes the target's exact place — same
+  parent, containment role, and sibling index, or root node position in the same
+  model when the target is a root. The rest of the target's subtree is deleted. The
+  kept node keeps its identity, so inbound references to it keep resolving.
+
+  keep may be any proper descendant, not just a direct child, so a multi-level strip
+  is one operation. If keep does not resolve to a proper descendant of target, the
+  operation fails as an unwrap error naming the rule. Nothing is created, so unwrap
+  takes no alias.
+
+EXAMPLE
+  Strip a wrapper, promoting one of its descendants into its slot:
+{
+  "operations": [
+    {
+      "op": "unwrap",
+      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+      "keep": {"model": "com.specificlanguages.json.structure", "nodeId": "8007894750083424799"}
+    }
+  ]
+}
+
+SEE ALSO
+  edit, target, node-ref
+```

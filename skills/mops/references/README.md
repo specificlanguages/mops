@@ -4,8 +4,9 @@ Examples use `mops`; substitute the project’s generated `mopsw` when available
 reference placeholders with actual project targets. Copy serialized references whole and quote shell metacharacters.
 
 Start with `mops examples setup`, then `mops examples navigation` and `mops examples search` to find targets. For
-changes, read `mops examples editing`; for verification, read `mops examples validation`. For compiled runtime
-and plugin classes, read `mops examples runtime`. `mops examples all` prints every topic. These commands
+changes, read `mops examples editing`; for verification, read `mops examples validation`. To load compiled language
+runtime and plugin classes through a module's class loader (`mops.runtime.loadClass` and `requireClass`), read
+`mops examples runtime`. `mops examples all` prints every topic. These commands
 work without MPS, Java runtime discovery, or a daemon.
 
 - [Setup and API discovery](setup.md)

@@ -14,6 +14,10 @@ import picocli.CommandLine.Parameters
             "default; append `in <scope-segments>` to search a module, model, or the whole repository (`in /`). Only " +
             "root-bearing scopes are valid. See `mops explain name-pattern` and `mops explain scope`.",
     ],
+    footer = [
+        "",
+        "Text output has the same rows as `mops find instances`; --json prints the structured response.",
+    ],
 )
 class FindRootByNameCommand(environment: CommandEnvironment) : NodeSearchCommand(environment) {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))

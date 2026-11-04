@@ -21,6 +21,18 @@ import picocli.CommandLine.Parameters
             "`in <scope-segments>` to search a module, model, or subtree exhaustively, or `in /` for the whole " +
             "repository. See `mops explain scope`.",
     ],
+    footer = [
+        "",
+        "The target is addressed the same way as in `mops get node`; an unresolved target fails with " +
+            "NODE_NOT_FOUND.",
+        "",
+        "Text output is one tab-separated row per reference: `usage`, the reference role, and the owning node's " +
+            "name (or <unnamed>), concept, and reference. The owner is typed `root` or `node` by its position in its " +
+            "model; a non-root owner appends `parent` and the parent's name (or <unnamed>), concept, and reference. " +
+            "--json prints an object with `limit`, `truncated`, and a `usages` array. Each entry carries the " +
+            "reference `role` and a nested `owner` node summary; a non-root owner carries a nested `parent` " +
+            "summary. --refs-only prints one reference per referencing node. See `mops explain output`.",
+    ],
 )
 class FindUsagesCommand(private val environment: CommandEnvironment) : CliCommand() {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
@@ -49,7 +61,10 @@ class FindUsagesCommand(private val environment: CommandEnvironment) : CliComman
     @Option(
         names = ["--limit"],
         paramLabel = "N",
-        description = ["Maximum usages to return. Defaults to 100; 0 means unlimited."],
+        description = [
+            "Maximum usages to return. Defaults to 100; 0 means unlimited; negative values are rejected. Only when " +
+                "more matches exist, text output ends with a `# truncated` line and JSON sets `truncated`.",
+        ],
     )
     var limit: Int = 100
 

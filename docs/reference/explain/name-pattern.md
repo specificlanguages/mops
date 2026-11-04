@@ -1,0 +1,46 @@
+# mops explain name-pattern
+
+Generated from `mops explain name-pattern` by `./gradlew :cli:updateReference`. Do not edit this page. Back to the
+[index](../index.md).
+
+```text
+name-pattern — the Name Pattern notation for `mops find root-by-name`.
+
+A name pattern matches a root node by its node name, using the same matcher as
+MPS's Go-to-Node navigation. The whole pattern is treated as one name; it is
+never split on dots or other separators. Matching is case-insensitive, and the
+pattern matches anywhere within a name, not only at its start.
+
+SYNTAX
+  abc        A run of letters matches those letters in order, allowing extra
+             characters between them at word boundaries (camel-hump matching).
+             `jo` and `json` both match JsonObject.
+
+  CamelHump  Upper-case letters anchor to word starts. `JO` matches JsonObject
+             and JsonArray-style names by their humps; `JN` matches JsonNumber
+             and JsonNull.
+
+  *          Wildcard for any run of characters. `Json*Type` matches
+             JsonNumberDatatype.
+
+  <trailing  A trailing space anchors the end of the name, so `JsonNull ` (with
+   space>    the space) matches JsonNull but not JsonNullable.
+
+RANKING
+  Results are ordered best match first: prefix and contiguous matches rank
+  above scattered middle matches. Use --limit to bound the result count.
+
+SCOPE
+  root-by-name searches root nodes in editable project sources by default.
+  Append an `in <segment>...` clause to search a module, a model, or the whole
+  repository (`in /`) exhaustively. See `mops explain scope`.
+
+EXAMPLE
+  mops find root-by-name Json
+  mops find root-by-name 'Json*Type'
+  mops find root-by-name Concept in /
+  mops find root-by-name --limit 10 Concept in com.specificlanguages.json
+
+SEE ALSO
+  node-ref, scope, target
+```

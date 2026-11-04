@@ -135,7 +135,10 @@ class CommandHelpTest {
             for (option in listOf("--mps-home", "--project-root", "--daemon-home", "--java-home", "--refs-as-urls")) {
                 assertContains(output.substring(globalOptions), option)
             }
-            assertFalse(output.substring(globalOptions).contains("--help"), "$name help should keep --help out of global options")
+            assertFalse(
+                output.substring(globalOptions).contains("-h, --help"),
+                "$name help should keep --help out of global options",
+            )
         }
     }
 
@@ -237,7 +240,7 @@ class CommandHelpTest {
         assertContains(output, "--output")
         assertContains(output, "--project-root")
         assertContains(output, "every discovered MPS project")
-        assertContains(output, "warnings when their paths are not usable yet")
+        assertContains(output, "warnings when the paths are not usable yet")
     }
 
     private fun runHelp(vararg args: String): String {

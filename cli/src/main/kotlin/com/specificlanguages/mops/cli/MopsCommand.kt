@@ -23,7 +23,13 @@ import picocli.CommandLine.Spec
     mixinStandardHelpOptions = true,
     versionProvider = MopsVersionProvider::class,
     description = ["Kotlin CLI for the daemon-backed MPS prototype."],
-    footer = ["Start with mops examples for task recipes; mops examples editing helps choose an editing approach."],
+    footer = [
+        "",
+        "Global options can appear before, between, or after command names; command options belong after their " +
+            "command name. mops explain output describes how output separates results, metadata, and diagnostics.",
+        "",
+        "Start with mops examples for task recipes; mops examples editing helps choose an editing approach.",
+    ],
 )
 class MopsCommand(
     /**
@@ -48,7 +54,10 @@ class MopsCommand(
         names = ["--project-root"],
         scope = ScopeType.INHERIT,
         paramLabel = "PATH",
-        description = ["Explicit MPS project root, absolute or relative to the directory where mops was started. Overrides upward inference from the working directory."],
+        description = [
+            "Explicit MPS project root, absolute or relative to the directory where mops was started. Overrides " +
+                "upward inference from the working directory.",
+        ],
     )
     var projectRoot: String? = null
 
@@ -73,9 +82,9 @@ class MopsCommand(
         scope = ScopeType.INHERIT,
         paramLabel = "NAME=PATH",
         description = [
-            "Path macro the daemon defines in MPS before it opens the project; repeatable. PATH is an existing " +
-                "directory, absolute or relative to the directory where mops was started. A running daemon with " +
-                "other macros is not reused; stop it with mops daemon stop.",
+            "Path macro for MPS, such as one used as \$\${NAME} in .mps/libraries.xml or .mps/modules.xml; " +
+                "repeatable. \$PROJECT_DIR\$ needs no macro. A running daemon started with other macros is not " +
+                "reused. See mops wrapper --help.",
         ],
         parameterConsumer = MacroConsumer::class,
     )
@@ -106,7 +115,11 @@ class MopsCommand(
 
     override var nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED
 
-    @Option(names = ["--refs-as-urls"], scope = ScopeType.INHERIT, description = ["Render node references as MPS URLs in text output."])
+    @Option(
+        names = ["--refs-as-urls"],
+        scope = ScopeType.INHERIT,
+        description = ["Render node references as MPS URLs in text output; JSON output is unchanged."],
+    )
     fun setRefsAsUrls(enabled: Boolean) {
         nodeReferenceFormat = if (enabled) NodeReferenceFormat.URL else NodeReferenceFormat.SERIALIZED
     }

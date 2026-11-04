@@ -14,6 +14,22 @@ import picocli.CommandLine.Parameters
     name = "module",
     header = ["Report where MPS locates one module's files."],
     description = ["Report where MPS locates one module's descriptor, jars, class output, and model sources."],
+    footer = [
+        "",
+        "The module is found anywhere in the repository. Text output is one `key<TAB>value` row per location MPS " +
+            "reports, keyed by the JSON field name: `kind`, `name`, `reference`, `packaged`, then `descriptor` (the " +
+            ".mpl, .msd, or .devkit file of a source module, or `name.jar!/META-INF/module.xml` of a deployed one), " +
+            "`jar` and `sourcesJar` (the deployed module's archive and the sources archive its deployment descriptor " +
+            "names), `sourceDescriptor` (the source descriptor inside that archive), `sourceDirectory` (a source " +
+            "module's descriptor directory), `classesGen` (a source module's compiled-class output, when its Java " +
+            "facet declares one), `classPath` (one row per entry of the Java facet's runtime classpath), and " +
+            "`modelRoots` (one row per file-based model root).",
+        "",
+        "A location MPS does not record for the module is left out rather than guessed from a naming convention. " +
+            "--json prints the daemon response, with the same fields under `module`. An unknown module fails with " +
+            "MODULE_NOT_FOUND; a name shared by several modules fails and lists their serialized references, so a " +
+            "reference disambiguates it.",
+    ],
 )
 class GetModuleCommand(private val environment: CommandEnvironment) : CliCommand() {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))

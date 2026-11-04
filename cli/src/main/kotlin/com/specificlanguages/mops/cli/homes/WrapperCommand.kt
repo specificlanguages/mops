@@ -17,12 +17,48 @@ import java.util.concurrent.Callable
     description = [
         "Write a project-local mops wrapper using runtime paths discovered from Gradle.",
         "",
-        "Uses the nearest Gradle wrapper to inspect all projects in its build and writes mopsw or mopsw.cmd for every discovered MPS project. Pass --project-root to write only that project's wrapper.",
-        "Wrappers go directly in each Gradle project's build directory when it has one detected MPS project; with multiple MPS projects, they go in mops/<MPS-project-name> beneath it. Reported paths are relative to the working directory.",
-        "No CLI-configured MPS home or daemon is required; Java must be available to run Gradle.",
-        "Querying configured providers may download and extract MPS or JBR distributions; it does not run preparation or language build task actions.",
-        "Partial discoveries print available values without writing a wrapper and exit with status 1; known pairs write the wrapper and exit with status 0, with warnings when their paths are not usable yet.",
-        "The wrapper passes each --macro NAME=PATH given to this command. A path macro that .mps/libraries.xml or .mps/modules.xml uses without a --macro value gets the root of the project's Git repository, with a warning; outside a Git repository, the command fails naming the macro. Project-relative paths (\$PROJECT_DIR\$) need no macro.",
+        "Uses the nearest Gradle wrapper to inspect all projects in its build and writes mopsw or mopsw.cmd for " +
+            "every discovered MPS project. Pass --project-root to write only that project's wrapper. Wrappers go " +
+            "directly in each Gradle project's build directory when it has one detected MPS project; with multiple " +
+            "MPS projects, they go in mops/<MPS-project-name> beneath it. Reported paths are relative to the " +
+            "working directory.",
+        "",
+        "No CLI-configured MPS home or daemon is required; Java must be available to run Gradle. Querying " +
+            "configured providers may download and extract MPS or JBR distributions; it does not run preparation " +
+            "or language build task actions. If discovery finds only some paths, it prints them, writes no " +
+            "wrapper, and exits with status 1. When both paths are known, it writes the wrappers and exits with " +
+            "status 0, with warnings when the paths are not usable yet, so wrappers can be written before the " +
+            "project's preparation steps.",
+    ],
+    footer = [
+        "",
+        "Discovery reads mpsDefaults of the com.specificlanguages.mps Gradle plugin, or RunAntScript tasks of the " +
+            "de.itemis.mps.gradle.common plugin, in every Gradle project of the build, for the shared MPS and Java " +
+            "homes. MPS projects come from configured mpsBuilds entries and .mps project markers in the build. " +
+            "Task-action overrides, included builds, and custom Ant property loading are outside this heuristic; " +
+            "Specific Languages values are project defaults.",
+        "",
+        "Each wrapper supplies the shared MPS and Java homes and its MPS project directory, and forwards its " +
+            "arguments to mops. It runs the full path of the mops installation that wrote it, so mops need not be " +
+            "in PATH. The POSIX wrappers are executable. --project-root can also precede `wrapper`.",
+        "",
+        "Provider resolution failures stop discovery and keep Gradle's dependency diagnostics; check the " +
+            "configured runtime versions and repositories. If a pinned MPS prerelease is no longer available, " +
+            "update the project's MPS prerelease version to the newest available one; prerelease artifacts are " +
+            "deleted periodically.",
+        "",
+        "Path macros: the global option --macro NAME=PATH defines a path macro, such as one that " +
+            ".mps/libraries.xml or .mps/modules.xml uses as \$\${NAME}; repeat it for more macros. PATH is an " +
+            "existing directory, absolute or relative to the directory where mops was started. The daemon defines " +
+            "the macros in MPS before it opens the project, and test runs pass them to the test worker. A running " +
+            "daemon started with other macros is not reused: the command fails, and after mops daemon stop the " +
+            "next command starts a daemon with the new macros. Project-relative paths (\$PROJECT_DIR\$) and the " +
+            "macros MPS defines itself (project, mps_home, platform_lib, lib_ext) need no --macro.",
+        "",
+        "Each wrapper passes the --macro values given to mops wrapper. For a macro that .mps/libraries.xml or " +
+            ".mps/modules.xml uses without a --macro value, mops wrapper guesses the root of the project's Git " +
+            "repository, writes it into the wrapper, and prints a warning; rerun mops wrapper --macro NAME=PATH to " +
+            "set another value. Outside a Git repository, the command fails and names the macro that needs --macro.",
     ],
 )
 class WrapperCommand(

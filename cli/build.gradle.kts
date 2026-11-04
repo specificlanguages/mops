@@ -97,33 +97,68 @@ val generateExamples by tasks.registering {
     }
 }
 
-tasks.register("updateExamples") {
-    group = "documentation"
-    description = "Regenerates the checked-in skill reference pages from the example specs."
-    val generated = generateExamples.map { it.outputs.files.singleFile.resolve("pages") }
-    val checkedIn = rootProject.layout.projectDirectory.dir("skills/mops/references")
-    inputs.dir(generated)
-    doLast {
-        project.sync {
-            from(generated)
-            into(checkedIn)
+/**
+ * Registers `update<name>`, which replaces the pages in [checkedIn] with the [generated] ones, and returns
+ * `check<name>`, which fails when the two directory trees differ. [pages] names the pages in task descriptions and
+ * in the failure message.
+ */
+fun registerCheckedInPages(
+    name: String,
+    pages: String,
+    generated: Provider<File>,
+    checkedIn: Directory,
+): TaskProvider<Task> {
+    tasks.register("update$name") {
+        group = "documentation"
+        description = "Regenerates the checked-in $pages."
+        inputs.dir(generated)
+        doLast {
+            project.sync {
+                from(generated)
+                into(checkedIn)
+            }
+        }
+    }
+    return tasks.register("check$name") {
+        group = LifecycleBasePlugin.VERIFICATION_GROUP
+        description = "Checks that the checked-in $pages are up to date."
+        inputs.dir(generated)
+        inputs.dir(checkedIn)
+        doLast {
+            fun contents(dir: File) =
+                fileTree(dir).files.associate { it.relativeTo(dir).invariantSeparatorsPath to it.readText() }
+            check(contents(generated.get()) == contents(checkedIn.asFile)) {
+                "The $pages are stale. Run ./gradlew :cli:update$name."
+            }
         }
     }
 }
 
-val checkExamples by tasks.registering {
-    group = LifecycleBasePlugin.VERIFICATION_GROUP
-    description = "Checks that the skill reference pages match the executable example specs."
-    val generated = generateExamples.map { it.outputs.files.singleFile.resolve("pages") }
-    val checkedIn = rootProject.layout.projectDirectory.dir("skills/mops/references")
-    inputs.dir(generated)
-    inputs.dir(checkedIn)
-    doLast {
-        val expected = generated.get().listFiles()!!.associate { it.name to it.readText() }
-        val actual = checkedIn.asFile.listFiles()!!.associate { it.name to it.readText() }
-        check(expected == actual) { "Skill reference pages are stale. Run ./gradlew :cli:updateExamples." }
-    }
+val checkExamples = registerCheckedInPages(
+    "Examples",
+    "skill reference pages in skills/mops/references",
+    generateExamples.map { it.outputs.files.singleFile.resolve("pages") },
+    rootProject.layout.projectDirectory.dir("skills/mops/references"),
+)
+
+val skillSources = rootProject.layout.projectDirectory.dir("skills")
+val generateReference by tasks.registering(JavaExec::class) {
+    description = "Renders the command reference from the command tree and the explain pages."
+    val outputDir = layout.buildDirectory.dir("generated/reference")
+    inputs.dir(skillSources)
+    outputs.dir(outputDir)
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "com.specificlanguages.mops.cli.CommandReference"
+    argumentProviders.add { listOf(outputDir.get().asFile.absolutePath, skillSources.asFile.absolutePath) }
+    doFirst { outputDir.get().asFile.deleteRecursively() }
 }
+
+val checkReference = registerCheckedInPages(
+    "Reference",
+    "command reference pages in docs/reference",
+    generateReference.map { it.outputs.files.singleFile },
+    rootProject.layout.projectDirectory.dir("docs/reference"),
+)
 
 tasks.processResources {
     from(generateExamples.map { it.outputs.files.singleFile.resolve("pages") }) { into("examples") }
@@ -307,6 +342,7 @@ tasks.register<Test>("integrationTestLocal") {
 
 tasks.check {
     dependsOn(checkExamples)
+    dependsOn(checkReference)
     dependsOn("integrationTest")
     dependsOn("gradleDiscoveryTest")
 }

@@ -50,7 +50,6 @@ repos:
         # Files that were over the limit when the check was introduced. Remove a file from this list after splitting it.
         exclude: |
           (?x)^(
-            README\.md|
             cli/src/test/kotlin/com/specificlanguages/mops/cli/FindInstancesCommandTest\.kt|
             daemon/src/main/kotlin/com/specificlanguages/mops/daemon/EditBatchExecutor\.kt|
             daemon/src/main/kotlin/com/specificlanguages/mops/daemon/JetBrainsMpsAccess\.kt|
