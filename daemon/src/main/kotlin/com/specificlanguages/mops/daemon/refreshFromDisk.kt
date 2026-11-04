@@ -36,7 +36,7 @@ fun refreshFromDisk(project: MPSProject, folders: List<Path>, mpsHome: Path) {
 }
 
 /** Loads into memory the files the VFS has stored under [folder], without listing folders on disk. */
-private fun loadStoredFiles(folder: VirtualFile) {
+internal fun loadStoredFiles(folder: VirtualFile) {
     VfsUtilCore.visitChildrenRecursively(folder, object : VirtualFileVisitor<Unit>() {
         override fun getChildrenIterable(file: VirtualFile): Iterable<VirtualFile> =
             (file as NewVirtualFile).iterInDbChildren()

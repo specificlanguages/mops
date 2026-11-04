@@ -2,13 +2,15 @@ package com.specificlanguages.mops.daemon
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.configurationStore.StoreReloadManager
+import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.VfsUtil
 import jetbrains.mps.classloading.ClassLoaderManager
 import jetbrains.mps.ide.platform.watching.ReloadManager
-import jetbrains.mps.project.AbstractModule
 import jetbrains.mps.project.MPSProject
 import jetbrains.mps.project.Project
 import jetbrains.mps.project.facets.JavaModuleFacet
 import jetbrains.mps.project.dependency.GlobalModuleDependenciesManager
+import jetbrains.mps.util.PathManager
 import jetbrains.mps.vfs.refresh.DefaultCachingContext
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.mps.openapi.module.SModuleReference
@@ -19,12 +21,14 @@ import java.security.MessageDigest
 import java.util.HexFormat
 
 /**
- * Refreshes project files and the archives of packaged modules, and replaces runtimes whose Java classpath contents
- * changed between requests.
+ * Refreshes project files, the folders of source modules, and the archives of packaged modules, and replaces runtimes
+ * whose Java classpath contents changed between requests.
  */
 internal class ExternalProjectRefresh(private val project: Project) {
     private var outputs = snapshot()
     private var archiveStamps: Map<Path, ArchiveStamp?>? = null
+    private val foldersWithStoredFilesLoaded = mutableSetOf<Path>()
+    private val mpsHome = Path.of(PathManager.getHomePath())
 
     fun refresh() {
         val mpsProject = project as MPSProject
@@ -35,10 +39,7 @@ internal class ExternalProjectRefresh(private val project: Project) {
         // The component store reloads project membership separately from MPS's model/module reload sessions.
         runBlocking { StoreReloadManager.getInstance(mpsProject.project).reloadChangedStorageFiles() }
         ApplicationManager.getApplication().invokeAndWait {
-            val roots = project.modelAccess.computeReadAction {
-                project.projectModules.mapNotNull { (it as? AbstractModule)?.descriptorFile?.parent }.distinct()
-            }
-            roots.forEach { it.refresh(DefaultCachingContext(true, true)) }
+            refreshModuleFolders()
             refreshModuleArchives()
             ReloadManager.getInstance().flush()
             val current = snapshot()
@@ -51,6 +52,19 @@ internal class ExternalProjectRefresh(private val project: Project) {
             }
             outputs = current
         }
+    }
+
+    /**
+     * Refreshes the local folders that modules are loaded from: project modules and the modules of libraries that point
+     * at source folders. The persistent VFS keeps records of these files across daemon restarts, so the first time a
+     * folder is seen, the files the VFS has stored under it are loaded into memory before the refresh;
+     * docs/test-running-design.md explains why.
+     */
+    private fun refreshModuleFolders() {
+        val folders = project.modelAccess.computeReadAction { moduleFolders(project, mpsHome) }
+            .mapNotNull { LocalFileSystem.getInstance().findFileByNioFile(it) }
+        folders.filter { foldersWithStoredFilesLoaded.add(it.toNioPath()) }.forEach(::loadStoredFiles)
+        VfsUtil.markDirtyAndRefresh(false, true, true, *folders.toTypedArray())
     }
 
     /**
