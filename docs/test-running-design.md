@@ -1,7 +1,7 @@
 # Test running
 
-Status: implemented. See [development.md](development.md#test-running-integration-tests) for the validation fixtures and
-pinned development baseline.
+Status: implemented. See [Test-running integration tests](test-running-integration-tests.md) for the validation fixtures
+and pinned development baseline.
 
 ## Required scope
 
