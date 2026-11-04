@@ -36,7 +36,7 @@ internal class ClassPathFingerprints(
      * Returns the fingerprint of each root. Roots are walked in parallel because the walk, one `stat` call per file, is
      * most of the cost when nothing changed. Only the files of these roots stay cached for the next call.
      */
-    fun fingerprints(roots: Collection<Path>): Map<Path, String> {
+    fun compute(roots: Collection<Path>): Map<Path, String> {
         val racyAfter = now().minus(racyWindow)
         val current = ConcurrentHashMap<Path, CachedHash>()
         val result = roots.distinct().parallelStream()
@@ -48,7 +48,7 @@ internal class ClassPathFingerprints(
 
     private fun fingerprint(root: Path, racyAfter: Instant, current: MutableMap<Path, CachedHash>): String {
         if (!Files.exists(root)) return "missing"
-        val files = mutableListOf<Pair<Path, Map<String, Any?>?>>()
+        val files = mutableListOf<Pair<Path, FileStamp?>>()
         Files.walkFileTree(root, setOf(FOLLOW_LINKS), Int.MAX_VALUE, object : SimpleFileVisitor<Path>() {
             override fun visitFile(file: Path, attributes: BasicFileAttributes): FileVisitResult {
                 if (attributes.isRegularFile) files.add(file to stamp(file))
@@ -66,22 +66,31 @@ internal class ClassPathFingerprints(
         return HexFormat.of().formatHex(digest.digest())
     }
 
-    private fun cachedHash(file: Path, stamp: Map<String, Any?>?, racyAfter: Instant): CachedHash {
+    private fun cachedHash(file: Path, stamp: FileStamp?, racyAfter: Instant): CachedHash {
         val previous = hashes[file]
-        if (stamp != null && previous != null && previous.stamp == stamp) return previous
-        val trusted = stamp?.takeUnless { (it[CHANGE_TIME] as FileTime).toInstant() > racyAfter }
+        if (stamp != null && previous != null && previous.trustedStamp == stamp) return previous
+        val trusted = stamp?.takeUnless { it.changed.toInstant() > racyAfter }
         return CachedHash(trusted, hashFile(file))
     }
 
     /** The attributes whose values are equal while a file is unchanged, or `null` without status change times. */
-    private fun stamp(file: Path): Map<String, Any?>? =
-        if (unixAttributes) Files.readAttributes(file, STAMP_ATTRIBUTES) else null
+    private fun stamp(file: Path): FileStamp? {
+        if (!unixAttributes) return null
+        val attributes = Files.readAttributes(file, "unix:size,lastModifiedTime,fileKey,ctime")
+        return FileStamp(
+            attributes.getValue("size") as Long,
+            attributes.getValue("lastModifiedTime") as FileTime,
+            attributes["fileKey"],
+            attributes.getValue("ctime") as FileTime,
+        )
+    }
 
-    private class CachedHash(val stamp: Map<String, Any?>?, val hash: ByteArray)
+    private data class FileStamp(val size: Long, val modified: FileTime, val key: Any?, val changed: FileTime)
+
+    /** A content hash; [trustedStamp] is `null` when the hash must be computed again on the next call. */
+    private class CachedHash(val trustedStamp: FileStamp?, val hash: ByteArray)
 
     companion object {
-        private const val CHANGE_TIME = "ctime"
-        private const val STAMP_ATTRIBUTES = "unix:size,lastModifiedTime,fileKey,$CHANGE_TIME"
         private val racyWindow = Duration.ofSeconds(2)
         private val unixAttributes = "unix" in FileSystems.getDefault().supportedFileAttributeViews()
 

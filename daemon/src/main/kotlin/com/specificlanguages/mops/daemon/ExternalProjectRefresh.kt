@@ -92,7 +92,7 @@ internal class ExternalProjectRefresh(private val project: Project) {
                 module.moduleReference to facet.classPath.map { entry -> Path.of(entry.substringBefore("!/")) }
             }.toMap()
         }
-        val fingerprints = classPathFingerprints.fingerprints(classPaths.values.flatten())
+        val fingerprints = classPathFingerprints.compute(classPaths.values.flatten())
         return classPaths.mapValues { (_, roots) -> roots.map { it to fingerprints.getValue(it) } }
     }
 }
