@@ -1,9 +1,11 @@
 package com.specificlanguages.mops.daemon
 
+import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
 import com.specificlanguages.mops.protocol.InlineChild
+import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.ModelDestination
 import com.specificlanguages.mops.protocol.MpsNodeJson
 import com.specificlanguages.mops.protocol.MpsNodePropertyJson
@@ -17,22 +19,18 @@ class StructureMetaIdEditSemanticsTest {
 
     @Test
     fun `copyAsRoot gives a copied concept the new node id as its conceptId and reports it`() {
-        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
-            val response = mpsAccess.write {
-                modelEdit(
-                    batchOf(
-                        EditOperation.CopyAsRoot(
-                            model = ModelDestination(STRUCTURE_MODEL),
-                            source = EditTarget.NodeReference(JSON_OBJECT_REF),
-                            alias = "\$copy",
-                        ),
-                    ),
-                )
-            }
-
+        edit(
+            EditOperation.CopyAsRoot(
+                model = ModelDestination(STRUCTURE_MODEL),
+                source = EditTarget.NodeReference(JSON_OBJECT_REF),
+                alias = "\$copy",
+            ),
+        ) { mpsAccess, response ->
             val copyRef = response.created.getValue("copy")
             val copy = mpsAccess.read { getNode(NodeTarget.NodeReference(copyRef)) }
             assertEquals(copy.id, propertyValue(copy, "conceptId"))
+            val source = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_OBJECT_REF)) }
+            assertNotEquals(propertyValue(source, "conceptId"), propertyValue(copy, "conceptId"))
             val link = childrenInRole(copy, "linkDeclaration").single()
             assertEquals(link.id, propertyValue(link, "linkId"))
             assertEquals(
@@ -46,68 +44,37 @@ class StructureMetaIdEditSemanticsTest {
     }
 
     @Test
-    fun `copying an interface concept reassigns its conceptId`() {
-        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
-            val response = mpsAccess.write {
-                modelEdit(
-                    batchOf(
-                        EditOperation.CopyAsRoot(
-                            model = ModelDestination(STRUCTURE_MODEL),
-                            source = EditTarget.NodeReference(IJSON_VALUE_REF),
-                            alias = "\$copy",
-                        ),
-                    ),
-                )
-            }
-
-            val copyRef = response.created.getValue("copy")
-            val copy = mpsAccess.read { getNode(NodeTarget.NodeReference(copyRef)) }
-            assertEquals(copy.id, propertyValue(copy, "conceptId"))
-            assertEquals(
-                listOf("set conceptId of InterfaceConceptDeclaration IJsonValue $copyRef to ${copy.id}"),
-                response.hints,
-            )
-        }
-    }
-
-    @Test
     fun `copyAsChild and a copy leaf reassign the propertyId of a copied property`() {
-        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
-            val response = mpsAccess.write {
-                modelEdit(
-                    batchOf(
-                        EditOperation.CopyAsChild(
-                            target = EditTarget.NodeReference(JSON_ARRAY_REF),
-                            source = EditTarget.NodeReference(JSON_STRING_VALUE_REF),
-                            role = "propertyDeclaration",
-                            alias = "\$childCopy",
-                        ),
-                        EditOperation.AddChild(
-                            target = EditTarget.NodeReference(JSON_ARRAY_REF),
-                            role = "linkDeclaration",
-                            concept = LINK_DECLARATION,
-                            properties = listOf(
-                                MpsNodePropertyJson(name = "role", value = "extra"),
-                                MpsNodePropertyJson(name = "linkId", value = "42"),
-                            ),
-                            alias = "\$link",
-                        ),
-                        EditOperation.AddRoot(
-                            model = ModelDestination(STRUCTURE_MODEL),
-                            concept = CONCEPT_DECLARATION,
-                            properties = listOf(MpsNodePropertyJson(name = "name", value = "Holder")),
-                            children = listOf(
-                                InlineChild.Copy(
-                                    role = "propertyDeclaration",
-                                    source = EditTarget.NodeReference(JSON_STRING_VALUE_REF),
-                                ),
-                            ),
-                            alias = "\$holder",
-                        ),
+        edit(
+            EditOperation.CopyAsChild(
+                target = EditTarget.NodeReference(JSON_ARRAY_REF),
+                source = EditTarget.NodeReference(JSON_STRING_VALUE_REF),
+                role = "propertyDeclaration",
+                alias = "\$childCopy",
+            ),
+            EditOperation.AddChild(
+                target = EditTarget.NodeReference(JSON_ARRAY_REF),
+                role = "linkDeclaration",
+                concept = LINK_DECLARATION,
+                properties = listOf(
+                    MpsNodePropertyJson(name = "role", value = "extra"),
+                    MpsNodePropertyJson(name = "linkId", value = "42"),
+                ),
+                alias = "\$link",
+            ),
+            EditOperation.AddRoot(
+                model = ModelDestination(STRUCTURE_MODEL),
+                concept = CONCEPT_DECLARATION,
+                properties = listOf(MpsNodePropertyJson(name = "name", value = "Holder")),
+                children = listOf(
+                    InlineChild.Copy(
+                        role = "propertyDeclaration",
+                        source = EditTarget.NodeReference(JSON_STRING_VALUE_REF),
                     ),
-                )
-            }
-
+                ),
+                alias = "\$holder",
+            ),
+        ) { mpsAccess, response ->
             val childCopy = mpsAccess.read { getNode(NodeTarget.NodeReference(response.created.getValue("childCopy"))) }
             assertEquals(childCopy.id, propertyValue(childCopy, "propertyId"))
             val link = mpsAccess.read { getNode(NodeTarget.NodeReference(response.created.getValue("link"))) }
@@ -129,35 +96,29 @@ class StructureMetaIdEditSemanticsTest {
 
     @Test
     fun `an enumeration and its members get meta-ids when created and new ones when copied`() {
-        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
-            val response = mpsAccess.write {
-                modelEdit(
-                    batchOf(
-                        EditOperation.AddRoot(
-                            model = ModelDestination(STRUCTURE_MODEL),
-                            concept = ENUMERATION_DECLARATION,
-                            properties = listOf(
-                                MpsNodePropertyJson(name = "name", value = "Color"),
-                                MpsNodePropertyJson(name = "datatypeId", value = "7"),
-                            ),
-                            children = listOf(
-                                InlineChild.Fresh(
-                                    role = "members",
-                                    concept = ENUMERATION_MEMBER_DECLARATION,
-                                    properties = listOf(MpsNodePropertyJson(name = "name", value = "red")),
-                                ),
-                            ),
-                            alias = "\$enum",
-                        ),
-                        EditOperation.CopyAsRoot(
-                            model = ModelDestination(STRUCTURE_MODEL),
-                            source = EditTarget.Alias("\$enum"),
-                            alias = "\$copy",
-                        ),
+        edit(
+            EditOperation.AddRoot(
+                model = ModelDestination(STRUCTURE_MODEL),
+                concept = ENUMERATION_DECLARATION,
+                properties = listOf(
+                    MpsNodePropertyJson(name = "name", value = "Color"),
+                    MpsNodePropertyJson(name = "datatypeId", value = "7"),
+                ),
+                children = listOf(
+                    InlineChild.Fresh(
+                        role = "members",
+                        concept = ENUMERATION_MEMBER_DECLARATION,
+                        properties = listOf(MpsNodePropertyJson(name = "name", value = "red")),
                     ),
-                )
-            }
-
+                ),
+                alias = "\$enum",
+            ),
+            EditOperation.CopyAsRoot(
+                model = ModelDestination(STRUCTURE_MODEL),
+                source = EditTarget.Alias("\$enum"),
+                alias = "\$copy",
+            ),
+        ) { mpsAccess, response ->
             val created = mpsAccess.read { getNode(NodeTarget.NodeReference(response.created.getValue("enum"))) }
             assertEquals("7", propertyValue(created, "datatypeId"))
             val createdMember = childrenInRole(created, "members").single()
@@ -180,24 +141,18 @@ class StructureMetaIdEditSemanticsTest {
 
     @Test
     fun `an explicit setProperty later in the batch overrides the assigned meta-id and drops its hint`() {
-        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
-            val response = mpsAccess.write {
-                modelEdit(
-                    batchOf(
-                        EditOperation.CopyAsRoot(
-                            model = ModelDestination(STRUCTURE_MODEL),
-                            source = EditTarget.NodeReference(JSON_OBJECT_REF),
-                            alias = "\$copy",
-                        ),
-                        EditOperation.SetProperty(
-                            target = EditTarget.Alias("\$copy"),
-                            name = "conceptId",
-                            value = "123456789",
-                        ),
-                    ),
-                )
-            }
-
+        edit(
+            EditOperation.CopyAsRoot(
+                model = ModelDestination(STRUCTURE_MODEL),
+                source = EditTarget.NodeReference(JSON_OBJECT_REF),
+                alias = "\$copy",
+            ),
+            EditOperation.SetProperty(
+                target = EditTarget.Alias("\$copy"),
+                name = "conceptId",
+                value = "123456789",
+            ),
+        ) { mpsAccess, response ->
             val copy = mpsAccess.read { getNode(NodeTarget.NodeReference(response.created.getValue("copy"))) }
             assertEquals("123456789", propertyValue(copy, "conceptId"))
             val link = childrenInRole(copy, "linkDeclaration").single()
@@ -209,31 +164,25 @@ class StructureMetaIdEditSemanticsTest {
     }
 
     @Test
-    fun `a declaration deleted later in the batch gets no hint and a hint names the final node name`() {
-        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
-            val response = mpsAccess.write {
-                modelEdit(
-                    batchOf(
-                        EditOperation.CopyAsRoot(
-                            model = ModelDestination(STRUCTURE_MODEL),
-                            source = EditTarget.NodeReference(JSON_OBJECT_REF),
-                            alias = "\$deleted",
-                        ),
-                        EditOperation.Delete(target = EditTarget.Alias("\$deleted")),
-                        EditOperation.CopyAsRoot(
-                            model = ModelDestination(STRUCTURE_MODEL),
-                            source = EditTarget.NodeReference(IJSON_VALUE_REF),
-                            alias = "\$renamed",
-                        ),
-                        EditOperation.SetProperty(
-                            target = EditTarget.Alias("\$renamed"),
-                            name = "name",
-                            value = "IRenamed",
-                        ),
-                    ),
-                )
-            }
-
+    fun `a declaration deleted later in the batch gets no hint and a renamed interface hint names its final name`() {
+        edit(
+            EditOperation.CopyAsRoot(
+                model = ModelDestination(STRUCTURE_MODEL),
+                source = EditTarget.NodeReference(JSON_OBJECT_REF),
+                alias = "\$deleted",
+            ),
+            EditOperation.Delete(target = EditTarget.Alias("\$deleted")),
+            EditOperation.CopyAsRoot(
+                model = ModelDestination(STRUCTURE_MODEL),
+                source = EditTarget.NodeReference(IJSON_VALUE_REF),
+                alias = "\$renamed",
+            ),
+            EditOperation.SetProperty(
+                target = EditTarget.Alias("\$renamed"),
+                name = "name",
+                value = "IRenamed",
+            ),
+        ) { mpsAccess, response ->
             val renamedRef = response.created.getValue("renamed")
             val renamed = mpsAccess.read { getNode(NodeTarget.NodeReference(renamedRef)) }
             assertEquals(
@@ -245,78 +194,43 @@ class StructureMetaIdEditSemanticsTest {
 
     @Test
     fun `a blocked batch reports no hints`() {
-        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
-            val response = mpsAccess.write {
-                modelEdit(
-                    batchOf(
-                        EditOperation.CopyAsRoot(
-                            model = ModelDestination(STRUCTURE_MODEL),
-                            source = EditTarget.NodeReference(JSON_OBJECT_REF),
-                        ),
-                        EditOperation.AddChild(
-                            target = EditTarget.NodeReference(JSON_FILE_REF),
-                            role = "propertyDeclaration",
-                            concept = LINK_DECLARATION,
-                        ),
-                    ),
-                )
-            }
-
+        edit(
+            EditOperation.CopyAsRoot(
+                model = ModelDestination(STRUCTURE_MODEL),
+                source = EditTarget.NodeReference(JSON_OBJECT_REF),
+            ),
+            EditOperation.AddChild(
+                target = EditTarget.NodeReference(JSON_FILE_REF),
+                role = "propertyDeclaration",
+                concept = LINK_DECLARATION,
+            ),
+        ) { mpsAccess, response ->
             assertTrue(response.violations.isNotEmpty())
             assertEquals(emptyList(), response.hints)
         }
     }
 
     @Test
-    fun `a copy gets a conceptId different from its source's`() {
-        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
-            val response = mpsAccess.write {
-                modelEdit(
-                    batchOf(
-                        EditOperation.CopyAsRoot(
-                            model = ModelDestination(STRUCTURE_MODEL),
-                            source = EditTarget.NodeReference(JSON_OBJECT_REF),
-                            alias = "\$copy",
-                        ),
-                    ),
-                )
-            }
-
-            val source = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_OBJECT_REF)) }
-            val copy = mpsAccess.read { getNode(NodeTarget.NodeReference(response.created.getValue("copy"))) }
-            val sourceConceptId = propertyValue(source, "conceptId")
-            assertTrue(sourceConceptId.isNotEmpty(), "the fixture's JsonObject has a conceptId")
-            assertNotEquals(sourceConceptId, propertyValue(copy, "conceptId"))
-        }
-    }
-
-    @Test
     fun `primitive and constrained datatypes get a datatypeId when created and a new one when copied`() {
-        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
-            val response = mpsAccess.write {
-                modelEdit(
-                    batchOf(
-                        EditOperation.AddRoot(
-                            model = ModelDestination(STRUCTURE_MODEL),
-                            concept = PRIMITIVE_DATA_TYPE_DECLARATION,
-                            properties = listOf(MpsNodePropertyJson(name = "name", value = "number")),
-                            alias = "\$primitive",
-                        ),
-                        EditOperation.AddRoot(
-                            model = ModelDestination(STRUCTURE_MODEL),
-                            concept = CONSTRAINED_DATA_TYPE_DECLARATION,
-                            properties = listOf(MpsNodePropertyJson(name = "name", value = "digits")),
-                            alias = "\$constrained",
-                        ),
-                        EditOperation.CopyAsRoot(
-                            model = ModelDestination(STRUCTURE_MODEL),
-                            source = EditTarget.Alias("\$constrained"),
-                            alias = "\$copy",
-                        ),
-                    ),
-                )
-            }
-
+        edit(
+            EditOperation.AddRoot(
+                model = ModelDestination(STRUCTURE_MODEL),
+                concept = PRIMITIVE_DATA_TYPE_DECLARATION,
+                properties = listOf(MpsNodePropertyJson(name = "name", value = "number")),
+                alias = "\$primitive",
+            ),
+            EditOperation.AddRoot(
+                model = ModelDestination(STRUCTURE_MODEL),
+                concept = CONSTRAINED_DATA_TYPE_DECLARATION,
+                properties = listOf(MpsNodePropertyJson(name = "name", value = "digits")),
+                alias = "\$constrained",
+            ),
+            EditOperation.CopyAsRoot(
+                model = ModelDestination(STRUCTURE_MODEL),
+                source = EditTarget.Alias("\$constrained"),
+                alias = "\$copy",
+            ),
+        ) { mpsAccess, response ->
             val nodes = listOf("primitive", "constrained", "copy").map { alias ->
                 mpsAccess.read { getNode(NodeTarget.NodeReference(response.created.getValue(alias))) }
             }
@@ -335,19 +249,13 @@ class StructureMetaIdEditSemanticsTest {
 
     @Test
     fun `replace with a copy leaf reassigns the meta-id of the copy`() {
-        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
-            val response = mpsAccess.write {
-                modelEdit(
-                    batchOf(
-                        EditOperation.Replace(
-                            target = EditTarget.NodeReference(JSON_ARRAY_ITEMS_LINK_REF),
-                            with = InlineChild.Copy(role = null, source = EditTarget.NodeReference(JSON_ARRAY_ITEMS_LINK_REF)),
-                            alias = "\$copy",
-                        ),
-                    ),
-                )
-            }
-
+        edit(
+            EditOperation.Replace(
+                target = EditTarget.NodeReference(JSON_ARRAY_ITEMS_LINK_REF),
+                with = InlineChild.Copy(role = null, source = EditTarget.NodeReference(JSON_ARRAY_ITEMS_LINK_REF)),
+                alias = "\$copy",
+            ),
+        ) { mpsAccess, response ->
             val copy = mpsAccess.read { getNode(NodeTarget.NodeReference(response.created.getValue("copy"))) }
             assertEquals(copy.id, propertyValue(copy, "linkId"))
             assertEquals(
@@ -357,7 +265,10 @@ class StructureMetaIdEditSemanticsTest {
         }
     }
 
-    private fun batchOf(vararg operations: EditOperation): EditBatch = EditBatch(operations.toList())
+    private fun edit(vararg operations: EditOperation, verify: (MpsAccess, ModelEditResponse) -> Unit) =
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
+            verify(mpsAccess, mpsAccess.write { modelEdit(EditBatch(operations.toList())) })
+        }
 
     private fun childrenInRole(node: MpsNodeJson, role: String): List<MpsNodeJson> =
         node.children.orEmpty().filter { it.role == role }

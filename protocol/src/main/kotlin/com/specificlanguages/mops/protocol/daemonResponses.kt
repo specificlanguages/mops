@@ -138,7 +138,7 @@ data class ModelEditResponse(
     // capped, with a final summary line when more languages were affected.
     val warnings: List<String> = emptyList(),
     // Hints: one line per adjustment the edit made on the caller's behalf, e.g. a meta-id assigned to a created or
-    // copied structure declaration. Empty when the batch was blocked, since nothing was applied.
+    // copied structure declaration.
     val hints: List<String> = emptyList(),
 ) : DaemonResponse
 

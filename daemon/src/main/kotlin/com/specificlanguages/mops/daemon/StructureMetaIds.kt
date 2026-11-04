@@ -1,6 +1,5 @@
 package com.specificlanguages.mops.daemon
 
-import com.specificlanguages.mops.daemon.MaterializedNode.Origin
 import jetbrains.mps.smodel.SNodeId
 import jetbrains.mps.smodel.adapter.structure.MetaAdapterFactory
 import org.jetbrains.mps.openapi.language.SConcept
@@ -20,30 +19,31 @@ import kotlin.random.Random
  * concept or datatype is the model's root declarations of that kind; the scope of a property, link, or enumeration member
  * is its siblings under the same parent and role.
  *
- * Matching is subconcept-inclusive, so it covers interface concepts and every kind of datatype declaration.
+ * Matching is subconcept-inclusive, so it covers interface concepts and every kind of datatype declaration. Peers are
+ * checked right after the operation that materialized the node; a later move in the same batch does not check them again.
  *
  * One instance serves one edit batch: [recordFresh] and [recordCopy] collect the nodes an Edit Operation materializes,
  * [assignRecorded] runs after each operation, and [hints] reports the assignments at the end of the batch.
  */
 internal class StructureMetaIds(private val persistence: PersistenceFacade) {
-    private val recorded = mutableListOf<MaterializedNode>()
+    private val recorded = mutableListOf<Recorded>()
     private val assignments = mutableListOf<Assignment>()
 
     /** Records [node], created fresh by the current operation. */
     fun recordFresh(node: SNode) {
-        recorded.add(MaterializedNode(node, Origin.FRESH))
+        recorded.add(Recorded(node, copied = false))
     }
 
     /** Records every node of [copy], a subtree the current operation copied. */
     fun recordCopy(copy: SNode) {
-        SNodeUtil.getDescendants(copy).mapTo(recorded) { MaterializedNode(it, Origin.COPY) }
+        SNodeUtil.getDescendants(copy).mapTo(recorded) { Recorded(it, copied = true) }
     }
 
     /** Assigns meta-ids to the nodes recorded since the previous call, in the order they were recorded. */
     fun assignRecorded() {
-        for ((node, origin) in recorded) {
+        for ((node, copied) in recorded) {
             val kind = KINDS.firstOrNull { node.concept.isSubConceptOf(it.declaration) } ?: continue
-            if (origin == Origin.FRESH && !node.getProperty(kind.metaId).isNullOrEmpty()) continue
+            if (!copied && !node.getProperty(kind.metaId).isNullOrEmpty()) continue
             val id = kind.generate(node).toString()
             node.setProperty(kind.metaId, id)
             assignments.add(Assignment(node, kind.metaId, id))
@@ -62,6 +62,8 @@ internal class StructureMetaIds(private val persistence: PersistenceFacade) {
                 val name = node.name?.let { " $it" }.orEmpty()
                 "set ${metaId.name} of ${node.concept.name}$name ${persistence.asString(node.reference)} to $id"
             }
+
+    private data class Recorded(val node: SNode, val copied: Boolean)
 
     private data class Assignment(val node: SNode, val metaId: SProperty, val id: String)
 

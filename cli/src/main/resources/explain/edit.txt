@@ -67,7 +67,8 @@ NOTES
   ID, or a random number if another declaration in the same scope already has that
   ID. A copy always gets a new one; a created node keeps one it was given. The
   response's "hints" list each assigned meta-id still in place when the batch
-  ends; a later setProperty in the batch overrides it and drops its hint.
+  ends; a later setProperty that overrides it, or a later delete of the node,
+  drops its hint.
 
 DRILL DOWN
   edit.setProperty, edit.setReference, edit.addChild, edit.copyAsChild,
