@@ -14,7 +14,7 @@ object ExplainTopics {
     private const val LINE_WIDTH = 80
 
     private val topLevelTopics =
-        listOf("code", "edit", "inline-subtree", "target", "position", "node-ref", "name-pattern", "scope")
+        listOf("code", "edit", "inline-subtree", "target", "position", "node-ref", "name-pattern", "scope", "output")
 
     private val operationTopics: List<String> = EditNotation.operationNames.map { "edit.$it" }
 

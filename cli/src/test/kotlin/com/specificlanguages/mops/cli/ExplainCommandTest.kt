@@ -20,12 +20,12 @@ import org.junit.jupiter.api.parallel.ResourceLock
 @ResourceLock("system-streams")
 class ExplainCommandTest {
     private val topLevelTopics =
-        listOf("edit", "inline-subtree", "target", "position", "node-ref", "name-pattern", "scope")
+        listOf("edit", "inline-subtree", "target", "position", "node-ref", "name-pattern", "scope", "output")
     private val operationTopics = EditNotation.operationNames.map { "edit.$it" }
     private val allTopics = topLevelTopics + operationTopics
 
     // Topics whose EXAMPLE is a shell command rather than an edit-batch JSON object; excluded from batch parsing.
-    private val nonBatchTopics = setOf("edit", "name-pattern", "scope")
+    private val nonBatchTopics = setOf("edit", "name-pattern", "scope", "output")
     private val sectionHeaders =
         setOf("FIELDS", "SEMANTICS", "EXAMPLE", "SEE ALSO", "SHAPE", "OPERATIONS", "CHOOSING AN OPERATION", "NOTES",
             "DRILL DOWN", "FORMS")
