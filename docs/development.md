@@ -102,21 +102,34 @@ to it. A test that must not see such changes passes its own `copy` key. Tests th
 daemon, run a separate builder daemon or a modified MPS distribution, or run MPS tests in worker processes, create a
 private daemon home in their own `@TempDir` and stop it with `stopDaemons`.
 
-PRs, pushes to `main`, and manual workflow dispatch run the full integration matrix, the CLI smoke suite on macOS and
-Windows, and an Ubuntu verification job. Linux has no separate smoke job: the integration job for the last supported
-version runs every smoke test on Ubuntu. The verification job runs
-`check -x :cli:integrationTest -x :daemon:test -x :daemon:testOtherMpsVersions`, covering all subprojects' unit tests,
-daemon checks, Gradle discovery tests, and packaging checks, and then runs the `prek` hooks on all files. The separate
-`daemon-versions` and integration matrices cover the excluded daemon tests and CLI integration suite. The `CI passed`
-job requires every job to succeed. Release validation runs the complete `check`, including the full integration matrix.
+CI has two tiers. The full tier runs in the merge queue, on pushes to `main`, and on manual workflow dispatch. It runs
+the daemon tests and the CLI integration suite on every version in `supportedMpsVersions`, the CLI smoke suite on macOS
+and Windows, and an Ubuntu verification job. Linux has no separate smoke job: the integration job for the last supported
+version runs every smoke test on Ubuntu. The pull request tier runs the verification job, the daemon tests on the oldest
+and the newest release in `supportedMpsVersions` (not `Prerelease`), and the CLI integration suite on the newest release
+only. To run the full tier on a branch before it enters the merge queue, dispatch the workflow on it:
 
-When every job succeeds, `CI passed` saves a `ci-passed-<tree>` cache entry for the tested git tree. For a pull request
-the tested tree is the tree of the merge commit, and the `tree-check` job prints it in its summary. A pull request run
-that finds an entry for its tree skips the test jobs, and `CI passed` still succeeds. This happens, for example, when a
-stacked pull request is rebased onto `main` without changing its code. Entries saved by a pull request run are only
-visible to later runs of the same pull request. Entries saved by runs on `main` are visible to all pull requests. Pushes
-to `main` and manual dispatches never skip. Re-running a skipped run skips again. To force a full pull request run,
-delete the entry with `gh cache delete ci-passed-<tree>` and re-run the workflow.
+```sh
+gh workflow run ci.yml --ref <branch>
+```
+
+The verification job runs `check -x :cli:integrationTest -x :daemon:test -x :daemon:testOtherMpsVersions`, covering all
+subprojects' unit tests, daemon checks, Gradle discovery tests, and packaging checks, and then runs the `prek` hooks on
+all files. The separate `daemon-versions` and integration matrices cover the excluded daemon tests and CLI integration
+suite. A pull request that changes only files under `docs/` and Markdown files in the repository root runs only the
+verification job. The `plan` job picks the tier and the versions and prints them in its summary. The `CI passed` job
+requires every job to succeed, except jobs that the plan skips in the pull request tier. It is the required check in
+both tiers. Release validation runs the complete `check`, including the full integration matrix.
+
+When every planned job succeeds, `CI passed` saves a cache entry for the tested git tree: `ci-passed-<tree>` in the full
+tier, `ci-passed-pr-<tree>` in the pull request tier. For a pull request the tested tree is the tree of the merge
+commit, and the `plan` job prints it in its summary. A pull request run that finds either entry for its tree skips the
+test jobs, and `CI passed` still succeeds. This happens, for example, when a stacked pull request is rebased onto `main`
+without changing its code. Entries saved by a pull request run are only visible to later runs of the same pull request.
+Entries saved by runs on `main` are visible to all pull requests. Merge queue runs, pushes to `main`, and manual
+dispatches never skip, so a pull request tier entry never replaces a full tier run. Re-running a skipped run skips
+again. To force a full pull request tier run, delete the entries with `gh cache delete ci-passed-<tree>` and
+`gh cache delete ci-passed-pr-<tree>` and re-run the workflow.
 
 To test an already extracted distribution, use the separate local task:
 

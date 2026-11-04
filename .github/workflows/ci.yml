@@ -2,6 +2,8 @@ name: CI
 
 on:
   pull_request:
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [main]
   workflow_dispatch:
@@ -14,52 +16,84 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Pull request runs skip the test jobs when CI already passed for the tested git tree. docs/development.md describes
-  # the `ci-passed-<tree>` cache entry and how to force a full run.
-  tree-check:
+  # Picks the tier and the MPS versions of this run, and whether the test jobs can be skipped. docs/development.md
+  # describes the tiers, the docs-only filter, and the `ci-passed-<tree>` cache entries.
+  plan:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      tree: ${{ steps.tree.outputs.tree }}
-      already-passed: ${{ steps.marker.outputs.cache-hit == 'true' }}
+      tier: ${{ steps.plan.outputs.tier }}
+      daemon-versions: ${{ steps.plan.outputs.daemon-versions }}
+      integration-versions: ${{ steps.plan.outputs.integration-versions }}
+      marker-key: ${{ steps.plan.outputs.marker-key }}
+      already-passed: ${{ steps.full-marker.outputs.cache-hit == 'true' || steps.pr-marker.outputs.cache-hit == 'true' }}
+      run-tests: >-
+        ${{ steps.plan.outputs.docs-only != 'true' && steps.full-marker.outputs.cache-hit != 'true' &&
+        steps.pr-marker.outputs.cache-hit != 'true' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - name: Compute the tree hash of the tested commit
-        id: tree
+          fetch-depth: 2
+      - name: Plan the run
+        id: plan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           tree="$(git rev-parse 'HEAD^{tree}')"
-          echo "Tree: $tree" | tee -a "$GITHUB_STEP_SUMMARY"
-          echo "tree=$tree" >> "$GITHUB_OUTPUT"
-      - name: Look up a passed marker for this tree
-        id: marker
-        if: github.event_name == 'pull_request'
+          versions="$(sed -n 's/^supportedMpsVersions=//p' gradle.properties | jq -Rc 'split(",") | map(gsub("^\\s+|\\s+$"; ""))')"
+          docs_only=false
+          if [ "$EVENT_NAME" = pull_request ]; then
+            tier='pr'
+            marker_key="ci-passed-pr-$tree"
+            daemon_versions="$(jq -c 'map(select(. != "Prerelease")) | [first, last] | unique' <<< "$versions")"
+            integration_versions="$(jq -c 'map(select(. != "Prerelease")) | [last]' <<< "$versions")"
+            # HEAD is the merge commit of the pull request and HEAD^1 is the base branch.
+            changed="$(git diff --name-only 'HEAD^1' HEAD)"
+            if [ -n "$changed" ] && ! grep -qvE '^(docs/.+|[^/]+\.md)$' <<< "$changed"; then
+              docs_only=true
+            fi
+          else
+            tier='full'
+            marker_key="ci-passed-$tree"
+            daemon_versions="$versions"
+            integration_versions="$versions"
+          fi
+          {
+            echo "Tree: $tree"
+            echo "Tier: $tier"
+            echo "Docs only: $docs_only"
+            echo "Daemon test versions: $daemon_versions"
+            echo "Integration test versions: $integration_versions"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          {
+            echo "tree=$tree"
+            echo "tier=$tier"
+            echo "docs-only=$docs_only"
+            echo "marker-key=$marker_key"
+            echo "daemon-versions=$daemon_versions"
+            echo "integration-versions=$integration_versions"
+          } >> "$GITHUB_OUTPUT"
+      - name: Look up a full-tier passed marker for this tree
+        id: full-marker
+        if: steps.plan.outputs.tier == 'pr'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ci-passed-marker
-          key: ci-passed-${{ steps.tree.outputs.tree }}
+          key: ci-passed-${{ steps.plan.outputs.tree }}
+          lookup-only: true
+      - name: Look up a pull request tier passed marker for this tree
+        id: pr-marker
+        if: steps.plan.outputs.tier == 'pr' && steps.full-marker.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ci-passed-marker
+          key: ci-passed-pr-${{ steps.plan.outputs.tree }}
           lookup-only: true
 
-  mps-versions:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      versions: ${{ steps.read.outputs.versions }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - name: Read supportedMpsVersions from gradle.properties
-        id: read
-        run: |
-          versions="$(sed -n 's/^supportedMpsVersions=//p' gradle.properties | jq -Rc 'split(",") | map(gsub("^\\s+|\\s+$"; ""))')"
-          echo "$versions"
-          echo "versions=$versions" >> "$GITHUB_OUTPUT"
-
   verification:
-    needs: tree-check
-    if: needs.tree-check.outputs.already-passed != 'true'
+    needs: plan
+    if: needs.plan.outputs.already-passed != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -88,9 +122,10 @@ jobs:
             */build/test-results/
             */build/reports/tests/
 
+  # Cross-platform smoke tests run only in the full tier.
   daemon:
-    needs: tree-check
-    if: needs.tree-check.outputs.already-passed != 'true'
+    needs: plan
+    if: needs.plan.outputs.tier == 'full' && needs.plan.outputs.run-tests == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -119,12 +154,12 @@ jobs:
             cli/build/reports/tests/
 
   daemon-versions:
-    needs: [tree-check, mps-versions]
-    if: needs.tree-check.outputs.already-passed != 'true'
+    needs: plan
+    if: needs.plan.outputs.run-tests == 'true'
     strategy:
       fail-fast: false
       matrix:
-        mps: ${{ fromJSON(needs.mps-versions.outputs.versions) }}
+        mps: ${{ fromJSON(needs.plan.outputs.daemon-versions) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -150,12 +185,12 @@ jobs:
             daemon/build/reports/tests/
 
   integration:
-    needs: [tree-check, mps-versions]
-    if: needs.tree-check.outputs.already-passed != 'true'
+    needs: plan
+    if: needs.plan.outputs.run-tests == 'true'
     strategy:
       fail-fast: false
       matrix:
-        mps: ${{ fromJSON(needs.mps-versions.outputs.versions) }}
+        mps: ${{ fromJSON(needs.plan.outputs.integration-versions) }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -182,28 +217,29 @@ jobs:
 
   ci-passed:
     name: CI passed
-    needs: [tree-check, mps-versions, verification, daemon, daemon-versions, integration]
+    needs: [plan, verification, daemon, daemon-versions, integration]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      # The full tier skips no jobs. In the pull request tier, jobs are skipped only by their own conditions or after a
+      # failed plan job, which this check rejects.
       - name: Require all jobs to succeed
         env:
           JOB_RESULTS: ${{ toJSON(needs) }}
-          ALREADY_PASSED: ${{ needs.tree-check.outputs.already-passed }}
+          TIER: ${{ needs.plan.outputs.tier }}
         run: |
-          if [ "$ALREADY_PASSED" = true ]; then
-            echo "CI already passed for this tree, the test jobs were skipped."
-            echo "$JOB_RESULTS" | jq -e 'all(.[]; .result == "success" or .result == "skipped")'
-          else
+          if [ "$TIER" = full ]; then
             echo "$JOB_RESULTS" | jq -e 'all(.[]; .result == "success")'
+          else
+            echo "$JOB_RESULTS" | jq -e 'all(.[]; .result == "success" or .result == "skipped")'
           fi
       - name: Create the passed marker
-        if: needs.tree-check.outputs.already-passed != 'true'
+        if: needs.plan.outputs.run-tests == 'true'
         run: touch ci-passed-marker
       - name: Save the passed marker for this tree
-        if: needs.tree-check.outputs.already-passed != 'true'
+        if: needs.plan.outputs.run-tests == 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ci-passed-marker
-          key: ci-passed-${{ needs.tree-check.outputs.tree }}
+          key: ${{ needs.plan.outputs.marker-key }}
