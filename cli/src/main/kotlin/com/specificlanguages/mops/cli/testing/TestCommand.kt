@@ -47,10 +47,10 @@ import java.nio.file.Files
         "",
         "In Code Mode, mops.testing.run(selection, options) runs the same operation outside model-access blocks; " +
             "the selection is the native project, module, model, or test node, and the options default to " +
-            "[build: true, timeout: 900]. A failed report does not change the Code Mode exit status. The enclosing Code Mode deadline still terminates its " +
-            "daemon; the test worker detects that and saves an incomplete report. Project operations are serialized " +
-            "during a run, and changes are saved before launch. Tests use the existing checkout and may change its " +
-            "files.",
+            "[build: true, timeout: 900]. A failed report does not change the Code Mode exit status. The enclosing " +
+            "Code Mode deadline still terminates its daemon; the test worker detects that and saves an incomplete " +
+            "report. Project operations are serialized during a run, and changes are saved before launch. Tests use " +
+            "the existing checkout and may change its files.",
     ],
 )
 class TestCommand(private val environment: CommandEnvironment) : CliCommand(), IExitCodeGenerator {
