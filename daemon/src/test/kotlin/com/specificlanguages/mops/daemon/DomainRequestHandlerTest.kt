@@ -276,12 +276,12 @@ class DomainRequestHandlerTest {
     @Test
     fun `make-modules makes the requested modules and returns the result directly`() {
         val expected = MakeResponse(MakeOutcome.SUCCESS, moduleCount = 2, messages = emptyList())
-        whenever(extra.makeModules(listOf("moduleA", "moduleB"))).thenReturn(expected)
+        whenever(extra.makeModules(listOf("moduleA", "moduleB"), null)).thenReturn(expected)
 
         val response = handler.handleDomainRequest(MakeModulesRequest(TOKEN, listOf("moduleA", "moduleB")))
 
         assertEquals(expected, response)
-        verify(extra).makeModules(listOf("moduleA", "moduleB"))
+        verify(extra).makeModules(listOf("moduleA", "moduleB"), null)
         verifyNoInteractions(operations)
     }
 
@@ -292,18 +292,28 @@ class DomainRequestHandlerTest {
             moduleCount = 5,
             messages = listOf(MakeMessageJson(MakeMessageKind.ERROR, "boom")),
         )
-        whenever(extra.makeProject()).thenReturn(expected)
+        whenever(extra.makeProject(null)).thenReturn(expected)
 
         val response = handler.handleDomainRequest(MakeProjectRequest(TOKEN))
 
         assertEquals(expected, response)
-        verify(extra).makeProject()
+        verify(extra).makeProject(null)
         verifyNoInteractions(operations)
     }
 
     @Test
+    fun `make requests pass their generation thread count to the make`() {
+        val expected = MakeResponse(MakeOutcome.SUCCESS, moduleCount = 1, messages = emptyList())
+        whenever(extra.makeModules(listOf("moduleA"), 3)).thenReturn(expected)
+        whenever(extra.makeProject(2)).thenReturn(expected)
+
+        assertEquals(expected, handler.handleDomainRequest(MakeModulesRequest(TOKEN, listOf("moduleA"), threads = 3)))
+        assertEquals(expected, handler.handleDomainRequest(MakeProjectRequest(TOKEN, threads = 2)))
+    }
+
+    @Test
     fun `a request exception on the make path maps to its error code`() {
-        whenever(extra.makeModules(listOf("missing")))
+        whenever(extra.makeModules(listOf("missing"), null))
             .thenThrow(MpsRequestException(MpsErrorCode.TARGET_NOT_FOUND, "module not found: missing"))
 
         val response = handler.handleDomainRequest(MakeModulesRequest(TOKEN, listOf("missing")))

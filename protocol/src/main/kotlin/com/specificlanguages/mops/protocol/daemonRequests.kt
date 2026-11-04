@@ -226,20 +226,28 @@ data class DiagnoseModuleRequest(
 /**
  * Request to run the MPS make (generation and compilation) on the named [modules] (each a module name or serialized
  * module reference) together with their transitive dependency closure, so that any un-made dependency is made too.
+ * [threads] is the generation thread count for this make only, as in [MakeProjectRequest].
  */
 @Serializable
 @SerialName("make-modules")
 data class MakeModulesRequest(
     override val token: String,
     val modules: List<String>,
+    val threads: Int? = null,
 ) : DomainRequest
 
 /**
  * Request to run the MPS make (generation and compilation) on every generatable module in the project.
+ *
+ * [threads] is the generation thread count for this make only: null keeps the daemon's generation settings, 1 generates
+ * sequentially, and a larger number generates in parallel with that many threads.
  */
 @Serializable
 @SerialName("make-project")
-data class MakeProjectRequest(override val token: String) : DomainRequest
+data class MakeProjectRequest(
+    override val token: String,
+    val threads: Int? = null,
+) : DomainRequest
 
 @Serializable
 @SerialName("code-run")

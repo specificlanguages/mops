@@ -6,10 +6,15 @@ import com.specificlanguages.mops.protocol.MakeMessageJson
 import com.specificlanguages.mops.protocol.MakeMessageKind
 import com.specificlanguages.mops.protocol.MakeOutcome
 import com.specificlanguages.mops.protocol.MakeResponse
+import jetbrains.mps.generator.GenerationOptions
+import jetbrains.mps.generator.GenerationSettingsProvider
+import jetbrains.mps.generator.IGenerationSettings
+import jetbrains.mps.internal.make.cfg.GenerateFacetInitializer
 import jetbrains.mps.make.MakeSession
 import jetbrains.mps.make.dependencies.MakeSequence
 import jetbrains.mps.make.resources.IResource
 import jetbrains.mps.make.script.IScriptController
+import jetbrains.mps.make.script.PropertyPoolInitializer
 import jetbrains.mps.make.service.CoreMakeTask
 import jetbrains.mps.messages.IMessage
 import jetbrains.mps.messages.IMessageHandler
@@ -38,26 +43,37 @@ import org.jetbrains.mps.openapi.persistence.PersistenceFacade
  * Model collection runs inside short read actions; the make call runs outside any model action, on the calling thread,
  * because the make framework acquires its own model locks.
  *
+ * A thread count passed to [makeModules] or [makeProject] reaches the Generate facet as generation options of that make
+ * session only ([makeGenerationOptions]); the project's generation settings are not changed.
+ *
  * See https://github.com/specificlanguages/mps-api-research/blob/main/make-generation.md for the verified API contract.
  */
 class ProjectMake(private val project: Project) {
     private val persistence: PersistenceFacade = PersistenceFacade.getInstance()
 
-    fun makeModules(moduleNames: List<String>): MakeResponse {
+    fun makeModules(moduleNames: List<String>, threads: Int? = null): MakeResponse {
+        val initializers = poolInitializers(threads)
         val models = project.modelAccess.computeReadAction<List<SModel>> {
             collectMakeSet(moduleNames.map(::resolveProjectModule)).flatMap { it.models }
         }
-        return runMake(models)
+        return runMake(models, initializers)
     }
 
-    fun makeProject(): MakeResponse {
+    fun makeProject(threads: Int? = null): MakeResponse {
+        val initializers = poolInitializers(threads)
         val models = project.modelAccess.computeReadAction<List<SModel>> {
             project.projectModulesWithGenerators.flatMap { it.models }
         }
-        return runMake(models)
+        return runMake(models, initializers)
     }
 
-    private fun runMake(models: List<SModel>): MakeResponse {
+    private fun poolInitializers(threads: Int?): Array<PropertyPoolInitializer> {
+        val settings = project.getComponent(GenerationSettingsProvider::class.java).generationSettings
+        val options = makeGenerationOptions(settings, threads) ?: return emptyArray()
+        return arrayOf(GenerateFacetInitializer().setGenerationOptions(options))
+    }
+
+    private fun runMake(models: List<SModel>, initializers: Array<PropertyPoolInitializer>): MakeResponse {
         // resources() reads the model graph and keeps only generatable models, grouped one MResource per module.
         // But "generatable" is not the same as "writable": MPS ships its library languages and runtime solutions as
         // *source* models inside `-src.jar` files, and those models report themselves generatable, so they survive
@@ -77,7 +93,7 @@ class ProjectMake(private val project: Project) {
         // Reimplements BuildMakeService.doMake using classes from mps-core: BuildMakeService itself ships only in
         // lib/mpsant/mps-tool.jar, which is not on the daemon classpath. A null script lets MPS build the correct
         // per-cluster script; a null-controller default is IScriptController.Stub2. See the mps-api-research notes.
-        val controller: IScriptController = IScriptController.Stub2(session)
+        val controller: IScriptController = IScriptController.Stub2(session, *initializers)
         val task = CoreMakeTask(MakeSequence(resources, null, session), controller, handler)
         task.run(EmptyProgressMonitor())
         val result = task.getResult()
@@ -170,4 +186,28 @@ class ProjectMake(private val project: Project) {
             messages.add(MakeMessageJson(MakeMessageKind.ERROR, msg.text.orEmpty()))
         }
     }
+}
+
+/**
+ * The generation options for one make that generates with [threads] threads, built from [settings] so the other
+ * generation settings carry over, or null when [threads] is null and the Generate facet reads the settings itself.
+ * A thread count of 1 generates sequentially.
+ *
+ * Generation options passed through [GenerateFacetInitializer] apply to the one make session whose script controller
+ * populates them; the Generate facet falls back to the settings only when no options are set. MPS generates in
+ * parallel only in strict mode, so a parallel request fails instead of silently generating sequentially when the
+ * settings turn strict mode off.
+ */
+internal fun makeGenerationOptions(settings: IGenerationSettings, threads: Int?): GenerationOptions.OptionsBuilder? {
+    if (threads == null) return null
+    if (threads < 1) {
+        throw MpsRequestException(MpsErrorCode.INVALID_REQUEST, "generation thread count must be at least 1, got $threads")
+    }
+    if (threads > 1 && !settings.isStrictMode) {
+        throw MpsRequestException(
+            MpsErrorCode.INVALID_REQUEST,
+            "parallel generation needs strict mode, which the generation settings turn off",
+        )
+    }
+    return GenerationOptions.fromSettings(settings).generateInParallel(threads > 1, threads)
 }

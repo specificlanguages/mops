@@ -6,6 +6,7 @@ import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import picocli.CommandLine.Command
 import picocli.CommandLine.IExitCodeGenerator
+import picocli.CommandLine.Mixin
 import picocli.CommandLine.Option
 
 /**
@@ -14,7 +15,7 @@ import picocli.CommandLine.Option
 @Command(
     name = "project",
     description = ["Make every generatable module in the project."],
-    footer = ["", MAKE_OUTPUT_HELP],
+    footer = ["", MAKE_OUTPUT_HELP, "", MAKE_THREADS_HELP],
 )
 class MakeProjectCommand(private val environment: CommandEnvironment) : CliCommand(), IExitCodeGenerator {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
@@ -22,11 +23,14 @@ class MakeProjectCommand(private val environment: CommandEnvironment) : CliComma
     @Option(names = ["--json"], description = ["Print the make result as JSON."])
     var json: Boolean = false
 
+    @Mixin
+    val generation = GenerationThreadsOption()
+
     private var exitCode: Int = 0
 
     override fun run() {
         val client = environment.daemon()
-        exitCode = renderMakeResult(client.makeProject(), json)
+        exitCode = renderMakeResult(client.makeProject(generation.threads), json)
     }
 
     override fun getExitCode(): Int = exitCode

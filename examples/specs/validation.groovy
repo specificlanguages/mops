@@ -7,6 +7,11 @@
                 code: '''mops make module sample.language sample.solution''',
             ],
             [
+                title: 'Make modules, generating with 4 threads',
+                kind: 'cli',
+                code: '''mops make module --threads 4 sample.language''',
+            ],
+            [
                 title: 'Make all generatable project modules',
                 kind: 'cli',
                 code: '''mops make project''',

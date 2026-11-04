@@ -80,15 +80,17 @@ interface DaemonClient {
     fun diagnoseModule(module: String): ModuleDiagnosticResponse
 
     /**
-     * Runs the MPS make on the named [modules] and their dependency closure. May block for a long time — generation and
-     * compilation are unbounded — so implementations must not impose a short read timeout.
+     * Runs the MPS make on the named [modules] and their dependency closure, generating with [threads] threads when it
+     * is not null. May block for a long time — generation and compilation are unbounded — so implementations must not
+     * impose a short read timeout.
      */
-    fun makeModules(modules: List<String>): MakeResponse
+    fun makeModules(modules: List<String>, threads: Int?): MakeResponse
 
     /**
-     * Runs the MPS make on every generatable module in the project. May block for a long time.
+     * Runs the MPS make on every generatable module in the project, generating with [threads] threads when it is not
+     * null. May block for a long time.
      */
-    fun makeProject(): MakeResponse
+    fun makeProject(threads: Int?): MakeResponse
     fun runCode(
         source: String,
         sourceName: String,

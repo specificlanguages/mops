@@ -23,13 +23,18 @@ interface MpsExtra {
      * Makes the modules named by [modules] (each a module name or serialized module reference) together with their
      * transitive dependency closure, so any un-made dependency — direct or indirect — is made too. Fails with
      * [MpsRequestException] if a name resolves to no project module or to more than one.
+     *
+     * [threads] is the generation thread count for this make only: null uses the generation settings, 1 generates
+     * sequentially, and a larger number generates in parallel. Fails with [MpsErrorCode.INVALID_REQUEST] when it is
+     * below 1, or above 1 while the generation settings turn strict mode off (MPS generates in parallel only in strict
+     * mode).
      */
-    fun makeModules(modules: List<String>): MakeResponse
+    fun makeModules(modules: List<String>, threads: Int? = null): MakeResponse
 
     /**
-     * Makes every generatable module in the project.
+     * Makes every generatable module in the project, with [threads] as in [makeModules].
      */
-    fun makeProject(): MakeResponse
+    fun makeProject(threads: Int? = null): MakeResponse
 
     /**
      * Renders one resolved node as the plain text of its default editor, the way it would appear in the MPS editor. The

@@ -50,6 +50,17 @@ class MakeSemanticsTest {
     }
 
     @Test
+    fun `a make with several generation threads succeeds`() {
+        val response = SharedMpsEnvironment.withProjectCopy { access, _ ->
+            access.extra { makeModules(listOf("json.sandbox"), threads = 2) }
+        }
+
+        val errors = response.messages.filter { it.kind == MakeMessageKind.ERROR }
+        assertEquals(MakeOutcome.SUCCESS, response.outcome, "unexpected errors: $errors")
+        assertTrue(response.moduleCount >= 2, "expected the language to be made too, got ${response.moduleCount}")
+    }
+
+    @Test
     fun `making the whole project succeeds`() {
         val response = SharedMpsEnvironment.withProjectCopy { access, _ ->
             access.extra {makeProject() }

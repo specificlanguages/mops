@@ -439,9 +439,10 @@ class JetBrainsMpsAccess(
 
         override fun saveProject() = saveProjectSettings(project)
 
-        override fun makeModules(modules: List<String>): MakeResponse = projectMake.makeModules(modules)
+        override fun makeModules(modules: List<String>, threads: Int?): MakeResponse =
+            projectMake.makeModules(modules, threads)
 
-        override fun makeProject(): MakeResponse = projectMake.makeProject()
+        override fun makeProject(threads: Int?): MakeResponse = projectMake.makeProject(threads)
 
         // Resolution and rendering run together in one read action on the EDT, required because the editor's disposal
         // asserts the EDT.

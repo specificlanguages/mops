@@ -25,8 +25,8 @@ fun mpsAccessOver(operations: MpsWrite, extra: MpsExtra = UnstubbedExtra): MpsAc
 private object UnstubbedExtra : MpsExtra {
     override fun refreshExternalChanges() = Unit
     override fun saveProject() = Unit
-    override fun makeModules(modules: List<String>) = error("MpsExtra.makeModules not stubbed in this test")
-    override fun makeProject() = error("MpsExtra.makeProject not stubbed in this test")
+    override fun makeModules(modules: List<String>, threads: Int?) = error("MpsExtra.makeModules not stubbed in this test")
+    override fun makeProject(threads: Int?) = error("MpsExtra.makeProject not stubbed in this test")
     override fun renderNode(target: NodeTarget, allowReflective: Boolean) =
         error("MpsExtra.renderNode not stubbed in this test")
     override fun runTests(request: TestRunRequest) = error("MpsExtra.runTests not stubbed in this test")

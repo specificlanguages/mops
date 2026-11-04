@@ -199,16 +199,16 @@ class DefaultDaemonClient(
             ModuleDiagnosticResponse::class.java
         )
 
-    override fun makeModules(modules: List<String>): MakeResponse =
+    override fun makeModules(modules: List<String>, threads: Int?): MakeResponse =
         exchange(
-            MakeModulesRequest(token = token, modules = modules),
+            MakeModulesRequest(token = token, modules = modules, threads = threads),
             MakeResponse::class.java,
             timeout = MAKE_TIMEOUT,
         )
 
-    override fun makeProject(): MakeResponse =
+    override fun makeProject(threads: Int?): MakeResponse =
         exchange(
-            MakeProjectRequest(token = token),
+            MakeProjectRequest(token = token, threads = threads),
             MakeResponse::class.java,
             timeout = MAKE_TIMEOUT,
         )
