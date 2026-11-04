@@ -43,17 +43,18 @@ class AntTestSelectionTest {
     }
 
     @Test
-    fun `source folders are the project, the repository folders, and the module folders that no other source folder contains`() {
+    fun `source folders are the project, repository, and module folders, none inside another`() {
         val selection = AntTestSelection(
             testModules = listOf(Path.of("/project/solutions/tests/tests.msd")),
             testModuleIds = listOf("85ebbead-a656-46af-af88-81c850c5e554"),
             repositoryModules = listOf(Path.of("/project/solutions/tests/tests.msd"), Path.of("/elsewhere/peer/peer.msd"),
                 Path.of("/shared/libraries/lib/lib.msd"), Path.of("/project-other/other.msd")),
-            repositoryFolders = listOf(Path.of("/shared/libraries"), Path.of("/project/libs")),
+            repositoryFolders = listOf(Path.of("/shared/libraries"), Path.of("/project/libs"),
+                Path.of("/project/../outside")),
             macros = emptyMap(), model = null, node = null, description = "project (no target given)", diagnostics = emptyList(),
         )
 
-        assertEquals(listOf(Path.of("/project"), Path.of("/shared/libraries"), Path.of("/elsewhere/peer"),
-            Path.of("/project-other")), selection.sourceFolders(Path.of("/project")))
+        assertEquals(listOf(Path.of("/project"), Path.of("/shared/libraries"), Path.of("/outside"),
+            Path.of("/elsewhere/peer"), Path.of("/project-other")), selection.sourceFolders(Path.of("/project")))
     }
 }

@@ -34,8 +34,8 @@ data class AntTestSelection(
 ) {
     /** The folders a run of this selection on [project] reads modules and models from, none inside another. */
     fun sourceFolders(project: Path): List<Path> {
-        val modules = (testModules + repositoryModules).map { it.parent }
-        val folders = (listOf(project) + repositoryFolders + modules).distinct()
+        val moduleFolders = (testModules + repositoryModules).map { it.parent }
+        val folders = (listOf(project) + repositoryFolders + moduleFolders).map { it.normalize() }.distinct()
         return folders.filter { folder -> folders.none { it != folder && folder.startsWith(it) } }
     }
 
