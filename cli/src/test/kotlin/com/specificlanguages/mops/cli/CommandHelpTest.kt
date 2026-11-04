@@ -2,6 +2,7 @@ package com.specificlanguages.mops.cli
 
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.cli.output.NodeReferenceFormat
+import com.specificlanguages.mops.protocol.MopsBuild
 import org.junit.jupiter.api.parallel.ResourceLock
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -39,6 +40,13 @@ class CommandHelpTest {
         assertContains(output, "check")
         assertContains(output, "--project-root")
         assertContains(output, "--refs-as-urls")
+    }
+
+    @Test
+    fun `root help starts with the mops version`() {
+        val output = runHelp("--help")
+
+        assertEquals("mops ${MopsBuild.fullVersion}", output.lineSequence().first())
     }
 
     @Test

@@ -14,6 +14,15 @@ The repository is a Gradle-rooted Kotlin prototype with two application subproje
 command requires an MPS project root containing `.mps/`. `--java-home` can be omitted when the MPS distribution bundles
 Java.
 
+### Build version
+
+`mops --version`, `mops-daemon --version`, the first line of `mops --help` and of `mops wrapper` output report the
+`version` from `gradle.properties` together with the git commit of the build, for example `0.4.0-SNAPSHOT (abc1234)`.
+The build runs `git describe --always --dirty` in the repository root and stores the result in the protocol jar, so an
+installed distribution needs no git checkout. A build with uncommitted changes to tracked files reports `abc1234-dirty`.
+A source tree without its own `.git`, or a machine without git, builds normally and reports `(unknown revision)`. Test
+tasks ignore the commit on their classpath, so a new commit alone does not rerun them.
+
 ## Commits and pull requests
 
 Pull request titles follow [Conventional Commits](https://www.conventionalcommits.org/). Pull requests are

@@ -12,6 +12,6 @@ class MopsVersionProviderTest {
             assertEquals(0, newCommandLine().execute("--version"))
         }
 
-        assertEquals("mops ${MopsBuild.version}\n", output)
+        assertEquals("mops ${MopsBuild.fullVersion}\n", output)
     }
 }
