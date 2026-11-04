@@ -18,11 +18,11 @@ relative to the working directory.
 
 No CLI-configured MPS home or daemon is required; Java must be available to run
 Gradle. Querying configured providers may download and extract MPS or JBR
-distributions; it does not run preparation or language build task actions.
-Partial discoveries print available values without writing a wrapper and exit
-with status 1; known pairs write the wrapper and exit with status 0, with
-warnings when their paths are not usable yet, so wrappers can be written before
-the project's preparation steps.
+distributions; it does not run preparation or language build task actions. If
+discovery finds only some paths, it prints them, writes no wrapper, and exits
+with status 1. When both paths are known, it writes the wrappers and exits with
+status 0, with warnings when the paths are not usable yet, so wrappers can be
+written before the project's preparation steps.
 Parameters:
       [PATH]                Starting point of discovery; default is
                               --project-root when supplied, otherwise the

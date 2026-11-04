@@ -29,9 +29,9 @@ import picocli.CommandLine.Parameters
         "Text output is one tab-separated row per reference: `usage`, the reference role, and the owning node's " +
             "name (or <unnamed>), concept, and reference. The owner is typed `root` or `node` by its position in its " +
             "model; a non-root owner appends `parent` and the parent's name (or <unnamed>), concept, and reference. " +
-            "--json prints an object with `limit`, `truncated`, and a `usages` array whose entries carry the " +
-            "reference `role` and a nested `owner` node summary, which carries a nested `parent` summary for a " +
-            "non-root owner. --refs-only prints one reference per referencing node. See `mops explain output`.",
+            "--json prints an object with `limit`, `truncated`, and a `usages` array. Each entry carries the " +
+            "reference `role` and a nested `owner` node summary; a non-root owner carries a nested `parent` " +
+            "summary. --refs-only prints one reference per referencing node. See `mops explain output`.",
     ],
 )
 class FindUsagesCommand(private val environment: CommandEnvironment) : CliCommand() {

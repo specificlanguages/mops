@@ -240,7 +240,7 @@ class CommandHelpTest {
         assertContains(output, "--output")
         assertContains(output, "--project-root")
         assertContains(output, "every discovered MPS project")
-        assertContains(output, "warnings when their paths are not usable yet")
+        assertContains(output, "warnings when the paths are not usable yet")
     }
 
     private fun runHelp(vararg args: String): String {
