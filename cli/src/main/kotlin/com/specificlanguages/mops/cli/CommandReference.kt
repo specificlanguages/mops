@@ -32,6 +32,8 @@ object CommandReference {
     /** Returns every page of the reference by its path relative to the reference directory. */
     fun pages(skillPages: List<SkillPage>): Map<String, String> {
         val root = newCommandLine()
+        // The root header is the build version, which names the current commit; the checked-in index leaves it out.
+        root.commandSpec.usageMessage().header(*emptyArray<String>())
         val rootHelp = help(root)
         val commands = root.documentedSubcommands()
 

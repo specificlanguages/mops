@@ -56,7 +56,7 @@ class HelpLayoutTest {
 
     private fun helpOf(spec: CommandSpec): String {
         val commandLine = CommandLine(spec)
-        HelpLayout.apply(commandLine)
+        HelpLayout.apply(commandLine, rootHeader = "demo 1.0")
         return commandLine.getUsageMessage(Ansi.OFF)
     }
 }

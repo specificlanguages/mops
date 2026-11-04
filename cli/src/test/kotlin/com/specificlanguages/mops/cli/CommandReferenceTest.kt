@@ -52,6 +52,11 @@ class CommandReferenceTest {
     }
 
     @Test
+    fun `the index shows the root help without the build version`() {
+        assertContains(pages.getValue("index.md"), "```text\nUsage: mops [-hV] [COMMAND]\n")
+    }
+
+    @Test
     fun `there is one page per explain topic with the page text`() {
         val page = pages.getValue("explain/edit.addChild.md")
 
