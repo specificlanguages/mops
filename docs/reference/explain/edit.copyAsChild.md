@@ -1,0 +1,49 @@
+# mops explain edit.copyAsChild
+
+Generated from `mops explain edit.copyAsChild` by `./gradlew :cli:updateReference`. Do not edit this page. Back to the
+[index](../index.md).
+
+```text
+edit.copyAsChild — copy a node subtree under a containment role.
+
+FIELDS
+  op        "copyAsChild"
+  target    (required) the destination parent node — see target
+  source    (required) the node whose node subtree is copied — see target
+  role      (required) the containment role for the copy
+  position  (optional, default last) placement among children — see position
+  as        (optional) batch-local alias bound to the copy; reference it in later
+            operations as $name (the leading $ is required in references)
+
+SEMANTICS
+  Deep-copies the source node subtree (containment links only) under the
+  destination parent's role. The copy gets fresh node IDs. References inside the
+  subtree keep their targets, but the referenced nodes are not themselves copied.
+
+  With an "as" alias, a later operation can edit inside the fresh copy without
+  learning a descendant's ID: address it relative to the alias by role path, e.g.
+  "$copy/members[0]/name" (see target, form 4).
+
+EXAMPLE
+{
+  "operations": [
+    {
+      "op": "copyAsChild",
+      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+      "source": {"model": "com.specificlanguages.json.structure", "nodeId": "8007894750083424799"},
+      "role": "members",
+      "position": 3,
+      "as": "copy"
+    },
+    {
+      "op": "setProperty",
+      "target": "$copy",
+      "name": "name",
+      "value": "CopiedMember"
+    }
+  ]
+}
+
+SEE ALSO
+  edit, target, position, node-ref
+```

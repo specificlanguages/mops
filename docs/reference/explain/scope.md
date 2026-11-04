@@ -1,0 +1,70 @@
+# mops explain scope
+
+Generated from `mops explain scope` by `./gradlew :cli:updateReference`. Do not edit this page. Back to the
+[index](../index.md).
+
+```text
+scope — the search scope clause on `mops find`.
+
+A find command searches editable project sources by default. Append a scope
+clause to search somewhere else, exhaustively:
+
+    mops find instances    <concept> in <segment>...
+    mops find usages       <node>    in <segment>...
+    mops find root-by-name <pattern> in <segment>...
+    mops find node-by-id   <id>      in <segment>...
+
+`find root-by-name` searches root nodes only, so it accepts a repository,
+module, or model scope, but not a node or root-node subtree scope.
+
+Everything after the first freestanding `in` argument is scope segments, so a
+query argument literally named `in` is never mistaken for the clause. `in` with
+no following segments is an error.
+
+DEFAULT VS EXPLICIT
+  No clause          editable project sources — the editable models you may
+                     modify, excluding read-only libraries and stub models.
+  Explicit scope     Searched exhaustively, including read-only content within
+                     it. Naming a scope is already an intentional act.
+
+SEGMENTS
+  The segments are navigation target segments — the same grammar `mops list`
+  navigates. A scope resolves to one of:
+
+    /                        The whole MPS repository (replaces the old --all).
+    <module>                 A module, by name or serialized module reference.
+    <module> <model>         A model within a module. A `.suffix` model segment
+                             expands against the module name; a model segment
+                             matching none of the module's models fails with
+                             the module's models listed.
+    <module> .               The model whose name equals the module name. A
+                             module and its main model often share a name, so
+                             that bare name alone is ambiguous.
+    <model-name>             A model, by its full name (a single segment). A name
+                             that is also a module name, or names two models,
+                             is ambiguous (see RESOLUTION).
+    <model-reference>        A model, by serialized model reference.
+    <node-reference>         A root node or nested node subtree, by serialized
+                             node reference.
+    <module> <model> <node>...
+                             A node subtree, addressed segment by segment by
+                             node name or node ID.
+
+  A module, model, or repository scope maps to an MPS search scope directly. A
+  root node or nested-node scope searches the containing model and keeps only
+  matches within that node's subtree.
+
+RESOLUTION
+  Segments resolve by counting actual matches, never by shape. An ambiguous
+  segment fails with each candidate's serialized reference so you can retry
+  unambiguously; a segment that matches nothing fails as not found.
+
+EXAMPLE
+  mops find instances ConceptDeclaration in com.specificlanguages.json
+  mops find instances LinkDeclaration in com.specificlanguages.json .structure JsonObject
+  mops find instances BuildProject in com.specificlanguages.json.build .
+  mops find usages r:fd75...(com.specificlanguages.json.structure)/2110... in /
+
+SEE ALSO
+  node-ref, name-pattern, target
+```

@@ -1,0 +1,35 @@
+# mops explain edit.moveAsChild
+
+Generated from `mops explain edit.moveAsChild` by `./gradlew :cli:updateReference`. Do not edit this page. Back to the
+[index](../index.md).
+
+```text
+edit.moveAsChild — move an existing node to a new parent role.
+
+FIELDS
+  op        "moveAsChild"
+  target    (required) the node to move — see target
+  into      (required) the new parent node — see target
+  role      (required) the containment role under the new parent
+  position  (optional, default last) placement among children — see position
+
+SEMANTICS
+  Detaches the target node from its current location and inserts it under the
+  "into" parent's containment role at position. The node keeps its identity.
+
+EXAMPLE
+{
+  "operations": [
+    {
+      "op": "moveAsChild",
+      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+      "into": {"model": "com.specificlanguages.json.structure", "nodeId": "8007894750083424799"},
+      "role": "members",
+      "position": "last"
+    }
+  ]
+}
+
+SEE ALSO
+  edit, target, position, node-ref
+```

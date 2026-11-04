@@ -125,6 +125,46 @@ val checkExamples by tasks.registering {
     }
 }
 
+val skillSources = rootProject.layout.projectDirectory.dir("skills")
+val checkedInReference = rootProject.layout.projectDirectory.dir("docs/reference")
+val generateReference by tasks.registering(JavaExec::class) {
+    description = "Renders the command reference from the command tree and the explain pages."
+    val outputDir = layout.buildDirectory.dir("generated/reference")
+    inputs.dir(skillSources)
+    outputs.dir(outputDir)
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "com.specificlanguages.mops.cli.CommandReference"
+    argumentProviders.add { listOf(outputDir.get().asFile.absolutePath, skillSources.asFile.absolutePath) }
+    doFirst { outputDir.get().asFile.deleteRecursively() }
+}
+
+tasks.register("updateReference") {
+    group = "documentation"
+    description = "Regenerates the checked-in command reference in docs/reference."
+    val generated = generateReference.map { it.outputs.files.singleFile }
+    inputs.dir(generated)
+    doLast {
+        project.sync {
+            from(generated)
+            into(checkedInReference)
+        }
+    }
+}
+
+val checkReference by tasks.registering {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = "Checks that the command reference in docs/reference matches the command line."
+    val generated = generateReference.map { it.outputs.files.singleFile }
+    inputs.dir(generated)
+    inputs.dir(checkedInReference)
+    doLast {
+        fun pages(dir: File) = fileTree(dir).files.associate { it.relativeTo(dir).invariantSeparatorsPath to it.readText() }
+        val expected = pages(generated.get())
+        val actual = pages(checkedInReference.asFile)
+        check(expected == actual) { "The command reference is stale. Run ./gradlew :cli:updateReference." }
+    }
+}
+
 tasks.processResources {
     from(generateExamples.map { it.outputs.files.singleFile.resolve("pages") }) { into("examples") }
 }
@@ -307,6 +347,7 @@ tasks.register<Test>("integrationTestLocal") {
 
 tasks.check {
     dependsOn(checkExamples)
+    dependsOn(checkReference)
     dependsOn("integrationTest")
     dependsOn("gradleDiscoveryTest")
 }

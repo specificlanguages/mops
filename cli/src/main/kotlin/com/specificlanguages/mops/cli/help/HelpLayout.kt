@@ -47,6 +47,13 @@ object HelpLayout {
         )
     }
 
+    /** Leaves the global options out of the help of [root] and every subcommand registered so far. */
+    fun omitGlobalOptions(root: CommandLine) {
+        root.setHelpSectionKeys(
+            root.helpSectionKeys - listOf(SECTION_KEY_GLOBAL_OPTION_LIST_HEADING, SECTION_KEY_GLOBAL_OPTION_LIST),
+        )
+    }
+
     /**
      * Picocli's default order with the command list moved up after the description, the global options added before
      * the footer, and the header left out (on a subcommand it only serves the parent's command list).

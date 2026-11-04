@@ -20,6 +20,9 @@ object ExplainTopics {
 
     private val allTopics: List<String> = topLevelTopics + operationTopics
 
+    /** Every canonical topic path: the top-level topics, then the `edit.<op>` operation pages. */
+    val topics: List<String> get() = allTopics
+
     /** Renders the topic index: the [topicList] framed by what the pages are and how to open one. */
     fun index(): String = buildString {
         appendLine("mops explain — reference for mops notations (the textual formats mops exchanges with agents).")
@@ -85,7 +88,8 @@ object ExplainTopics {
         checkNotNull(javaClass.getResourceAsStream("/model-edit.schema.json")) { "generated edit schema missing" }
             .bufferedReader().use { it.readText() }
 
-    private fun summaryOf(topic: String): String {
+    /** Returns the summary of [topic]: the part of its page's first line after the dash. */
+    fun summaryOf(topic: String): String {
         val firstLine = (readResource(topic) ?: return "").lineSequence().firstOrNull().orEmpty().trim()
         val dash = firstLine.indexOf('—')
         return if (dash >= 0) firstLine.substring(dash + 1).trim() else firstLine

@@ -1,0 +1,51 @@
+# mops explain edit.addRoot
+
+Generated from `mops explain edit.addRoot` by `./gradlew :cli:updateReference`. Do not edit this page. Back to the
+[index](../index.md).
+
+```text
+edit.addRoot — create a new root node directly in a model.
+
+FIELDS
+  op          "addRoot"
+  model       (required) the destination model — a model reference string or a
+              {"model": <target>} object (see node-ref)
+  concept     (required) qualified concept name of the new root
+  properties  (optional) inline properties for the new root
+  references  (optional) inline references to existing nodes, each {role, to} or
+              {role, target} — see inline-subtree
+  children    (optional) nested nodes: fresh specs, move leaves, or copy leaves —
+              see inline-subtree
+  as          (optional) batch-local alias bound to the created root; reference it
+              in later operations as $name (the leading $ is required in references)
+
+SEMANTICS
+  Creates one node of concept and attaches it as a root node of the destination
+  model, which is owned by the model itself rather than a containment role — so
+  there is no role and no position. Nested children build a whole node subtree in
+  one operation; a move leaf or copy leaf reuses an existing node. The placement is
+  checked against the can-be-root constraint.
+
+EXAMPLE
+  Create a concept, then give it an alias through the same batch's alias:
+{
+  "operations": [
+    {
+      "op": "addRoot",
+      "model": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
+      "concept": "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+      "properties": [ { "name": "name", "value": "JsonComment" } ],
+      "as": "newConcept"
+    },
+    {
+      "op": "setProperty",
+      "target": "$newConcept",
+      "name": "conceptAlias",
+      "value": "comment"
+    }
+  ]
+}
+
+SEE ALSO
+  edit, edit.addChild, inline-subtree, node-ref
+```
