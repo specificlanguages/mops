@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   # Picks the tier, the MPS versions, and the test shards of this run, and whether the test jobs can be skipped.
-  # docs/development.md describes the tiers, the shards, the docs-only filter, and the `ci-passed-<tree>` cache entries.
+  # docs/ci.md describes the tiers, the shards, the docs-only filter, and the `ci-passed-<tree>` cache entries.
   plan:
     runs-on: ubuntu-latest
     timeout-minutes: 5

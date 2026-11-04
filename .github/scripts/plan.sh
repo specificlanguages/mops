@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Plans a CI run of the checked-out HEAD and prints the plan as `key=value` lines. Needs the full history of the
-# checkout. docs/development.md describes the tiers and the docs-only rule.
+# checkout. docs/ci.md describes the tiers and the docs-only rule.
 #
 # Environment:
 #   EVENT_NAME  the GitHub event: pull_request, merge_group, push, or workflow_dispatch.
@@ -12,7 +12,7 @@ set -euo pipefail
 # Pull request runs split the slowest test jobs into shards that run side by side. shardTests in
 # build-logic/src/main/kotlin/testShards.kt assigns the tests to the shards.
 pr_daemon_shards=2
-pr_integration_shards=8
+pr_integration_shards=7
 
 # Prints "true" when every changed path is documentation that no build task, test, or generated-page check reads, or
 # configuration that only the prek hooks read: files under docs/, Markdown files in the repository root, and the lint

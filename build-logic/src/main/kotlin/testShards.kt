@@ -1,18 +1,21 @@
 import org.gradle.api.GradleException
+import org.gradle.api.specs.Spec
 import org.gradle.api.tasks.testing.Test
-import java.io.File
+import java.util.zip.CRC32
 
 /**
  * Runs one shard of this task's tests when the `testShard` Gradle property is `<index>/<count>`, for example
- * `-PtestShard=2/8`. Without the property, or with `1/1`, the task runs all its tests.
+ * `-PtestShard=2/7`. Without the property the task runs all its tests.
  *
- * [durations] lists measured test durations, one `<seconds> <test>` line each, where `<test>` is a fully qualified test
- * class name or `<class>.<method>`. Blank lines and lines starting with `#` are ignored.
- * `.github/scripts/test-durations.sh` writes the file from JUnit XML reports. The listed tests go to the shards longest
- * first, each to the shard with the smallest total so far. Tests that the file does not list run in the shard with the
- * smallest total, so every test runs in exactly one shard.
+ * A test class runs in shard `testShardOf(<fully qualified class name>, count) + 1`, so every class runs in exactly one
+ * shard. The task still compiles and sees every class file, but skips the class files of other shards.
+ *
+ * The classes in [splitClasses] run in every shard, and a JUnit Platform `PostDiscoveryFilter` in the test sources
+ * keeps only the methods whose `<class>.<method>` name falls into the shard. Only split classes whose methods share no
+ * state, since the methods then run in different JVMs. The task passes the shard and the split classes to the filter in
+ * the `mops.testShard` and `mops.testShard.splitClasses` system properties.
  */
-fun Test.shardTests(durations: File) {
+fun Test.shardTests(splitClasses: List<String> = emptyList()) {
     val property = project.providers.gradleProperty("testShard").orNull ?: return
     val match = Regex("""(\d+)/(\d+)""").matchEntire(property)
     val index = match?.groupValues?.get(1)?.toInt()
@@ -20,35 +23,18 @@ fun Test.shardTests(durations: File) {
     if (index == null || count == null || index !in 1..count) {
         throw GradleException("testShard must be <index>/<count> with 1 <= index <= count, not '$property'")
     }
-    val shards = assignShards(readDurations(durations), count)
-    val unlisted = shards.indices.minBy { shards[it].totalSeconds() }
-    if (index - 1 == unlisted) {
-        shards.filterIndexed { shard, _ -> shard != unlisted }.flatten().forEach { filter.excludeTestsMatching(it.test) }
-    } else if (shards[index - 1].isEmpty()) {
-        throw GradleException("Shard $property has no tests in ${durations.name}; use fewer shards")
-    } else {
-        shards[index - 1].forEach { filter.includeTestsMatching(it.test) }
-    }
+    exclude(Spec { element ->
+        // Nested classes (`Outer$Inner.class`) run with their outer class.
+        val className = element.path.removeSuffix(".class").substringBefore('$').replace('/', '.')
+        !element.isDirectory && className !in splitClasses && testShardOf(className, count) != index - 1
+    })
+    systemProperty("mops.testShard", property)
+    systemProperty("mops.testShard.splitClasses", splitClasses.joinToString(","))
 }
 
-private data class TestDuration(val test: String, val seconds: Double)
-
-private fun List<TestDuration>.totalSeconds() = sumOf { it.seconds }
-
-private fun readDurations(file: File): List<TestDuration> =
-    file.readLines()
-        .map(String::trim)
-        .filter { it.isNotEmpty() && !it.startsWith("#") }
-        .map { line ->
-            val seconds = line.substringBefore(' ').toDoubleOrNull()
-                ?: throw GradleException("${file.name}: expected '<seconds> <test>', not '$line'")
-            TestDuration(line.substringAfter(' ').trim(), seconds)
-        }
-
-private fun assignShards(tests: List<TestDuration>, count: Int): List<List<TestDuration>> {
-    val shards = List(count) { mutableListOf<TestDuration>() }
-    tests.sortedWith(compareByDescending<TestDuration> { it.seconds }.thenBy { it.test }).forEach { test ->
-        shards.minBy { it.totalSeconds() }.add(test)
-    }
-    return shards
-}
+/**
+ * The zero-based shard of the test named [name] among [count] shards. The salt in the hashed text was picked so that
+ * the shards of the current tests take similar time; change it when one shard takes much longer than the others.
+ */
+fun testShardOf(name: String, count: Int): Int =
+    (CRC32().apply { update("139:$name".toByteArray()) }.value % count).toInt()
