@@ -288,12 +288,12 @@ mops --mps-home <path> diagnose project [--all] [--json]
 
 Reports the load state of the project's languages and of every other project module with a Java facet, to trace a
 `CONCEPT_NOT_FOUND` from `find instances` to its cause: a concept resolves by name only if its owning language's runtime
-is loaded. Text output starts with a `modules\t<loaded>/<total> loaded\t<failed> failed` summary row, a result row
-because it is part of the report. A tab-separated row per failed module follows: name, `kind`, and reason code; under
-`BROKEN_DEPENDENCIES`, indented rows name the root-cause modules to fix. A final `#` metadata line says that modules
-without a Java facet are not listed; inspect them individually with `diagnose module`. Lines starting with `#` are
-metadata, never results, so `grep -v '^#'` leaves only rows. `--all` also lists loaded modules; `--json` prints the full
-structured diagnosis.
+is loaded. Text output starts with a `modules\t<loaded>/<total> loaded\t<failed> failed` summary row, a result row (not
+metadata) because it is part of the report. A tab-separated row per failed module follows: name, `kind`, and reason
+code; under `BROKEN_DEPENDENCIES`, indented rows name the root-cause modules to fix. A final `#` metadata line says that
+modules without a Java facet are not listed; inspect them individually with `diagnose module`. Lines starting with `#`
+are metadata, never results, so `grep -v '^#'` leaves only rows. `--all` also lists loaded modules; `--json` prints the
+full structured diagnosis.
 
 ```sh
 mops --mps-home <path> diagnose module [--json] <module>

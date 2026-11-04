@@ -49,7 +49,8 @@ from that list after splitting it.
 
 The custom markdownlint rule `paragraph-length` in `tools/markdownlint/` rejects Markdown paragraphs with more words
 than `max_words` in `.markdownlint-cli2.yaml`. The `markdownlint-rules-test` hook runs the tests in that folder. When
-the rule or `.markdownlint-cli2.yaml` changes, the `markdownlint-cli2-all` hook lints every tracked Markdown file.
+the rule, `.markdownlint-cli2.yaml`, or `.pre-commit-config.yaml` changes, the `markdownlint-cli2-all` hook lints every
+tracked Markdown file.
 
 ## Daemon tests on each MPS version
 

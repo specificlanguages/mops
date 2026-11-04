@@ -32,14 +32,14 @@ repos:
         types:
           - markdown
 
-      # A change to the markdownlint configuration or custom rules can affect every Markdown file.
+      # A change to the markdownlint configuration, custom rules, or hook versions can affect every Markdown file.
       - id: markdownlint-cli2-all
         name: Lint all Markdown with markdownlint-cli2
         entry: sh -c 'git ls-files -z -- "*.md" | xargs -0 markdownlint-cli2'
         language: node
         additional_dependencies:
           - markdownlint-cli2@0.23.2
-        files: ^(tools/markdownlint/|\.markdownlint-cli2\.yaml$)
+        files: ^(tools/markdownlint/|\.markdownlint-cli2\.yaml$|\.pre-commit-config\.yaml$)
         pass_filenames: false
 
       - id: markdownlint-rules-test
