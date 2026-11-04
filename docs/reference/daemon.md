@@ -25,8 +25,8 @@ Start or reuse a project daemon and exchange a ping request.
 Usage: mops daemon ping [-h]
 Start or reuse a project daemon, exchange a ping request over a loopback
 socket, and print the structured response. The project is --project-root, or
-else the nearest directory at or above the working directory that contains a .
-mps directory.
+else the nearest directory at or above the working directory that contains a
+.mps directory.
 Options:
   -h, --help                Show this help message and exit.
 ```

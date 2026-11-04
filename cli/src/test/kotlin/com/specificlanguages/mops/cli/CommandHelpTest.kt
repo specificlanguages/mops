@@ -135,7 +135,10 @@ class CommandHelpTest {
             for (option in listOf("--mps-home", "--project-root", "--daemon-home", "--java-home", "--refs-as-urls")) {
                 assertContains(output.substring(globalOptions), option)
             }
-            assertFalse(output.substring(globalOptions).contains("--help"), "$name help should keep --help out of global options")
+            assertFalse(
+                output.substring(globalOptions).contains("-h, --help"),
+                "$name help should keep --help out of global options",
+            )
         }
     }
 

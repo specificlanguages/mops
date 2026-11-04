@@ -14,7 +14,8 @@ import picocli.CommandLine.Parameters
     header = ["Find subconcepts of one MPS concept."],
     description = [
         "Find extending concepts and interface implementors in all loaded language runtimes, including libraries. " +
-            "Excludes the queried concept; prints qualified names in sorted order. Unloaded languages contribute no results.",
+            "Excludes the queried concept; prints qualified names in sorted order. Unloaded languages contribute no " +
+            "results.",
     ],
     footer = [
         "",
@@ -22,8 +23,8 @@ import picocli.CommandLine.Parameters
             "Build project languages before querying their hierarchy. CONCEPT resolves the same way as in " +
             "`mops find instances`.",
         "",
-        "In Code Mode, mops.search.subConceptsOf(concept, concreteOnly, direct) applies the same filters, with the booleans passed positionally; see " +
-            "`mops code help mops.search.subConceptsOf`.",
+        "In Code Mode, mops.search.subConceptsOf(concept, concreteOnly, direct) applies the same filters, with the " +
+            "booleans passed positionally; see `mops code help mops.search.subConceptsOf`.",
     ],
 )
 class FindSubconceptsCommand(private val environment: CommandEnvironment) : CliCommand() {

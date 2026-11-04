@@ -31,8 +31,8 @@ object CommandReference {
 
     /** Returns every page of the reference by its path relative to the reference directory. */
     fun pages(skillPages: List<SkillPage>): Map<String, String> {
-        val rootHelp = help(newCommandLine())
-        val root = newCommandLine().also(HelpLayout::omitGlobalOptions)
+        val root = newCommandLine()
+        val rootHelp = help(root)
         val commands = root.documentedSubcommands()
 
         val pages = linkedMapOf<String, String>()
@@ -78,13 +78,11 @@ object CommandReference {
         for (topic in ExplainTopics.topics) {
             appendWrapped("- [mops explain $topic]($EXPLAIN_DIR/$topic.md): ${ExplainTopics.summaryOf(topic)}", "  ")
         }
-        if (skillPages.isNotEmpty()) {
-            appendLine()
-            appendLine("## Skills and task recipes")
-            appendLine()
-            for (page in skillPages) {
-                appendWrapped("- [${page.title}](${page.path})", "  ")
-            }
+        appendLine()
+        appendLine("## Skills and task recipes")
+        appendLine()
+        for (page in skillPages) {
+            appendWrapped("- [${page.title}](${page.path})", "  ")
         }
     }
 
@@ -102,10 +100,12 @@ object CommandReference {
         }
     }
 
+    /** Appends the summary and the help of [command], leaving out the global options that the index lists. */
     private fun StringBuilder.appendCommand(command: CommandLine) {
         appendLine()
         appendWrapped(summary(command))
         appendLine()
+        HelpLayout.omitGlobalOptions(command)
         append(fenced(help(command)))
     }
 
@@ -151,7 +151,9 @@ object CommandReference {
     private fun CommandLine.documentedSubcommands(): List<CommandLine> =
         subcommands.values.distinct().filterNot { it.commandSpec.helpCommand() }
 
-    /** Writes the reference into the directory `args[0]`, linking the skill pages in the `skills/` directory `args[1]`. */
+    /**
+     * Writes the reference into the directory `args[0]`, linking the skill pages in the `skills/` directory `args[1]`.
+     */
     @JvmStatic
     fun main(args: Array<String>) {
         val outputDir = Path.of(args[0])
@@ -166,8 +168,11 @@ object CommandReference {
     private fun skillPages(skillsDir: Path): List<SkillPage> =
         skillsDir.listDirectoryEntries().filter { it.isDirectory() }.sortedBy { it.name }.flatMap { skill ->
             val references = skill.resolve("references")
-            val referencePages =
-                if (references.isDirectory()) references.listDirectoryEntries("*.md").sortedBy { it.name } else emptyList()
+            val referencePages = if (references.isDirectory()) {
+                references.listDirectoryEntries("*.md").sortedBy { it.name }
+            } else {
+                emptyList()
+            }
             (listOf(skill.resolve("SKILL.md")) + referencePages).map { page ->
                 val title = page.readLines().first { it.startsWith("# ") }.removePrefix("# ")
                 SkillPage("$SKILLS_LINK/${skillsDir.relativize(page).joinToString("/")}", title)

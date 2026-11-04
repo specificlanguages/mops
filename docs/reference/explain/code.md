@@ -4,7 +4,7 @@ Generated from `mops explain code` by `./gradlew :cli:updateReference`. Do not e
 [index](../index.md).
 
 ```text
-code mode — execute Groovy code over an open MPS project
+code mode — execute Groovy code over an open MPS project.
 
 Run a program from a file with `mops code run FILE`, or pipe source to `mops code run` (a missing FILE and `-` both
 mean stdin). The source is evaluated as a function body: an explicit top-level return or the final expression is the

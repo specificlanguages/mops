@@ -23,7 +23,12 @@ import picocli.CommandLine.TypeConversionException
 class CreateSolutionCommand(environment: CommandEnvironment) : CreateModuleCommand(environment) {
     constructor(client: DaemonClient) : this(DaemonClientCommandEnvironment(client))
     @Parameters(index = "0", paramLabel = "MODULE_NAME") lateinit var moduleName: String
-    @Option(names = ["--descriptor"], paramLabel = "FILE", description = ["Descriptor file to write instead of the conventional location."]) var descriptor: String? = null
+    @Option(
+        names = ["--descriptor"],
+        paramLabel = "FILE",
+        description = ["Descriptor file to write instead of the conventional location."],
+    )
+    var descriptor: String? = null
     @Option(
         names = ["--usage-preset"], paramLabel = "PRESET", defaultValue = "not-generated", converter = [UsagePresetConverter::class],
         description = [

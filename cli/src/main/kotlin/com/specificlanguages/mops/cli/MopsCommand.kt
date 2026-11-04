@@ -54,7 +54,10 @@ class MopsCommand(
         names = ["--project-root"],
         scope = ScopeType.INHERIT,
         paramLabel = "PATH",
-        description = ["Explicit MPS project root, absolute or relative to the directory where mops was started. Overrides upward inference from the working directory."],
+        description = [
+            "Explicit MPS project root, absolute or relative to the directory where mops was started. Overrides " +
+                "upward inference from the working directory.",
+        ],
     )
     var projectRoot: String? = null
 
@@ -79,10 +82,8 @@ class MopsCommand(
         scope = ScopeType.INHERIT,
         paramLabel = "NAME=PATH",
         description = [
-            "Path macro the daemon defines in MPS before it opens the project; repeatable. PATH is an existing " +
-                "directory, absolute or relative to the directory where mops was started. Test runs pass the macros " +
-                "to the test worker. A running daemon with other macros is not reused: the command fails, and after mops daemon stop the next " +
-                "command starts a daemon with the new macros.",
+            "Path macro for MPS, such as one used as \$\${NAME} in .mps/libraries.xml or .mps/modules.xml; " +
+                "repeatable. \$PROJECT_DIR\$ needs no macro. See mops wrapper --help.",
         ],
         parameterConsumer = MacroConsumer::class,
     )

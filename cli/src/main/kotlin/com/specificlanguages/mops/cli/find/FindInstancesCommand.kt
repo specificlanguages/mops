@@ -13,10 +13,11 @@ import picocli.CommandLine.Parameters
     name = "instances",
     header = ["Find instances of one MPS concept."],
     description = [
-        "Find instances of one MPS concept, optionally narrowed by `--named` and `--role` (which AND together with " +
-            "each other and the scope). Searches editable project sources by default; append `in <scope-segments>` to " +
-            "search a module, model, or subtree exhaustively, or `in /` for the whole repository. See " +
-            "`mops explain scope`.",
+        "Find instances of one MPS concept, including instances of its subconcepts and, for an interface concept, of " +
+            "the concepts that implement it; --exact drops both. Narrow the results with `--named` and `--role`, " +
+            "which AND together with each other and the scope. Searches editable project sources by default; append " +
+            "`in <scope-segments>` to search a module, model, or subtree exhaustively, or `in /` for the whole " +
+            "repository. See `mops explain scope`.",
     ],
     footer = [
         "",
@@ -72,8 +73,8 @@ class FindInstancesCommand(environment: CommandEnvironment) : NodeSearchCommand(
         arity = "1",
         paramLabel = "CONCEPT",
         description = [
-            "The MPS concept to search for: its qualified name (<language>.structure.<ConceptName>), the same name with " +
-                ".structure. dropped, or a bare short name that is unique across loaded languages.",
+            "The MPS concept to search for: its qualified name (<language>.structure.<ConceptName>), the same name " +
+                "with .structure. dropped, or a bare short name that is unique across loaded languages.",
         ],
     )
     lateinit var concept: String

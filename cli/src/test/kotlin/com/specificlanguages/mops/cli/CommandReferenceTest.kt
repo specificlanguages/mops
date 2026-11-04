@@ -34,7 +34,10 @@ class CommandReferenceTest {
         assertTrue(page.startsWith("# mops find\n"))
         assertContains(page, "Search editable MPS project sources or loaded concept hierarchies.\n")
         assertContains(page, "```text\nUsage: mops find [-h] [COMMAND]\n")
-        assertContains(page, "## mops find instances\n\nFind instances of one MPS concept.\n\n```text\nUsage: mops find instances")
+        assertContains(
+            page,
+            "## mops find instances\n\nFind instances of one MPS concept.\n\n```text\nUsage: mops find instances",
+        )
         assertFalse(page.contains("## mops find help"))
     }
 

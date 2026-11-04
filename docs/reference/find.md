@@ -54,11 +54,12 @@ Find instances of one MPS concept.
 Usage: mops find instances [-h] [--exact] [--full-concept] [--json]
                            [--refs-only] [--limit=N] [--named=PATTERN]
                            [--role=ROLE] CONCEPT [[in SCOPE_SEGMENT...]...]
-Find instances of one MPS concept, optionally narrowed by `--named` and
-`--role` (which AND together with each other and the scope). Searches editable
-project sources by default; append `in <scope-segments>` to search a module,
-model, or subtree exhaustively, or `in /` for the whole repository. See `mops
-explain scope`.
+Find instances of one MPS concept, including instances of its subconcepts and,
+for an interface concept, of the concepts that implement it; --exact drops
+both. Narrow the results with `--named` and `--role`, which AND together with
+each other and the scope. Searches editable project sources by default; append
+`in <scope-segments>` to search a module, model, or subtree exhaustively, or
+`in /` for the whole repository. See `mops explain scope`.
 Parameters:
       CONCEPT               The MPS concept to search for: its qualified name
                               (<language>.structure.<ConceptName>), the same
@@ -75,7 +76,9 @@ Options:
   -h, --help                Show this help message and exit.
       --json                Print results as JSON.
       --limit=N             Maximum nodes to return. Defaults to 100; 0 means
-                              unlimited; negative values are rejected.
+                              unlimited; negative values are rejected. Only
+                              when more matches exist, text output ends with a
+                              `# truncated` line and JSON sets `truncated`.
       --named=PATTERN       Keep only instances whose node name matches this
                               Go-to-Node pattern; supports camel-hump and '*'
                               wildcards. See `mops explain name-pattern`.
@@ -127,7 +130,9 @@ Options:
   -h, --help                Show this help message and exit.
       --json                Print usage results as JSON.
       --limit=N             Maximum usages to return. Defaults to 100; 0 means
-                              unlimited; negative values are rejected.
+                              unlimited; negative values are rejected. Only
+                              when more matches exist, text output ends with a
+                              `# truncated` line and JSON sets `truncated`.
       --refs-only           Print one serialized node reference per line and
                               nothing else, for piping. Cannot combine with
                               --json; truncation is reported on stderr.
@@ -168,7 +173,9 @@ Options:
   -h, --help                Show this help message and exit.
       --json                Print results as JSON.
       --limit=N             Maximum nodes to return. Defaults to 100; 0 means
-                              unlimited; negative values are rejected.
+                              unlimited; negative values are rejected. Only
+                              when more matches exist, text output ends with a
+                              `# truncated` line and JSON sets `truncated`.
       --refs-only           Print one serialized node reference per line and
                               nothing else, for piping. Cannot combine with
                               --json; truncation is reported on stderr.
@@ -203,7 +210,9 @@ Options:
   -h, --help                Show this help message and exit.
       --json                Print results as JSON.
       --limit=N             Maximum nodes to return. Defaults to 100; 0 means
-                              unlimited; negative values are rejected.
+                              unlimited; negative values are rejected. Only
+                              when more matches exist, text output ends with a
+                              `# truncated` line and JSON sets `truncated`.
       --refs-only           Print one serialized node reference per line and
                               nothing else, for piping. Cannot combine with
                               --json; truncation is reported on stderr.

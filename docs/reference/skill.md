@@ -24,6 +24,10 @@ Usage: mops skill path [-h] [NAME]
 Print the absolute path to a bundled SKILL.md. Load it directly or symlink its
 directory into your agent's skills directory. Works without an MPS project or
 daemon.
+
+The mops skill covers project preparation, command selection, model navigation,
+editing, builds, checks, tests, and Code Mode. The mops-daemon skill covers
+daemon coordination, restarts, and recovery.
 Parameters:
       [NAME]                Skill name: mops (default), mops-daemon (alias:
                               daemon).

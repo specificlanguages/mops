@@ -86,11 +86,12 @@ object ExplainTopics {
         checkNotNull(javaClass.getResourceAsStream("/model-edit.schema.json")) { "generated edit schema missing" }
             .bufferedReader().use { it.readText() }
 
-    /** Returns the summary of [topic]: the part of its page's first line after the dash. */
+    /** Returns the summary of [topic]: the part of its page's first paragraph after the dash, on one line. */
     fun summaryOf(topic: String): String {
-        val firstLine = (readResource(topic) ?: return "").lineSequence().firstOrNull().orEmpty().trim()
-        val dash = firstLine.indexOf('—')
-        return if (dash >= 0) firstLine.substring(dash + 1).trim() else firstLine
+        val page = readResource(topic) ?: return ""
+        val firstParagraph = page.lineSequence().takeWhile { it.isNotBlank() }.joinToString(" ") { it.trim() }
+        val dash = firstParagraph.indexOf('—')
+        return if (dash >= 0) firstParagraph.substring(dash + 1).trim() else firstParagraph
     }
 
     private fun readResource(path: String): String? =

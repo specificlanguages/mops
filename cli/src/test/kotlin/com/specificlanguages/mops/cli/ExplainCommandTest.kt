@@ -52,6 +52,18 @@ class ExplainCommandTest {
     }
 
     @Test
+    fun `a topic summary is the whole first paragraph of its page`() {
+        assertEquals(
+            "the edit-batch notation: an ordered batch of edit operations applied as a unit, with best-effort " +
+                "atomicity.",
+            ExplainTopics.summaryOf("edit"),
+        )
+        for (topic in ExplainTopics.topics) {
+            assertTrue(ExplainTopics.summaryOf(topic).endsWith("."), "summary of $topic is not a sentence")
+        }
+    }
+
+    @Test
     fun `explain edit prints the edit page and exits zero`() {
         val output = runExplain("edit")
 

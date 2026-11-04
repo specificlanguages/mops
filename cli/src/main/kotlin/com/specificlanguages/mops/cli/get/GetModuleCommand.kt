@@ -18,12 +18,12 @@ import picocli.CommandLine.Parameters
         "",
         "The module is found anywhere in the repository. Text output is one `key<TAB>value` row per location MPS " +
             "reports, keyed by the JSON field name: `kind`, `name`, `reference`, `packaged`, then `descriptor` (the " +
-            ".mpl, .msd, or .devkit file of a source module, or `name.jar!/META-INF/module.xml` of a deployed one), `jar` and " +
-            "`sourcesJar` (the deployed module's archive and the sources archive its deployment descriptor names), " +
-            "`sourceDescriptor` (the source descriptor inside that archive), `sourceDirectory` (a source module's " +
-            "descriptor directory), `classesGen` (a source module's compiled-class output, when its Java facet " +
-            "declares one), `classPath` (one row per entry of the Java facet's runtime classpath), and `modelRoots` " +
-            "(one row per file-based model root).",
+            ".mpl, .msd, or .devkit file of a source module, or `name.jar!/META-INF/module.xml` of a deployed one), " +
+            "`jar` and `sourcesJar` (the deployed module's archive and the sources archive its deployment descriptor " +
+            "names), `sourceDescriptor` (the source descriptor inside that archive), `sourceDirectory` (a source " +
+            "module's descriptor directory), `classesGen` (a source module's compiled-class output, when its Java " +
+            "facet declares one), `classPath` (one row per entry of the Java facet's runtime classpath), and " +
+            "`modelRoots` (one row per file-based model root).",
         "",
         "A location MPS does not record for the module is left out rather than guessed from a naming convention. " +
             "--json prints the daemon response, with the same fields under `module`. An unknown module fails with " +

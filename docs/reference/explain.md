@@ -12,9 +12,9 @@ command is offline: it never starts a daemon, resolves a project root, or needs
 an MPS home. An unknown path exits non-zero with sibling suggestions.
 
 Topics:
-  code            execute Groovy code over an open MPS project
+  code            execute Groovy code over an open MPS project.
   edit            the edit-batch notation: an ordered batch of edit operations
-                  applied as a unit,
+                  applied as a unit, with best-effort atomicity.
   inline-subtree  the node-tree an edit operation builds: fresh nodes, move
                   leaves, and copy leaves.
   target          how an edit operation names a node.

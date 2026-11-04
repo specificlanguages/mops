@@ -52,14 +52,10 @@ Options:
 Global options:
       --daemon-home=PATH    Daemon home used by daemon-backed commands.
       --java-home=PATH      Java home used to start daemon-backed commands.
-      --macro=NAME=PATH     Path macro the daemon defines in MPS before it
-                              opens the project; repeatable. PATH is an
-                              existing directory, absolute or relative to the
-                              directory where mops was started. Test runs pass
-                              the macros to the test worker. A running daemon
-                              with other macros is not reused: the command
-                              fails, and after mops daemon stop the next
-                              command starts a daemon with the new macros.
+      --macro=NAME=PATH     Path macro for MPS, such as one used as ${NAME} in
+                              .mps/libraries.xml or .mps/modules.xml;
+                              repeatable. $PROJECT_DIR$ needs no macro. See
+                              mops wrapper --help.
       --mps-home=PATH       MPS home used by daemon-backed commands.
       --project-root=PATH   Explicit MPS project root, absolute or relative to
                               the directory where mops was started. Overrides
@@ -77,8 +73,9 @@ an editing approach.
 
 ## Notations
 
-- [mops explain code](explain/code.md): execute Groovy code over an open MPS project
+- [mops explain code](explain/code.md): execute Groovy code over an open MPS project.
 - [mops explain edit](explain/edit.md): the edit-batch notation: an ordered batch of edit operations applied as a unit,
+  with best-effort atomicity.
 - [mops explain inline-subtree](explain/inline-subtree.md): the node-tree an edit operation builds: fresh nodes, move
   leaves, and copy leaves.
 - [mops explain target](explain/target.md): how an edit operation names a node.

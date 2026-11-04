@@ -61,7 +61,10 @@ class FindUsagesCommand(private val environment: CommandEnvironment) : CliComman
     @Option(
         names = ["--limit"],
         paramLabel = "N",
-        description = ["Maximum usages to return. Defaults to 100; 0 means unlimited; negative values are rejected."],
+        description = [
+            "Maximum usages to return. Defaults to 100; 0 means unlimited; negative values are rejected. Only when " +
+                "more matches exist, text output ends with a `# truncated` line and JSON sets `truncated`.",
+        ],
     )
     var limit: Int = 100
 
