@@ -20,9 +20,9 @@ class TestReportStoreTest {
         now = 3_000_000
         report.beginTiming("execution")
         now = 8_000_000
-        report.finish(TestRunConclusion("TIMED_OUT", false))
+        report.finish(TestRunConclusion("TIMED_OUT", complete = false))
         now = 100_000_000
-        report.finish(TestRunConclusion("SUCCESS", true))
+        report.finish(TestRunConclusion("SUCCESS", complete = true))
         val saved = TestReportStore(path) { 0L }
         assertEquals(mapOf("startup" to 3L, "execution" to 5L), saved.snapshot().timingsMillis)
         assertEquals("TIMED_OUT", saved.snapshot().outcome)
@@ -36,11 +36,11 @@ class TestReportStoreTest {
         for (outcome in listOf("CANCELLED", "TIMED_OUT", "PARENT_TERMINATED")) {
             val path = directory.resolve("$outcome.json")
             val report = TestReportStore(path)
-            report.finish(TestRunConclusion(outcome, false))
+            report.finish(TestRunConclusion(outcome, complete = false))
             report.event(mapOf("id" to "test", "name" to "completed", "kind" to "TEST", "status" to "PASSED"))
             val interrupted = report.snapshot()
-            report.finish(TestRunConclusion("WORKER_FAILED", false, listOf("Ant process terminated")))
-            report.finish(TestRunConclusion("SUCCESS", true))
+            report.finish(TestRunConclusion("WORKER_FAILED", complete = false, listOf("Ant process terminated")))
+            report.finish(TestRunConclusion("SUCCESS", complete = true))
             assertEquals(interrupted, TestReportStore(path).snapshot())
         }
     }
