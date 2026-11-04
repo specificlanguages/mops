@@ -25,9 +25,9 @@ example, gets
 it passes the discovered MPS and Java homes.
 
 When `.mps/libraries.xml` or `.mps/modules.xml` uses a path macro (`${NAME}`), the daemon needs its value. Pass
-`--macro NAME=PATH` to `mops wrapper`, and the wrapper passes it on every run. For a used macro without a value,
-`mops wrapper` guesses the project's Git root and prints a warning; check the guess, and rerun with `--macro` if it is
-wrong. A daemon started with other macros is not reused; run `mops daemon stop` after changing them.
+`--macro NAME=PATH` to `mops wrapper`, and the wrapper passes it on every run. For a used path macro without a value,
+`mops wrapper` guesses the project's Git root and prints a warning on stderr; check the guess, and rerun with `--macro`
+if it is wrong. A daemon started with other path macros is not reused; run `mops daemon stop` after changing them.
 
 Wrappers discover configured distributions and can download them, but do not execute preparation or language build
 tasks. Build the project with its own build tool first; most operations need the project languages built. Then run

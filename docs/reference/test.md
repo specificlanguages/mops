@@ -32,8 +32,8 @@ JVM's classpath is built independently of the daemon's boot classpath. The
 worker's module repository holds the project modules and the folders of the
 project libraries (.mps/libraries.xml) as the daemon loaded them, and the
 worker gets the path macros the daemon defines, including those given with
---macro. A project library whose path uses a macro the daemon does not define
-is left out, with a diagnostic.
+--macro. A project library whose path uses a path macro the daemon does not
+define is left out, with a diagnostic.
 
 When the worker cannot load classes of some modules, for example because a
 dependency is absent from its repository, the report's diagnostics list the

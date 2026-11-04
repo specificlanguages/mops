@@ -94,11 +94,11 @@ observations across the four validation baselines.
 
 The daemon resolves selection to persistent identities and descriptor paths. It also records the worker's repository and
 path macros as the daemon loaded them: the project module descriptors, the folders of the project libraries from
-`ProjectLibraryManager` with macros expanded, and the user path macros from `PathMacros`. The worker does not open the
-project before discovery, so it never reads `.mps/libraries.xml` itself; without these folders, modules that depend on
-project-library modules cannot load classes. A project library whose path keeps an undefined macro is left out, with a
-report diagnostic. The Ant file passes the folders as `<modules dir>` and the macros as `<macro name path>`, so tests
-that open a project through a macro-based `TestInfo.projectPath` find it.
+`ProjectLibraryManager` with path macros expanded, and the user path macros from `PathMacros`. The worker does not open
+the project before discovery, so it never reads `.mps/libraries.xml` itself; without these folders, modules that depend
+on project-library modules cannot load classes. A project library whose path keeps an undefined path macro is left out,
+with a report diagnostic. The Ant file passes the folders as `<modules dir>` and the path macros as `<macro name path>`,
+so tests that open a project through a `TestInfo.projectPath` that uses a path macro find it.
 
 A separate controller performs the optional incremental build in a normal-mode preparation environment, with the same
 path macros, and saves the project. No-build runs start Ant without initializing a preparation MPS environment. It

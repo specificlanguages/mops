@@ -278,6 +278,9 @@ project-library and path-macro fixture in `test-projects/project-library`. The l
 instead of waiting out deadlines, apart from one 15-second test execution limit. Runtime reload and daemon lifecycle
 tests also retain their independent process boundaries.
 
+`WrapperIntegrationTest` puts a copy of the project-library fixture into a Gradle build, makes its project library path
+use a path macro, runs the installed `mops wrapper`, and runs a command through the written `mopsw`.
+
 ```sh
 ./gradlew :cli:integrationTestMps2024.1.6 --tests '*TestRunningIntegrationTest' --tests '*TestFamiliesIntegrationTest' \
   :cli:integrationTestMps2025.1.4 --tests '*TestRunningIntegrationTest' --tests '*TestFamiliesIntegrationTest' \

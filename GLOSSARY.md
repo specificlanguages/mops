@@ -45,6 +45,11 @@ dependency or platform modules. _Related_: Git repository, source repository
 **Project and Libraries**: The **MPS Project** together with the library modules visible to that project. _Related_: MPS
 Repository
 
+**Path Macro**: A named directory that an **MPS Project**'s files refer to as `${NAME}` at the start of a path, such as
+the path of a project library. Its value comes from outside the project. A path relative to the project
+(`$PROJECT_DIR$`) does not use a **Path Macro**. _Avoid_: path variable, macro without qualification _Related_: MPS
+Project, Project and Libraries
+
 **Editable Project Sources**: The editable **MPS Models** in an **MPS Project** that users and agents may modify.
 Non-editable stub models and packaged library models are not **Editable Project Sources**. _Related_: Project and
 Libraries
