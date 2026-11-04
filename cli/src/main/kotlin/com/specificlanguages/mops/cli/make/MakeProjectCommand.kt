@@ -24,13 +24,13 @@ class MakeProjectCommand(private val environment: CommandEnvironment) : CliComma
     var json: Boolean = false
 
     @Mixin
-    val generation = GenerationThreadsOption()
+    val threadsOption = GenerationThreadsOption()
 
     private var exitCode: Int = 0
 
     override fun run() {
         val client = environment.daemon()
-        exitCode = renderMakeResult(client.makeProject(generation.threads), json)
+        exitCode = renderMakeResult(client.makeProject(threadsOption.threads), json)
     }
 
     override fun getExitCode(): Int = exitCode

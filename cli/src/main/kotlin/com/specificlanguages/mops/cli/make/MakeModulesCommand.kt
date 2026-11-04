@@ -29,7 +29,7 @@ class MakeModulesCommand(private val environment: CommandEnvironment) : CliComma
     var json: Boolean = false
 
     @Mixin
-    val generation = GenerationThreadsOption()
+    val threadsOption = GenerationThreadsOption()
 
     @Parameters(
         arity = "1..*",
@@ -42,7 +42,7 @@ class MakeModulesCommand(private val environment: CommandEnvironment) : CliComma
 
     override fun run() {
         val client = environment.daemon()
-        exitCode = renderMakeResult(client.makeModules(modules, generation.threads), json)
+        exitCode = renderMakeResult(client.makeModules(modules, threadsOption.threads), json)
     }
 
     override fun getExitCode(): Int = exitCode

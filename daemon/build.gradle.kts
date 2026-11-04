@@ -66,6 +66,7 @@ dependencies {
             include("lib/mps-editor-api.jar")
             include("lib/mps-collections.jar")
             include("lib/mps-closures.jar")
+            include("lib/mps-tuples.jar")
             include("lib/mps-environment.jar")
             include("lib/mps-persistence.jar")
             include("lib/mps-platform.jar")

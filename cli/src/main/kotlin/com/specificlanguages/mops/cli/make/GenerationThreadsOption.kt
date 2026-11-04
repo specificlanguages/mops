@@ -14,7 +14,7 @@ class GenerationThreadsOption {
         converter = [ThreadCountConverter::class],
         description = [
             "Generate with N threads during this make; 1 generates sequentially. Without it, the make uses the " +
-                "daemon's generation settings (sequential by default).",
+                "daemon's MPS generation settings (MPS's default is sequential).",
         ],
     )
     var threads: Int? = null
