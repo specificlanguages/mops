@@ -44,7 +44,7 @@ repos:
 
       - id: markdownlint-rules-test
         name: Test markdownlint custom rules
-        entry: node --test tools/markdownlint/
+        entry: node --test "tools/markdownlint/*.test.cjs"
         language: node
         # Keep in step with the markdownlint version that markdownlint-cli2 above depends on.
         additional_dependencies:
