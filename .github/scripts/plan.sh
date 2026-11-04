@@ -36,14 +36,14 @@ tree="$(git rev-parse 'HEAD^{tree}')"
 versions="$(sed -n 's/^supportedMpsVersions=//p' gradle.properties | jq -Rc 'split(",") | map(gsub("^\\s+|\\s+$"; ""))')"
 case "$EVENT_NAME" in
   pull_request)
-    tier=pr
+    tier='pr'
     marker_key="ci-passed-pr-$tree"
     daemon_versions="$(jq -c 'map(select(. != "Prerelease")) | [first, last] | unique' <<< "$versions")"
     integration_versions="$(jq -c 'map(select(. != "Prerelease")) | [last]' <<< "$versions")"
     docs_only="$(docs_only "$(git rev-parse 'HEAD^1')")"
     ;;
   *)
-    tier=full
+    tier='full'
     marker_key="ci-passed-$tree"
     daemon_versions="$versions"
     integration_versions="$versions"

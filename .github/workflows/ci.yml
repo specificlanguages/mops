@@ -45,7 +45,7 @@ jobs:
         run: |
           plan="$(.github/scripts/plan.sh)"
           echo "$plan" >> "$GITHUB_OUTPUT"
-          printf '```text\n%s\n```\n' "$plan" | tee -a "$GITHUB_STEP_SUMMARY"
+          printf "\`\`\`text\n%s\n\`\`\`\n" "$plan" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Look up a full-tier passed marker for this tree
         id: full-marker
         if: steps.plan.outputs.tier == 'pr'

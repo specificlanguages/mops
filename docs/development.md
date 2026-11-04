@@ -116,21 +116,28 @@ gh workflow run ci.yml --ref <branch>
 The verification job runs `check -x :cli:integrationTest -x :daemon:test -x :daemon:testOtherMpsVersions`, covering all
 subprojects' unit tests, daemon checks, Gradle discovery tests, and packaging checks, and then runs the `prek` hooks on
 all files. The separate `daemon-versions` and integration matrices cover the excluded daemon tests and CLI integration
-suite. A pull request that changes only files under `docs/` and Markdown files in the repository root runs only the
-verification job. The `plan` job picks the tier and the versions and prints them in its summary. The `CI passed` job
-requires every job to succeed, except jobs that the plan skips in the pull request tier. It is the required check in
-both tiers. Release validation runs the complete `check`, including the full integration matrix.
+suite. The `plan` job (`.github/scripts/plan.sh`) picks the tier and the versions and prints them in its summary. The
+`CI passed` job requires every job to succeed or to be skipped by the plan. It is the required check in both tiers.
+Release validation runs the complete `check`, including the full integration matrix.
 
-When every planned job succeeds, `CI passed` saves a cache entry for the tested git tree: `ci-passed-<tree>` in the full
-tier, `ci-passed-pr-<tree>` in the pull request tier. For a pull request the tested tree is the tree of the merge
-commit, and the `plan` job prints it in its summary. A pull request run that finds either entry for its tree skips the
-test jobs, and `CI passed` still succeeds, for example after a stacked pull request is rebased onto `main` without
-changing its code. Re-running a skipped run skips again.
+A docs-only run skips the test jobs, and its verification job runs only the `prek` hooks, without Gradle. A run is
+docs-only when every changed file is under `docs/` or is a Markdown file in the repository root, and none is under
+`docs/reference/`, which is kept for generated pages that a Gradle check compares with their source. No build task or
+test reads the other files. A pull request compares its merge commit with the base branch, a merge queue run with the
+queue's base commit, and a push to `main` with the previous head. A force push, a push without a previous head, and a
+manual dispatch run everything.
+
+When every planned job succeeds and the test jobs ran, `CI passed` saves a cache entry for the tested git tree:
+`ci-passed-<tree>` in the full tier, `ci-passed-pr-<tree>` in the pull request tier. A docs-only run saves no entry. For
+a pull request the tested tree is the tree of the merge commit, and the `plan` job prints it in its summary. A pull
+request run that finds either entry for its tree skips the test jobs, and `CI passed` still succeeds, for example after
+a stacked pull request is rebased onto `main` without changing its code. Re-running a skipped run skips again.
 
 Entries saved by a pull request run are visible only to later runs of the same pull request; entries saved by runs on
-`main` are visible to all pull requests. Merge queue runs, pushes to `main`, and manual dispatches never skip, so a pull
-request tier entry never replaces a full tier run. To make a pull request run without skipping, delete both entries with
-`gh cache delete ci-passed-<tree>` and `gh cache delete ci-passed-pr-<tree>`, then re-run the workflow.
+`main` are visible to all pull requests. Merge queue runs, pushes to `main`, and manual dispatches never look up an
+entry, so a pull request tier entry never replaces a full tier run. To make a pull request run without skipping, delete
+both entries with `gh cache delete ci-passed-<tree>` and `gh cache delete ci-passed-pr-<tree>`, then re-run the
+workflow.
 
 To test an already extracted distribution, use the separate local task:
 
