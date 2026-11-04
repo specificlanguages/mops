@@ -215,7 +215,7 @@ _Related_: MPS Concept, Meta-id
 
 **Meta-id**: The numeric identity of a **Structure Declaration**, by which models refer to the concept, property, link,
 datatype, or enumeration member it declares independently of its name. It must be unique among the declaration's peers
-of the same kind. _Avoid_: concept id for meta-ids in general, Node ID _Related_: Structure Declaration, Node ID, Hint
+of the same kind. _Avoid_: concept id _Related_: Structure Declaration, Node ID, Hint
 
 **Constraint**: A language-defined rule that restricts whether an edit is well-formed, such as which **MPS Concepts**
 may fill an **MPS Link**, a link's cardinality, or whether a node may be a **Child** of another node. _Avoid_: rule,
