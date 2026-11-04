@@ -12,7 +12,10 @@ import java.nio.file.StandardOpenOption.WRITE
 import kotlin.io.path.*
 import kotlin.test.*
 
-/** Test runs share persistent IntelliJ system directories, and a run that finds one in use falls back visibly. */
+/**
+ * Test runs share persistent IntelliJ system directories, and a run that finds one in use falls back visibly. The CLI
+ * runs with its own system directory cache, so the lock taken here does not hold up test runs of other test classes.
+ */
 @ResourceLock("system-streams")
 class TestSystemDirectoryIntegrationTest {
     @TempDir(cleanup = CleanupMode.ON_SUCCESS)
@@ -22,14 +25,14 @@ class TestSystemDirectoryIntegrationTest {
     fun `a run whose worker system directory is in use uses a fresh one and says so`() {
         val project = copyTestProject("base-language-sandbox", tempDir.resolve("project"))
         val home = tempDir.resolve("daemon-home").createDirectories()
-        val workerSystems = Path.of(System.getenv("MOPS_TEST_SYSTEM_CACHE"))
+        val systemCache = tempDir.resolve("test-system-cache")
+        val workerSystems = systemCache
             .resolve(requireNotNull(MpsBuildProperties.fromMpsHome(Path.of(System.getProperty("test.mpsHome")))?.buildNumber))
             .createDirectories()
+        val cli = InstalledCli(project, home, tempDir, mapOf("MOPS_TEST_SYSTEM_CACHE" to systemCache.pathString))
         try {
             val result = FileChannel.open(workerSystems.resolve("worker.lock"), CREATE, WRITE).use { channel ->
-                channel.lock().use {
-                    runCommandLine(project, "--daemon-home", home.pathString, *javaAndMpsHomeArgs(), "test", "--no-build", "--json")
-                }
+                channel.lock().use { cli.run("test", "--no-build", "--json") }
             }
             assertEquals(1, result.exitCode, result.output)
             val report = ProtocolJson.testReport.decode(result.stdout)
