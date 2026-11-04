@@ -1,12 +1,5 @@
 # Developing mops
 
-## Setup
-
-Install [prek](https://prek.j178.dev/) and run `prek install` once in your clone. It installs a Git `pre-commit` hook
-that runs the hooks from `.pre-commit-config.yaml` on each commit. The hook goes into the hooks directory of the shared
-Git directory (`git rev-parse --git-common-dir`), so one `prek install` covers the main clone and all its worktrees.
-Each worktree runs the hooks from its own `.pre-commit-config.yaml`.
-
 ## Build and test
 
 ```sh
@@ -46,7 +39,7 @@ Commit messages on pull request branches are free-form.
 
 Before you open a pull request:
 
-- Run `prek run --all-files`. CI runs the same hooks on all files.
+- Cherry-picks and rebases don't run the `pre-commit` hook, so prek may not have checked commits made that way.
 - Run `./gradlew detektMain` (see [Code structure checks](#code-structure-checks)).
 - Run the focused tests for what you changed, for example one test class on one MPS version.
 - After changing anything under `examples/`, run `./gradlew :cli:updateExamples` and commit the regenerated
