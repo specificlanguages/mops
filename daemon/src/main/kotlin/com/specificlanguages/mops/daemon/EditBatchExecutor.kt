@@ -47,6 +47,24 @@ class EditBatchExecutor(
         writeScope: WriteTransaction.WriteScope,
         enforcement: ConstraintEnforcement = ConstraintEnforcement.BEST_EFFORT,
     ): ModelEditResponse {
+        // Every affected model is unchanged when the batch first touches it, so any unsaved change it holds after a
+        // failure is the batch's own.
+        val affectedModels = linkedSetOf<EditableSModel>()
+        return try {
+            applyTracked(project, batch, writeScope, enforcement, affectedModels)
+        } catch (failure: Throwable) {
+            discardUnsavedChanges(affectedModels).forEach(failure::addSuppressed)
+            throw failure
+        }
+    }
+
+    private fun applyTracked(
+        project: Project,
+        batch: EditBatch,
+        writeScope: WriteTransaction.WriteScope,
+        enforcement: ConstraintEnforcement,
+        affectedModels: MutableSet<EditableSModel>,
+    ): ModelEditResponse {
         if (batch.operations.isEmpty()) {
             throw MpsRequestException(
                 code = MpsErrorCode.INVALID_REQUEST,
@@ -54,7 +72,6 @@ class EditBatchExecutor(
             )
         }
 
-        val affectedModels = linkedSetOf<EditableSModel>()
         val aliases = linkedMapOf<String, SNode>()
         val placements = mutableListOf<Placement>()
         val rootPlacements = mutableListOf<RootPlacement>()
@@ -62,14 +79,9 @@ class EditBatchExecutor(
         val uncheckable = UncheckableLanguages()
         val conceptResolver = ConceptResolver(project)
         val moduleLoadDiagnostics = ModuleLoadDiagnostics(project)
-        var mutated = false
 
-        fun fail(code: MpsErrorCode, message: String): Nothing {
-            if (mutated) {
-                reload(affectedModels)
-            }
+        fun fail(code: MpsErrorCode, message: String): Nothing =
             throw MpsRequestException(code = code, message = message)
-        }
 
         // Refuses to edit a model that imports a project language whose runtime is unbuilt or stale (built from older
         // sources than the files on disk): editing through such a runtime can resolve a concept or role to an identity
@@ -217,7 +229,7 @@ class EditBatchExecutor(
         fun resolveConceptOrFail(index: Int, fqn: String): SConcept {
             // ConceptResolver forgives a dropped `.structure.` and, when a name does not resolve, throws with a
             // diagnosis (unknown language, unloaded language, or a "did you mean" among a loaded language's concepts).
-            // Re-route that through fail() so the operation index is prefixed and any partial batch is rolled back.
+            // Re-route that through fail() so the operation index is prefixed.
             val concept = try {
                 conceptResolver.resolve(fqn)
             } catch (exception: MpsRequestException) {
@@ -434,7 +446,6 @@ class EditBatchExecutor(
                     val property = resolvePropertyOrFail(index, node, operation.name)
                     try {
                         setPropertyOrFail(index, node, property, operation.value)
-                        mutated = true
                     } catch (exception: MpsRequestException) {
                         throw exception
                     } catch (exception: Exception) {
@@ -447,7 +458,6 @@ class EditBatchExecutor(
 
                 is EditOperation.Delete -> {
                     val node = requireEditableNode(index, operation.target)
-                    mutated = true
                     node.delete()
                 }
 
@@ -458,7 +468,6 @@ class EditBatchExecutor(
                             MpsErrorCode.NODE_NOT_FOUND,
                             "operation $index child not found: role ${operation.role}, position ${operation.position}",
                         )
-                    mutated = true
                     child.delete()
                 }
 
@@ -467,7 +476,6 @@ class EditBatchExecutor(
                     val link = resolveContainmentOrFail(index, node, operation.role)
                     val concept = resolveConceptOrFail(index, operation.concept)
                     val model = node.model!!
-                    mutated = true
                     val child = model.createNode(concept)
                     attach(index, node, link, child, operation.position)
                     placements.add(Placement(index, node, link, child))
@@ -480,7 +488,6 @@ class EditBatchExecutor(
                     val newParent = requireEditableNode(index, operation.into)
                     failIfWouldMoveIntoOwnDescendant(index, newParent, node)
                     val link = resolveContainmentOrFail(index, newParent, operation.role)
-                    mutated = true
                     detach(node)
                     attach(index, newParent, link, node, operation.position)
                     placements.add(Placement(index, newParent, link, node))
@@ -490,7 +497,6 @@ class EditBatchExecutor(
                     val node = requireEditableNode(index, operation.target)
                     val link = resolveReferenceLinkOrFail(index, node, operation.role)
                     val to = operation.to?.let { resolveNode(index, it) }
-                    mutated = true
                     node.setReferenceTarget(link, to)
                     // Clearing a reference (to == null) cannot violate a scope; only a concrete target is checked.
                     if (to != null) {
@@ -502,7 +508,6 @@ class EditBatchExecutor(
                     val node = requireEditableNode(index, operation.target)
                     val link = resolveContainmentOrFail(index, node, operation.role)
                     val source = resolveNode(index, operation.source)
-                    mutated = true
                     val copy = CopyUtil.copy(source)
                     attach(index, node, link, copy, operation.position)
                     placements.add(Placement(index, node, link, copy))
@@ -512,7 +517,6 @@ class EditBatchExecutor(
                 is EditOperation.AddRoot -> {
                     val model = requireEditableModel(index, operation.model)
                     val concept = resolveConceptOrFail(index, operation.concept)
-                    mutated = true
                     val root = model.createNode(concept)
                     model.addRootNode(root)
                     rootPlacements.add(RootPlacement(index, model, root))
@@ -523,7 +527,6 @@ class EditBatchExecutor(
                 is EditOperation.CopyAsRoot -> {
                     val model = requireEditableModel(index, operation.model)
                     val source = resolveNode(index, operation.source)
-                    mutated = true
                     val copy = CopyUtil.copy(source)
                     model.addRootNode(copy)
                     rootPlacements.add(RootPlacement(index, model, copy))
@@ -533,7 +536,6 @@ class EditBatchExecutor(
                 is EditOperation.MoveAsRoot -> {
                     val node = requireEditableNode(index, operation.target)
                     val model = requireEditableModel(index, operation.model)
-                    mutated = true
                     detach(node)
                     model.addRootNode(node)
                     rootPlacements.add(RootPlacement(index, model, node))
@@ -547,7 +549,6 @@ class EditBatchExecutor(
                     val replacement = when (val with = operation.with) {
                         is InlineChild.Fresh -> {
                             val concept = resolveConceptOrFail(index, with.concept)
-                            mutated = true
                             val node = model.createNode(concept)
                             populate(index, model, node, with.properties, with.references, with.children)
                             node
@@ -557,12 +558,10 @@ class EditBatchExecutor(
                             // A child target's slot lives under its parent; adopting an ancestor of that parent would
                             // place a node inside its own descendant. A descendant of the target (an unwrap) is fine.
                             target.parent?.let { failIfWouldMoveIntoOwnDescendant(index, it, source) }
-                            mutated = true
                             source
                         }
                         is InlineChild.Copy -> {
                             val source = resolveNode(index, with.source)
-                            mutated = true
                             CopyUtil.copy(source)
                         }
                     }
@@ -574,7 +573,6 @@ class EditBatchExecutor(
                     val target = requireEditableNode(index, operation.target)
                     val model = target.model!!
                     val concept = resolveConceptOrFail(index, operation.concept)
-                    mutated = true
                     val wrapper = model.createNode(concept)
                     val link = resolveContainmentOrFail(index, wrapper, operation.role)
                     // Build the wrapper's other inline structure first, then swap it into the target's slot, then adopt
@@ -590,7 +588,6 @@ class EditBatchExecutor(
                     val target = requireEditableNode(index, operation.target)
                     val keep = requireEditableNode(index, operation.keep)
                     failIfNotProperDescendant(index, target, keep)
-                    mutated = true
                     // The kept descendant rises into the target's slot; the swap detaches it from inside the target and
                     // drops the remainder.
                     replaceInPlace(index, target, keep)
@@ -610,16 +607,14 @@ class EditBatchExecutor(
         // Advisory applies and saves despite violations; best-effort and strict block on any violation.
         if (violations.isNotEmpty() && enforcement != ConstraintEnforcement.ADVISORY) {
             // Block: revert the in-memory batch and report the violations without saving.
-            if (mutated) {
-                reload(affectedModels)
-            }
+            discardUnsavedChanges(affectedModels).firstOrNull()?.let { throw it }
             return ModelEditResponse(created = emptyMap(), violations = violations, warnings = warnings)
         }
 
         // The batch will be saved: bring each affected model's declared dependencies in line with the content it now
         // holds, so a headless edit does not leave a model using an undeclared language or referencing an unimported
-        // model. This is reached only on a saving path — a batch that failed or was blocked reloaded the models above
-        // and returned before here — so a rejected edit adds no imports.
+        // model. This is reached only on a saving path — a batch that failed or was blocked left before here — so a
+        // rejected edit adds no imports.
         ensureUsedImports(affectedModels, placements, rootPlacements, referencePlacements)
 
         return when (val saveOutcome = writeScope.saveWithResolveInfo(affectedModels)) {
@@ -926,10 +921,6 @@ class EditBatchExecutor(
             return true
         }
         return registry.getConstraintsDescriptor(link.targetConcept).defaultScopeProvider != null
-    }
-
-    private fun reload(models: Iterable<EditableSModel>) {
-        models.forEach { it.reloadFromSource() }
     }
 }
 
