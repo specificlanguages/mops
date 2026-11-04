@@ -13,3 +13,7 @@ formatting and naming.
   every property separately. This keeps the assertion aligned with the object's equality contract and catches newly
   added properties.
 - Wildcard imports are acceptable.
+- Get the serializer of a `@Serializable` class declared in the same module with `serializer<X>()`, not
+  `X.serializer()`. detekt's type resolution does not run the serialization compiler plugin, so it cannot see the
+  generated `X.serializer()` and reports a compiler error. The plugin compiles `serializer<X>()` to the same direct
+  `X.Companion.serializer()` call.

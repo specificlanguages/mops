@@ -3,6 +3,7 @@ package com.specificlanguages.mops.protocol
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.elementNames
+import kotlinx.serialization.serializer
 
 /**
  * Plain-Kotlin introspection over the edit-batch Notation.
@@ -17,7 +18,7 @@ object EditNotation {
     // EditBatch -> List<EditOperation> -> EditOperation (sealed) -> polymorphic subclass container. The container's
     // element names are the leaf @SerialName values and each element descriptor is that leaf's class descriptor.
     private val operationsContainer: SerialDescriptor =
-        EditBatch.serializer().descriptor
+        serializer<EditBatch>().descriptor
             .getElementDescriptor(0)
             .getElementDescriptor(0)
             .getElementDescriptor(1)

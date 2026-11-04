@@ -13,6 +13,7 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.serializer
 
 /**
  * One position in an Inline Subtree's `children` array. Every position carries the Containment [role] it fills under
@@ -62,7 +63,7 @@ internal object InlineChildSerializer : KSerializer<InlineChild> {
     override fun serialize(encoder: Encoder, value: InlineChild) {
         val jsonEncoder = encoder as? JsonEncoder ?: throw UnsupportedJsonOnlySerializerException("InlineChild")
         val element = when (value) {
-            is InlineChild.Fresh -> jsonEncoder.json.encodeToJsonElement(InlineChild.Fresh.serializer(), value)
+            is InlineChild.Fresh -> jsonEncoder.json.encodeToJsonElement(serializer<InlineChild.Fresh>(), value)
             is InlineChild.Move -> leafObject(jsonEncoder, "move", value.role, value.source)
             is InlineChild.Copy -> leafObject(jsonEncoder, "copy", value.role, value.source)
         }
@@ -88,17 +89,17 @@ internal object InlineChildSerializer : KSerializer<InlineChild> {
                         "a leaf carries only \"role\" and \"$leaf\"",
                 )
             }
-            val source = jsonDecoder.json.decodeFromJsonElement(EditTarget.serializer(), obj.getValue(leaf))
+            val source = jsonDecoder.json.decodeFromJsonElement(serializer<EditTarget>(), obj.getValue(leaf))
             val role = obj.stringField("role")
             return if (hasMove) InlineChild.Move(role, source) else InlineChild.Copy(role, source)
         }
-        return jsonDecoder.json.decodeFromJsonElement(InlineChild.Fresh.serializer(), obj)
+        return jsonDecoder.json.decodeFromJsonElement(serializer<InlineChild.Fresh>(), obj)
     }
 
     private fun leafObject(encoder: JsonEncoder, key: String, role: String?, source: EditTarget): JsonObject =
         buildJsonObject {
             if (role != null) put("role", role)
-            put(key, encoder.json.encodeToJsonElement(EditTarget.serializer(), source))
+            put(key, encoder.json.encodeToJsonElement(serializer<EditTarget>(), source))
         }
 }
 
@@ -109,9 +110,9 @@ internal object InlineReferenceSerializer : KSerializer<InlineReference> {
         val jsonEncoder = encoder as? JsonEncoder ?: throw UnsupportedJsonOnlySerializerException("InlineReference")
         val element = buildJsonObject {
             put("role", value.role)
-            value.to?.let { put("to", jsonEncoder.json.encodeToJsonElement(EditTarget.serializer(), it)) }
+            value.to?.let { put("to", jsonEncoder.json.encodeToJsonElement(serializer<EditTarget>(), it)) }
             value.target?.let {
-                put("target", jsonEncoder.json.encodeToJsonElement(MpsNodeReferenceTargetJson.serializer(), it))
+                put("target", jsonEncoder.json.encodeToJsonElement(serializer<MpsNodeReferenceTargetJson>(), it))
             }
         }
         jsonEncoder.encodeJsonElement(element)
@@ -131,9 +132,9 @@ internal object InlineReferenceSerializer : KSerializer<InlineReference> {
         if (!hasTo && !hasTarget) {
             throw InlineSubtreeException("has a reference \"$role\" with neither \"to\" nor \"target\"")
         }
-        val to = if (hasTo) jsonDecoder.json.decodeFromJsonElement(EditTarget.serializer(), obj.getValue("to")) else null
+        val to = if (hasTo) jsonDecoder.json.decodeFromJsonElement(serializer<EditTarget>(), obj.getValue("to")) else null
         val target = if (hasTarget) {
-            jsonDecoder.json.decodeFromJsonElement(MpsNodeReferenceTargetJson.serializer(), obj.getValue("target"))
+            jsonDecoder.json.decodeFromJsonElement(serializer<MpsNodeReferenceTargetJson>(), obj.getValue("target"))
         } else {
             null
         }
