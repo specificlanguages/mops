@@ -101,6 +101,14 @@ daemon checks, Gradle discovery tests, and packaging checks, and then runs the `
 `daemon-versions` and integration matrices cover the excluded daemon tests and CLI integration suite. The `CI passed`
 job requires every job to succeed. Release validation runs the complete `check`, including the full integration matrix.
 
+When every job succeeds, `CI passed` saves a `ci-passed-<tree>` cache entry for the tested git tree. For a pull request
+the tested tree is the tree of the merge commit, and the `tree-check` job prints it in its summary. A pull request run
+that finds an entry for its tree skips the test jobs, and `CI passed` still succeeds. This happens, for example, when a
+stacked pull request is rebased onto `main` without changing its code. Entries saved by a pull request run are only
+visible to later runs of the same pull request. Entries saved by runs on `main` are visible to all pull requests. Pushes
+to `main` and manual dispatches never skip. Re-running a skipped run skips again. To force a full pull request run,
+delete the entry with `gh cache delete ci-passed-<tree>` and re-run the workflow.
+
 To test an already extracted distribution, use the separate local task:
 
 ```sh
