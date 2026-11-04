@@ -124,12 +124,13 @@ both tiers. Release validation runs the complete `check`, including the full int
 When every planned job succeeds, `CI passed` saves a cache entry for the tested git tree: `ci-passed-<tree>` in the full
 tier, `ci-passed-pr-<tree>` in the pull request tier. For a pull request the tested tree is the tree of the merge
 commit, and the `plan` job prints it in its summary. A pull request run that finds either entry for its tree skips the
-test jobs, and `CI passed` still succeeds. This happens, for example, when a stacked pull request is rebased onto `main`
-without changing its code. Entries saved by a pull request run are only visible to later runs of the same pull request.
-Entries saved by runs on `main` are visible to all pull requests. Merge queue runs, pushes to `main`, and manual
-dispatches never skip, so a pull request tier entry never replaces a full tier run. Re-running a skipped run skips
-again. To force a full pull request tier run, delete the entries with `gh cache delete ci-passed-<tree>` and
-`gh cache delete ci-passed-pr-<tree>` and re-run the workflow.
+test jobs, and `CI passed` still succeeds, for example after a stacked pull request is rebased onto `main` without
+changing its code. Re-running a skipped run skips again.
+
+Entries saved by a pull request run are visible only to later runs of the same pull request; entries saved by runs on
+`main` are visible to all pull requests. Merge queue runs, pushes to `main`, and manual dispatches never skip, so a pull
+request tier entry never replaces a full tier run. To make a pull request run without skipping, delete both entries with
+`gh cache delete ci-passed-<tree>` and `gh cache delete ci-passed-pr-<tree>`, then re-run the workflow.
 
 To test an already extracted distribution, use the separate local task:
 
