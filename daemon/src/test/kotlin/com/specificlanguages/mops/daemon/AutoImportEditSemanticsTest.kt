@@ -93,7 +93,7 @@ class AutoImportEditSemanticsTest {
 
             // Point an existing reference at a node in the sandbox model, which the structure model does not import.
             // Advisory saves despite the reference-scope violation, isolating the model-import behavior.
-            mpsAccess.write {
+            val response = mpsAccess.write {
                 modelEdit(
                     batchOf(
                         EditOperation.SetReference(
@@ -109,6 +109,10 @@ class AutoImportEditSemanticsTest {
             assertTrue(
                 importsModel(structureModel(projectPath), SANDBOX_MODEL_NAME),
                 "referencing a node in the sandbox model must add it to the structure model's imports",
+            )
+            assertEquals(
+                listOf("added model import $SANDBOX_MODEL_NAME to model com.specificlanguages.json.structure"),
+                response.notes,
             )
         }
     }

@@ -613,7 +613,7 @@ class EditBatchExecutor(
         // holds, so a headless edit does not leave a model using an undeclared language or referencing an unimported
         // model. This is reached only on a saving path — a batch that failed or was blocked left before here — so a
         // rejected edit adds no imports.
-        val notes = ensureUsedImports(affectedModels, placements, rootPlacements, referencePlacements)
+        val notes = addMissingImports(affectedModels, placements, rootPlacements, referencePlacements)
 
         return when (val saveOutcome = writeScope.saveWithResolveInfo(affectedModels)) {
             SaveOutcome.Saved -> ModelEditResponse(
@@ -642,7 +642,7 @@ class EditBatchExecutor(
      * count as declared. Returns one note per added language or import. Runs inside the edit's write transaction, so
      * the added imports are saved together with the edit or discarded together with it.
      */
-    private fun ensureUsedImports(
+    private fun addMissingImports(
         affectedModels: Iterable<EditableSModel>,
         placements: List<Placement>,
         rootPlacements: List<RootPlacement>,
