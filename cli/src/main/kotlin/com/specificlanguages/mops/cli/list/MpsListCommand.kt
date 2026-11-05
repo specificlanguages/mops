@@ -13,6 +13,20 @@ import picocli.CommandLine.Parameters
     name = "list",
     aliases = ["ls"],
     description = ["List an MPS navigation target as a bounded tree."],
+    footer = [
+        "",
+        "Space-separated target segments address a module, model, or node. After a module, a `.suffix` model segment " +
+            "expands against the module name, and a segment that is a single `.` names the model whose name equals " +
+            "the module name; that name alone is ambiguous between the module and the model.",
+        "",
+        "Text output is one indented tab-separated row per entry, tagged by kind (`project`, `repository`, " +
+            "`module`, `model`, `root`, or `node`); --json prints the semantic tree. A level wider than --limit ends " +
+            "in an indented `# truncated: showing <shown> of <total> children; pass --limit 0 for all` line. See " +
+            "`mops explain output`.",
+        "",
+        "--summary groups the target's children: per role, with the dominant concepts, for a node; per concept " +
+            "for a model's roots; per model for a module; per kind for the project or repository.",
+    ],
 )
 class MpsListCommand(private val environment: CommandEnvironment) : CliCommand() {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))

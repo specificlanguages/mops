@@ -18,13 +18,31 @@ import picocli.CommandLine.Parameters
         "\${COMMAND-FULL-NAME} [OPTIONS] NODE_REFERENCE",
         "       \${COMMAND-FULL-NAME} [OPTIONS] MODEL_TARGET NODE_ID",
     ],
+    footer = [
+        "",
+        "An unresolved target fails with NODE_NOT_FOUND. The exported object carries the node's concept, id, " +
+            "properties, references, and child subtree, plus a `parent` object for its immediate containing node: " +
+            "the containment `role` by which the node sits in it, a `type` of `root` or `node`, and the parent's " +
+            "name, concept, and reference. A root node has no `parent`.",
+        "",
+        "Output is pretty-printed with `concept`, `id`, and `parent` ahead of `properties`, `references`, and " +
+            "`children`, so `head` shows the identifying part first.",
+        "",
+        "With --depth N, the top-level object gains `truncatedAt: N`, so a stub (`childCount` present) is never " +
+            "mistaken for a leaf. --summary prints the same summary object `find` emits (`type`, `name`, `concept`, " +
+            "`reference`, `parent`) plus `children` as a role-to-count map, without serializing the subtree. When " +
+            "neither is given and the export exceeds about 16 KB, a hint on stderr points at both options.",
+    ],
 )
 class ModelGetNodeCommand(private val environment: CommandEnvironment) : CliCommand() {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
 
     @Option(
         names = ["--ancestry"],
-        description = ["Nest the node's full containment chain up to the root node, not just its immediate parent."],
+        description = [
+            "Nest `parent` recursively up to the root node, giving the full containment chain, not just the " +
+                "immediate parent.",
+        ],
     )
     var ancestry: Boolean = false
 

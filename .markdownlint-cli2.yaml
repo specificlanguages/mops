@@ -3,5 +3,11 @@ config:
     line_length: 120
     code_blocks: false
     tables: false
-globs:
-  - cli/build/generated/examples/pages/*.md
+  paragraph-length:
+    max_words: 150
+customRules:
+  - ./tools/markdownlint/paragraph-length.cjs
+gitignore: true
+# Agent worktrees are often ignored only by a global Git ignore file, which the gitignore option does not read.
+ignores:
+  - .claude/worktrees/**

@@ -15,7 +15,20 @@ import picocli.CommandLine.*
  * recorded process is not signalled. A daemon that acknowledges the stop but survives the force-kill keeps its record
  * and makes the command exit non-zero.
  */
-@Command(name = "stop", description = ["Stop a daemon process."])
+@Command(
+    name = "stop",
+    description = ["Stop a daemon process."],
+    footer = [
+        "",
+        "Sends a stop request to each selected daemon and waits for its process to exit, force-killing it if " +
+            "necessary. It prints one action report line per record. A stopped daemon's record is removed and " +
+            "reported as `stopped ...`. If the stop request gets no response, the record is removed as stale and " +
+            "reported as `removed stale daemon record ...; process not signalled`; the recorded process is not " +
+            "killed. If the daemon acknowledges the stop but its process survives the force-kill, the record is " +
+            "kept so the next `daemon stop` retries it, the PID is reported on stderr, and the command exits " +
+            "non-zero. When no record matches, it prints the metadata line `# no mops daemons` and exits 0.",
+    ],
+)
 class DaemonStopCommand(private val environment: CommandEnvironment) : CliCommand(), IExitCodeGenerator {
     @Option(names = ["--all"], description = ["Stop daemons for all projects."])
     var all: Boolean = false

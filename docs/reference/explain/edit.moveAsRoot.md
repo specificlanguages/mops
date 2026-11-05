@@ -1,0 +1,50 @@
+# mops explain edit.moveAsRoot
+
+Generated from `mops explain edit.moveAsRoot` by `./gradlew :cli:updateReference`. Do not edit this page. Back to the
+[index](../index.md).
+
+```text
+edit.moveAsRoot — move an existing node to root node position of a model.
+
+FIELDS
+  op          "moveAsRoot"
+  target      (required) the node to move — a child or an existing root (see target)
+  model       (required) the destination model — a model reference string or a
+              {"model": <target>} object (see node-ref)
+
+SEMANTICS
+  Detaches target from its current location — a containment role or another
+  model's roots — and attaches it as a root node of the destination model. The
+  node keeps its identity. The placement is checked against the can-be-root
+  constraint.
+
+  The reverse — moving a root into a parent's containment role — needs no special
+  operation: moveAsChild already accepts a root as its target and detaches it.
+
+  moveAsRoot binds no alias of its own, but its target may be a $alias a creating
+  operation bound earlier in the same batch — reference it as $name (the leading $
+  is required in references).
+
+EXAMPLE
+  Copy a node under a parent, then promote that copy to a standalone root through
+  its alias:
+{
+  "operations": [
+    {
+      "op": "copyAsChild",
+      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+      "source": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544569338",
+      "role": "members",
+      "as": "extracted"
+    },
+    {
+      "op": "moveAsRoot",
+      "target": "$extracted",
+      "model": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
+    }
+  ]
+}
+
+SEE ALSO
+  edit, edit.moveAsChild, target, node-ref
+```

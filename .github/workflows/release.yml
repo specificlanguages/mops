@@ -66,8 +66,9 @@ jobs:
           mkdir unpacked
           unzip -q "$archive" -d unpacked
           reported="$("unpacked/mops-${VERSION}/bin/mops" --version)"
-          if [[ "$reported" != "mops ${VERSION}" ]]; then
-            echo "Expected 'mops ${VERSION}', got '$reported'" >&2
+          expected="mops ${VERSION} ($(git rev-parse --short HEAD))"
+          if [[ "$reported" != "$expected" ]]; then
+            echo "Expected '$expected', got '$reported'" >&2
             exit 1
           fi
 

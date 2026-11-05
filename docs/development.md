@@ -14,6 +14,20 @@ The repository is a Gradle-rooted Kotlin prototype with two application subproje
 command requires an MPS project root containing `.mps/`. `--java-home` can be omitted when the MPS distribution bundles
 Java.
 
+### Build version
+
+`mops --version`, `mops-daemon --version`, the first line of `mops --help` and of `mops wrapper` output report the
+`version` from `gradle.properties` together with the git commit of the build, for example `0.4.0-SNAPSHOT (abc1234)`.
+The build runs `git describe --always --dirty` in the repository root and stores the result in the protocol jar, so an
+installed distribution needs no git checkout. A build with uncommitted changes to tracked files reports `abc1234-dirty`.
+A source tree without its own `.git`, or a machine without git, builds normally and reports `(unknown revision)`. Test
+tasks ignore the commit on their classpath, so a new commit alone does not rerun them.
+
+## Command names
+
+Commands that operate on MPS data use a verb-first shape: `mops <verb> <object>`, such as `mops find instances`.
+Operational commands use a concrete subsystem or artifact name, such as `daemon`, `code`, and `wrapper`.
+
 ## Commits and pull requests
 
 Pull request titles follow [Conventional Commits](https://www.conventionalcommits.org/). Pull requests are
@@ -22,6 +36,28 @@ with the `conventional-pre-commit` hook from `.pre-commit-config.yaml`, which ru
 the allowed types when it rejects one. GitHub release notes list the merged pull requests by title.
 
 Commit messages on pull request branches are free-form.
+
+Before you open a pull request:
+
+- Cherry-picks and rebases don't run the `pre-commit` hook, so prek may not have checked commits made that way.
+- Run `./gradlew detektMain` (see [Code structure checks](#code-structure-checks)).
+- Run the focused tests for what you changed, for example one test class on one MPS version.
+- After changing anything under `examples/`, run `./gradlew :cli:updateExamples` and commit the regenerated
+  `skills/mops/references/` pages.
+- Keep `.kt` and `.md` files under the `file-size` hook's limit. Split a file instead of growing it.
+
+## Release
+
+Releases are published from explicit release commits on `main`:
+
+1. Change `version` in `gradle.properties` from the development snapshot to the exact release version and merge the
+   release commit.
+2. Run the **Release mops** workflow from `main`, entering the version without the `v` prefix.
+3. After publication, change `gradle.properties` to the next development `-SNAPSHOT` version.
+
+The workflow verifies the version, runs all checks, smoke-tests the ZIP distribution, generates its SHA-256 checksum,
+and publishes both files in a GitHub Release with notes generated from the merged pull requests. It creates the
+`v<version>` tag at the tested release commit; release tags must not be created manually.
 
 ## Code structure checks
 
@@ -47,6 +83,10 @@ The `file-size` pre-commit hook rejects `.kt` and `.md` files larger than 20000 
 Files that were already larger are listed in the hook's `exclude` pattern in `.pre-commit-config.yaml`. Remove a file
 from that list after splitting it.
 
+The custom markdownlint rule `paragraph-length` in `tools/markdownlint/` rejects Markdown paragraphs with more words
+than `max_words` in `.markdownlint-cli2.yaml`. When the rule, `.markdownlint-cli2.yaml`, or `.pre-commit-config.yaml`
+changes, the `markdownlint-cli2-all` hook lints every Markdown file that Git does not ignore.
+
 ## Daemon tests on each MPS version
 
 `./gradlew :daemon:test` runs the daemon tests against the MPS version pinned as `mps` in `gradle/libs.versions.toml`.
@@ -55,7 +95,7 @@ from that list after splitting it.
 mps-platform-cache. `./gradlew :daemon:testAllMpsVersions` runs all of them. Each task keeps its MPS state under
 `daemon/build/mps-test-<version>/` and its reports under `daemon/build/reports/tests/<task-name>/`, so the tasks can run
 side by side. `check` runs `:daemon:test` and, through `testOtherMpsVersions`, the tasks for the other supported
-versions. CI runs every version's task in its own `daemon-versions` matrix job instead.
+versions. CI runs these tasks in `daemon-versions` matrix jobs instead.
 
 ## Integration tests
 
@@ -93,21 +133,8 @@ to it. A test that must not see such changes passes its own `copy` key. Tests th
 daemon, run a separate builder daemon or a modified MPS distribution, or run MPS tests in worker processes, create a
 private daemon home in their own `@TempDir` and stop it with `stopDaemons`.
 
-PRs, pushes to `main`, and manual workflow dispatch run the full integration matrix, the CLI smoke suite on macOS and
-Windows, and an Ubuntu verification job. Linux has no separate smoke job: the integration job for the last supported
-version runs every smoke test on Ubuntu. The verification job runs
-`check -x :cli:integrationTest -x :daemon:test -x :daemon:testOtherMpsVersions`, covering all subprojects' unit tests,
-daemon checks, Gradle discovery tests, and packaging checks, and then runs the `prek` hooks on all files. The separate
-`daemon-versions` and integration matrices cover the excluded daemon tests and CLI integration suite. The `CI passed`
-job requires every job to succeed. Release validation runs the complete `check`, including the full integration matrix.
-
-When every job succeeds, `CI passed` saves a `ci-passed-<tree>` cache entry for the tested git tree. For a pull request
-the tested tree is the tree of the merge commit, and the `tree-check` job prints it in its summary. A pull request run
-that finds an entry for its tree skips the test jobs, and `CI passed` still succeeds. This happens, for example, when a
-stacked pull request is rebased onto `main` without changing its code. Entries saved by a pull request run are only
-visible to later runs of the same pull request. Entries saved by runs on `main` are visible to all pull requests. Pushes
-to `main` and manual dispatches never skip. Re-running a skipped run skips again. To force a full pull request run,
-delete the entry with `gh cache delete ci-passed-<tree>` and re-run the workflow.
+CI has a pull request tier and a full tier, which runs in the merge queue and on `main`. [ci.md](ci.md) describes the
+tiers, the test shards of pull request runs, docs-only runs, and how runs of an already tested tree are skipped.
 
 To test an already extracted distribution, use the separate local task:
 
@@ -162,9 +189,9 @@ references and runs in both `check` and `smokeTest`.
 
 `ExamplesCommandTest` parses CLI recipes directly from the catalog with the current command tree, including commands in
 shell pipelines, without executing them. It validates JSON edit batches with the protocol serializer and generated
-schema, and checks bundled reference links. These checks catch syntax and protocol drift without starting MPS. The
-pre-commit CI job generates the pages first; Markdown lint includes the generated build output as well as checked-in
-references. Line-length checks apply to prose, excluding code blocks and tables globally.
+schema, and checks bundled reference links. These checks catch syntax and protocol drift without starting MPS. Markdown
+lint checks the checked-in references, not the generated build output. Line-length checks apply to prose, excluding code
+blocks and tables globally.
 
 `BundledExamplesIntegrationTest` creates a named JUnit dynamic test for each executable Groovy spec. It starts one
 daemon and gives every example fresh models in a disposable BaseLanguage project. Each spec declares its placeholder
@@ -176,44 +203,19 @@ suite uses the last supported MPS version, and the full integration matrix runs 
 ./gradlew :cli:smokeIntegrationTest --tests '*BundledExamplesIntegrationTest'
 ```
 
-### Test-running integration tests
+### Command reference
 
-`TestFamiliesIntegrationTest` checks native BaseLanguage, language, generator, Jupiter, parameterized, and legacy JUnit
-results. Its test methods share immutable reports from a completed full-project run and a parameterized-case selection
-run. The fixture daemon stops before any method inspects those reports. Slow and crashing models are removed from that
-fixture copy. Each request still executes in a separate worker process.
-
-Integration JUnit output includes `MOPS_CLI_TIMING` for calls through the `runCommandLine` test helper. The
-`stopDaemons` helper emits `MOPS_DAEMON_STOP_TIMING` for daemon shutdown including its exit wait. CLI duration includes
-daemon startup when a call starts a daemon. Before deleting fixtures, `stopDaemons` copies test-run reports and
-preparation/Ant logs to `cli/build/test-results/test-run-diagnostics/<MPS version>/<run ID>/`, included in CI's
-test-report artifact. A job killed before fixture teardown may not retain these files.
-
-Each test report's `timingsMillis` records process-local monotonic durations: `preparationStartup` measures preparation
-entry to project opening (or the no-build shortcut), `build` includes generation/compilation and saving,
-`antStartupAndDiscovery` includes Ant setup and worker startup through discovery, `execution` ends when the test plan
-finishes, and `antShutdown` ends when Ant exits. Event collection has 50 ms polling resolution. `workerLifetime` is the
-parent's enclosing spawn-to-exit measurement and overlaps the worker phases; do not add it to them. Missing phases were
-not reached or could not be saved before a process was killed. These timings do not separately measure plugin loading or
-indexing. Per-event report writes checkpoint the active duration, and orderly failures/timeouts close it.
-
-`TestRunningIntegrationTest` uses fresh project copies for root test-case/model/module/project selection, multiple test
-modules, preparation failures, and worker lifecycle behavior. The fixtures live in `test-projects/testing`, and the
-project-library and path-macro fixture in `test-projects/project-library`. The lifecycle test reacts to report updates
-instead of waiting out deadlines, apart from one 15-second test execution limit. Runtime reload and daemon lifecycle
-tests also retain their independent process boundaries.
+`docs/reference/` is generated output: one page per top-level command with the `--help` output of the command and its
+subcommands, one page per `mops explain` topic, and an index that also links the bundled skills. `updateReference`
+renders it in-process from the command tree, without a daemon or MPS. `checkReference` rejects a stale reference and
+runs in `check`. Change the command's help text or the explain page, never the generated page.
 
 ```sh
-./gradlew :cli:integrationTestMps2024.1.6 --tests '*TestRunningIntegrationTest' --tests '*TestFamiliesIntegrationTest' \
-  :cli:integrationTestMps2025.1.4 --tests '*TestRunningIntegrationTest' --tests '*TestFamiliesIntegrationTest' \
-  :cli:integrationTestMps2026.1.1 --tests '*TestRunningIntegrationTest' --tests '*TestFamiliesIntegrationTest'
+./gradlew :cli:updateReference :cli:checkReference
 ```
 
-The build pins MPS 2026.1.1 in `gradle/libs.versions.toml`. To test an MPS 2026.2 development distribution, use
-`integrationTestLocal` with `--tests '*TestRunningIntegrationTest' --tests '*TestFamiliesIntegrationTest'` and the
-extracted distribution/JBR paths. For distributions containing `lib/intellij.libraries.junit5.jar`, the integration
-fixture adjusts Jupiter API imports to the `JUnit` module in its temporary copy.
+### Test-running integration tests
 
-On macOS, MPS's IDEA environment still initializes AWT in headless mode. A sandbox that prevents application
-registration can abort the JVM before tests start. Run with `--no-daemon` outside that sandbox so an existing sandboxed
-Gradle daemon is not reused.
+[Test-running integration tests](test-running-integration-tests.md) covers the test-running fixtures, the timing output
+and test report timings, how to run the tests on each MPS version or an MPS development distribution, and the macOS
+sandbox limitation.

@@ -15,6 +15,20 @@ import picocli.CommandLine.Option
     name = "project",
     header = ["Report which project languages and Java-bearing modules loaded."],
     description = ["Report which project languages and Java-bearing modules loaded, and why each unloaded one failed."],
+    footer = [
+        "",
+        "Use it to trace a CONCEPT_NOT_FOUND from `find instances` to its cause: a concept resolves by name only " +
+            "if its owning language's runtime is loaded.",
+        "",
+        "Text output starts with a `modules<TAB><loaded>/<total> loaded<TAB><failed> failed` summary row, which " +
+            "is a result row, not metadata. One tab-separated row follows per failed module: its name, kind, and " +
+            "reason code; for BROKEN_DEPENDENCIES, indented rows name the root-cause modules to fix. A final `#` " +
+            "metadata line says that modules without a Java facet are not listed; inspect them with " +
+            "`mops diagnose module`. --json prints the full structured diagnosis. The command is a listing and " +
+            "exits 0 regardless of failed modules.",
+        "",
+        REASON_CODES_HELP,
+    ],
 )
 class DiagnoseModulesCommand(private val environment: CommandEnvironment) : CliCommand() {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))

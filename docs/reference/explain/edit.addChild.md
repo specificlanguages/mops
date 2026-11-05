@@ -1,0 +1,51 @@
+# mops explain edit.addChild
+
+Generated from `mops explain edit.addChild` by `./gradlew :cli:updateReference`. Do not edit this page. Back to the
+[index](../index.md).
+
+```text
+edit.addChild — create a new child node under a containment role.
+
+FIELDS
+  op          "addChild"
+  target      (required) the parent node — see target
+  role        (required) the containment role to add the child under
+  concept     (required) qualified concept name of the new node
+  properties  (optional) inline properties for the new node
+  references  (optional) inline references to existing nodes, each {role, to} or
+              {role, target} — see inline-subtree
+  children    (optional) nested nodes: fresh specs, move leaves, or copy leaves —
+              see inline-subtree
+  position    (optional, default last) placement among children — see position
+  as          (optional) batch-local alias bound to the created node; reference it
+              in later operations as $name (the leading $ is required in references)
+
+SEMANTICS
+  Creates one node of concept and inserts it under the parent's containment role
+  at position. Nested children build a whole node subtree in one operation; a
+  move leaf or copy leaf reuses an existing node instead of building a fresh one.
+
+EXAMPLE
+  Add a member, then set a property on it through its alias:
+{
+  "operations": [
+    {
+      "op": "addChild",
+      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+      "role": "members",
+      "concept": "com.specificlanguages.json.structure.JsonMember",
+      "position": "first",
+      "as": "newMember"
+    },
+    {
+      "op": "setProperty",
+      "target": "$newMember",
+      "name": "name",
+      "value": "newMember"
+    }
+  ]
+}
+
+SEE ALSO
+  edit, inline-subtree, target, position, node-ref
+```

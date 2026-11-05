@@ -4,8 +4,9 @@ Examples use `mops`; substitute the project’s generated `mopsw` when available
 reference placeholders with actual project targets. Copy serialized references whole and quote shell metacharacters.
 
 Start with `{{setup}}`, then `{{navigation}}` and `{{search}}` to find targets. For
-changes, read `{{editing}}`; for verification, read `{{validation}}`. For compiled runtime
-and plugin classes, read `{{runtime}}`. `{{all-topics}}` prints every topic. These commands
+changes, read `{{editing}}`; for verification, read `{{validation}}`. To load compiled language
+runtime and plugin classes through a module's class loader (`mops.runtime.loadClass` and `requireClass`), read
+`{{runtime}}`. `{{all-topics}}` prints every topic. These commands
 work without MPS, Java runtime discovery, or a daemon.
 
 - [Setup and API discovery](setup.md)

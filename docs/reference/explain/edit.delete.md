@@ -1,0 +1,28 @@
+# mops explain edit.delete
+
+Generated from `mops explain edit.delete` by `./gradlew :cli:updateReference`. Do not edit this page. Back to the
+[index](../index.md).
+
+```text
+edit.delete — delete a node.
+
+FIELDS
+  op      "delete"
+  target  (required) the node to delete — see target
+
+SEMANTICS
+  Removes the target node together with its whole node subtree from its model.
+
+EXAMPLE
+{
+  "operations": [
+    {
+      "op": "delete",
+      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
+    }
+  ]
+}
+
+SEE ALSO
+  edit, target, node-ref
+```
