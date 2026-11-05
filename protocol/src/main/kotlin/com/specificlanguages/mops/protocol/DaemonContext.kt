@@ -31,8 +31,8 @@ data class DaemonContext internal constructor(
         private fun toRealPathChecked(description: String, path: Path): Path =
             try {
                 path.toRealPath()
-            } catch (e: NoSuchFileException) {
-                throw IllegalArgumentException("File does not exist when resolving $description $path: ${e.message}")
+            } catch (_: NoSuchFileException) {
+                throw IllegalArgumentException("File does not exist when resolving $description $path")
             } catch (e: IOException) {
                 throw IllegalArgumentException("Error resolving $description $path: ${e.message}", e)
             }

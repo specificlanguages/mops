@@ -11,7 +11,7 @@ dependencies {
 tasks.test {
     // Konsist reads the other modules' sources from disk, so Gradle must see them as inputs to rerun the tests when
     // they change.
-    inputs.files(fileTree(isolated.rootProject.projectDirectory) { include("*/src/**") })
+    inputs.files(fileTree(layout.settingsDirectory) { include("*/src/**") })
         .withPropertyName("moduleSources")
         .withPathSensitivity(PathSensitivity.RELATIVE)
 }
