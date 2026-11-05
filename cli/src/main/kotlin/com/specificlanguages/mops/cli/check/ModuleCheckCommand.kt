@@ -24,7 +24,7 @@ class ModuleCheckCommand(environment: CommandEnvironment) : CheckCommand(environ
 
     override fun check(client: DaemonClient): ModelCheckResponse = client.checkModules(modules, limit)
 
-    override fun selectionWithoutRoots(): String =
+    override fun noRootsError(): String =
         if (modules.size == 1) {
             "module ${modules.single()} has no roots"
         } else {

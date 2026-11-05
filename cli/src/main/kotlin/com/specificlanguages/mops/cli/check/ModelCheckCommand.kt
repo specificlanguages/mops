@@ -29,5 +29,5 @@ class ModelCheckCommand(environment: CommandEnvironment) : CheckCommand(environm
 
     override fun check(client: DaemonClient): ModelCheckResponse = client.checkModel(target, limit)
 
-    override fun selectionWithoutRoots(): String = "model $target has no roots"
+    override fun noRootsError(): String = "model $target has no roots"
 }

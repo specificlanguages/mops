@@ -39,13 +39,13 @@ abstract class CheckCommand(private val environment: CommandEnvironment) : CliCo
 
     protected abstract fun check(client: DaemonClient): ModelCheckResponse
 
-    /** Names the checked selection in the error for a selection without roots, e.g. `model foo has no roots`. */
-    protected abstract fun selectionWithoutRoots(): String
+    /** The error for a selection without root nodes, e.g. `model foo has no roots`. */
+    protected abstract fun noRootsError(): String
 
     final override fun run() {
         require(limit >= 0) { "limit must not be negative" }
         val response = check(environment.daemon())
-        check(response.rootsChecked > 0) { "${selectionWithoutRoots()}; nothing was checked" }
+        if (response.rootsChecked == 0) error("${noRootsError()}; nothing was checked")
         exitCode = renderCheckResponse(response, format, environment.nodeReferenceFormat)
     }
 

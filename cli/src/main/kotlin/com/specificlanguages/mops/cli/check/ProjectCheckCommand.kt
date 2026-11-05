@@ -20,5 +20,5 @@ class ProjectCheckCommand(environment: CommandEnvironment) : CheckCommand(enviro
 
     override fun check(client: DaemonClient): ModelCheckResponse = client.checkProject(limit)
 
-    override fun selectionWithoutRoots(): String = "the project has no roots"
+    override fun noRootsError(): String = "the project has no roots"
 }
