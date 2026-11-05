@@ -3,8 +3,11 @@ package com.specificlanguages.mops.cli
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.cli.find.FindSubconceptsCommand
 import com.specificlanguages.mops.daemoncomms.DaemonClient
+import com.specificlanguages.mops.protocol.ConceptTargetJson
 import com.specificlanguages.mops.protocol.FindSubconceptsResponse
 import com.specificlanguages.mops.protocol.ProtocolJson
+import com.specificlanguages.mops.protocol.SearchScopeJson
+import com.specificlanguages.mops.protocol.SearchScopeKind
 import org.junit.jupiter.api.parallel.ResourceLock
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
@@ -16,10 +19,32 @@ import kotlin.test.assertEquals
 @ResourceLock("system-streams")
 class FindSubconceptsCommandTest {
     @Test
+    fun `find subconcepts names the resolved concept and hierarchy filters when it has no subconcepts`() {
+        val client = mock<DaemonClient>()
+        whenever(client.findSubconcepts("Expression", true, true)).thenReturn(
+            FindSubconceptsResponse(
+                target = ConceptTargetJson("jetbrains.mps.baseLanguage.structure.Expression"),
+                scope = SearchScopeJson(SearchScopeKind.LOADED_LANGUAGES),
+                concepts = emptyList(),
+            ),
+        )
+
+        val stdout = tapSystemOut {
+            assertEquals(0, CommandLine(FindSubconceptsCommand(client)).execute("Expression", "--concrete", "--direct"))
+        }
+
+        assertEquals(
+            "# no concrete direct subconcepts of jetbrains.mps.baseLanguage.structure.Expression in loaded languages" +
+                System.lineSeparator(),
+            stdout,
+        )
+    }
+
+    @Test
     fun `find subconcepts prints qualified names and forwards hierarchy filters`() {
         val client = mock<DaemonClient>()
         whenever(client.findSubconcepts("Expression", true, true)).thenReturn(
-            FindSubconceptsResponse(listOf("example.structure.ConcreteExpression")),
+            FindSubconceptsResponse(testConceptTarget, testScope, listOf("example.structure.ConcreteExpression")),
         )
         val stdout = tapSystemOut {
             assertEquals(0, CommandLine(FindSubconceptsCommand(client)).execute("Expression", "--concrete", "--direct"))
@@ -30,7 +55,7 @@ class FindSubconceptsCommandTest {
     @Test
     fun `find subconcepts defaults to all descendants and renders empty JSON results`() {
         val client = mock<DaemonClient>()
-        val response = FindSubconceptsResponse(emptyList())
+        val response = FindSubconceptsResponse(testConceptTarget, testScope, emptyList())
         whenever(client.findSubconcepts("Expression", false, false)).thenReturn(response)
         val stdout = tapSystemOut {
             assertEquals(0, CommandLine(FindSubconceptsCommand(client)).execute("Expression", "--json"))
