@@ -1,9 +1,5 @@
 package com.specificlanguages.mops.daemon
 
-import jetbrains.mps.smodel.ModelDependencyResolver
-import jetbrains.mps.smodel.ModelDependencyScanner
-import jetbrains.mps.smodel.ModelImports
-import jetbrains.mps.smodel.language.LanguageRegistry
 import org.jetbrains.mps.openapi.event.SNodeAddEvent
 import org.jetbrains.mps.openapi.event.SReferenceChangeEvent
 import org.jetbrains.mps.openapi.model.SModel
@@ -39,38 +35,17 @@ internal class MissingImportsTracker(private val repository: SRepository) : SRep
     }
 
     /**
-     * Adds to each model the used languages and the imports of referenced models that the recorded content needs, unless
-     * the model already declares them. The content is each added node with its descendants, and each node whose
-     * reference changed, without its descendants. Languages that a used devkit brings count as
-     * declared, and so do accessory models of used languages, as in MPS's `ModelDependencyUpdate`. Nodes no longer in a
-     * writable model are skipped. Returns one note per added language or import.
+     * Adds to each model the used languages and the imports of referenced models that the recorded content needs, as
+     * the top-level [addMissingImports] does. The content is each added node with its descendants, and each node whose
+     * reference changed, without its descendants. Nodes no longer in a writable model are skipped. Returns one note per
+     * added language or import.
      */
     fun addMissingImports(): List<String> {
-        val resolver = ModelDependencyResolver(LanguageRegistry.getInstance(repository), repository)
         val content = addedNodes.flatMap { node -> SNodeUtil.getDescendants(node) } + referencingNodes
         return content.distinct()
             .mapNotNull { node -> node.model?.takeUnless { it.isReadOnly }?.let { model -> model to node } }
             .groupBy({ it.first }, { it.second })
-            .flatMap { (model, nodes) -> addMissingImports(model, nodes, resolver) }
-    }
-
-    private fun addMissingImports(model: SModel, nodes: List<SNode>, resolver: ModelDependencyResolver): List<String> {
-        val scanner = ModelDependencyScanner().walk(nodes)
-        val imports = ModelImports(model)
-        val modelName = model.name.value
-
-        val declaredLanguages = resolver.usedLanguages(model).toHashSet()
-        val addedLanguages = scanner.usedLanguages.sortedBy { it.qualifiedName }.filter(declaredLanguages::add)
-        addedLanguages.forEach(imports::addUsedLanguage)
-
-        // Read after the languages are added, so the accessory models of an added language count as imported.
-        val visibleModels = imports.importedModels.toHashSet()
-        resolver.implicitImports(model).mapTo(visibleModels) { it.reference }
-        val addedImports = scanner.crossModelReferences.sortedBy { it.name.value }.filter(visibleModels::add)
-        addedImports.forEach(imports::addModelImport)
-
-        return addedLanguages.map { "added used language ${it.qualifiedName} to model $modelName" } +
-            addedImports.map { "added model import ${it.name.value} to model $modelName" }
+            .flatMap { (model, nodes) -> addMissingImports(model, nodes) }
     }
 
     override fun close() = unsubscribeFrom(repository)

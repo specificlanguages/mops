@@ -177,6 +177,34 @@ class AutoImportEditSemanticsTest {
     }
 
     @Test
+    fun `a language that a used devkit brings is not added explicitly`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
+            val languagesBefore = languagesBlock(behaviorModel(projectPath))
+
+            // The behavior model gets baseLanguage through the general-purpose devkit. Advisory saves despite any
+            // can-be-root violation, isolating the used-language behavior.
+            mpsAccess.write {
+                modelEdit(
+                    batchOf(
+                        EditOperation.AddRoot(
+                            model = ModelDestination(BEHAVIOR_MODEL),
+                            concept = CLASS_CONCEPT,
+                            properties = listOf(MpsNodePropertyJson(name = "name", value = "Helper")),
+                        ),
+                    ),
+                    constraints = ConstraintEnforcement.ADVISORY,
+                )
+            }
+
+            assertEquals(
+                languagesBefore,
+                languagesBlock(behaviorModel(projectPath)),
+                "a language the model's devkit brings must not be added to the used-languages block",
+            )
+        }
+    }
+
+    @Test
     fun `a blocked edit adds no import`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
             val before = structureModel(projectPath).readText()
@@ -204,6 +232,8 @@ class AutoImportEditSemanticsTest {
     private fun structureModel(projectPath: Path): Path = projectPath.resolve(STRUCTURE_MODEL_PATH)
 
     private fun buildModel(projectPath: Path): Path = projectPath.resolve(BUILD_MODEL_PATH)
+
+    private fun behaviorModel(projectPath: Path): Path = projectPath.resolve(BEHAVIOR_MODEL_PATH)
 
     // The `<languages>` header block, listing the model's used languages and devkits.
     private fun languagesBlock(model: Path): String = block(model.readText(), "languages")
@@ -234,6 +264,11 @@ class AutoImportEditSemanticsTest {
         const val STRUCTURE_MODEL = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
         const val STRUCTURE_MODEL_PATH =
             "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps"
+
+        // Uses baseLanguage only through the jetbrains.mps.devkit.general-purpose devkit.
+        const val BEHAVIOR_MODEL = "r:0e3ed68a-e841-4ab1-bafa-60852d5e8891(com.specificlanguages.json.behavior)"
+        const val BEHAVIOR_MODEL_PATH =
+            "languages/com.specificlanguages.json/models/com.specificlanguages.json.behavior.mps"
 
         // A solution model that uses only platform build languages (no project language), so it is freely editable in
         // the test environment and does not use baseLanguage.

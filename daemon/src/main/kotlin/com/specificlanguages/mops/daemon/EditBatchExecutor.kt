@@ -20,8 +20,6 @@ import jetbrains.mps.core.aspects.constraints.rules.kinds.ContainmentContext
 import jetbrains.mps.project.Project
 import jetbrains.mps.scope.ErrorScope
 import jetbrains.mps.smodel.CopyUtil
-import jetbrains.mps.smodel.ModelDependencyScanner
-import jetbrains.mps.smodel.ModelImports
 import jetbrains.mps.smodel.SModelInternal
 import jetbrains.mps.smodel.constraints.ConstraintsCanBeFacade
 import jetbrains.mps.smodel.constraints.ModelConstraints
@@ -639,8 +637,8 @@ class EditBatchExecutor(
      * The scan covers the whole subtree of each created, copied, or moved root — so inline children and copied
      * descendants contribute their languages and cross-model references, not just the operation's top node — plus any
      * pre-existing node that had a reference set on it, whose (possibly cross-model) target would otherwise be missed.
-     * Only imports genuinely absent are added, leaving existing (including implicit) imports untouched. Runs inside the
-     * edit's write transaction, so the added imports are saved together with the edit or discarded together with it.
+     * Declared imports follow [addMissingImports]: languages of used devkits and accessory models of used languages
+     * count as declared. Runs inside the edit's write transaction, so the added imports are saved together with the edit or discarded together with it.
      */
     private fun ensureUsedImports(
         affectedModels: Iterable<EditableSModel>,
@@ -658,22 +656,7 @@ class EditBatchExecutor(
                 continue
             }
 
-            val scanner = ModelDependencyScanner().walk(scanned)
-            val imports = ModelImports(model)
-
-            addMissing(scanner.usedLanguages, imports.usedLanguages, imports::addUsedLanguage)
-            addMissing(scanner.crossModelReferences, imports.importedModels, imports::addModelImport)
-        }
-    }
-
-    // Adds each of [required] not already in [declared] via [add], so an existing (including implicit) import is left
-    // untouched and only genuinely absent dependencies are introduced.
-    private fun <T> addMissing(required: Iterable<T>, declared: Collection<T>, add: (T) -> Unit) {
-        val present = declared.toHashSet()
-        for (item in required) {
-            if (present.add(item)) {
-                add(item)
-            }
+            addMissingImports(model, scanned)
         }
     }
 
