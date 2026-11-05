@@ -5,7 +5,9 @@ import com.specificlanguages.mops.protocol.CodeRunRequest
 import com.specificlanguages.mops.protocol.FindingSeverity
 import jetbrains.mps.project.MPSProject
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class CodeModeMissingImportsTest {
@@ -50,6 +52,30 @@ class CodeModeMissingImportsTest {
             """.trimIndent())
 
             assertEquals(emptyList(), response.notes)
+        }
+    }
+
+    @Test
+    fun `a program that fails after a command reports the imports that command added`() {
+        SharedMpsEnvironment.withOpenProjectCopy(projectName = SANDBOX) { project, _ ->
+            val failure = assertFailsWith<IllegalStateException> {
+                run(project, """
+                    def owner = project.read { mops.lookup.requireModule('$SANDBOX_MODEL') }
+                    project.command {
+                        def model = owner.createModel('.client')
+                        def subclass = model.createNode(mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.ClassConcept'))
+                        subclass.properties['name'] = 'Client'
+                        model.addRootNode(subclass)
+                    }
+                    throw new IllegalStateException('program failed')
+                """.trimIndent())
+            }
+
+            assertContains(failure.message.orEmpty(), "program failed")
+            assertContains(
+                failure.message.orEmpty(),
+                "\nadded used language jetbrains.mps.baseLanguage to model $CLIENT_MODEL",
+            )
         }
     }
 

@@ -74,8 +74,9 @@ object CodeModeExtensions {
             MissingImportsTracker(project.repository).use { missingImports ->
                 try {
                     body.call().also {
-                        CodeModeProjectProvider.mops().notes += missingImports.addMissingImports()
+                        val notes = missingImports.addMissingImports()
                         project.repository.saveAll()
+                        CodeModeProjectProvider.mops().notes += notes
                     }
                 } catch (failure: Throwable) {
                     discardUnsavedChanges(project.repository).forEach(failure::addSuppressed)

@@ -19,7 +19,8 @@ import org.jetbrains.mps.openapi.module.SRepositoryContentAdapter
  * they were. Construct, use, and close it with write access.
  */
 internal class MissingImportsTracker(private val repository: SRepository) : SRepositoryContentAdapter(), AutoCloseable {
-    private val changedNodes = mutableListOf<SNode>()
+    private val addedNodes = mutableListOf<SNode>()
+    private val referencingNodes = mutableListOf<SNode>()
 
     init {
         subscribeTo(repository)
@@ -30,30 +31,31 @@ internal class MissingImportsTracker(private val repository: SRepository) : SRep
     override fun stopListening(model: SModel) = model.removeChangeListener(this)
 
     override fun nodeAdded(event: SNodeAddEvent) {
-        changedNodes += event.child
+        addedNodes += event.child
     }
 
     override fun referenceChanged(event: SReferenceChangeEvent) {
-        changedNodes += event.node
+        referencingNodes += event.node
     }
 
     /**
-     * Adds to each model the used languages of the recorded nodes and their descendants, and imports of the models
-     * their references point to, unless the model already declares them. Languages that a used devkit brings count as
+     * Adds to each model the used languages and the imports of referenced models that the recorded content needs, unless
+     * the model already declares them. The content is each added node with its descendants, and each node whose
+     * reference changed, without its descendants. Languages that a used devkit brings count as
      * declared, and so do accessory models of used languages, as in MPS's `ModelDependencyUpdate`. Nodes no longer in a
      * writable model are skipped. Returns one note per added language or import.
      */
     fun addMissingImports(): List<String> {
         val resolver = ModelDependencyResolver(LanguageRegistry.getInstance(repository), repository)
-        return changedNodes
-            .filter { node -> node.model?.isReadOnly == false }
-            .groupBy { node -> node.model!! }
+        val content = addedNodes.flatMap { node -> SNodeUtil.getDescendants(node) } + referencingNodes
+        return content.distinct()
+            .mapNotNull { node -> node.model?.takeUnless { it.isReadOnly }?.let { model -> model to node } }
+            .groupBy({ it.first }, { it.second })
             .flatMap { (model, nodes) -> addMissingImports(model, nodes, resolver) }
     }
 
     private fun addMissingImports(model: SModel, nodes: List<SNode>, resolver: ModelDependencyResolver): List<String> {
-        val scanned = nodes.flatMap { node -> SNodeUtil.getDescendants(node) }.distinct()
-        val scanner = ModelDependencyScanner().walk(scanned)
+        val scanner = ModelDependencyScanner().walk(nodes)
         val imports = ModelImports(model)
         val modelName = model.name.value
 
