@@ -62,3 +62,11 @@ Entries saved by a pull request run are visible only to later runs of the same p
 entry, so a pull request tier entry never replaces a full tier run. To make a pull request run without skipping, delete
 both entries with `gh cache delete ci-passed-<tree>` and `gh cache delete ci-passed-pr-<tree>`, then re-run the
 workflow.
+
+The `setup-gradle` steps leave the MPS distribution archives out of their Gradle user home entries. The
+`.github/actions/mps-distributions` action keeps one `mps-distribution-<group>-<module>-<version>` cache entry per MPS
+version instead, holding that version's directory under `~/.gradle/caches/modules-2/files-2.1/`. Each job restores the
+`mps` and `mps-legacy` versions from `gradle/libs.versions.toml` and the version it tests, after `setup-gradle` and
+before the Gradle build. Pushes to `main` save the entries that do not exist yet, so each entry is saved once and every
+job and pull request reads it. A pull request that adds an MPS version downloads it in every run until it merges. Linux
+and macOS jobs share the entries. Windows jobs download the distributions in every run.
