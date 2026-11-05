@@ -15,4 +15,7 @@ data class TestRunReport(
     val timingsMillis: Map<String, Long> = emptyMap(),
 ) {
     val successful: Boolean get() = complete && outcome == "SUCCESS"
+
+    /** Whether any test or test container result failed. */
+    val hasFailedTests: Boolean get() = results.any { it.status == "FAILED" }
 }

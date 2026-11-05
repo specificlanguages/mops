@@ -45,12 +45,13 @@ class TestReportStore(private val path: Path, private val nanoTime: () -> Long =
         Files.move(pending, path, ATOMIC_MOVE, REPLACE_EXISTING)
     }
     fun phase(phase: String) = update { it.copy(phase = phase) }
-    @Synchronized fun finish(outcome: String, complete: Boolean, vararg diagnostics: String?) {
+    /** Records [conclusion], unless the run was already cancelled, timed out, or lost its parent process. */
+    @Synchronized fun finish(conclusion: TestRunConclusion) {
         endTiming()
         update {
             if (it.outcome in setOf("CANCELLED", "TIMED_OUT", "PARENT_TERMINATED")) it
-            else it.copy(outcome = outcome, complete = complete,
-                diagnostics = it.diagnostics + diagnostics.filterNotNull())
+            else it.copy(outcome = conclusion.outcome, complete = conclusion.complete,
+                diagnostics = it.diagnostics + conclusion.diagnostics)
         }
     }
     fun event(event: Map<String, Any?>) = update { current ->
