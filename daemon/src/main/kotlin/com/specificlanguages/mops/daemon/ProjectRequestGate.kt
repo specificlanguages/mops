@@ -14,16 +14,16 @@ internal class ProjectRequestGate(private val refresh: () -> Unit) {
     private val waiting = ArrayDeque<Ticket>()
     private var active = 0
     private var refreshing = false
-    private var queued = 0L
+    private var issuedTickets = 0L
 
     fun <T> run(parallelRead: Boolean, operation: () -> T): T {
         val ticket = lock.withLock {
-            val ticket = Ticket(parallelRead, ++queued)
+            val ticket = Ticket(parallelRead, ++issuedTickets)
             waiting.addLast(ticket)
             while (!ticket.admitted) {
                 if (active == 0 && !refreshing && waiting.first() === ticket) {
                     refreshing = true
-                    val queuedBeforeRefresh = queued
+                    val issuedBeforeRefresh = issuedTickets
                     lock.unlock()
                     val failure = try {
                         refresh()
@@ -40,7 +40,7 @@ internal class ProjectRequestGate(private val refresh: () -> Unit) {
                         next.failure = failure
                         next.admitted = true
                         active++
-                    } while (parallelRead && waiting.firstOrNull()?.sharesRefresh(queuedBeforeRefresh) == true)
+                    } while (parallelRead && waiting.firstOrNull()?.sharesRefresh(issuedBeforeRefresh) == true)
                     refreshing = false
                     changed.signalAll()
                 } else {
@@ -60,8 +60,9 @@ internal class ProjectRequestGate(private val refresh: () -> Unit) {
         }
     }
 
-    private class Ticket(val parallelRead: Boolean, val number: Long) {
-        fun sharesRefresh(queuedBeforeRefresh: Long) = parallelRead && number <= queuedBeforeRefresh
+    private class Ticket(val parallelRead: Boolean, val sequence: Long) {
+        /** Whether this ticket joins a batch of readers whose refresh started after [issuedBeforeRefresh] tickets. */
+        fun sharesRefresh(issuedBeforeRefresh: Long) = parallelRead && sequence <= issuedBeforeRefresh
 
         var admitted = false
         var failure: Throwable? = null

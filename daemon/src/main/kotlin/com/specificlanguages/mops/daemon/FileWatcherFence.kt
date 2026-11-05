@@ -19,20 +19,20 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
 
 /**
- * Makes sure the native file watcher has reported every change made before [pass] was called. There is no API to
+ * Makes sure the native file watcher has reported every change made before [awaitReported] was called. There is no API to
  * flush pending watcher events, and on macOS an event arrives up to about 300 ms after the change. `fsnotifier` reports
- * events in order, so once it reports a change made by [pass], it has reported every earlier change too.
+ * events in order, so once it reports a change made by [awaitReported], it has reported every earlier change too.
  *
- * Each pass creates a fresh directory with a file in it under [root], a folder that is watched recursively, and waits
+ * Each call creates a fresh directory with a file in it under [root], a folder that is watched recursively, and waits
  * until the watcher reports a path inside that directory. A fresh directory can only be named by events that happened
  * after it was created. The raw watcher events are observed through `FileWatcher.myTestNotifier`, a private hook that
  * the platform calls for every event; see the mps-api-research note native-file-watcher-in-headless-mps.md.
  */
-internal class FileWatcherFence private constructor(private val root: Path) {
+internal class FileWatcherFence private constructor(val root: Path) {
     private val pending = ConcurrentHashMap<String, CountDownLatch>()
 
     /** Returns `true` once the watcher reported the fence, or `false` after [timeout] or when it cannot be written. */
-    fun pass(timeout: Duration): Boolean {
+    fun awaitReported(timeout: Duration): Boolean {
         val marker = root.resolve(UUID.randomUUID().toString())
         val reported = CountDownLatch(1)
         pending[marker.toString()] = reported
@@ -59,7 +59,7 @@ internal class FileWatcherFence private constructor(private val root: Path) {
             marker.resolve("fence").deleteIfExists()
             marker.deleteIfExists()
         } catch (_: IOException) {
-            // A leftover fence directory is harmless: every pass uses a new one.
+            // A leftover fence directory is harmless: every call uses a new one.
         }
     }
 
@@ -68,7 +68,7 @@ internal class FileWatcherFence private constructor(private val root: Path) {
         val instance: FileWatcherFence? by lazy { create() }
 
         private fun create(): FileWatcherFence? {
-            val fileWatcher = (LocalFileSystem.getInstance() as? LocalFileSystemImpl)?.fileWatcher ?: return null
+            val fileWatcher = (LocalFileSystem.getInstance() as LocalFileSystemImpl).fileWatcher
             val hook = try {
                 FileWatcher::class.java.getDeclaredField("myTestNotifier").apply { isAccessible = true }
             } catch (_: ReflectiveOperationException) {

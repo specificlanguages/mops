@@ -17,8 +17,9 @@ import java.time.Duration
  * makes sure the watcher has reported every change made before the request, and a non-forced recursive refresh then
  * visits only the files the watcher reported. The full walk stays the fallback: when the watcher is not operational or
  * has reported a failure, when the fence times out, and on the first refresh after the watch roots changed or
- * `fsnotifier` was started again. A folder is also walked fully the first time it is refreshed and whenever it lies
- * outside every recursive watch root.
+ * `fsnotifier` was started again. A folder is also walked fully the first time it is refreshed, whenever it lies
+ * outside every recursive watch root, and on Windows when it is on another drive than the fence: `fsnotifier` watches
+ * each drive in its own thread, so it keeps the order of events only within a drive.
  *
  * See the mps-api-research note native-file-watcher-in-headless-mps.md.
  */
@@ -31,17 +32,21 @@ internal class WatchedFolderRefresh {
         val started = System.nanoTime()
         val watcher = HeadlessWatcher.find()
         val fileWatcher = (LocalFileSystem.getInstance() as LocalFileSystemImpl).fileWatcher
+        // Created before the roots settle, because creating it adds a watch root.
+        val fence = if (watcher != null && fileWatcher.isOperational) FileWatcherFence.instance else null
         val reason = when {
-            watcher == null || !fileWatcher.isOperational -> "the file watcher is not operational"
+            watcher == null -> "the mops file watcher is not registered"
+            !fileWatcher.isOperational -> "the file watcher is not operational"
             !awaitSettledRoots(fileWatcher::isSettingRoots) -> "the file watcher is still setting its roots"
-            else -> fenceAndCompare(watcher)
+            else -> fenceAndCompare(watcher, fence)
         }
-        return Pass(reason, watcher?.recursiveRoots().orEmpty(), Duration.ofNanos(System.nanoTime() - started))
+        return Pass(
+            reason, watcher?.recursiveRoots().orEmpty(), fence?.root, Duration.ofNanos(System.nanoTime() - started),
+        )
     }
 
-    private fun fenceAndCompare(watcher: HeadlessWatcher): String? {
-        val fence = FileWatcherFence.instance
-        val fenced = fence?.pass(FENCE_TIMEOUT) ?: false
+    private fun fenceAndCompare(watcher: HeadlessWatcher, fence: FileWatcherFence?): String? {
+        val fenced = fence?.awaitReported(FENCE_TIMEOUT) ?: false
         // The watcher reports failures as notifications that are delivered on the EDT.
         ApplicationManager.getApplication().invokeAndWait {}
         val changeCount = watcher.changeCount()
@@ -70,7 +75,12 @@ internal class WatchedFolderRefresh {
      * The refresh of one request. [fullWalkReason] is `null` when the watcher is trusted and says otherwise why every
      * folder is walked.
      */
-    inner class Pass(val fullWalkReason: String?, private val recursiveRoots: List<Path>, private val preparation: Duration) {
+    inner class Pass(
+        val fullWalkReason: String?,
+        private val recursiveRoots: List<Path>,
+        private val fenceRoot: Path?,
+        private val preparation: Duration,
+    ) {
         private var walked = 0
         private var watched = 0
         private var refreshing = Duration.ZERO
@@ -96,7 +106,8 @@ internal class WatchedFolderRefresh {
             } catch (_: IOException) {
                 return false
             }
-            return recursiveRoots.any(real::startsWith)
+            val sameDrive = !isWindows || real.root == fenceRoot?.root
+            return sameDrive && recursiveRoots.any(real::startsWith)
         }
 
         /** A line for the daemon log that names how the folders were refreshed and what it cost. */
@@ -127,5 +138,6 @@ internal class WatchedFolderRefresh {
         val FENCE_TIMEOUT: Duration = Duration.ofSeconds(2)
         val ROOTS_TIMEOUT: Duration = Duration.ofSeconds(10)
         const val POLL_MILLIS = 10L
+        val isWindows = System.getProperty("os.name").startsWith("Windows")
     }
 }
