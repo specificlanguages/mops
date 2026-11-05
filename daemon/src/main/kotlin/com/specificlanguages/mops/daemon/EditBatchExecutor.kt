@@ -613,13 +613,14 @@ class EditBatchExecutor(
         // holds, so a headless edit does not leave a model using an undeclared language or referencing an unimported
         // model. This is reached only on a saving path — a batch that failed or was blocked left before here — so a
         // rejected edit adds no imports.
-        ensureUsedImports(affectedModels, placements, rootPlacements, referencePlacements)
+        val notes = ensureUsedImports(affectedModels, placements, rootPlacements, referencePlacements)
 
         return when (val saveOutcome = writeScope.saveWithResolveInfo(affectedModels)) {
             SaveOutcome.Saved -> ModelEditResponse(
                 created = aliases.mapValues { (_, node) -> persistence.asString(node.reference) },
                 violations = violations,
                 warnings = warnings,
+                notes = notes,
             )
             is SaveOutcome.SaveFailed -> fail(
                 MpsErrorCode.SAVE_FAILED,
@@ -638,26 +639,21 @@ class EditBatchExecutor(
      * descendants contribute their languages and cross-model references, not just the operation's top node — plus any
      * pre-existing node that had a reference set on it, whose (possibly cross-model) target would otherwise be missed.
      * Declared imports follow [addMissingImportsTo]: languages of used devkits and accessory models of used languages
-     * count as declared. The edit response does not list the added imports. Runs inside the edit's write transaction,
-     * so the added imports are saved together with the edit or discarded together with it.
+     * count as declared. Returns one note per added language or import. Runs inside the edit's write transaction, so
+     * the added imports are saved together with the edit or discarded together with it.
      */
     private fun ensureUsedImports(
         affectedModels: Iterable<EditableSModel>,
         placements: List<Placement>,
         rootPlacements: List<RootPlacement>,
         referencePlacements: List<ReferencePlacement>,
-    ) {
+    ): List<String> {
         val createdRoots = placements.map { it.child } + rootPlacements.map { it.node }
-        for (model in affectedModels) {
+        return affectedModels.flatMap { model ->
             val createdInModel = createdRoots.filter { it.model === model }
             val referenceSourcesInModel = referencePlacements.map { it.node }.filter { it.model === model }
-            val scanned = SNodeUtil.getDescendants(createdInModel).toMutableList()
-            scanned.addAll(referenceSourcesInModel)
-            if (scanned.isEmpty()) {
-                continue
-            }
-
-            addMissingImportsTo(model, scanned)
+            val scanned = SNodeUtil.getDescendants(createdInModel) + referenceSourcesInModel
+            if (scanned.isEmpty()) emptyList() else addMissingImportsTo(model, scanned)
         }
     }
 

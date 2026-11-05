@@ -167,6 +167,7 @@ class DaemonProtocolJsonTest {
                     message = "not checked in this slice",
                 ),
             ),
+            notes = listOf("added used language jetbrains.mps.baseLanguage to model main"),
         )
         val serializedResponse = ProtocolJson.encodeResponse(response)
 

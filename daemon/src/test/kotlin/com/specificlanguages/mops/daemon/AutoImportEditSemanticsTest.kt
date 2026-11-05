@@ -32,7 +32,7 @@ class AutoImportEditSemanticsTest {
 
             // ClassConcept is not a legal root of a structure model; advisory enforcement saves the edit despite the
             // can-be-root violation, so the import behavior can be observed in isolation.
-            mpsAccess.write {
+            val response = mpsAccess.write {
                 modelEdit(
                     batchOf(
                         EditOperation.AddRoot(
@@ -48,6 +48,10 @@ class AutoImportEditSemanticsTest {
             assertTrue(
                 usesLanguage(structureModel(projectPath), BASE_LANGUAGE),
                 "instantiating a baseLanguage concept must add baseLanguage to the model's used languages",
+            )
+            assertEquals(
+                listOf("added used language $BASE_LANGUAGE to model com.specificlanguages.json.structure"),
+                response.notes,
             )
         }
     }
@@ -183,7 +187,7 @@ class AutoImportEditSemanticsTest {
 
             // The behavior model gets baseLanguage through the general-purpose devkit. Advisory saves despite any
             // can-be-root violation, isolating the used-language behavior.
-            mpsAccess.write {
+            val response = mpsAccess.write {
                 modelEdit(
                     batchOf(
                         EditOperation.AddRoot(
@@ -201,6 +205,7 @@ class AutoImportEditSemanticsTest {
                 languagesBlock(behaviorModel(projectPath)),
                 "a language the model's devkit brings must not be added to the used-languages block",
             )
+            assertEquals(emptyList(), response.notes)
         }
     }
 

@@ -57,8 +57,9 @@ Pitfalls when navigating and searching:
   encoded base64 form, while mops prints decimal IDs; the command accepts both.
 
 Read `mops examples editing` to choose JSON edit batches, Java insertion, or Code Mode. JSON batches report containment
-constraint violations; Code Mode supports custom traversal and logic. Check edited models with `check model`, build with
-`make module`, and run relevant tests with `test`. Constraint checks alone do not establish model or build correctness.
+constraint violations and the used languages and model imports they add; Code Mode supports custom traversal and logic.
+Check edited models with `check model`, build with `make module`, and run relevant tests with `test`. Constraint checks
+alone do not establish model or build correctness.
 
 For test selection, build options, failure reports, and worker limitations, read `mops examples validation` or the
 [bundled validation recipes](references/validation.md).
