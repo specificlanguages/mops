@@ -239,6 +239,57 @@ class ModelCheckCommandTest {
     }
 
     @Test
+    fun `a human finding stays on one row when its message has newlines and tabs`() {
+        val client = mock<DaemonClient>()
+        whenever(client.checkModel(MODEL, 20)).thenReturn(
+            ModelCheckResponse(
+                limit = 20,
+                truncated = false,
+                totals = ModelCheckFindingCounts(errors = 0, warnings = 1, infos = 0),
+                findings = listOf(MULTILINE_FINDING),
+            ),
+        )
+
+        val stdout = tapSystemOut {
+            CommandLine(ModelCheckCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(MODEL)
+        }
+
+        assertEquals(
+            listOf(
+                "warning\tWarning: getQualifiedName():String is deprecated (\\n)\\r\\n\\tsee docs\t<unnamed>\t" +
+                    "jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation\t$MODEL/call",
+                "# 0 errors, 1 warning, 0 infos",
+            ),
+            stdout.trim().lines(),
+        )
+    }
+
+    @Test
+    fun `jsonl output keeps newlines and tabs in a finding message`() {
+        val client = mock<DaemonClient>()
+        whenever(client.checkModel(MODEL, 20)).thenReturn(
+            ModelCheckResponse(
+                limit = 20,
+                truncated = false,
+                totals = ModelCheckFindingCounts(errors = 0, warnings = 1, infos = 0),
+                findings = listOf(MULTILINE_FINDING),
+            ),
+        )
+
+        val stdout = tapSystemOut {
+            CommandLine(ModelCheckCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("--format", "jsonl", MODEL)
+        }
+
+        val lines = stdout.trim().lines()
+        assertEquals(2, lines.size, stdout)
+        assertEquals(MULTILINE_FINDING, ProtocolJson.finding.decode(lines[0]))
+    }
+
+    @Test
     fun `model check rejects an unknown format`() {
         val client = mock<DaemonClient>()
         whenever(client.checkModel(MODEL, 20)).thenReturn(
@@ -278,6 +329,17 @@ class ModelCheckCommandTest {
         val WARNING_FINDING = ModelCheckFindingJson(
             severity = FindingSeverity.WARNING,
             message = "model-level note",
+        )
+
+        val MULTILINE_FINDING = ModelCheckFindingJson(
+            severity = FindingSeverity.WARNING,
+            message = "Warning: getQualifiedName():String is deprecated (\n)\r\n\tsee docs",
+            node = MpsNodeSummaryJson(
+                type = "node",
+                name = null,
+                concept = "jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation",
+                reference = "$MODEL/call",
+            ),
         )
     }
 }
