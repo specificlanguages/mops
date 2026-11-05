@@ -239,14 +239,14 @@ class ModelCheckCommandTest {
     }
 
     @Test
-    fun `a human finding stays on one row when its message has newlines and tabs`() {
+    fun `a human finding stays on one row when its message has newlines, tabs and backslashes`() {
         val client = mock<DaemonClient>()
         whenever(client.checkModel(MODEL, 20)).thenReturn(
             ModelCheckResponse(
                 limit = 20,
                 truncated = false,
                 totals = ModelCheckFindingCounts(errors = 0, warnings = 1, infos = 0),
-                findings = listOf(MULTILINE_FINDING),
+                findings = listOf(CONTROL_CHARACTER_FINDING),
             ),
         )
 
@@ -258,7 +258,7 @@ class ModelCheckCommandTest {
 
         assertEquals(
             listOf(
-                "warning\tWarning: getQualifiedName():String is deprecated (\\n)\\r\\n\\tsee docs\t<unnamed>\t" +
+                "warning\tWarning: getQualifiedName():String is deprecated (\\n)\\r\\n\\tsee C:\\\\docs\t<unnamed>\t" +
                     "jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation\t$MODEL/call",
                 "# 0 errors, 1 warning, 0 infos",
             ),
@@ -274,7 +274,7 @@ class ModelCheckCommandTest {
                 limit = 20,
                 truncated = false,
                 totals = ModelCheckFindingCounts(errors = 0, warnings = 1, infos = 0),
-                findings = listOf(MULTILINE_FINDING),
+                findings = listOf(CONTROL_CHARACTER_FINDING),
             ),
         )
 
@@ -286,7 +286,7 @@ class ModelCheckCommandTest {
 
         val lines = stdout.trim().lines()
         assertEquals(2, lines.size, stdout)
-        assertEquals(MULTILINE_FINDING, ProtocolJson.finding.decode(lines[0]))
+        assertEquals(CONTROL_CHARACTER_FINDING, ProtocolJson.finding.decode(lines[0]))
     }
 
     @Test
@@ -331,9 +331,9 @@ class ModelCheckCommandTest {
             message = "model-level note",
         )
 
-        val MULTILINE_FINDING = ModelCheckFindingJson(
+        val CONTROL_CHARACTER_FINDING = ModelCheckFindingJson(
             severity = FindingSeverity.WARNING,
-            message = "Warning: getQualifiedName():String is deprecated (\n)\r\n\tsee docs",
+            message = "Warning: getQualifiedName():String is deprecated (\n)\r\n\tsee C:\\docs",
             node = MpsNodeSummaryJson(
                 type = "node",
                 name = null,
