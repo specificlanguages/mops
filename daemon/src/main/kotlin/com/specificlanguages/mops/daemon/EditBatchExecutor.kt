@@ -637,8 +637,9 @@ class EditBatchExecutor(
      * The scan covers the whole subtree of each created, copied, or moved root — so inline children and copied
      * descendants contribute their languages and cross-model references, not just the operation's top node — plus any
      * pre-existing node that had a reference set on it, whose (possibly cross-model) target would otherwise be missed.
-     * Declared imports follow [addMissingImports]: languages of used devkits and accessory models of used languages
-     * count as declared. Runs inside the edit's write transaction, so the added imports are saved together with the edit or discarded together with it.
+     * Declared imports follow [addMissingImportsTo]: languages of used devkits and accessory models of used languages
+     * count as declared. The edit response does not list the added imports. Runs inside the edit's write transaction,
+     * so the added imports are saved together with the edit or discarded together with it.
      */
     private fun ensureUsedImports(
         affectedModels: Iterable<EditableSModel>,
@@ -656,7 +657,7 @@ class EditBatchExecutor(
                 continue
             }
 
-            addMissingImports(model, scanned)
+            addMissingImportsTo(model, scanned)
         }
     }
 

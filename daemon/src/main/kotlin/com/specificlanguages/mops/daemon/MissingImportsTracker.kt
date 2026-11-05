@@ -36,7 +36,7 @@ internal class MissingImportsTracker(private val repository: SRepository) : SRep
 
     /**
      * Adds to each model the used languages and the imports of referenced models that the recorded content needs, as
-     * the top-level [addMissingImports] does. The content is each added node with its descendants, and each node whose
+     * [addMissingImportsTo] does. The content is each added node with its descendants, and each node whose
      * reference changed, without its descendants. Nodes no longer in a writable model are skipped. Returns one note per
      * added language or import.
      */
@@ -45,7 +45,7 @@ internal class MissingImportsTracker(private val repository: SRepository) : SRep
         return content.distinct()
             .mapNotNull { node -> node.model?.takeUnless { it.isReadOnly }?.let { model -> model to node } }
             .groupBy({ it.first }, { it.second })
-            .flatMap { (model, nodes) -> addMissingImports(model, nodes) }
+            .flatMap { (model, nodes) -> addMissingImportsTo(model, nodes) }
     }
 
     override fun close() = unsubscribeFrom(repository)

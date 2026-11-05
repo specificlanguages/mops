@@ -13,7 +13,7 @@ import org.jetbrains.mps.openapi.model.SNode
  * count as declared, and so do accessory models of used languages, as in MPS's `ModelDependencyUpdate`. Nothing is
  * removed. Returns one note per added language or import. Requires write access and a model in a repository.
  */
-internal fun addMissingImports(model: SModel, nodes: Iterable<SNode>): List<String> {
+internal fun addMissingImportsTo(model: SModel, nodes: Iterable<SNode>): List<String> {
     val repository = requireNotNull(model.repository) { "model ${model.name.value} is not in a repository" }
     val resolver = ModelDependencyResolver(LanguageRegistry.getInstance(repository), repository)
     val scanner = ModelDependencyScanner().walk(nodes)
