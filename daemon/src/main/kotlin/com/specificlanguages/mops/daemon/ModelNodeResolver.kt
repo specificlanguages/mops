@@ -21,9 +21,7 @@ class ModelNodeResolver(
 ) {
     fun findNode(project: Project, target: NodeTarget): SNode? =
         when (target) {
-            is NodeTarget.NodeReference -> persistence
-                .createNodeReference(normalizeNodeReferenceSpelling(persistence, target.nodeReference))
-                .resolve(project.repository)
+            is NodeTarget.NodeReference -> findNode(project, target.nodeReference)
 
             is NodeTarget.InModel -> {
                 val model = findSingleModel(project, target.modelTarget)
@@ -41,11 +39,10 @@ class ModelNodeResolver(
         }
 
     /**
-     * Resolves a node target written as one string, in the notations the CLI accepts for a node: `<model>/<node ID>`,
-     * where `<model>` is a model target and the node ID is in its decimal or encoded spelling, or a
-     * serialized node reference, whose node ID may also use either spelling. Returns null when the target is well formed
-     * but names no node. Throws [IllegalArgumentException] when the target is in neither notation, and
-     * [MpsRequestException] when the model target is ambiguous.
+     * Resolves a node target written as one string: `<model>/<node ID>`, where `<model>` is a model target and the node
+     * ID is in its decimal or encoded spelling, or a serialized node reference, whose node ID may also use either
+     * spelling. Returns null when the target is well formed but names no node. Throws [IllegalArgumentException] when
+     * the target is in neither notation, and [MpsRequestException] when the model target is ambiguous.
      */
     fun findNode(project: Project, target: String): SNode? {
         val slash = target.lastIndexOf('/')
@@ -54,9 +51,7 @@ class ModelNodeResolver(
             val nodeId = parseNodeIdOrNull(persistence, target.substring(slash + 1))
             if (model != null && nodeId != null) return model.getNode(nodeId)
         }
-        val reference = runCatching { persistence.createNodeReference(normalizeNodeReferenceSpelling(persistence, target)) }
-            .getOrNull()
-            ?: throw IllegalArgumentException("invalid node target: $target; accepted notations: $NODE_TARGET_NOTATIONS")
+        val reference = persistence.createNodeReference(normalizeNodeReferenceSpelling(persistence, target))
         // A bare model name parses into a reference whose model id is derived from the name. MPS 2024.1 resolves such an
         // id inexactly, to any model of that name; requiring the ids to match gives the later versions' behavior.
         return reference.resolve(project.repository)

@@ -40,7 +40,11 @@ object MopsLookupExtensions {
     @JvmStatic
     fun node(lookup: MopsLookup, target: String): SNode? {
         requireRead(lookup.mops, "mops.lookup.node")
-        return ModelNodeResolver(DaemonLogger()).findNode(lookup.mops.project, target)
+        return try {
+            ModelNodeResolver(DaemonLogger()).findNode(lookup.mops.project, target)
+        } catch (failure: IllegalArgumentException) {
+            throw IllegalArgumentException("invalid node target: $target; accepted notations: $NODE_TARGET_NOTATIONS", failure)
+        }
     }
 
     /** Resolves a concept name, returning null on a miss. Ambiguity and untrusted runtimes remain errors. Access: read. */

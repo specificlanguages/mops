@@ -298,7 +298,7 @@ class EditBatchExecutor(
             val resolved = if (targetModel == null) {
                 parseNodeIdOrNull(persistence, nodeId)?.let(ownerModel::getNode)
             } else {
-                modelNodeResolver.findNode(project, NodeTarget.NodeReference("$targetModel/$nodeId"))
+                modelNodeResolver.findNode(project, "$targetModel/$nodeId")
             }
             return resolved
                 ?: fail(
@@ -701,10 +701,7 @@ class EditBatchExecutor(
                 NodeTarget.InModel(modelTarget = target.modelTarget, nodeId = target.nodeId),
             )
 
-            is EditTarget.NodeReference -> modelNodeResolver.findNode(
-                project,
-                NodeTarget.NodeReference(target.nodeReference),
-            )
+            is EditTarget.NodeReference -> modelNodeResolver.findNode(project, target.nodeReference)
         }
 
     /**
