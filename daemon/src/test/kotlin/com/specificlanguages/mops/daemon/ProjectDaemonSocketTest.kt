@@ -89,7 +89,7 @@ class ProjectDaemonSocketTest {
 
     @Test
     fun `a domain request is delegated to the request handler`() {
-        val expected = FindInstancesResponse(limit = 100, truncated = false, nodes = emptyList())
+        val expected = emptyInstancesResponse(limit = 100)
         whenever(operations.resolveScope(null)).thenReturn(ResolvedScope.EditableProjectSources)
         whenever(operations.findInstances("some.Concept", false, ResolvedScope.EditableProjectSources, limit = 100))
             .thenReturn(expected)
@@ -208,7 +208,7 @@ class ProjectDaemonSocketTest {
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
         whenever(operations.resolveScope(null)).thenReturn(ResolvedScope.EditableProjectSources)
-        val expected = FindInstancesResponse(limit = 100, truncated = false, nodes = emptyList())
+        val expected = emptyInstancesResponse(limit = 100)
         whenever(operations.findInstances("blocked", false, ResolvedScope.EditableProjectSources, limit = 100))
             .thenAnswer {
                 entered.countDown()
@@ -243,7 +243,7 @@ class ProjectDaemonSocketTest {
             .thenAnswer {
                 entered.countDown()
                 assertTrue(release.await(10, TimeUnit.SECONDS))
-                FindInstancesResponse(limit = 100, truncated = false, nodes = emptyList())
+                emptyInstancesResponse(limit = 100)
             }
         val daemon = start(idleTimeout = Duration.ofMillis(200))
         val request = FutureTask { daemon.exchange(FindInstancesRequest(TOKEN, "blocked", exact = false, limit = 100)) }

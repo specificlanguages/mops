@@ -2,6 +2,10 @@ package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
+import com.specificlanguages.mops.protocol.FindByNameResponse
+import com.specificlanguages.mops.protocol.NamePatternTargetJson
+import com.specificlanguages.mops.protocol.SearchScopeJson
+import com.specificlanguages.mops.protocol.SearchScopeKind
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -103,6 +107,29 @@ class FindRootByNameSemanticsTest {
         assertTrue(
             inModel.nodes.all { it.reference.contains("($STRUCTURE_MODEL)") },
             "every model-scoped result must belong to the structure model: ${inModel.nodes}",
+        )
+    }
+
+    @Test
+    fun `an empty result names the pattern and the model it searched`() {
+        val payload = SharedMpsEnvironment.sharedMpsAccess.read {
+            findByName("NoSuchRoot", limit = 0, scope = resolveScope(listOf(LANGUAGE_MODULE, STRUCTURE_MODEL)))
+        }
+
+        assertEquals(
+            FindByNameResponse(
+                target = NamePatternTargetJson("NoSuchRoot"),
+                scope = SearchScopeJson(
+                    kind = SearchScopeKind.MODEL,
+                    reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6($STRUCTURE_MODEL)",
+                    name = STRUCTURE_MODEL,
+                    models = 1,
+                ),
+                limit = 0,
+                truncated = false,
+                nodes = emptyList(),
+            ),
+            payload,
         )
     }
 

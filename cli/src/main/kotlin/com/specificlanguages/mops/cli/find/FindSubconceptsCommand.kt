@@ -19,7 +19,10 @@ import picocli.CommandLine.Parameters
     ],
     footer = [
         "",
-        "Text output is one qualified concept name per line; --json prints a `concepts` array of qualified names. " +
+        "Text output is one qualified concept name per line; when there are none, it is one " +
+            "`# no subconcepts of <concept> in loaded languages` line, naming --concrete and --direct when given. " +
+            "--json prints a `concepts` array of qualified names, with the qualified concept as `target` and " +
+            "`scope` set to `{\"kind\":\"loaded-languages\"}`. " +
             "Build project languages before querying their hierarchy. CONCEPT resolves the same way as in " +
             "`mops find instances`.",
         "",
@@ -45,6 +48,14 @@ class FindSubconceptsCommand(private val environment: CommandEnvironment) : CliC
 
     override fun run() {
         val response = environment.daemon().findSubconcepts(concept, concreteOnly, direct)
-        if (json) println(renderJson(response)) else response.concepts.forEach(::println)
+        when {
+            json -> println(renderJson(response))
+            response.concepts.isEmpty() -> {
+                val filters = listOfNotNull("concrete".takeIf { concreteOnly }, "direct".takeIf { direct })
+                val subject = (filters + "subconcepts of ${response.target.concept}").joinToString(" ")
+                println(emptyResultLine(subject, response.scope, environment.nodeReferenceFormat))
+            }
+            else -> response.concepts.forEach(::println)
+        }
     }
 }

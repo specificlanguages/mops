@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.daemoncomms.DefaultDaemonClient
+import com.specificlanguages.mops.protocol.ConceptTargetJson
 import com.specificlanguages.mops.protocol.FindingSeverity
 import com.specificlanguages.mops.protocol.ModelCheckFindingCounts
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
@@ -19,6 +20,8 @@ import com.specificlanguages.mops.protocol.MpsNodeJson
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import com.specificlanguages.mops.protocol.MpsNodeUsageJson
 import com.specificlanguages.mops.protocol.NodeTarget
+import com.specificlanguages.mops.protocol.SearchScopeJson
+import com.specificlanguages.mops.protocol.SearchScopeKind
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.time.Duration
@@ -116,6 +119,8 @@ class DefaultDaemonClientTest {
     @Test
     fun `find instances sends concept exact and limit request`() {
         val response = FindInstancesResponse(
+            target = testConceptTarget,
+            scope = testScope,
             limit = 100,
             truncated = false,
             nodes = listOf(
@@ -149,6 +154,8 @@ class DefaultDaemonClientTest {
     @Test
     fun `find usages sends target and limit request`() {
         val response = FindUsagesResponse(
+            target = testUsagesTarget,
+            scope = testScope,
             limit = 100,
             truncated = false,
             usages = listOf(
@@ -182,7 +189,13 @@ class DefaultDaemonClientTest {
 
     @Test
     fun `find sends the scope segments when requested`() {
-        val instancesResponse = FindInstancesResponse(limit = 100, truncated = false, nodes = emptyList())
+        val instancesResponse = FindInstancesResponse(
+            target = testConceptTarget,
+            scope = testScope,
+            limit = 100,
+            truncated = false,
+            nodes = emptyList(),
+        )
         val instancesDaemon = startPrerecordedDaemon(instancesResponse)
 
         DefaultDaemonClient(instancesDaemon.port, "secret").findInstances(
@@ -199,7 +212,13 @@ class DefaultDaemonClientTest {
             "\"scope\":[\"com.specificlanguages.json\",\".structure\"]",
         )
 
-        val usagesResponse = FindUsagesResponse(limit = 100, truncated = false, usages = emptyList())
+        val usagesResponse = FindUsagesResponse(
+            target = testUsagesTarget,
+            scope = testScope,
+            limit = 100,
+            truncated = false,
+            usages = emptyList(),
+        )
         val usagesDaemon = startPrerecordedDaemon(usagesResponse)
         val nodeReference =
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"

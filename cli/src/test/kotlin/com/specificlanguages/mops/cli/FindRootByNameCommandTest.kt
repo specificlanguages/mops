@@ -5,7 +5,10 @@ import com.specificlanguages.mops.cli.find.FindRootByNameCommand
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.FindByNameResponse
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
+import com.specificlanguages.mops.protocol.NamePatternTargetJson
 import com.specificlanguages.mops.protocol.ProtocolJson
+import com.specificlanguages.mops.protocol.SearchScopeJson
+import com.specificlanguages.mops.protocol.SearchScopeKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.parallel.ResourceLock
@@ -17,6 +20,40 @@ import picocli.CommandLine
 
 @ResourceLock("system-streams")
 class FindRootByNameCommandTest {
+    @Test
+    fun `find root-by-name names the pattern and scope when nothing matches`() {
+        val client = mock<DaemonClient>()
+        val model = SearchScopeJson(
+            kind = SearchScopeKind.MODEL,
+            reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
+            name = "com.specificlanguages.json.structure",
+            models = 1,
+        )
+        whenever(client.findByName("Nope*", listOf("com.specificlanguages.json.structure"), limit = 100)).thenReturn(
+            FindByNameResponse(
+                target = NamePatternTargetJson("Nope*"),
+                scope = model,
+                limit = 100,
+                truncated = false,
+                nodes = emptyList(),
+            ),
+        )
+        var exitCode = Int.MIN_VALUE
+
+        val stdout = tapSystemOut {
+            exitCode = CommandLine(FindRootByNameCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("Nope*", "in", "com.specificlanguages.json.structure")
+        }
+
+        assertEquals(0, exitCode)
+        assertEquals(
+            "# no root nodes matching Nope* in model com.specificlanguages.json.structure (searched 1 model)" +
+                System.lineSeparator(),
+            stdout,
+        )
+    }
+
     @Test
     fun `find root-by-name prints tab-separated rows for a pattern`() {
         val client = mock<DaemonClient>()
@@ -251,6 +288,8 @@ class FindRootByNameCommandTest {
 
     private fun sampleResponse(limit: Int = 100, name: String? = "JsonObject") =
         FindByNameResponse(
+            target = testPatternTarget,
+            scope = testScope,
             limit = limit,
             truncated = false,
             nodes = listOf(

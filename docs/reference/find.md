@@ -39,8 +39,11 @@ Options:
   -h, --help                Show this help message and exit.
       --json                Print the qualified concept names as JSON.
 
-Text output is one qualified concept name per line; --json prints a `concepts`
-array of qualified names. Build project languages before querying their
+Text output is one qualified concept name per line; when there are none, it is
+one `# no subconcepts of <concept> in loaded languages` line, naming --concrete
+and --direct when given. --json prints a `concepts` array of qualified names,
+with the qualified concept as `target` and `scope` set to
+`{"kind":"loaded-languages"}`. Build project languages before querying their
 hierarchy. CONCEPT resolves the same way as in `mops find instances`.
 
 In Code Mode, mops.search.subConceptsOf(concept, concreteOnly, direct) returns
@@ -86,7 +89,8 @@ Options:
                               wildcards. See `mops explain name-pattern`.
       --refs-only           Print one serialized node reference per line and
                               nothing else, for piping. Cannot combine with
-                              --json; truncation is reported on stderr.
+                              --json; truncation and an empty result are
+                              reported on stderr.
       --role=ROLE           Keep only instances filling this containment role
                               in their parent.
 
@@ -101,14 +105,15 @@ A bare short name that names concepts in several languages fails with
 AMBIGUOUS_TARGET and lists the qualified candidates. While a project language
 is unbuilt, a bare short name fails with LANGUAGE_NOT_LOADED instead of
 guessing, since the unbuilt language could define it too. An existing concept
-with no matches succeeds with no rows.
+with no matches succeeds with a `# no instances of <concept> in <scope>` line
+instead of rows, naming --exact, --named, and --role when given.
 
 Text output is one tab-separated row per node: `root` or `node`, the node name
 (or <unnamed>), the node's concept, and its serialized reference. A non-root
 node appends `parent` and the parent's name (or <unnamed>), concept, and
-reference. --json prints an object with `limit`, `truncated`, and a `nodes`
-array whose non-root entries carry a nested `parent` summary. See `mops explain
-output`.
+reference. --json prints an object with `target` (the qualified `concept`),
+`scope`, `limit`, `truncated`, and a `nodes` array whose non-root entries carry
+a nested `parent` summary. See `mops explain output`.
 ```
 
 ## mops find usages
@@ -137,7 +142,8 @@ Options:
                               `# truncated` line and JSON sets `truncated`.
       --refs-only           Print one serialized node reference per line and
                               nothing else, for piping. Cannot combine with
-                              --json; truncation is reported on stderr.
+                              --json; truncation and an empty result are
+                              reported on stderr.
 
 The target is addressed the same way as in `mops get node`; an unresolved
 target fails with NODE_NOT_FOUND.
@@ -146,10 +152,11 @@ Text output is one tab-separated row per reference: `usage`, the reference
 role, and the owning node's name (or <unnamed>), concept, and reference. The
 owner is typed `root` or `node` by its position in its model; a non-root owner
 appends `parent` and the parent's name (or <unnamed>), concept, and reference.
---json prints an object with `limit`, `truncated`, and a `usages` array. Each
-entry carries the reference `role` and a nested `owner` node summary; a
-non-root owner carries a nested `parent` summary. --refs-only prints one
-reference per referencing node. See `mops explain output`.
+--json prints an object with `target` (the resolved node's summary), `scope`,
+`limit`, `truncated`, and a `usages` array. Each entry carries the reference
+`role` and a nested `owner` node summary; a non-root owner carries a nested
+`parent` summary. --refs-only prints one reference per referencing node. See
+`mops explain output`.
 ```
 
 ## mops find root-by-name
@@ -180,10 +187,11 @@ Options:
                               `# truncated` line and JSON sets `truncated`.
       --refs-only           Print one serialized node reference per line and
                               nothing else, for piping. Cannot combine with
-                              --json; truncation is reported on stderr.
+                              --json; truncation and an empty result are
+                              reported on stderr.
 
 Text output has the same rows as `mops find instances`; --json prints the
-structured response.
+structured response, with the `pattern` as `target`.
 ```
 
 ## mops find node-by-id
@@ -217,5 +225,9 @@ Options:
                               `# truncated` line and JSON sets `truncated`.
       --refs-only           Print one serialized node reference per line and
                               nothing else, for piping. Cannot combine with
-                              --json; truncation is reported on stderr.
+                              --json; truncation and an empty result are
+                              reported on stderr.
+
+Text output has the same rows as `mops find instances`; --json prints the
+structured response, with the decimal `nodeId` as `target`.
 ```

@@ -24,7 +24,7 @@ class ProjectTesting(private val access: JetBrainsMpsAccess, private val workspa
             selection.save(selectionPath)
             report.update { it.copy(diagnostics = it.diagnostics + selection.diagnostics) }
         } catch (failure: Exception) {
-            report.finish("DISCOVERY_FAILED", true, failure.stackTraceToString())
+            report.finish(TestRunConclusion("DISCOVERY_FAILED", complete = true, listOf(failure.stackTraceToString())))
             return report.snapshot()
         }
         if (build && !build(target, report, TestRunLimits(cancellationPath?.let(Path::of), executionTimeoutMillis = 0))) return report.snapshot()
@@ -58,16 +58,16 @@ class ProjectTesting(private val access: JetBrainsMpsAccess, private val workspa
             val build = ProjectMake(project).makeModules(modules, cancellation)
             report.update { it.copy(build = build) }
             limits.interruption()?.let { interruption ->
-                report.finish(interruption, false)
+                report.finish(TestRunConclusion(interruption, complete = false))
                 return false
             }
             if (build.outcome == MakeOutcome.FAILED) {
-                report.finish("BUILD_FAILED", true, "Build failed for selection: $description")
+                report.finish(TestRunConclusion("BUILD_FAILED", complete = true, listOf("Build failed for selection: $description")))
                 return false
             }
             access.extra { saveProject() }
         } catch (failure: Exception) {
-            report.finish("BUILD_FAILED", true, failure.stackTraceToString())
+            report.finish(TestRunConclusion("BUILD_FAILED", complete = true, listOf(failure.stackTraceToString())))
             return false
         }
         report.endTiming()
@@ -99,7 +99,7 @@ class ProjectTesting(private val access: JetBrainsMpsAccess, private val workspa
         val worker = try {
             ProcessBuilder(command).redirectErrorStream(true).redirectOutput(directory.resolve("worker.log").toFile()).start()
         } catch (failure: Exception) {
-            report.finish("WORKER_FAILED", false, failure.toString())
+            report.finish(TestRunConclusion("WORKER_FAILED", complete = false, listOf(failure.toString())))
             return report.snapshot()
         }
         // Only the worker knows when test execution starts, so it enforces the time limit; the daemon handles
@@ -115,9 +115,10 @@ class ProjectTesting(private val access: JetBrainsMpsAccess, private val workspa
             worker.outputStream.close()
         }
         val saved = TestReportStore(reportPath)
-        if (interruption != null) saved.finish(interruption, false)
+        if (interruption != null) saved.finish(TestRunConclusion(interruption, complete = false))
         else if (saved.snapshot().outcome == "RUNNING")
-            saved.finish("WORKER_FAILED", false, "Test worker exited ${worker.exitValue()}; see ${directory.resolve("worker.log")}")
+            saved.finish(TestRunConclusion("WORKER_FAILED", complete = false,
+                listOf("Test worker exited ${worker.exitValue()}; see ${directory.resolve("worker.log")}")))
         saved.recordTiming("workerLifetime", (System.nanoTime() - workerStarted) / 1_000_000)
         return saved.snapshot()
     }

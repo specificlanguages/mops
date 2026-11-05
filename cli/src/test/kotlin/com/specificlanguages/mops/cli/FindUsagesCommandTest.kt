@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.cli
 
+import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.cli.find.FindUsagesCommand
 import com.specificlanguages.mops.daemoncomms.DaemonClient
@@ -9,6 +10,8 @@ import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import com.specificlanguages.mops.protocol.MpsNodeUsageJson
 import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.ProtocolJson
+import com.specificlanguages.mops.protocol.SearchScopeJson
+import com.specificlanguages.mops.protocol.SearchScopeKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.parallel.ResourceLock
@@ -20,6 +23,117 @@ import picocli.CommandLine
 
 @ResourceLock("system-streams")
 class FindUsagesCommandTest {
+    @Test
+    fun `find usages names the resolved target and the searched scope when nothing references it`() {
+        val client = mock<DaemonClient>()
+        whenever(client.findUsages(NodeTarget.NodeReference(TARGET_REFERENCE), limit = 100)).thenReturn(emptyUsages())
+        var exitCode = Int.MIN_VALUE
+        var stdout = ""
+
+        val stderr = tapSystemErr {
+            stdout = tapSystemOut {
+                exitCode = CommandLine(FindUsagesCommand(client))
+                    .setExecutionExceptionHandler(PrintErrorAndExit)
+                    .execute(TARGET_REFERENCE)
+            }
+        }
+
+        assertEquals(0, exitCode)
+        assertEquals(
+            "# no usages of IJsonValue (InterfaceConceptDeclaration) in editable project sources (searched 12 models)" +
+                System.lineSeparator(),
+            stdout,
+        )
+        assertEquals("", stderr)
+    }
+
+    @Test
+    fun `find usages reports an empty --refs-only result on stderr keeping stdout empty`() {
+        val client = mock<DaemonClient>()
+        whenever(client.findUsages(NodeTarget.NodeReference(TARGET_REFERENCE), limit = 100)).thenReturn(emptyUsages())
+        var exitCode = Int.MIN_VALUE
+        var stdout = ""
+
+        val stderr = tapSystemErr {
+            stdout = tapSystemOut {
+                exitCode = CommandLine(FindUsagesCommand(client))
+                    .setExecutionExceptionHandler(PrintErrorAndExit)
+                    .execute("--refs-only", TARGET_REFERENCE)
+            }
+        }
+
+        assertEquals(0, exitCode)
+        assertEquals("", stdout)
+        assertEquals(
+            "# no usages of IJsonValue (InterfaceConceptDeclaration) in editable project sources (searched 12 models)" +
+                System.lineSeparator(),
+            stderr,
+        )
+    }
+
+    @Test
+    fun `find usages prints only the response for an empty --json result`() {
+        val client = mock<DaemonClient>()
+        whenever(client.findUsages(NodeTarget.NodeReference(TARGET_REFERENCE), limit = 100)).thenReturn(emptyUsages())
+        var exitCode = Int.MIN_VALUE
+        var stdout = ""
+
+        val stderr = tapSystemErr {
+            stdout = tapSystemOut {
+                exitCode = CommandLine(FindUsagesCommand(client))
+                    .setExecutionExceptionHandler(PrintErrorAndExit)
+                    .execute("--json", TARGET_REFERENCE)
+            }
+        }
+
+        assertEquals(0, exitCode)
+        assertEquals(emptyUsages(), ProtocolJson.decodeResponse(stdout))
+        assertEquals("", stderr)
+    }
+
+    @Test
+    fun `find usages names a subtree scope by its node without a model count`() {
+        val client = mock<DaemonClient>()
+        val subtree = SearchScopeJson(kind = SearchScopeKind.SUBTREE, reference = SUBTREE_REFERENCE, name = "JsonObject")
+        whenever(client.findUsages(NodeTarget.NodeReference(TARGET_REFERENCE), listOf("JsonObject"), limit = 100))
+            .thenReturn(emptyUsages().copy(scope = subtree))
+        var stdout = ""
+
+        tapSystemErr {
+            stdout = tapSystemOut {
+                CommandLine(FindUsagesCommand(client))
+                    .setExecutionExceptionHandler(PrintErrorAndExit)
+                    .execute("--full-concept", TARGET_REFERENCE, "in", "JsonObject")
+            }
+        }
+
+        assertEquals(
+            "# no usages of IJsonValue (jetbrains.mps.lang.structure.structure.InterfaceConceptDeclaration) in " +
+                "the subtree of JsonObject $SUBTREE_REFERENCE" + System.lineSeparator(),
+            stdout,
+        )
+    }
+
+    private fun emptyUsages() = FindUsagesResponse(
+        target = MpsNodeSummaryJson(
+            type = "root",
+            name = "IJsonValue",
+            concept = "jetbrains.mps.lang.structure.structure.InterfaceConceptDeclaration",
+            reference = TARGET_REFERENCE,
+        ),
+        scope = SearchScopeJson(SearchScopeKind.EDITABLE_PROJECT_SOURCES, models = 12),
+        limit = 100,
+        truncated = false,
+        usages = emptyList(),
+    )
+
+    private companion object {
+        const val TARGET_REFERENCE =
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566909"
+        const val SUBTREE_REFERENCE =
+            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905"
+    }
+
     @Test
     fun `find usages prints tab-separated rows for a node reference`() {
         val client = mock<DaemonClient>()
@@ -63,7 +177,13 @@ class FindUsagesCommandTest {
             ),
         )
         whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), limit = 100)).thenReturn(
-            FindUsagesResponse(limit = 100, truncated = false, usages = listOf(MpsNodeUsageJson(role = "concept", owner = owner))),
+            FindUsagesResponse(
+                target = testUsagesTarget,
+                scope = testScope,
+                limit = 100,
+                truncated = false,
+                usages = listOf(MpsNodeUsageJson(role = "concept", owner = owner)),
+            ),
         )
         var exitCode = Int.MIN_VALUE
 
@@ -324,6 +444,8 @@ class FindUsagesCommandTest {
 
     private fun sampleUsagesResponse(limit: Int = 100) =
         FindUsagesResponse(
+            target = testUsagesTarget,
+            scope = testScope,
             limit = limit,
             truncated = false,
             usages = listOf(

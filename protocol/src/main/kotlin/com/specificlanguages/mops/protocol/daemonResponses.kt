@@ -82,33 +82,42 @@ data class ModelCheckResponse(
 ) : DaemonResponse
 
 /**
- * Successful response carrying bounded Node Usage search results.
+ * Successful response carrying bounded Node Usage search results, with the resolved [target] node and the [scope]
+ * searched. An empty [usages] list is a success: the target resolved and nothing in the scope references it.
  */
 @Serializable
 @SerialName("usages")
 data class FindUsagesResponse(
+    val target: MpsNodeSummaryJson,
+    val scope: SearchScopeJson,
     val limit: Int,
     val truncated: Boolean,
     val usages: List<MpsNodeUsageJson>,
 ) : DaemonResponse
 
 /**
- * Successful response carrying bounded concept instance search results.
+ * Successful response carrying bounded concept instance search results, with the resolved [target] concept and the
+ * [scope] searched.
  */
 @Serializable
 @SerialName("nodes")
 data class FindInstancesResponse(
+    val target: ConceptTargetJson,
+    val scope: SearchScopeJson,
     val limit: Int,
     val truncated: Boolean,
     val nodes: List<MpsNodeSummaryJson>,
 ) : DaemonResponse
 
 /**
- * Successful response carrying bounded name-pattern search results, ordered best match first.
+ * Successful response carrying bounded name-pattern search results, ordered best match first, with the [target]
+ * pattern and the [scope] searched.
  */
 @Serializable
 @SerialName("named-nodes")
 data class FindByNameResponse(
+    val target: NamePatternTargetJson,
+    val scope: SearchScopeJson,
     val limit: Int,
     val truncated: Boolean,
     val nodes: List<MpsNodeSummaryJson>,
@@ -116,11 +125,14 @@ data class FindByNameResponse(
 
 /**
  * Successful response carrying bounded node-by-id search results — one per model whose [Node ID][FindNodeByIdRequest]
- * matched. A well-formed id matching nothing yields an empty [nodes] list, which is a success, not a failure.
+ * matched, with the parsed [target] id and the [scope] searched. A well-formed id matching nothing yields an empty
+ * [nodes] list, which is a success, not a failure.
  */
 @Serializable
 @SerialName("nodes-by-id")
 data class FindNodeByIdResponse(
+    val target: NodeIdTargetJson,
+    val scope: SearchScopeJson,
     val limit: Int,
     val truncated: Boolean,
     val nodes: List<MpsNodeSummaryJson>,
@@ -214,7 +226,11 @@ data class ReadyMessage(val port: Int) : DaemonResponse
 @SerialName("testRun")
 data class TestRunResponse(val report: TestRunReport) : DaemonResponse
 
-/** Qualified descendant concept names, unique and sorted. */
+/** Qualified descendant concept names of the resolved [target] concept, unique and sorted. */
 @Serializable
 @SerialName("subconcepts")
-data class FindSubconceptsResponse(val concepts: List<String>) : DaemonResponse
+data class FindSubconceptsResponse(
+    val target: ConceptTargetJson,
+    val scope: SearchScopeJson,
+    val concepts: List<String>,
+) : DaemonResponse

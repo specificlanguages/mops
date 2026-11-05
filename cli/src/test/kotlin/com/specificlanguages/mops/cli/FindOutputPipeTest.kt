@@ -2,10 +2,13 @@ package com.specificlanguages.mops.cli
 
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
+import com.specificlanguages.mops.protocol.ConceptTargetJson
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import com.specificlanguages.mops.protocol.PongResponse
+import com.specificlanguages.mops.protocol.SearchScopeJson
+import com.specificlanguages.mops.protocol.SearchScopeKind
 import java.nio.file.Path
 import kotlin.io.path.pathString
 import kotlin.test.Test
@@ -76,6 +79,8 @@ class FindOutputPipeTest {
     }
 
     private fun truncatedResponse() = FindInstancesResponse(
+        target = testConceptTarget,
+        scope = testScope,
         limit = 2,
         truncated = true,
         nodes = listOf(
