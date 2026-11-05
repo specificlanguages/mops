@@ -45,7 +45,7 @@ class DefaultDaemonPool(
     private val killGrace: Duration = Duration.ofSeconds(5),
 ) : DaemonPool {
     override fun ensureDaemon(context: DaemonContext): DaemonClient {
-        val existing = records.read(context.realProjectPath)
+        val existing = records.read(context)
         if (existing != null) {
             val client = launcher.connectToExistingDaemon(existing.record)
             val existingResponse = try {
@@ -74,17 +74,43 @@ class DefaultDaemonPool(
             }
         }
 
+        stopDaemonsInOtherWorkspaces(context)
+
         val result = launcher.startDaemon(context)
 
-        records.checkRecordWasWrittenForProject(context.realProjectPath)
+        records.checkRecordWasWritten(context)
 
         return result
     }
 
+    /**
+     * Stops the daemons of the project of [context] that run with another MPS home or build, so that two MPS instances
+     * never open the project at once.
+     */
+    private fun stopDaemonsInOtherWorkspaces(context: DaemonContext) {
+        val ownRecordPath = records.recordPath(context)
+        for (other in records.readForProject(context.realProjectPath).filter { it.recordPath != ownRecordPath }) {
+            val otherContext = other.record.context
+            when (stop(other)) {
+                DaemonPool.StopOutcome.STOPPED -> System.err.println(
+                    "mops: stopped the daemon for ${context.realProjectPath} that used ${otherContext.mps()}; " +
+                        "starting one for ${context.mps()}",
+                )
+                DaemonPool.StopOutcome.ALREADY_GONE -> Unit
+                DaemonPool.StopOutcome.NOT_TERMINATED -> throw IllegalStateException(
+                    "the daemon for ${context.realProjectPath} that uses ${otherContext.mps()} (pid ${other.record.pid}) " +
+                        "is still running after a force-kill; stop it before starting one for ${context.mps()}",
+                )
+            }
+        }
+    }
+
+    private fun DaemonContext.mps() = "MPS $mpsBuild at $realMpsHome"
+
 
     override fun findRecords(spec: DaemonPool.Spec): List<StoredDaemonRecord> = when (spec) {
         is DaemonPool.Spec.All -> records.readAll()
-        is DaemonPool.Spec.ForProject -> listOfNotNull(records.read(spec.projectPath))
+        is DaemonPool.Spec.ForProject -> records.readForProject(spec.projectPath)
     }
 
     override fun isReachable(record: DaemonRecord): Boolean = try {

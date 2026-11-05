@@ -78,7 +78,7 @@ class ModelAccessBoundaryTest {
             project = project,
             logger = DaemonLogger(),
             workspace = Files.createTempDirectory("mops-test-workspace"),
-            testSystemCache = Files.createTempDirectory("mops-test-system-cache"),
+            testWorkerSystem = TestWorkerSystemDirectory(Files.createTempDirectory("mops-test-worker-system"), deleteAfterUncleanRun = true),
             platform = mock(),
             mpsListExporter = mock(),
             jsonNodeExporter = mock(),

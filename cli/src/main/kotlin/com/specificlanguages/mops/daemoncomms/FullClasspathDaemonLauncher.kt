@@ -24,8 +24,7 @@ class FullClasspathDaemonLauncher(
     private val startupTimeout: Duration = startupTimeoutFromEnvironment(System.getenv(STARTUP_TIMEOUT_ENV)),
     private val javaOptions: List<String> = javaOptionsFromEnvironment(System.getenv(JAVA_OPTIONS_ENV)),
     private val distribution: DaemonDistribution = DaemonDistribution(),
-    private val testSystemCache: Path =
-        System.getenv(TEST_SYSTEM_CACHE_ENV)?.takeIf(String::isNotEmpty)?.let(Path::of) ?: records.paths.testSystemCache,
+    private val testWorkerSystem: Path? = System.getProperty(TEST_WORKER_SYSTEM_PROPERTY)?.takeIf(String::isNotEmpty)?.let(Path::of),
 ) : DaemonLauncher {
 
     override fun connectToExistingDaemon(record: DaemonRecord): DefaultDaemonClient {
@@ -34,11 +33,12 @@ class FullClasspathDaemonLauncher(
 
     override fun startDaemon(context: DaemonContext): DefaultDaemonClient {
         val token = UUID.randomUUID().toString()
-        val workspace = records.paths.workspace(context.realProjectPath)
+        val workspace = records.paths.workspace(context)
         val runtimeClasspath = runtimeClasspath(context.realMpsHome)
         val mpsPlugin = distribution.mpsPlugin()
 
         workspace.createDirectories()
+        WorkspaceMetadata.of(context).writeTo(workspace)
         val classpathArgFile = writeClasspathArgFile(workspace.daemonWorkingDir(), runtimeClasspath)
         try {
             val logFile = workspace.logFile()
@@ -96,8 +96,10 @@ class FullClasspathDaemonLauncher(
         add(context.realMpsHome.pathString)
         add("--mps-plugin")
         add(mpsPlugin.pathString)
-        add("--test-system-cache")
-        add(testSystemCache.toAbsolutePath().pathString)
+        if (testWorkerSystem != null) {
+            add("--test-worker-system")
+            add(testWorkerSystem.toAbsolutePath().pathString)
+        }
         add("--token")
         add(token)
         context.macros.forEach { (name, path) ->
@@ -143,7 +145,7 @@ class FullClasspathDaemonLauncher(
         val timeoutMillis = startupTimeout.toMillis()
         val startTime = System.currentTimeMillis()
         while (System.currentTimeMillis() - startTime < timeoutMillis) {
-            val record = records.read(context.realProjectPath)?.record
+            val record = records.read(context)?.record
             if (record?.context == context && record.token == token) {
                 return record
             }
@@ -194,7 +196,14 @@ class FullClasspathDaemonLauncher(
     companion object {
         private const val STARTUP_TIMEOUT_ENV = "MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS"
         private const val JAVA_OPTIONS_ENV = "MOPS_DAEMON_JAVA_OPTIONS"
-        private const val TEST_SYSTEM_CACHE_ENV = "MOPS_TEST_SYSTEM_CACHE"
+
+        /**
+         * Names a test worker system directory for all daemons this CLI starts, instead of the one in each daemon
+         * workspace. The mops integration tests share one per test JVM, so that each test does not index the MPS
+         * distribution again. The daemon does not delete it after an unclean test run.
+         */
+        const val TEST_WORKER_SYSTEM_PROPERTY = "mops.test.workerSystem"
+
         private val REQUEST_TIMEOUT = Duration.ofMinutes(2)
 
         internal fun startupTimeoutFromEnvironment(value: String?): Duration {

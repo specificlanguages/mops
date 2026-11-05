@@ -48,7 +48,7 @@ class DaemonControlIntegrationTest {
             val started = runCommandLine(project, *javaAndMpsHomeArgs(),
                 "--daemon-home", daemonHome.pathString, "daemon", "ping")
             assertEquals(0, started.exitCode, started.output)
-            val record = requireNotNull(store.read(project)).record
+            val record = requireNotNull(store.readForProject(project).singleOrNull()).record
             val client = DefaultDaemonClient.fromRecord(record)
             val request = FutureTask {
                 client.runCode("""
@@ -68,7 +68,7 @@ class DaemonControlIntegrationTest {
                 "--daemon-home", daemonHome.pathString, "daemon", "ping")
             assertEquals(0, ping.exitCode, ping.output)
             assertIs<PongResponse>(ProtocolJson.decodeResponse(ping.stdout.trim()))
-            assertEquals(record, store.read(project)?.record, "discovery must retain the busy daemon")
+            assertEquals(record, store.readForProject(project).singleOrNull()?.record, "discovery must retain the busy daemon")
             assertFalse(request.isDone, "ping must finish while Code Mode is blocked")
         } finally {
             Files.writeString(release, "release")
@@ -90,7 +90,7 @@ class DaemonControlIntegrationTest {
             val ping = runCommandLine(project, *javaAndMpsHomeArgs(),
                 "--daemon-home", daemonHome.pathString, "daemon", "ping")
             assertEquals(0, ping.exitCode, ping.output)
-            val record = requireNotNull(store.read(project)).record
+            val record = requireNotNull(store.readForProject(project).singleOrNull()).record
             // Calls an int-returning native function with int arguments, the same way DaemonProcess does: through the
             // Foreign Function API on Java 22 and newer, otherwise through JNA from the MPS boot classpath. Starting
             // with MPS 2026.3, JNA is no longer on the boot classpath.
@@ -148,7 +148,7 @@ class DaemonControlIntegrationTest {
             val stopped = runCommandLine(project, "--daemon-home", daemonHome.pathString, "daemon", "status")
             assertEquals(0, stopped.exitCode, stopped.output)
             assertContains(stopped.stdout, "unreachable ")
-            assertEquals(record, store.read(project)?.record)
+            assertEquals(record, store.readForProject(project).singleOrNull()?.record)
         } finally {
             stopDaemons(project, daemonHome)
         }
@@ -169,7 +169,7 @@ class DaemonControlIntegrationTest {
         )
         assertEquals(0, ping.exitCode, ping.output)
 
-        val daemonPid = store.read(project)?.record?.pid
+        val daemonPid = store.readForProject(project).singleOrNull()?.record?.pid
             ?: throw AssertionError("a running daemon should have published its record")
 
         val stop = runCommandLine(
@@ -181,7 +181,7 @@ class DaemonControlIntegrationTest {
 
         assertEquals(0, stop.exitCode, stop.output)
         assertContains(stop.stdout, "stopped")
-        assertNull(store.read(project))
+        assertNull(store.readForProject(project).singleOrNull())
         // The daemon must actually terminate, not just drop its record: a surviving process would keep holding the
         // MPS workspace lock and block the next start.
         assertFalse(
@@ -195,21 +195,19 @@ class DaemonControlIntegrationTest {
         val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
         val daemonHome = tempDir.resolve("daemon-home").createDirectories()
         val staleMpsHome = tempDir.resolve("stale-mps").createDirectories().toRealPath()
+        staleMpsHome.resolve("build.properties").writeText("mps.build.number=MPS-213.7172.1079\n")
         val javaHome = Path.of(System.getProperty("java.home")).toRealPath()
 
         val store = DaemonRecordStore.forDaemonHome(daemonHome)
+        val staleContext = DaemonContext.fromLivePaths(projectPath = project, mpsHome = staleMpsHome, javaHome = javaHome)
         store.write(
             DaemonRecord(
                 port = 9,
                 token = "stale-token",
                 pid = 999_999L,
                 daemonVersion = "0.3.0-SNAPSHOT",
-                context = DaemonContext.fromLivePaths(
-                    projectPath = project,
-                    mpsHome = staleMpsHome,
-                    javaHome = javaHome,
-                ),
-                workspace = store.workspacePath(project),
+                context = staleContext,
+                workspace = store.workspacePath(staleContext),
                 startupTime = "2026-05-12T12:02:00Z",
             ),
         )
