@@ -184,7 +184,7 @@ class MopsCommand(
             if (resolved.resolve(".mps").isDirectory()) {
                 return resolved
             }
-            throw ProjectPathNotFoundException(resolved)
+            throw ProjectPathNotFoundException.explicitRoot(resolved)
         }
 
         return MopsCommand.resolveProjectPath(start)
@@ -204,7 +204,7 @@ class MopsCommand(
                 current = current.parent
             }
 
-            throw ProjectPathNotFoundException(start)
+            throw ProjectPathNotFoundException.upwardFrom(start)
         }
 
     }

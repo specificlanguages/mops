@@ -7,6 +7,7 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.pathString
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ProjectPathsTest {
     @TempDir
@@ -33,4 +34,46 @@ class ProjectPathsTest {
 
         assertEquals(project, command.resolveProjectPath())
     }
+
+    @Test
+    fun `explicit project root without mps directory is reported without an upward search`() {
+        val worktree = tempDir.resolve("worktree").createDirectories().toRealPath()
+
+        val error = assertThrows<ProjectPathNotFoundException> { explicitRoot(worktree).resolveProjectPath() }
+
+        assertEquals("--project-root $worktree has no .mps directory", error.message)
+    }
+
+    @Test
+    fun `explicit project root without mps directory names projects up to three levels below`() {
+        val worktree = tempDir.resolve("worktree").createDirectories().toRealPath()
+        val extensions = worktree.resolve("code").mpsProject("extensions")
+        worktree.resolve("a/b/c/d").mpsProject("too-deep")
+
+        val error = assertThrows<ProjectPathNotFoundException> { explicitRoot(worktree).resolveProjectPath() }
+
+        assertEquals(
+            "--project-root $worktree has no .mps directory; MPS projects below it: $extensions",
+            error.message,
+        )
+    }
+
+    @Test
+    fun `explicit project root without mps directory names at most three projects, nearest first`() {
+        val worktree = tempDir.resolve("worktree").createDirectories().toRealPath()
+        val near = worktree.mpsProject("near")
+        val deeper = listOf("p1", "p2", "p3").map { worktree.resolve("x").mpsProject(it) }
+
+        val error = assertThrows<ProjectPathNotFoundException> { explicitRoot(worktree).resolveProjectPath() }
+
+        val listed = error.message!!.substringAfter("MPS projects below it: ").split(", ")
+        assertEquals(3, listed.size)
+        assertEquals(near.toString(), listed.first())
+        assertTrue(listed.drop(1).all { it in deeper.map(Path::toString) })
+    }
+
+    private fun explicitRoot(root: Path) =
+        MopsCommand(workingDirectory = tempDir.resolve("outside").createDirectories()).apply {
+            projectRoot = root.pathString
+        }
 }
