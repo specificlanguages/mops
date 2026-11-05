@@ -35,7 +35,7 @@ class FindNodeByIdCommand(environment: CommandEnvironment) : NodeSearchCommand(e
 
     override fun run() {
         require(id.isNotBlank()) { "ID must not be blank" }
-        val scope = validatedScope()
+        val scope = validatedScope(id to "ID")
         val client = environment.daemon()
         val response = client.findNodeById(nodeId = id, limit = limit, scope = scope)
         printResults(

@@ -55,11 +55,14 @@ abstract class NodeSearchCommand(protected val environment: CommandEnvironment) 
     )
     var scopeClause: List<String> = emptyList()
 
-    /** Checks the shared options and returns the parsed scope segments, or `null` for the default scope. */
-    protected fun validatedScope(): List<String>? {
+    /**
+     * Checks the shared options and returns the parsed scope segments, or `null` for the default scope. [query] pairs
+     * the query argument with its parameter label, for an error that says how the arguments were read.
+     */
+    protected fun validatedScope(query: Pair<String, String>): List<String>? {
         require(limit >= 0) { "limit must not be negative" }
         require(!(refsOnly && json)) { "--refs-only cannot be combined with --json" }
-        return scopeClauseSegments(scopeClause)
+        return scopeClauseSegments(query, scopeClause)
     }
 
     /**

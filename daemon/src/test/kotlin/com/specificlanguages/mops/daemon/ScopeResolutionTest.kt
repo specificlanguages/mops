@@ -106,6 +106,62 @@ class ScopeResolutionTest {
     }
 
     @Test
+    fun `names the path that selects the model in a module and model ambiguity`() {
+        val exception = assertFailsWith<MpsRequestException> {
+            SharedMpsEnvironment.sharedMpsAccess.read { resolveScope(listOf(BUILD_MODULE)) }
+        }
+
+        assertContains(
+            exception.message,
+            "\npass one candidate's reference instead, or select model $BUILD_MODULE with `$BUILD_MODULE .`\n",
+        )
+    }
+
+    @Test
+    fun `reports a kind word before a scope segment as a keyword to drop`() {
+        val exception = assertFailsWith<MpsRequestException> {
+            SharedMpsEnvironment.sharedMpsAccess.read { resolveScope(listOf("model", STRUCTURE_MODEL)) }
+        }
+
+        assertEquals(MpsErrorCode.TARGET_NOT_FOUND, exception.code)
+        assertEquals(
+            "scope not found: model $STRUCTURE_MODEL\n" +
+                "mops read `model $STRUCTURE_MODEL` as one target path (module, model, root node, child nodes)\n" +
+                "`model` is not a keyword; drop it: `$STRUCTURE_MODEL`\n" +
+                "see: mops explain scope",
+            exception.message,
+        )
+    }
+
+    @Test
+    fun `reports segments that each name a target as one target per call`() {
+        val exception = assertFailsWith<MpsRequestException> {
+            SharedMpsEnvironment.sharedMpsAccess.read { resolveScope(listOf(STRUCTURE_MODEL, LANGUAGE_MODULE)) }
+        }
+
+        assertEquals(
+            "scope not found: $STRUCTURE_MODEL $LANGUAGE_MODULE\n" +
+                "mops read `$STRUCTURE_MODEL $LANGUAGE_MODULE` as one target path (module, model, root node, child nodes)\n" +
+                "each segment names a target on its own; name one target per call\n" +
+                "see: mops explain scope",
+            exception.message,
+        )
+    }
+
+    @Test
+    fun `reports a path that starts at a model name with the path through its module`() {
+        val exception = assertFailsWith<MpsRequestException> {
+            SharedMpsEnvironment.sharedMpsAccess.read { resolveScope(listOf(STRUCTURE_MODEL, "JsonFile")) }
+        }
+
+        assertContains(
+            exception.message,
+            "\n`$STRUCTURE_MODEL` is a model name; a path through it starts at its module: " +
+                "`$LANGUAGE_MODULE $STRUCTURE_MODEL JsonFile`\n",
+        )
+    }
+
+    @Test
     fun `resolves a bare dot after a module to the model named like the module`() {
         assertEquals(
             ResolvedScope.Model(BUILD_MODEL_REFERENCE),
@@ -122,6 +178,7 @@ class ScopeResolutionTest {
         assertEquals(MpsErrorCode.TARGET_NOT_FOUND, exception.code)
         assertEquals(
             "scope not found: $BUILD_MODULE .missing\n" +
+                "mops read `$BUILD_MODULE .missing` as one target path (module, model, root node, child nodes)\n" +
                 "module $BUILD_MODULE has no model $BUILD_MODULE.missing; its models:\n" +
                 "model\t$BUILD_MODULE\t$BUILD_MODEL_REFERENCE\n" +
                 "see: mops explain scope",
