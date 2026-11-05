@@ -36,6 +36,23 @@ class CodeModeExecutorTest {
     }
 
     @Test
+    fun `open API model language and module types resolve without imports`() {
+        assertNull(run("SNode n = null; n"))
+        assertEquals(
+            """["org.jetbrains.mps.openapi.model.SNode","org.jetbrains.mps.openapi.model.SModel",""" +
+                """"org.jetbrains.mps.openapi.language.SConcept","org.jetbrains.mps.openapi.module.SModule"]""",
+            run("SNode n = null; SModel m = null; SConcept c = null; [SNode, SModel, SConcept, SModule]*.name"),
+        )
+    }
+
+    @Test
+    fun `script imports and classes take precedence over default open API imports`() {
+        assertEquals("jetbrains.mps.smodel.SNode", run("import jetbrains.mps.smodel.SNode\nSNode.name"))
+        assertEquals("jetbrains.mps.smodel.SNodeId", run("import jetbrains.mps.smodel.*\nSNodeId.name"))
+        assertEquals("SModel", run("class SModel {}\nSModel.name"))
+    }
+
+    @Test
     fun `dependency injection transforms are rejected`() {
         val failure = assertFailsWith<IllegalArgumentException> { run("@Grab('x:y:1')\nreturn 1") }
         assertTrue(failure.message.orEmpty().contains("dependency injection"))

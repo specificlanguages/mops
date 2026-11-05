@@ -81,8 +81,11 @@ mops code help Project.command --json
 ```
 
 `help(object)` inside a program describes its runtime type. `project` is the native MPS project; `mops` provides lookup,
-search, parsing, and editing helpers. Classes on the daemon/MPS classpath are available; Groovy `@Grab` dependencies are
-disabled. Each invocation gets a fresh binding, so return references or data needed by a later invocation.
+search, parsing, and editing helpers. Programs import `org.jetbrains.mps.openapi.model.*`,
+`org.jetbrains.mps.openapi.language.*`, and `org.jetbrains.mps.openapi.module.*` by default, so `SNode`, `SModel`,
+`SConcept`, and `SModule` need no import; the program's own imports take precedence. Classes on the daemon/MPS classpath
+are available; Groovy `@Grab` dependencies are disabled. Each invocation gets a fresh binding, so return references or
+data needed by a later invocation.
 
 Run Code Mode programs and other exclusive operations sequentially for the same project. `code run` remains exclusive
 even when its program only reads. Independent CLI lookups, navigation, searches, diagnostics, and `code help` can run

@@ -12,6 +12,7 @@ import groovy.lang.GroovyShell
 import jetbrains.mps.core.platform.Platform
 import jetbrains.mps.project.MPSProject
 import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.customizers.ImportCustomizer
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SNode
 import org.jetbrains.mps.openapi.module.SModule
@@ -27,7 +28,10 @@ class CodeModeExecutor(
 ) {
     fun execute(request: CodeRunRequest): CodeResultResponse {
         rejectDependencyInjection(request.source)
-        val configuration = CompilerConfiguration().apply { scriptBaseClass = CodeModeScript::class.java.name }
+        val configuration = CompilerConfiguration().apply {
+            scriptBaseClass = CodeModeScript::class.java.name
+            addCompilationCustomizers(ImportCustomizer().addStarImports(*DEFAULT_STAR_IMPORTS))
+        }
         val loader = GroovyClassLoader(javaClass.classLoader, configuration)
         val mops = Mops(project, access, platform, testingRunner)
         CodeModeProjectProvider.initialize(mops)
@@ -46,6 +50,15 @@ class CodeModeExecutor(
             loader.clearCache()
             loader.close()
         }
+    }
+
+    private companion object {
+        // Groovy resolves these after the program's own classes and imports.
+        val DEFAULT_STAR_IMPORTS = arrayOf(
+            "org.jetbrains.mps.openapi.model",
+            "org.jetbrains.mps.openapi.language",
+            "org.jetbrains.mps.openapi.module",
+        )
     }
 
     private fun rejectDependencyInjection(source: String) {
