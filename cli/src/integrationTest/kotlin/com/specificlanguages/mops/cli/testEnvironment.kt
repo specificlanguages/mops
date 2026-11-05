@@ -2,11 +2,16 @@ package com.specificlanguages.mops.cli
 
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
+import com.specificlanguages.mops.protocol.DaemonPaths
 import com.specificlanguages.mops.protocol.DaemonRecordStore
+import com.specificlanguages.mops.protocol.DaemonWorkspace
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.time.Duration
 import java.time.Instant.now
+import java.util.concurrent.TimeUnit
+import kotlin.test.fail
 import kotlin.io.path.*
 import kotlin.jvm.optionals.getOrNull
 import kotlin.use
@@ -56,6 +61,46 @@ fun runCommandLine(workingDirectory: Path, vararg args: String): CliResult {
 
     println("MOPS_CLI_TIMING millis=${(System.nanoTime() - started) / 1_000_000} args=${args.joinToString(" ")}")
     return CliResult(exitCode = exitCode, stdout = stdout, stderr = stderr)
+}
+
+/** The `java` executable of the JVM running the tests. */
+fun javaExecutable(): Path = Path.of(
+    System.getProperty("java.home"), "bin",
+    if (System.getProperty("os.name").startsWith("Windows")) "java.exe" else "java",
+)
+
+/**
+ * Longer than the CLI's default daemon startup budget: five minutes for the daemon to write its record plus two minutes
+ * for the first ping. A slow daemon start then fails with the CLI's own startup error instead of being cut off here.
+ */
+private val CLI_TIMEOUT: Duration = Duration.ofMinutes(8)
+
+/**
+ * Waits for a CLI [process] whose output goes to [stdout] and [stderr], and kills it when it does not finish within
+ * [timeout]. When the CLI fails or times out, the logs of the daemons under [daemonHome] go to stderr or into the
+ * failure message, because the daemon home is a temporary directory that does not outlive the test run.
+ */
+fun awaitCli(process: Process, stdout: Path, stderr: Path, daemonHome: Path, timeout: Duration = CLI_TIMEOUT): CliResult {
+    try {
+        val finished = process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)
+        val result = CliResult(if (finished) process.exitValue() else -1, stdout.readText(), stderr.readText())
+        if (result.stderr.isNotEmpty()) System.err.print(result.stderr)
+        if (!finished) fail("CLI timed out after ${timeout.seconds} seconds: ${result.output}${daemonLogs(daemonHome)}")
+        if (result.exitCode != 0) System.err.println(daemonLogs(daemonHome))
+        return result
+    } finally {
+        if (process.isAlive) process.destroyForcibly()
+    }
+}
+
+private fun daemonLogs(daemonHome: Path): String {
+    val projects = DaemonPaths(daemonHome).projects
+    val logs = if (projects.isDirectory()) {
+        projects.listDirectoryEntries().map { DaemonWorkspace(it).logFile() }.filter { it.isRegularFile() }
+    } else {
+        emptyList()
+    }
+    return logs.joinToString("") { "\nDaemon log $it:\n${it.readText()}" }.ifEmpty { "\nNo daemon logs under $daemonHome" }
 }
 
 data class CliResult(
