@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.cli.find
 
+import com.specificlanguages.mops.cli.output.textRow
 import com.specificlanguages.mops.cli.output.displayConcept
 import com.specificlanguages.mops.cli.output.NodeReferenceFormat
 import com.specificlanguages.mops.cli.output.renderNodeReference
@@ -12,14 +13,14 @@ internal fun renderText(
     fullConcept: Boolean,
     nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED,
 ): String =
-    (
+    textRow(
         listOf(
             node.type,
             node.name ?: "<unnamed>",
             displayConcept(node.concept, fullConcept),
             renderNodeReference(node.reference, nodeReferenceFormat),
-        ) + parentColumns(node.parent, fullConcept, nodeReferenceFormat)
-    ).joinToString("\t")
+        ) + parentColumns(node.parent, fullConcept, nodeReferenceFormat),
+    )
 
 internal fun renderText(
     usage: MpsNodeUsageJson,
@@ -27,15 +28,15 @@ internal fun renderText(
     nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED,
 ): String {
     val owner = usage.owner
-    return (
+    return textRow(
         listOf(
             "usage",
             usage.role,
             owner.name ?: "<unnamed>",
             displayConcept(owner.concept, fullConcept),
             renderNodeReference(owner.reference, nodeReferenceFormat),
-        ) + parentColumns(owner.parent, fullConcept, nodeReferenceFormat)
-    ).joinToString("\t")
+        ) + parentColumns(owner.parent, fullConcept, nodeReferenceFormat),
+    )
 }
 
 /**

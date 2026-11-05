@@ -156,6 +156,27 @@ class FindInstancesCommandTest {
     }
 
     @Test
+    fun `find instances keeps a node whose name has a newline on one row`() {
+        val client = mock<DaemonClient>()
+        whenever(client.findInstances(CONCEPT, false, limit = 100)).thenReturn(
+            sampleInstancesResponse(name = "first\nsecond"),
+        )
+
+        val stdout = tapSystemOut {
+            CommandLine(FindInstancesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(CONCEPT)
+        }
+
+        assertEquals(
+            "root\tfirst\\nsecond\tConceptDeclaration\t" +
+                "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
+                System.lineSeparator(),
+            stdout,
+        )
+    }
+
+    @Test
     fun `find instances passes exact flag to the daemon`() {
         val client = mock<DaemonClient>()
         whenever(client.findInstances(CONCEPT, true, limit = 100)).thenReturn(sampleInstancesResponse())

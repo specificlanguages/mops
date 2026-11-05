@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.cli.list
 
+import com.specificlanguages.mops.cli.output.textRow
 import com.specificlanguages.mops.cli.output.displayConcept
 import com.specificlanguages.mops.cli.output.NodeReferenceFormat
 import com.specificlanguages.mops.cli.output.renderNodeReference
@@ -13,12 +14,12 @@ internal class ListRenderer(
     val nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED,
 ) {
     internal fun renderText(entry: MpsListEntryJson, indent: Int) {
-        println("${"  ".repeat(indent)}${entry.columns().joinToString("\t")}")
+        println("${"  ".repeat(indent)}${textRow(entry.columns())}")
 
         val summary = entry.summary
         if (summary != null) {
             summary.groups.forEach { group ->
-                println("${"  ".repeat(indent + 1)}${summaryColumns(summary, group).joinToString("\t")}")
+                println("${"  ".repeat(indent + 1)}${textRow(summaryColumns(summary, group))}")
             }
             return
         }

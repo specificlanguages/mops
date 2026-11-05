@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.cli.diagnose
 
+import com.specificlanguages.mops.cli.output.textRow
 import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
@@ -49,7 +50,7 @@ class DiagnoseModulesCommand(private val environment: CommandEnvironment) : CliC
         }
 
         val summary = response.summary
-        println(listOf("modules", "${summary.loaded}/${summary.total} loaded", "${summary.failed} failed").joinToString("\t"))
+        println(textRow(listOf("modules", "${summary.loaded}/${summary.total} loaded", "${summary.failed} failed")))
 
         val rows = if (all) response.modules else response.modules.filterNot { it.loaded }
         rows.forEach(::renderModule)
@@ -60,12 +61,12 @@ class DiagnoseModulesCommand(private val environment: CommandEnvironment) : CliC
     private fun renderModule(module: ModuleLoadDiagnosticJson) {
         val problem = module.problem
         if (problem == null) {
-            println(listOf(module.module, module.kind, "loaded").joinToString("\t"))
+            println(textRow(listOf(module.module, module.kind, "loaded")))
             return
         }
-        println(listOf(module.module, module.kind, problem.reason).joinToString("\t"))
+        println(textRow(listOf(module.module, module.kind, problem.reason)))
         // Root causes are the leaves of the problem tree: the actual modules to fix.
-        rootCauses(problem).forEach { println("\t${it.module}\t${it.reason}") }
+        rootCauses(problem).forEach { println("\t" + textRow(listOf(it.module, it.reason))) }
     }
 
     // The same root-cause module is often reachable through several dependency paths; collapse those to one row each.

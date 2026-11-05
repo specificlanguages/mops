@@ -46,6 +46,22 @@ class MpsListCommandTest {
     }
 
     @Test
+    fun `list keeps an entry whose name has a newline on one row`() {
+        val client = mock<DaemonClient>()
+        whenever(client.list(isNull(), eq(1), eq(50), eq(false), isNull())).thenReturn(
+            MpsListResponse(root = MpsListEntryJson(type = "project", name = "mps\njson")),
+        )
+
+        val stdout = tapSystemOut {
+            CommandLine(MpsListCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute()
+        }
+
+        assertEquals("project\tmps\\njson" + System.lineSeparator(), stdout)
+    }
+
+    @Test
     fun `list prints semantic tree as json when requested`() {
         val client = mock<DaemonClient>()
         val response = sampleListResponse()

@@ -11,6 +11,11 @@ RESULTS
   with tab-separated columns. A summary that is part of the report, such as
   the first row of `diagnose project`, is a result row.
 
+  A column never breaks its row. A backslash, newline, carriage return, or
+  tab inside a column prints as `\\`, `\n`, `\r`, or `\t`, so a finding
+  message with a line break stays on one row and the original text can be
+  recovered. JSON and JSONL output is not escaped this way.
+
 METADATA
   Metadata says what mops understood and what it left out: truncation, an
   empty selection, a summary of counts. In row-shaped text it is a line that

@@ -34,6 +34,29 @@ class DiagnoseModulesCommandTest {
     }
 
     @Test
+    fun `a reason with a newline stays on one row`() {
+        val client = mock<DaemonClient>()
+        whenever(client.diagnoseModules()).thenReturn(
+            ModulesDiagnosticsResponse(
+                summary = ModuleLoadSummary(total = 1, loaded = 0, failed = 1),
+                modules = listOf(
+                    ModuleLoadDiagnosticJson(
+                        module = "org.example.base",
+                        kind = "language",
+                        present = true,
+                        loaded = false,
+                        problem = ModuleLoadProblemJson(module = "org.example.base", reason = "NOT\nBUILT"),
+                    ),
+                ),
+            ),
+        )
+
+        val stdout = tapSystemOut { assertEquals(0, run(client)) }
+
+        assertEquals("org.example.base\tlanguage\tNOT\\nBUILT", stdout.lines()[1])
+    }
+
+    @Test
     fun `diagnose modules also lists loaded modules with --all`() {
         val client = mock<DaemonClient>()
         whenever(client.diagnoseModules()).thenReturn(sampleResponse())
