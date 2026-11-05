@@ -35,15 +35,16 @@ class CodeModeIntegrationTest {
                     val destination = target.resolve(relative)
                     if (path.isDirectory()) {
                         destination.createDirectories()
-                    } else if (path.extension == "jar") {
-                        // Runtime JARs are read-only. Hard links avoid duplicating the entire MPS distribution.
+                    } else {
+                        // Hard links avoid duplicating the MPS distribution. Besides its JARs, the distribution can
+                        // hold gigabytes of other files, such as the per-platform archives in platform-plugins/.
+                        // Sharing the files is safe because the daemon writes only to its own config and system
+                        // directories, never into the MPS home.
                         try {
                             Files.createLink(destination, path)
                         } catch (_: IOException) {
                             Files.copy(path, destination)
                         }
-                    } else {
-                        Files.copy(path, destination)
                     }
                 }
             }
