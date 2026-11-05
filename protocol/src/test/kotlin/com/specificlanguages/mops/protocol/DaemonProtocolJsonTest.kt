@@ -31,7 +31,7 @@ class DaemonProtocolJsonTest {
         val catalog = CodeCatalogRequest("secret", "Project.read", json = true)
         assertEquals(catalog, ProtocolJson.decodeRequest(ProtocolJson.encodeRequest(catalog)))
 
-        val result = CodeResultResponse("{\"answer\":42}")
+        val result = CodeResultResponse("{\"answer\":42}", listOf("added used language exprs to model sandbox"))
         assertEquals(result, ProtocolJson.decodeResponse(ProtocolJson.encodeResponse(result)))
         val quiet = CodeResultResponse(null)
         assertEquals(quiet, ProtocolJson.decodeResponse(ProtocolJson.encodeResponse(quiet)))

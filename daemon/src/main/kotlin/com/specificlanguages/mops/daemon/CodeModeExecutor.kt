@@ -34,7 +34,7 @@ class CodeModeExecutor(
         try {
             val result = GroovyShell(loader, Binding(), configuration).evaluate(request.source, request.sourceName)
             // Accessors and native collections returned from an access block read the model while they are rendered.
-            return CodeResultResponse(access.read { CodeResultAdapter.render(result) })
+            return CodeResultResponse(access.read { CodeResultAdapter.render(result) }, mops.notes.toList())
         } catch (failure: Throwable) {
             val line = failure.stackTrace.firstOrNull {
                 it.fileName == request.sourceName || request.sourceName.endsWith("/${it.fileName}")

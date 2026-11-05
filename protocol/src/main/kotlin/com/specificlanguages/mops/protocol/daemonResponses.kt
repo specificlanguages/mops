@@ -193,9 +193,13 @@ data class MakeResponse(
     val messages: List<MakeMessageJson>,
 ) : DaemonResponse
 
+/**
+ * Successful response carrying a Code Mode program's rendered [output] and [notes] on what mops did on the program's
+ * behalf, such as imports it added to changed models.
+ */
 @Serializable
 @SerialName("code-result")
-data class CodeResultResponse(val output: String?) : DaemonResponse
+data class CodeResultResponse(val output: String?, val notes: List<String> = emptyList()) : DaemonResponse
 
 @Serializable
 @SerialName("code-catalog")

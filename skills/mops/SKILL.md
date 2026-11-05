@@ -91,9 +91,11 @@ concurrently. Use `mops skill path daemon` for coordination and recovery guidanc
 ## Model access and results
 
 Put lookup and model reads inside `project.read { ... }`, and mutations inside `project.command { ... }`. Do not nest
-these access blocks. A command saves after successful completion. When it throws, every changed model is reloaded from
-disk, dropping its model changes; modules and models it created and module changes remain. Resolve and validate targets
-before changing them.
+these access blocks. A command saves after successful completion. Before saving, it adds to each model the used
+languages and model imports that the nodes the command added and the references it set need, and `code run` prints a
+note on stderr for each one added. It does not remove imports. When a command throws, every changed model is reloaded
+from disk, dropping its model changes; modules and models it created and module changes remain. Resolve and validate
+targets before changing them.
 
 The program runs on the daemon request thread, outside any model access. `project.read` and `project.command` open
 access for the calling thread only, so a worker thread started by the program may open its own `project.read`. Join

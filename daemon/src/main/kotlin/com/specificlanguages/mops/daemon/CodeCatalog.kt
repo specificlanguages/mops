@@ -60,6 +60,7 @@ object CodeCatalog {
         return buildString {
             appendLine("Code Mode Reference (mops-code-mode 1.0)")
             appendLine("Access blocks cannot nest. command saves after success and reloads changed models from disk on failure.")
+            appendLine("Before saving, command adds the used languages and model imports that added nodes and set references need; code run lists each on stderr.")
             if (document.index.isNotEmpty()) {
                 appendLine("Use help('path') to inspect an operation or type; help(object) and help(Class) also work.")
                 document.index.forEach { appendLine("  $it") }

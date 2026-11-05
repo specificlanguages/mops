@@ -61,21 +61,26 @@ object CodeModeExtensions {
     }
 
     /**
-     * Runs an MPS command on the EDT, saves successful repository changes, and returns the closure value. When the
-     * closure or the save throws, every changed model is reloaded from disk before the failure propagates. Access: none.
+     * Runs an MPS command on the EDT, saves successful repository changes, and returns the closure value. Before the
+     * save, each model gets the used languages and model imports that the nodes the closure added or re-referenced
+     * need; the result reports each one added. When the closure or the save throws, every changed model is reloaded
+     * from disk before the failure propagates. Access: none.
      */
     @CodeModeExtension(MpsAccessLevel.NONE)
     @JvmStatic
     fun <T> command(project: Project, body: Closure<T>): T {
         requireOutside(project, "command")
         return CodeModeProjectProvider.access().write {
-            try {
-                body.call().also {
-                    project.repository.saveAll()
+            MissingImportsTracker(project.repository).use { missingImports ->
+                try {
+                    body.call().also {
+                        CodeModeProjectProvider.mops().notes += missingImports.addMissingImports()
+                        project.repository.saveAll()
+                    }
+                } catch (failure: Throwable) {
+                    discardUnsavedChanges(project.repository).forEach(failure::addSuppressed)
+                    throw failure
                 }
-            } catch (failure: Throwable) {
-                discardUnsavedChanges(project.repository).forEach(failure::addSuppressed)
-                throw failure
             }
         }
     }
