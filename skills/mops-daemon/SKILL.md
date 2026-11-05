@@ -99,11 +99,11 @@ active request.
 `MOPS_DAEMON_JAVA_OPTIONS=-Xmx8g`. Test workers started by the daemon inherit them. Without it, the JVM picks its
 default maximum heap, a quarter of physical memory.
 
-Test runs keep the IntelliJ system directories (VFS and indexes) of the test worker and of the preparation environment
-between runs in the daemon home's `test-system-cache/<MPS build number>/` directory, shared by all projects, so a run
-does not index the MPS distribution again. A run that finds a directory in use by another run, for example of another
-project's daemon, uses a fresh directory under its `test-runs/<run-id>/` and says so in the report's diagnostics. Set
-`MOPS_TEST_SYSTEM_CACHE` to use another directory for a newly started daemon. The cache is safe to delete while no test
-runs; delete it if test results contradict the sources, and to free the disk space of MPS builds no longer in use.
+Test runs keep the IntelliJ system directory (VFS and indexes) of the test worker between runs in the daemon home's
+`test-system-cache/<MPS build number>/` directory, shared by all projects, so a run does not index the MPS distribution
+again. A run that finds a directory in use by another run, for example of another project's daemon, uses a fresh
+directory under its `test-runs/<run-id>/` and says so in the report's diagnostics. Set `MOPS_TEST_SYSTEM_CACHE` to use
+another directory for a newly started daemon. The cache is safe to delete while no test runs; delete it if test results
+contradict the sources, and to free the disk space of MPS builds no longer in use.
 
 Stop existing daemons after updating mops.

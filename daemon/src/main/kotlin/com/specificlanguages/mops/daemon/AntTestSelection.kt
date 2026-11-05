@@ -105,17 +105,20 @@ data class AntTestSelection(
             }
         }
 
+        /** The modules whose tests [selection] runs. Must be called inside a model read action. */
+        fun modules(project: MPSProject, selection: Any): List<SModule> = when (selection) {
+            is SModule -> listOf(selection)
+            is SModel -> listOf(requireNotNull(selection.module))
+            is SNode -> {
+                require(selection.parent == null) { "Individual test methods are unsupported; select a test class, model, module, or project" }
+                listOf(requireNotNull(selection.model?.module))
+            }
+            else -> project.projectModulesWithGenerators.toList()
+        }
+
         fun resolve(project: MPSProject, target: List<String>): AntTestSelection = project.modelAccess.computeReadAction {
             val selection = select(project, target)
-            val modules = when (selection) {
-                is SModule -> listOf(selection)
-                is SModel -> listOf(requireNotNull(selection.module))
-                is SNode -> {
-                    require(selection.parent == null) { "Individual test methods are unsupported; select a test class, model, module, or project" }
-                    listOf(requireNotNull(selection.model?.module))
-                }
-                else -> project.projectModulesWithGenerators.toList()
-            }
+            val modules = modules(project, selection)
             fun descriptors(modules: List<SModule>) = modules.mapNotNull { (it as? AbstractModule)?.descriptorFile?.path?.let(Path::of) }.distinct()
             // Paths come back with macros expanded the way the daemon loaded the libraries; an undefined macro stays as
             // written. MPS skips a library without a path, and so does the worker's repository.

@@ -25,6 +25,7 @@ import org.jetbrains.mps.openapi.language.SLanguage
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.module.SModule
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
+import org.jetbrains.mps.openapi.util.ProgressMonitor
 
 /**
  * Runs the MPS make (generation and compilation) on a set of modules.
@@ -43,21 +44,22 @@ import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 class ProjectMake(private val project: Project) {
     private val persistence: PersistenceFacade = PersistenceFacade.getInstance()
 
-    fun makeModules(moduleNames: List<String>): MakeResponse {
+    /** Makes [moduleNames] and their dependencies. The make checks [monitor] for cancellation between its steps. */
+    fun makeModules(moduleNames: List<String>, monitor: ProgressMonitor = EmptyProgressMonitor()): MakeResponse {
         val models = project.modelAccess.computeReadAction<List<SModel>> {
             collectMakeSet(moduleNames.map(::resolveProjectModule)).flatMap { it.models }
         }
-        return runMake(models)
+        return runMake(models, monitor)
     }
 
     fun makeProject(): MakeResponse {
         val models = project.modelAccess.computeReadAction<List<SModel>> {
             project.projectModulesWithGenerators.flatMap { it.models }
         }
-        return runMake(models)
+        return runMake(models, EmptyProgressMonitor())
     }
 
-    private fun runMake(models: List<SModel>): MakeResponse {
+    private fun runMake(models: List<SModel>, monitor: ProgressMonitor): MakeResponse {
         // resources() reads the model graph and keeps only generatable models, grouped one MResource per module.
         // But "generatable" is not the same as "writable": MPS ships its library languages and runtime solutions as
         // *source* models inside `-src.jar` files, and those models report themselves generatable, so they survive
@@ -79,7 +81,7 @@ class ProjectMake(private val project: Project) {
         // per-cluster script; a null-controller default is IScriptController.Stub2. See the mps-api-research notes.
         val controller: IScriptController = IScriptController.Stub2(session)
         val task = CoreMakeTask(MakeSequence(resources, null, session), controller, handler)
-        task.run(EmptyProgressMonitor())
+        task.run(monitor)
         val result = task.getResult()
 
         // MPS's make result is not reliable on its own — it can report success while errors were reported — so a run

@@ -47,9 +47,9 @@ version-specific adapter.
 
 Every run saves report.json under the daemon workspace's test-runs/<run-id>/
 directory and updates it as results arrive. Worker output is saved next to it
-in worker.log (preparation) and ant.log (test execution); XML reports are in
-xml-reports/. The report retains tests, containers, skips, assumption aborts,
-failures, and source node references.
+in worker.log (test supervisor) and ant.log (test execution); XML reports are
+in xml-reports/. The report retains tests, containers, skips, assumption
+aborts, failures, and source node references.
 
 Text output prints an `<outcome>: <N> passed, <N> failed, ...` summary line and
 a `Report: <path>` line on stdout, and diagnostics such as a failed discovery
