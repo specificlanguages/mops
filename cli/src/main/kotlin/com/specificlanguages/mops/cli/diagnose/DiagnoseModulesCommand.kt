@@ -1,11 +1,11 @@
 package com.specificlanguages.mops.cli.diagnose
 
-import com.specificlanguages.mops.cli.output.textRow
 import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
 import com.specificlanguages.mops.cli.output.metadataLine
 import com.specificlanguages.mops.cli.output.renderJson
+import com.specificlanguages.mops.cli.output.textRow
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.ModuleLoadDiagnosticJson
 import com.specificlanguages.mops.protocol.ModuleLoadProblemJson

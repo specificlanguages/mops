@@ -1,10 +1,10 @@
 package com.specificlanguages.mops.cli.list
 
-import com.specificlanguages.mops.cli.output.textRow
 import com.specificlanguages.mops.cli.output.displayConcept
 import com.specificlanguages.mops.cli.output.NodeReferenceFormat
 import com.specificlanguages.mops.cli.output.renderNodeReference
 import com.specificlanguages.mops.cli.output.truncationLine
+import com.specificlanguages.mops.cli.output.textRow
 import com.specificlanguages.mops.protocol.MpsListEntryJson
 import com.specificlanguages.mops.protocol.MpsListSummaryGroupJson
 import com.specificlanguages.mops.protocol.MpsListSummaryJson

@@ -7,14 +7,14 @@ RESULTS
   Results go to stdout: rows, JSON, rendered text, references, and the report
   of an action, such as `made 2 module(s): success`.
 
-  Text output of `find`, `list`, `check`, and `diagnose` is one row per line,
-  with tab-separated columns. A summary that is part of the report, such as
-  the first row of `diagnose project`, is a result row.
+  Text output of `find`, `list`, `check`, `diagnose`, and `get module` is one
+  row per line, with tab-separated columns. A summary that is part of the
+  report, such as the first row of `diagnose project`, is a result row.
 
   A column never breaks its row. A backslash, newline, carriage return, or
-  tab inside a column prints as `\\`, `\n`, `\r`, or `\t`, so a finding
-  message with a line break stays on one row and the original text can be
-  recovered. JSON and JSONL output is not escaped this way.
+  tab inside a column prints as `\\`, `\n`, `\r`, or `\t`, so a value with
+  a line break stays on one row and the original text can be recovered. JSON
+  and JSONL output is not escaped this way.
 
 METADATA
   Metadata says what mops understood and what it left out: truncation, an

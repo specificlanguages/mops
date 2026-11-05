@@ -45,7 +45,11 @@ class DiagnoseModulesCommandTest {
                         kind = "language",
                         present = true,
                         loaded = false,
-                        problem = ModuleLoadProblemJson(module = "org.example.base", reason = "NOT\nBUILT"),
+                        problem = ModuleLoadProblemJson(
+                            module = "org.example.base",
+                            reason = "BROKEN\nDEPENDENCIES",
+                            causes = listOf(ModuleLoadProblemJson(module = "org.example.dep", reason = "NOT\nBUILT")),
+                        ),
                     ),
                 ),
             ),
@@ -53,7 +57,13 @@ class DiagnoseModulesCommandTest {
 
         val stdout = tapSystemOut { assertEquals(0, run(client)) }
 
-        assertEquals("org.example.base\tlanguage\tNOT\\nBUILT", stdout.lines()[1])
+        assertEquals(
+            "modules\t0/1 loaded\t1 failed" + nl +
+                "org.example.base\tlanguage\tBROKEN\\nDEPENDENCIES" + nl +
+                "\torg.example.dep\tNOT\\nBUILT" + nl +
+                "# modules without a Java facet are not listed; diagnose one with: mops diagnose module <module>" + nl,
+            stdout,
+        )
     }
 
     @Test
