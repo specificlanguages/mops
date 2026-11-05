@@ -450,12 +450,8 @@ class JetBrainsMpsAccess(
     private inner class JetBrainsMpsWrite(
         private val writeScope: WriteTransaction.WriteScope,
     ) : JetBrainsMpsRead(), MpsWrite {
-        override fun modelEdit(
-            batch: EditBatch,
-            constraints: ConstraintMode,
-            ignoreMissingLanguages: Boolean,
-        ): ModelEditResponse =
-            editBatchExecutor.apply(project, batch, writeScope, constraints, ignoreMissingLanguages)
+        override fun modelEdit(batch: EditBatch, constraints: ConstraintPolicy): ModelEditResponse =
+            editBatchExecutor.apply(project, batch, writeScope, constraints)
 
         override fun createModule(request: CreateModuleRequest): ModuleCreationResponse =
             ModuleCreationCliAdapter(ModuleCreator(project)).create(request).also {

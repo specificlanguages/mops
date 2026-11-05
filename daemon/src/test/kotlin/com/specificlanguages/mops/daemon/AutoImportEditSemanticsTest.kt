@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.protocol.ConstraintMode
+import com.specificlanguages.mops.protocol.ConstraintPolicy
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
@@ -41,7 +42,7 @@ class AutoImportEditSemanticsTest {
                             properties = listOf(MpsNodePropertyJson(name = "name", value = "Helper")),
                         ),
                     ),
-                    constraints = ConstraintMode.ADVISORY,
+                    constraints = ConstraintPolicy(ConstraintMode.ADVISORY),
                 )
             }
 
@@ -68,7 +69,7 @@ class AutoImportEditSemanticsTest {
                             children = listOf(InlineChild.Fresh(role = "propertyDeclaration", concept = CLASS_CONCEPT)),
                         ),
                     ),
-                    constraints = ConstraintMode.ADVISORY,
+                    constraints = ConstraintPolicy(ConstraintMode.ADVISORY),
                 )
             }
 
@@ -98,7 +99,7 @@ class AutoImportEditSemanticsTest {
                             to = EditTarget.NodeReference("$SANDBOX_MODEL/$SANDBOX_ROOT_ID"),
                         ),
                     ),
-                    constraints = ConstraintMode.ADVISORY,
+                    constraints = ConstraintPolicy(ConstraintMode.ADVISORY),
                 )
             }
 
@@ -133,7 +134,7 @@ class AutoImportEditSemanticsTest {
                             source = EditTarget.Alias("\$src"),
                         ),
                     ),
-                    constraints = ConstraintMode.ADVISORY,
+                    constraints = ConstraintPolicy(ConstraintMode.ADVISORY),
                 )
             }
 

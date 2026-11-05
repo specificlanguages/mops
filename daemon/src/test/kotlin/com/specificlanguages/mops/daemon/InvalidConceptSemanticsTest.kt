@@ -4,6 +4,7 @@ import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.CodeRunRequest
 import com.specificlanguages.mops.protocol.ConstraintMode
+import com.specificlanguages.mops.protocol.ConstraintPolicy
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
@@ -76,6 +77,37 @@ class InvalidConceptSemanticsTest {
     }
 
     @Test
+    fun `copying a node whose language did not load fails by default, naming the concept and the language`() {
+        SharedMpsEnvironment.withOpenProjectCopy(prepare = ::injectUncompiledConceptNode) { project, projectPath ->
+            val access = SharedMpsEnvironment.mpsAccess(project)
+            val reference = uncompiledNodeReference(project)
+            val modelFile = projectPath.resolve(STRUCTURE_MODEL_PATH)
+            val before = modelFile.readText()
+
+            val exception = assertFailsWith<MpsRequestException> {
+                access.write {
+                    modelEdit(
+                        EditBatch(
+                            listOf(
+                                EditOperation.CopyAsChild(
+                                    target = EditTarget.InModel(STRUCTURE_MODEL_NAME, JSON_FILE_NODE_ID),
+                                    source = EditTarget.NodeReference(reference),
+                                    role = "propertyDeclaration",
+                                ),
+                            ),
+                        ),
+                    )
+                }
+            }
+
+            assertEquals(MpsErrorCode.LANGUAGE_NOT_LOADED, exception.code)
+            assertContains(exception.message.orEmpty(), "com.example.uncompiled (com.example.uncompiled.structure.Widget)")
+            assertContains(exception.message.orEmpty(), "--ignore-missing-languages")
+            assertEquals(before, modelFile.readText())
+        }
+    }
+
+    @Test
     fun `advisory edit still aborts when the target concept did not load`() {
         SharedMpsEnvironment.withOpenProjectCopy(prepare = ::injectUncompiledConceptNode) { project, projectPath ->
             val access = SharedMpsEnvironment.mpsAccess(project)
@@ -87,7 +119,7 @@ class InvalidConceptSemanticsTest {
                 access.write {
                     modelEdit(
                         EditBatch(listOf(EditOperation.Delete(EditTarget.NodeReference(reference)))),
-                        constraints = ConstraintMode.ADVISORY,
+                        constraints = ConstraintPolicy(ConstraintMode.ADVISORY),
                     )
                 }
             }
@@ -106,7 +138,7 @@ class InvalidConceptSemanticsTest {
             val response = access.write {
                 modelEdit(
                     EditBatch(listOf(EditOperation.Delete(EditTarget.NodeReference(reference)))),
-                    ignoreMissingLanguages = true,
+                    constraints = ConstraintPolicy(ignoreMissingLanguages = true),
                 )
             }
 

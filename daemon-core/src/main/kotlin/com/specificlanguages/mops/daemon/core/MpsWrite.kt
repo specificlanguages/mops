@@ -2,6 +2,7 @@ package com.specificlanguages.mops.daemon.core
 
 import com.specificlanguages.mops.protocol.Facade
 import com.specificlanguages.mops.protocol.ConstraintMode
+import com.specificlanguages.mops.protocol.ConstraintPolicy
 import com.specificlanguages.mops.protocol.CreateModelRequest
 import com.specificlanguages.mops.protocol.CreateModuleRequest
 import com.specificlanguages.mops.protocol.EditBatch
@@ -22,14 +23,10 @@ interface MpsWrite : MpsRead {
      *
      * Violations are always reported. [ConstraintMode.STRICT] blocks the batch on any violation (nothing is saved);
      * [ConstraintMode.ADVISORY] applies and saves the batch anyway. A concept that cannot be checked because its
-     * language did not load fails the batch, unless [ignoreMissingLanguages] is set: then it is skipped and reported as
-     * a warning.
+     * language did not load fails the batch, unless [ConstraintPolicy.ignoreMissingLanguages] is set: then it is
+     * skipped and reported as a warning.
      */
-    fun modelEdit(
-        batch: EditBatch,
-        constraints: ConstraintMode = ConstraintMode.STRICT,
-        ignoreMissingLanguages: Boolean = false,
-    ): ModelEditResponse
+    fun modelEdit(batch: EditBatch, constraints: ConstraintPolicy = ConstraintPolicy()): ModelEditResponse
 
     /**
      * Runs a **Module Creation Operation**, or only plans it when the request is a dry run. A created module and its

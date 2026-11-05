@@ -3,7 +3,7 @@ package com.specificlanguages.mops.daemoncomms
 import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.DaemonRequest
 import com.specificlanguages.mops.protocol.DaemonRecord
-import com.specificlanguages.mops.protocol.ConstraintMode
+import com.specificlanguages.mops.protocol.ConstraintPolicy
 import com.specificlanguages.mops.protocol.DaemonResponse
 import com.specificlanguages.mops.protocol.ModelEditRequest
 import com.specificlanguages.mops.protocol.ModelEditResponse
@@ -175,14 +175,9 @@ class DefaultDaemonClient(
             FindNodeByIdResponse::class.java
         )
 
-    override fun modelEdit(batch: EditBatch, constraints: ConstraintMode, ignoreMissingLanguages: Boolean): ModelEditResponse =
+    override fun modelEdit(batch: EditBatch, constraints: ConstraintPolicy): ModelEditResponse =
         exchange(
-            ModelEditRequest(
-                token = token,
-                batch = batch,
-                constraints = constraints,
-                ignoreMissingLanguages = ignoreMissingLanguages,
-            ),
+            ModelEditRequest(token = token, batch = batch, constraints = constraints),
             ModelEditResponse::class.java
         )
 

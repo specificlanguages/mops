@@ -4,6 +4,7 @@ import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.ChildPosition
 import com.specificlanguages.mops.protocol.ConstraintMode
+import com.specificlanguages.mops.protocol.ConstraintPolicy
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditConstraintViolation
 import com.specificlanguages.mops.protocol.EditOperation
@@ -45,14 +46,13 @@ class EditBatchExecutor(
         project: Project,
         batch: EditBatch,
         writeScope: WriteTransaction.WriteScope,
-        constraints: ConstraintMode = ConstraintMode.STRICT,
-        ignoreMissingLanguages: Boolean = false,
+        constraints: ConstraintPolicy = ConstraintPolicy(),
     ): ModelEditResponse {
         // Every affected model is unchanged when the batch first touches it, so any unsaved change it holds after a
         // failure is the batch's own.
         val affectedModels = linkedSetOf<EditableSModel>()
         return try {
-            applyTracked(project, batch, writeScope, constraints, ignoreMissingLanguages, affectedModels)
+            applyTracked(project, batch, writeScope, constraints, affectedModels)
         } catch (failure: Throwable) {
             discardUnsavedChanges(affectedModels).forEach(failure::addSuppressed)
             throw failure
@@ -63,8 +63,7 @@ class EditBatchExecutor(
         project: Project,
         batch: EditBatch,
         writeScope: WriteTransaction.WriteScope,
-        constraints: ConstraintMode,
-        ignoreMissingLanguages: Boolean,
+        constraints: ConstraintPolicy,
         affectedModels: MutableSet<EditableSModel>,
     ): ModelEditResponse {
         if (batch.operations.isEmpty()) {
@@ -78,7 +77,7 @@ class EditBatchExecutor(
         val placements = mutableListOf<Placement>()
         val rootPlacements = mutableListOf<RootPlacement>()
         val referencePlacements = mutableListOf<ReferencePlacement>()
-        val uncheckable = UncheckableLanguages()
+        val uncheckable = UncheckedConstraints()
         val conceptResolver = ConceptResolver(project)
         val moduleLoadDiagnostics = ModuleLoadDiagnostics(project)
 
@@ -149,21 +148,7 @@ class EditBatchExecutor(
                     "operation $index target could not be resolved: ${exception.message ?: exception.javaClass.name}",
                 )
             }
-            val resolved = node ?: fail(MpsErrorCode.NODE_NOT_FOUND, "operation $index target node not found")
-            // A node whose concept did not resolve (uncompiled language) carries only placeholder concept information.
-            // That aborts the batch unless missing languages are ignored; then it is recorded as an unchecked language and
-            // the operation proceeds (and typically fails later at property/role resolution, which is fine).
-            if (!resolved.concept.isValid) {
-                if (!ignoreMissingLanguages) {
-                    fail(
-                        MpsErrorCode.LANGUAGE_NOT_LOADED,
-                        "operation $index target: ${ConceptValidityGuard.messageFor(resolved)}, " +
-                            "or rerun with --ignore-missing-languages to skip its unchecked constraints",
-                    )
-                }
-                uncheckable.add(resolved.concept)
-            }
-            return resolved
+            return node ?: fail(MpsErrorCode.NODE_NOT_FOUND, "operation $index target node not found")
         }
 
         // Binds a created node to a batch-local alias; a duplicate alias name fails. The name is stored without its
@@ -180,6 +165,21 @@ class EditBatchExecutor(
         // Resolves a target whose model must be editable, clean at batch start, and tracked as affected.
         fun requireEditableNode(index: Int, target: EditTarget): SNode {
             val node = resolveNode(index, target)
+            // A node whose concept did not resolve (uncompiled language) carries only placeholder concept information.
+            // Editing it aborts the batch unless missing languages are ignored; then it is recorded as an unchecked
+            // language and the operation proceeds (and typically fails later at property/role resolution, which is
+            // fine). A node the batch only reads, such as a reference target or a copy source, is not checked here: a
+            // copy is checked where it is placed.
+            if (!node.concept.isValid) {
+                if (!constraints.ignoreMissingLanguages) {
+                    fail(
+                        MpsErrorCode.LANGUAGE_NOT_LOADED,
+                        "operation $index target: ${ConceptValidityGuard.messageFor(node)}, " +
+                            "or rerun with --ignore-missing-languages to skip its unchecked constraints",
+                    )
+                }
+                uncheckable.add(node.concept)
+            }
             val model = node.model
                 ?: fail(MpsErrorCode.NODE_NOT_FOUND, "operation $index target node is detached from a model")
             val editableModel = writeScope.asEditable(model)
@@ -604,14 +604,14 @@ class EditBatchExecutor(
         val violations = evaluateConstraints(placements, rootPlacements, referencePlacements, uncheckable)
 
         // Unless missing languages are ignored, refuse to apply anything that could not be fully checked.
-        if (!ignoreMissingLanguages && !uncheckable.isEmpty) {
+        if (!constraints.ignoreMissingLanguages && uncheckable.hasMissingLanguages) {
             fail(MpsErrorCode.LANGUAGE_NOT_LOADED, uncheckable.failureMessage())
         }
 
         val warnings = uncheckable.warnings()
 
         // Advisory applies and saves despite violations; strict blocks on any violation.
-        if (violations.isNotEmpty() && constraints == ConstraintMode.STRICT) {
+        if (violations.isNotEmpty() && constraints.mode == ConstraintMode.STRICT) {
             // Block: revert the in-memory batch and report the violations without saving.
             discardUnsavedChanges(affectedModels).firstOrNull()?.let { throw it }
             return ModelEditResponse(created = emptyMap(), violations = violations, warnings = warnings)
@@ -748,7 +748,7 @@ class EditBatchExecutor(
         placements: List<Placement>,
         rootPlacements: List<RootPlacement>,
         referencePlacements: List<ReferencePlacement>,
-        uncheckable: UncheckableLanguages,
+        uncheckable: UncheckedConstraints,
     ): List<EditConstraintViolation> {
         val violations = mutableListOf<EditConstraintViolation>()
         val cardinalityChecked = hashSetOf<String>()
@@ -895,9 +895,10 @@ class EditBatchExecutor(
             }
             val scope = ModelConstraints.getReferenceDescriptor(referencePlacement.node, link).scope
             // The scope function threw: MPS returns an ErrorScope rather than a membership answer, so treat the
-            // reference as unable-to-check (a language defect) rather than fabricating a scope violation.
+            // reference as unable-to-check (a language defect) rather than fabricating a scope violation. Its language
+            // did load, so it is reported as a warning whether or not missing languages are ignored.
             if (scope is ErrorScope) {
-                uncheckable.add(sourceConcept)
+                uncheckable.addFailedScope(link, sourceConcept)
                 continue
             }
             if (!scope.contains(referencePlacement.target)) {
@@ -958,24 +959,43 @@ private class ReferencePlacement(
 )
 
 /**
- * Collects the languages whose constraints an edit batch could not check because they are not loaded, deduplicated so
- * each language is reported once.
+ * Collects the constraints an edit batch could not check: concepts whose languages are not loaded, grouped by language
+ * so each language is reported once, and reference scopes whose scope function failed.
  */
-private class UncheckableLanguages {
-    private val languages = linkedSetOf<String>()
+private class UncheckedConstraints {
+    private val conceptsByLanguage = linkedMapOf<String, MutableSet<String>>()
+    private val failedScopes = linkedSetOf<String>()
 
     fun add(concept: SConcept) {
-        languages.add(ConceptValidityGuard.languageName(concept))
+        conceptsByLanguage.getOrPut(ConceptValidityGuard.languageName(concept)) { linkedSetOf() }
+            .add(concept.qualifiedName)
     }
 
-    val isEmpty: Boolean get() = languages.isEmpty()
+    fun addFailedScope(link: SReferenceLink, concept: SConcept) {
+        failedScopes.add(
+            "reference scope of ${link.name} on ${concept.qualifiedName} was not checked because its scope function " +
+                "failed",
+        )
+    }
 
-    fun failureMessage(): String =
-        "constraints could not be checked because these languages are not loaded: " +
-            "${languages.joinToString()} — build them (e.g. 'mops make module ${languages.joinToString(" ")}') and " +
-            "retry, or rerun with --ignore-missing-languages to skip the unchecked constraints"
+    val hasMissingLanguages: Boolean get() = conceptsByLanguage.isNotEmpty()
 
-    fun warnings(): List<String> = uncheckableLanguageWarnings(languages.toList())
+    fun failureMessage(): String = missingLanguagesFailureMessage(conceptsByLanguage)
+
+    fun warnings(): List<String> = uncheckableLanguageWarnings(conceptsByLanguage.keys.toList()) + failedScopes
+}
+
+/**
+ * Formats the failure for constraints that could not be checked because their languages are not loaded, naming each
+ * language with the concepts that needed it.
+ */
+internal fun missingLanguagesFailureMessage(conceptsByLanguage: Map<String, Set<String>>): String {
+    val languages = conceptsByLanguage.entries.joinToString { (language, concepts) ->
+        "$language (${concepts.joinToString()})"
+    }
+    return "constraints could not be checked because these languages are not loaded: $languages — build them " +
+        "(e.g. 'mops make module ${conceptsByLanguage.keys.joinToString(" ")}') and retry, or rerun with " +
+        "--ignore-missing-languages to skip the unchecked constraints"
 }
 
 /**

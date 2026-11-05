@@ -7,6 +7,7 @@ import com.specificlanguages.mops.cli.edit.ModelEditCommand
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.ChildPosition
 import com.specificlanguages.mops.protocol.ConstraintMode
+import com.specificlanguages.mops.protocol.ConstraintPolicy
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
@@ -59,7 +60,7 @@ class ModelEditCommandTest {
         val client = mock<DaemonClient>()
         val batch = sampleBatch()
         val response = ModelEditResponse(created = emptyMap(), violations = emptyList())
-        whenever(client.modelEdit(batch, ConstraintMode.STRICT, false)).thenReturn(response)
+        whenever(client.modelEdit(batch, ConstraintPolicy(ConstraintMode.STRICT, ignoreMissingLanguages = false))).thenReturn(response)
         var exitCode = Int.MIN_VALUE
 
         withTextFromSystemIn(ProtocolJson.batch.encode(batch)).execute {
@@ -71,7 +72,7 @@ class ModelEditCommandTest {
         }
 
         assertEquals(0, exitCode)
-        verify(client).modelEdit(batch, ConstraintMode.STRICT, false)
+        verify(client).modelEdit(batch, ConstraintPolicy(ConstraintMode.STRICT, ignoreMissingLanguages = false))
     }
 
     @Test
@@ -79,7 +80,7 @@ class ModelEditCommandTest {
         val client = mock<DaemonClient>()
         val batch = sampleBatch()
         val response = ModelEditResponse(created = emptyMap(), violations = emptyList())
-        whenever(client.modelEdit(batch, ConstraintMode.ADVISORY, true)).thenReturn(response)
+        whenever(client.modelEdit(batch, ConstraintPolicy(ConstraintMode.ADVISORY, ignoreMissingLanguages = true))).thenReturn(response)
         var exitCode = Int.MIN_VALUE
 
         withTextFromSystemIn(ProtocolJson.batch.encode(batch)).execute {
@@ -91,7 +92,7 @@ class ModelEditCommandTest {
         }
 
         assertEquals(0, exitCode)
-        verify(client).modelEdit(batch, ConstraintMode.ADVISORY, true)
+        verify(client).modelEdit(batch, ConstraintPolicy(ConstraintMode.ADVISORY, ignoreMissingLanguages = true))
     }
 
     @Test

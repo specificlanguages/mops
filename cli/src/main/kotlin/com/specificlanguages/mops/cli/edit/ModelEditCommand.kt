@@ -7,6 +7,7 @@ import com.specificlanguages.mops.cli.output.renderJson
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.BatchDecodeResult
 import com.specificlanguages.mops.protocol.ConstraintMode
+import com.specificlanguages.mops.protocol.ConstraintPolicy
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.ProtocolJson
 import java.nio.file.Path
@@ -62,7 +63,7 @@ class ModelEditCommand(private val environment: CommandEnvironment) : CliCommand
         require(batch.operations.isNotEmpty()) { "edit batch must contain at least one operation" }
 
         val client = environment.daemon()
-        val response = client.modelEdit(batch, resolveConstraints(), ignoreMissingLanguages)
+        val response = client.modelEdit(batch, ConstraintPolicy(resolveConstraints(), ignoreMissingLanguages))
         println(renderJson(response))
     }
 

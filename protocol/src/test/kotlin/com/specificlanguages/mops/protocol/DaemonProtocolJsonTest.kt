@@ -187,18 +187,15 @@ class DaemonProtocolJsonTest {
             ModelEditRequest(
                 token = "secret",
                 batch = batch,
-                constraints = ConstraintMode.ADVISORY,
-                ignoreMissingLanguages = true,
+                constraints = ConstraintPolicy(ConstraintMode.ADVISORY, ignoreMissingLanguages = true),
             ),
         )
-        assertContains(advisory, """"constraints":"advisory"""")
-        assertContains(advisory, """"ignoreMissingLanguages":true""")
+        assertContains(advisory, """"constraints":{"mode":"advisory","ignoreMissingLanguages":true}""")
         assertEquals(
             ModelEditRequest(
                 token = "secret",
                 batch = batch,
-                constraints = ConstraintMode.ADVISORY,
-                ignoreMissingLanguages = true,
+                constraints = ConstraintPolicy(ConstraintMode.ADVISORY, ignoreMissingLanguages = true),
             ),
             ProtocolJson.decodeRequest(advisory),
         )
@@ -207,8 +204,7 @@ class DaemonProtocolJsonTest {
             ModelEditRequest(
                 token = "secret",
                 batch = batch,
-                constraints = ConstraintMode.STRICT,
-                ignoreMissingLanguages = false,
+                constraints = ConstraintPolicy(ConstraintMode.STRICT, ignoreMissingLanguages = false),
             ),
             ProtocolJson.decodeRequest(
                 """{"type":"model-edit","token":"secret","batch":{"operations":[{"op":"delete","target":"$model/1"}]}}""",

@@ -4,6 +4,7 @@ import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.ConstraintMode
+import com.specificlanguages.mops.protocol.ConstraintPolicy
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
@@ -88,7 +89,7 @@ class RootEditSemanticsTest {
                             model = ModelDestination(STRUCTURE_MODEL),
                         ),
                     ),
-                    constraints = ConstraintMode.ADVISORY,
+                    constraints = ConstraintPolicy(ConstraintMode.ADVISORY),
                 )
             }
 
@@ -114,7 +115,7 @@ class RootEditSemanticsTest {
                             model = ModelDestination(STRUCTURE_MODEL),
                         ),
                     ),
-                    constraints = ConstraintMode.ADVISORY,
+                    constraints = ConstraintPolicy(ConstraintMode.ADVISORY),
                 )
             }
 
@@ -193,7 +194,7 @@ class RootEditSemanticsTest {
                             alias = "\$c",
                         ),
                     ),
-                    constraints = ConstraintMode.ADVISORY,
+                    constraints = ConstraintPolicy(ConstraintMode.ADVISORY),
                 )
             }
             assertTrue(forced.violations.any { it.constraint == "canBeRoot" })

@@ -1,7 +1,7 @@
 package com.specificlanguages.mops.daemoncomms
 
 import com.specificlanguages.mops.protocol.Facade
-import com.specificlanguages.mops.protocol.ConstraintMode
+import com.specificlanguages.mops.protocol.ConstraintPolicy
 import com.specificlanguages.mops.protocol.FindByNameResponse
 import com.specificlanguages.mops.protocol.FindSubconceptsResponse
 import com.specificlanguages.mops.protocol.FindInstancesResponse
@@ -68,11 +68,7 @@ interface DaemonClient {
     ): FindInstancesResponse
     fun findByName(pattern: String, scope: List<String>? = null, limit: Int): FindByNameResponse
     fun findNodeById(nodeId: String, scope: List<String>? = null, limit: Int): FindNodeByIdResponse
-    fun modelEdit(
-        batch: EditBatch,
-        constraints: ConstraintMode = ConstraintMode.STRICT,
-        ignoreMissingLanguages: Boolean = false,
-    ): ModelEditResponse
+    fun modelEdit(batch: EditBatch, constraints: ConstraintPolicy = ConstraintPolicy()): ModelEditResponse
     fun list(
         target: List<String>?,
         depth: Int,

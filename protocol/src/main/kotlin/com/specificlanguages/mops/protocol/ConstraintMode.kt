@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
  * - [STRICT]: block the batch; nothing is saved.
  *
  * What happens to a concept that cannot be checked because its language did not load is a separate setting,
- * [ModelEditRequest.ignoreMissingLanguages].
+ * [ConstraintPolicy.ignoreMissingLanguages].
  */
 @Serializable
 enum class ConstraintMode {

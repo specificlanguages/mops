@@ -1,6 +1,7 @@
 package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.protocol.ConstraintMode
+import com.specificlanguages.mops.protocol.ConstraintPolicy
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
@@ -56,7 +57,7 @@ class ConstraintEditSemanticsTest {
                             properties = listOf(MpsNodePropertyJson(name = "role", value = "forced")),
                         ),
                     ),
-                    constraints = ConstraintMode.ADVISORY,
+                    constraints = ConstraintPolicy(ConstraintMode.ADVISORY),
                 )
             }
 
@@ -157,7 +158,7 @@ class ConstraintEditSemanticsTest {
                             to = EditTarget.NodeReference(JSON_FILE_REF),
                         ),
                     ),
-                    constraints = ConstraintMode.ADVISORY,
+                    constraints = ConstraintPolicy(ConstraintMode.ADVISORY),
                 )
             }
 
