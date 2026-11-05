@@ -1,0 +1,60 @@
+# mops explain edit.replace
+
+Generated from `mops explain edit.replace` by `./gradlew :cli:updateReference`. Do not edit this page. Back to the
+[index](../index.md).
+
+```text
+edit.replace — swap a node in place for a new subtree, keeping its exact slot.
+
+FIELDS
+  op      "replace"
+  target  (required) the node to replace — see target
+  with    (required) what takes the target's place: an inline-subtree position — a
+          fresh-node spec, a move leaf, or a copy leaf — see inline-subtree
+  as      (optional) batch-local alias bound to the replacement root; reference it
+          in later operations as $name (the leading $ is required in references)
+
+SEMANTICS
+  The replacement takes the target's exact place: same parent, containment role, and
+  sibling index, or root node position in the same model when the target is a root.
+  The remainder of the target's old subtree is deleted (in MPS, detached and dropped).
+
+  "with" is one inline-subtree position:
+    fresh spec   a brand-new node, built recursively; any "role" it carries is
+                 ignored, since the slot comes from the target.
+    move leaf    {"move": <target>} adopts an existing node identity-preservingly. A
+                 bare move leaf of a descendant of the target is an unwrap: the kept
+                 descendant rises into the target's slot and the rest is deleted.
+    copy leaf    {"copy": <target>} deep-copies an existing node with fresh IDs.
+
+  move leaves inside "with" may source nodes from inside the replaced target — those
+  nodes are adopted (identities preserved, inbound references keep resolving) before
+  the remainder is dropped.
+
+  Inbound references to a deleted node are left dangling: mops does not detect, warn,
+  or rewrite them. To keep a node's inbound references alive, adopt it with a Move
+  Leaf rather than rebuilding it. `mops check model` reports any dangling references.
+
+EXAMPLE
+  Replace a LinkDeclaration with a fresh one that adopts an existing node (kept by
+  identity) under its "specializedLink" role:
+{
+  "operations": [
+    {
+      "op": "replace",
+      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+      "with": {
+        "concept": "jetbrains.mps.lang.structure.structure.LinkDeclaration",
+        "properties": [{"name": "role", "value": "items"}],
+        "children": [
+          {"role": "specializedLink", "move": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566909"}
+        ]
+      },
+      "as": "replacement"
+    }
+  ]
+}
+
+SEE ALSO
+  edit, inline-subtree, target, node-ref
+```

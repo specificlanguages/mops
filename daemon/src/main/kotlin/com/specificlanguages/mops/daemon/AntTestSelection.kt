@@ -32,9 +32,12 @@ data class AntTestSelection(
     val description: String,
     val diagnostics: List<String>,
 ) {
-    /** The folders a run of this selection on [project] reads modules and models from. */
-    fun sourceFolders(project: Path): List<Path> =
-        (listOf(project) + repositoryFolders + (testModules + repositoryModules).map { it.parent }).distinct()
+    /** The folders a run of this selection on [project] reads modules and models from, none inside another. */
+    fun sourceFolders(project: Path): List<Path> {
+        val moduleFolders = (testModules + repositoryModules).map { it.parent }
+        val folders = (listOf(project) + repositoryFolders + moduleFolders).map { it.normalize() }.distinct()
+        return folders.filter { folder -> folders.none { it != folder && folder.startsWith(it) } }
+    }
 
     fun save(path: Path) {
         val properties = Properties()

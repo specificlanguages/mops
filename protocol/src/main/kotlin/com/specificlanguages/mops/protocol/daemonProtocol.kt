@@ -16,6 +16,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.serializer
 import java.nio.file.Path
 import kotlin.io.path.invariantSeparatorsPathString
 
@@ -46,7 +47,7 @@ object ProtocolJson {
     // The set of valid request `type` discriminators, derived from the sealed serializer so it stays in sync with the
     // leaf @SerialName values.
     private val requestTypeNames: Set<String> =
-        DaemonRequest.serializer().descriptor.getElementDescriptor(1).elementNames.toSet()
+        serializer<DaemonRequest>().descriptor.getElementDescriptor(1).elementNames.toSet()
 
     // These methods are intentionally non-inline and expose no kotlinx.serialization type in their signatures: consumers
     // compile against the thin protocol jar but run against the relocated shaded jar, so any inlined body or shaded type
@@ -80,7 +81,7 @@ object ProtocolJson {
         if (type !in requestTypeNames) {
             throw ProtocolJsonException("unsupported request type $type")
         }
-        return json.decodeFromJsonElement(DaemonRequest.serializer(), root)
+        return json.decodeFromJsonElement(serializer<DaemonRequest>(), root)
     }
 
     fun encodeResponse(response: DaemonResponse): String = json.encodeToString(response)
@@ -95,20 +96,20 @@ object ProtocolJson {
      */
     fun decodeBatchOrError(text: String): BatchDecodeResult = BatchNotationDecoder.decode(json, text)
 
-    val batch: JsonCodec<EditBatch> = codec(EditBatch.serializer())
-    val testReport: JsonCodec<TestRunReport> = codec(TestRunReport.serializer())
-    val makeResponse: JsonCodec<MakeResponse> = codec(MakeResponse.serializer())
-    val codeHelp: JsonCodec<CodeHelpDocument> = codec(CodeHelpDocument.serializer())
-    val node: JsonCodec<MpsNodeJson> = codec(MpsNodeJson.serializer())
-    val nodeSummary: JsonCodec<MpsNodeSummaryJson> = codec(MpsNodeSummaryJson.serializer())
-    val finding: JsonCodec<ModelCheckFindingJson> = codec(ModelCheckFindingJson.serializer())
-    val checkSummary: JsonCodec<ModelCheckSummaryJson> = codec(ModelCheckSummaryJson.serializer())
-    val listEntry: JsonCodec<MpsListEntryJson> = codec(MpsListEntryJson.serializer())
-    val moduleCreationPlan: JsonCodec<ModuleCreationPlan> = codec(ModuleCreationPlan.serializer())
-    val moduleCreationReport: JsonCodec<ModuleCreationReport> = codec(ModuleCreationReport.serializer())
-    val modelCreationPlan: JsonCodec<ModelCreationPlan> = codec(ModelCreationPlan.serializer())
-    val modelCreationReport: JsonCodec<ModelCreationReport> = codec(ModelCreationReport.serializer())
-    val record: JsonCodec<DaemonRecord> = codec(DaemonRecord.serializer())
+    val batch: JsonCodec<EditBatch> = codec(serializer<EditBatch>())
+    val testReport: JsonCodec<TestRunReport> = codec(serializer<TestRunReport>())
+    val makeResponse: JsonCodec<MakeResponse> = codec(serializer<MakeResponse>())
+    val codeHelp: JsonCodec<CodeHelpDocument> = codec(serializer<CodeHelpDocument>())
+    val node: JsonCodec<MpsNodeJson> = codec(serializer<MpsNodeJson>())
+    val nodeSummary: JsonCodec<MpsNodeSummaryJson> = codec(serializer<MpsNodeSummaryJson>())
+    val finding: JsonCodec<ModelCheckFindingJson> = codec(serializer<ModelCheckFindingJson>())
+    val checkSummary: JsonCodec<ModelCheckSummaryJson> = codec(serializer<ModelCheckSummaryJson>())
+    val listEntry: JsonCodec<MpsListEntryJson> = codec(serializer<MpsListEntryJson>())
+    val moduleCreationPlan: JsonCodec<ModuleCreationPlan> = codec(serializer<ModuleCreationPlan>())
+    val moduleCreationReport: JsonCodec<ModuleCreationReport> = codec(serializer<ModuleCreationReport>())
+    val modelCreationPlan: JsonCodec<ModelCreationPlan> = codec(serializer<ModelCreationPlan>())
+    val modelCreationReport: JsonCodec<ModelCreationReport> = codec(serializer<ModelCreationReport>())
+    val record: JsonCodec<DaemonRecord> = codec(serializer<DaemonRecord>())
 
     private fun <T> codec(serializer: KSerializer<T>): JsonCodec<T> = JsonCodec(json, prettyJson, serializer)
 }

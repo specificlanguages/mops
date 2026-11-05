@@ -2,29 +2,31 @@ package com.specificlanguages.mops.daemon
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.configurationStore.StoreReloadManager
+import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.VfsUtil
 import jetbrains.mps.classloading.ClassLoaderManager
 import jetbrains.mps.ide.platform.watching.ReloadManager
-import jetbrains.mps.project.AbstractModule
 import jetbrains.mps.project.MPSProject
 import jetbrains.mps.project.Project
 import jetbrains.mps.project.facets.JavaModuleFacet
 import jetbrains.mps.project.dependency.GlobalModuleDependenciesManager
+import jetbrains.mps.util.PathManager
 import jetbrains.mps.vfs.refresh.DefaultCachingContext
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.mps.openapi.module.SModuleReference
 import java.nio.file.Files
-import java.nio.file.FileVisitOption.FOLLOW_LINKS
 import java.nio.file.Path
-import java.security.MessageDigest
-import java.util.HexFormat
 
 /**
- * Refreshes project files and the archives of packaged modules, and replaces runtimes whose Java classpath contents
- * changed between requests.
+ * Refreshes project files, the folders of source modules, and the archives of packaged modules, and replaces runtimes
+ * whose Java classpath contents changed between requests.
  */
 internal class ExternalProjectRefresh(private val project: Project) {
+    private val classPathFingerprints = ClassPathFingerprints()
     private var outputs = snapshot()
     private var archiveStamps: Map<Path, ArchiveStamp?>? = null
+    private val foldersWithStoredFilesLoaded = mutableSetOf<Path>()
+    private val mpsHome = Path.of(PathManager.getHomePath())
 
     fun refresh() {
         val mpsProject = project as MPSProject
@@ -35,10 +37,7 @@ internal class ExternalProjectRefresh(private val project: Project) {
         // The component store reloads project membership separately from MPS's model/module reload sessions.
         runBlocking { StoreReloadManager.getInstance(mpsProject.project).reloadChangedStorageFiles() }
         ApplicationManager.getApplication().invokeAndWait {
-            val roots = project.modelAccess.computeReadAction {
-                project.projectModules.mapNotNull { (it as? AbstractModule)?.descriptorFile?.parent }.distinct()
-            }
-            roots.forEach { it.refresh(DefaultCachingContext(true, true)) }
+            refreshModuleFolders()
             refreshModuleArchives()
             ReloadManager.getInstance().flush()
             val current = snapshot()
@@ -51,6 +50,19 @@ internal class ExternalProjectRefresh(private val project: Project) {
             }
             outputs = current
         }
+    }
+
+    /**
+     * Refreshes the local folders that modules are loaded from: project modules and the modules of libraries that point
+     * at source folders. The persistent VFS keeps records of these files across daemon restarts, so the first time a
+     * folder is seen, the files the VFS has stored under it are loaded into memory before the refresh;
+     * docs/test-running-design.md explains why.
+     */
+    private fun refreshModuleFolders() {
+        val folders = project.modelAccess.computeReadAction { moduleFolders(project, mpsHome) }
+            .mapNotNull { LocalFileSystem.getInstance().findFileByNioFile(it) }
+        folders.filter { foldersWithStoredFilesLoaded.add(it.toNioPath()) }.forEach(::loadStoredFiles)
+        VfsUtil.markDirtyAndRefresh(false, true, true, *folders.toTypedArray())
     }
 
     /**
@@ -83,44 +95,18 @@ internal class ExternalProjectRefresh(private val project: Project) {
         }
     }
 
-    // Replaced classes and libraries can retain both their timestamps and sizes.
-    private fun snapshot(): Map<SModuleReference, List<Pair<Path, String>>> =
-        project.modelAccess.computeReadAction {
-            val fingerprints = mutableMapOf<Path, String>()
+    private fun snapshot(): Map<SModuleReference, List<Pair<Path, String>>> {
+        val classPaths = project.modelAccess.computeReadAction {
             val modules = GlobalModuleDependenciesManager(project.projectModulesWithGenerators)
                 .getModules(GlobalModuleDependenciesManager.Deptype.EXECUTE)
             modules.mapNotNull { module ->
                 val facet = module.getFacet(JavaModuleFacet::class.java)
                 if (facet == null || facet.loadClasses != JavaModuleFacet.LoadClasses.ManagedByMPS) return@mapNotNull null
-                val files = facet.classPath.map { entry ->
-                    // A nested archive entry is replaced when its containing archive changes.
-                    val path = Path.of(entry.substringBefore("!/"))
-                    path to fingerprints.getOrPut(path) { fingerprint(path) }
-                }
-                module.moduleReference to files
+                // A nested archive entry is replaced when its containing archive changes.
+                module.moduleReference to facet.classPath.map { entry -> Path.of(entry.substringBefore("!/")) }
             }.toMap()
         }
-
-    private fun fingerprint(root: Path): String {
-        if (!Files.exists(root)) return "missing"
-        val digest = MessageDigest.getInstance("SHA-256")
-        val files = if (Files.isDirectory(root)) {
-            Files.walk(root, FOLLOW_LINKS).use { paths -> paths.filter(Files::isRegularFile).sorted().toList() }
-        } else listOf(root)
-        val buffer = ByteArray(8192)
-        for (file in files) {
-            digest.update(root.relativize(file).toString().toByteArray(Charsets.UTF_8))
-            digest.update(0.toByte())
-            digest.update(Files.size(file).toString().toByteArray(Charsets.UTF_8))
-            digest.update(0.toByte())
-            Files.newInputStream(file).use { input ->
-                var count = input.read(buffer)
-                while (count != -1) {
-                    digest.update(buffer, 0, count)
-                    count = input.read(buffer)
-                }
-            }
-        }
-        return HexFormat.of().formatHex(digest.digest())
+        val fingerprints = classPathFingerprints.compute(classPaths.values.flatten())
+        return classPaths.mapValues { (_, roots) -> roots.map { it to fingerprints.getValue(it) } }
     }
 }

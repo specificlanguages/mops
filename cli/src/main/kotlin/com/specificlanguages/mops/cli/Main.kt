@@ -120,7 +120,7 @@ fun newCommandLine(
     root.addLeaf("explain", ExplainCommand()).appendDescription(ExplainTopics.topicList())
     root.addLeaf("examples", ExamplesCommand()).appendDescription(ExampleTopics.topicList())
     root.addLeaf("help", RecursiveHelpCommand())
-    HelpLayout.apply(root)
+    HelpLayout.apply(root, rootHeader = MopsVersionProvider().version.single())
 
     return root.setExecutionExceptionHandler(PrintErrorAndExit)
 }

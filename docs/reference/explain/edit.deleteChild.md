@@ -1,0 +1,34 @@
+# mops explain edit.deleteChild
+
+Generated from `mops explain edit.deleteChild` by `./gradlew :cli:updateReference`. Do not edit this page. Back to the
+[index](../index.md).
+
+```text
+edit.deleteChild — delete a child selected by role and position.
+
+FIELDS
+  op        "deleteChild"
+  target    (required) the parent node — see target
+  role      (required) the containment role to delete a child from
+  position  (optional, default only) which child under that role — see position
+
+SEMANTICS
+  Deletes one child under the parent's containment role. With the default "only",
+  the role must hold exactly one child; otherwise position selects which child to
+  delete.
+
+EXAMPLE
+{
+  "operations": [
+    {
+      "op": "deleteChild",
+      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+      "role": "members",
+      "position": "only"
+    }
+  ]
+}
+
+SEE ALSO
+  edit, target, position, node-ref
+```

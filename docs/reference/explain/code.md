@@ -1,0 +1,107 @@
+# mops explain code
+
+Generated from `mops explain code` by `./gradlew :cli:updateReference`. Do not edit this page. Back to the
+[index](../index.md).
+
+```text
+code mode — execute Groovy code over an open MPS project.
+
+Run a program from a file with `mops code run FILE`, or pipe source to `mops code run` (a missing FILE and `-` both
+mean stdin). The source is evaluated as a function body: an explicit top-level return or the final expression is the
+command result.
+
+Results are printed out: strings are printed verbatim, structured values as JSON, and null produces no output.
+Nodes, models, and modules become serialized MPS reference strings, including when nested in maps or collections.
+The output does not contain their properties or members. Return a map from inside an access block to select the
+contents you need:
+
+  return project.read {
+    def model = mops.lookup.requireModel('my.model')
+    [model: model, roots: model.rootNodes.collect { [node: it, name: it.name] }]
+  }
+
+MakeResponse and TestRunReport results serialize as JSON objects, including when nested in maps or collections.
+For example, `return project.make()` prints outcome, moduleCount, and messages. Inside a program you can inspect
+these fields directly. Java parsing returns native nodes: return `[nodes: result.nodes, unresolved: result.unresolved]`
+to print their references, or select their contents while holding model access.
+
+Every run receives `project`, the daemon's native `jetbrains.mps.project.Project`. Values returned by resolvers and
+creation extensions are native MPS objects. Use `project.read { ... }` for model reads and `project.command { ... }`
+for mutations. Access blocks cannot nest or start under already-held model access. Make and editor rendering run
+outside access blocks. A successful command saves project changes. When a command throws, every changed model is
+reloaded from disk before the error is reported, so the failed command's model changes are dropped and a later command
+does not save them. Other effects of a failed command remain: modules and models it created, module changes (a later
+command saves them), and changes outside MPS.
+
+The program runs on the daemon request thread, outside any model access. `project.read` and `project.command` open
+access for the calling thread only, so a worker thread started by the program may open its own `project.read`. The
+program must join every thread it starts before returning: the `mops` context is cleared when the run ends, so a leaked
+thread fails on `mops.*` and on access blocks, and it outlives the request inside the daemon. The hard timeout (default
+900 seconds; `--timeout 0` disables it) terminates the daemon.
+
+Native nodes support indexed access by property name or link role, including inherited features:
+
+  node.properties['name']    — property getter value as a string, or null when unset
+  node.child['role']         — one child or null; throws when several children occupy the role
+  node.children['role']      — immutable list of current children in order, possibly empty
+  node.references['role']    — native SReference or null; .targetNode resolves its target
+
+Containment navigation also provides node.descendants and node.ancestors. Both return immutable list snapshots of native
+nodes, excluding the receiver. Descendants are in depth-first pre-order following native child order; ancestors run
+from the immediate parent to the root. References are not followed. A leaf has no descendants and a root has no
+ancestors. Reading these properties requires project.read or project.command; retained nodes keep native MPS validity
+semantics.
+
+Reads require project.read or project.command. Assignments require project.command:
+
+  node.properties['name'] = 'NewName'  // null requests clearing through the setter
+  node.child['role'] = child          // replaces all children of the role; null clears
+  node.children['role'] = [a, b]       // replaces all children of the role; [] clears
+  node.references['role'] = target    // SNode, SNodeReference, or SReference; null clears
+
+A name or role that the node's concept does not have fails on reads and writes alike with IllegalArgumentException,
+whose message lists the concept's names of that kind. A node whose concept did not load (its language is not compiled)
+fails with IllegalStateException naming the language to make. node.name is the native SNode.getName(): null, not a
+failure, for a concept without a name property. Child assignments accept detached nodes or existing children of that
+same role. Property reads and writes invoke MPS property getter/setter
+handlers and use persisted string values. Enumeration properties are the exception: they read as the literal name
+(`_1`, not the persisted `fLJekj4/_1`) and accept a literal name or a presentation (such as `0..1`) that only one literal
+has; any other value fails and lists the literals. Unset property values follow MPS getter and data type defaults. Child
+access uses native SNode operations: SNodeAccessUtil has no child APIs. Declared child cardinality and containment
+constraints are not checked. Reference assignments resolve SNodeReference and SReference values to a target node and use
+SNodeAccessUtil.setReferenceTarget, which invokes MPS reference setter hooks. An unresolved target fails without
+clearing the existing reference; only explicit null requests clearing. Assigning an SReference uses its resolved
+target, not its dynamic resolution information.
+
+These Groovy accessors shadow native getProperties(), getChildren(), and getReferences(): explicit calls of those
+no-argument getters return the accessors as well. Each accessor iterates like the native collection it shadows, so
+Groovy's collect, findAll, each, and size() work on node.children (all children across roles), node.references (set
+SReference values), and node.properties (SProperty descriptors of set properties). Accessing any other member fails with
+a message naming the native alternative. Property and link descriptors remain available through node.concept; native
+getChildren(containmentLink), getReference(referenceLink), and SNodeOperations.getReferences(node) still work.
+
+Compiled classes of a module — language runtime singletons, generated descriptors, plugin code — load through its class
+loader with mops.runtime.loadClass(module, className) (null for a missing class) or requireClass (throws), inside
+project.read or project.command. Module failures are named: unknown or ambiguous module, module without a class loader,
+or runtime not loaded (run `mops make module <module>` for an uncompiled source module). See `mops examples runtime`.
+
+The code is not sandboxed and runs with full access to the filesystem, network, process, reflection, and MPS.
+
+Groovy dependency injection (`@Grab` and related transforms) is disabled to avoid classpath issues. A fresh environment
+(Groovy binding and script classloader) is used for every run.
+
+Use `mops code help` to list receiver types and namespaces, then `mops code help PATH` for details. The same reference
+is available through global `help(PATH)` in a program. `project` aliases the Project receiver, and an unqualified
+operation name such as `createSolution` works when it identifies one operation. Ambiguous names report matching paths;
+unknown names suggest nearby matches.
+
+Operation help includes parameter and return types, defaults, option keys and accepted values, access requirements,
+and Groovy examples. Follow a return type with `mops code help JavaParsingResult` or `mops code help TestRunReport`
+to inspect its fields. `--json` returns the same documentation in structured form.
+
+Inspect public native members through `help(project)`, `help(model)`, or `help(SNode)` after importing the class.
+The CLI accepts known simple type names such as SNode and fully qualified class names. Member listings include inherited
+methods, Groovy properties, fields, and declaring types alongside applicable mops extensions. They inspect class metadata
+without evaluating getters. Native signatures describe the selected MPS distribution; access requirements and behavior
+must be checked against its API. Mops extension help supplies access requirements for the extensions themselves.
+```

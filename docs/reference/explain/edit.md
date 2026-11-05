@@ -1,0 +1,77 @@
+# mops explain edit
+
+Generated from `mops explain edit` by `./gradlew :cli:updateReference`. Do not edit this page. Back to the
+[index](../index.md).
+
+```text
+edit — the edit-batch notation: an ordered batch of edit operations applied as a unit,
+with best-effort atomicity.
+
+SHAPE
+  {"operations": [ <operation>, ... ]}
+
+  Each <operation> is a JSON object tagged by an "op" field. mops reads the batch
+  from stdin or --file (see: mops edit model --help).
+
+OPERATIONS
+  setProperty   set or clear a node's property
+  setReference  point or clear a node's reference (by role)
+  addChild      create a child node under a containment role
+  copyAsChild   copy a node subtree under a containment role
+  moveAsChild   move an existing node to a new parent role
+  delete        delete a node
+  deleteChild   delete a child selected by role and position
+  addRoot       create a root node directly in a model
+  copyAsRoot    copy a node subtree into a model as a root node
+  moveAsRoot    move an existing node to root node position of a model
+  replace       swap a node in place for a new subtree, keeping its exact slot
+  wrap          put a new node around an existing one, keeping its exact slot
+  unwrap        strip a wrapper, keeping one descendant in its place
+
+CHOOSING AN OPERATION
+  Rearranging existing structure? Prefer replace, wrap, and unwrap over
+  delete-and-rebuild. Each keeps the target's exact slot (parent, role, index) and
+  preserves node identity, so inbound references keep resolving — rebuilding from
+  scratch mints fresh IDs and silently orphans them.
+    replace  swap a node for a new subtree in its place — edit.replace
+    wrap     put a new node around one, keeping its slot — edit.wrap
+    unwrap   strip a wrapper, promoting one descendant — edit.unwrap
+
+  Reusing a node inside a new subtree (addChild, addRoot, replace, wrap)? A move
+  leaf adopts it by identity, so inbound references stay alive; a copy leaf mints an
+  independent duplicate with fresh IDs. Move preserves, copy mints — see
+  inline-subtree.
+
+  Annotations travel with their node: MPS attributes are children of the node they
+  annotate, so wrapping or moving a node carries them along — they never migrate to
+  a wrapper.
+
+  Dangling references: edit does not detect, warn about, or rewrite inbound
+  references left dangling when a node is deleted — that is model check territory.
+  Run `find usages` before to see what points at a node, and `check model` after to
+  catch anything left dangling. To keep inbound references alive across a
+  rearrangement, adopt the node with a move leaf rather than rebuilding it.
+
+NOTES
+  Atomicity is best-effort, not guaranteed. If an operation fails before the batch
+  is saved, the in-memory changes are reverted by reloading the affected models
+  from disk, so nothing is committed. Saving itself is not transactional: a batch
+  that spans several models writes them one at a time, so a failure partway through
+  saving can leave earlier models already persisted.
+  Aliases: a creating operation (addChild, copyAsChild, addRoot, copyAsRoot, replace, wrap) may bind
+  its new node to a batch-local "as" alias (e.g. "as": "root") that later operations
+  target as "$root". The leading $ is the reference sigil — required when targeting an
+  alias, and not part of the name.
+  Constraints: edits are checked against MPS constraints, and every violation is
+  reported. --constraints MODE decides what a violation does: advisory evaluates
+  and reports but applies the batch anyway; best-effort (the default) blocks the
+  batch on a violation and warns about concepts it could not check; strict also
+  fails on a concept it could not check. See `mops edit model --help`.
+
+DRILL DOWN
+  edit.setProperty, edit.setReference, edit.addChild, edit.copyAsChild,
+  edit.moveAsChild, edit.delete, edit.deleteChild, edit.addRoot, edit.copyAsRoot,
+  edit.moveAsRoot, edit.replace, edit.wrap, edit.unwrap
+  inline-subtree, target, position, node-ref
+  Run `mops explain edit --schema` for the generated JSON Schema of the batch.
+```

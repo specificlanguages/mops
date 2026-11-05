@@ -1,0 +1,44 @@
+# mops explain edit.copyAsRoot
+
+Generated from `mops explain edit.copyAsRoot` by `./gradlew :cli:updateReference`. Do not edit this page. Back to the
+[index](../index.md).
+
+```text
+edit.copyAsRoot — copy a node subtree into a model as a new root node.
+
+FIELDS
+  op          "copyAsRoot"
+  model       (required) the destination model — a model reference string or a
+              {"model": <target>} object (see node-ref)
+  source      (required) the node to copy — see target
+  as          (optional) batch-local alias bound to the created root; reference it
+              in later operations as $name (the leading $ is required in references)
+
+SEMANTICS
+  Deep-copies source and attaches the copy as a root node of the destination
+  model, assigning fresh node IDs so the copy is a distinct node rather than a
+  duplicate identity. Source may be a root or a child and may live in a read-only
+  model. The placement is checked against the can-be-root constraint.
+
+EXAMPLE
+  Copy a root, then rename the copy through its alias:
+{
+  "operations": [
+    {
+      "op": "copyAsRoot",
+      "model": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
+      "source": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+      "as": "jsonFileCopy"
+    },
+    {
+      "op": "setProperty",
+      "target": "$jsonFileCopy",
+      "name": "name",
+      "value": "JsonFileCopy"
+    }
+  ]
+}
+
+SEE ALSO
+  edit, edit.copyAsChild, target, node-ref
+```

@@ -5,7 +5,13 @@ import java.util.concurrent.TimeUnit
 import kotlin.io.path.*
 import kotlin.test.assertTrue
 
-class InstalledCli(private val project: Path, private val home: Path, private val workDir: Path) {
+/** Runs the installed CLI in its own process, with [environment] added to the test JVM's environment. */
+class InstalledCli(
+    private val project: Path,
+    private val home: Path,
+    private val workDir: Path,
+    private val environment: Map<String, String> = emptyMap(),
+) {
     fun run(vararg args: String): CliResult {
         val install = Path.of(System.getProperty("test.cliInstall"))
         val java = Path.of(System.getProperty("java.home"), "bin",
@@ -16,7 +22,8 @@ class InstalledCli(private val project: Path, private val home: Path, private va
             java.pathString, "-cp", install.resolve("lib").pathString + "/*",
             "com.specificlanguages.mops.cli.MainKt", "--project-root", project.pathString,
             "--daemon-home", home.pathString, *javaAndMpsHomeArgs(), *args,
-        ).redirectOutput(stdout.toFile()).redirectError(stderr.toFile()).start()
+        ).apply { environment().putAll(environment) }
+            .redirectOutput(stdout.toFile()).redirectError(stderr.toFile()).start()
         try {
             val finished = process.waitFor(3, TimeUnit.MINUTES)
             val result = CliResult(if (finished) process.exitValue() else -1, stdout.readText(), stderr.readText())

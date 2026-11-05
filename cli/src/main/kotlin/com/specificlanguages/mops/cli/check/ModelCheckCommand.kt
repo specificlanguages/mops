@@ -13,6 +13,7 @@ import picocli.CommandLine.Parameters
     description = [
         "Run MPS's full model check over one model and report the findings. Exits 1 when any finding is an error.",
     ],
+    footer = ["", CHECK_OUTPUT_HELP, "", CHECK_JSONL_HELP],
 )
 class ModelCheckCommand(environment: CommandEnvironment) : CheckCommand(environment) {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))

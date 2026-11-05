@@ -14,11 +14,12 @@ object ExplainTopics {
     private const val LINE_WIDTH = 80
 
     private val topLevelTopics =
-        listOf("code", "edit", "inline-subtree", "target", "position", "node-ref", "name-pattern", "scope")
+        listOf("code", "edit", "inline-subtree", "target", "position", "node-ref", "name-pattern", "scope", "output")
 
     private val operationTopics: List<String> = EditNotation.operationNames.map { "edit.$it" }
 
-    private val allTopics: List<String> = topLevelTopics + operationTopics
+    /** Every canonical topic path: the top-level topics, then the `edit.<op>` operation pages. */
+    val topics: List<String> = topLevelTopics + operationTopics
 
     /** Renders the topic index: the [topicList] framed by what the pages are and how to open one. */
     fun index(): String = buildString {
@@ -72,12 +73,12 @@ object ExplainTopics {
      * `edit.*` page naturally qualify those names with the namespace they are in.
      */
     private fun resolve(path: String): String? {
-        if (path in allTopics) return path
+        if (path in topics) return path
         val lastDot = path.lastIndexOf('.')
         if (lastDot < 0) return null
         val prefix = path.substring(0, lastDot)
         val leaf = path.substring(lastDot + 1)
-        return leaf.takeIf { prefix in allTopics && leaf in topLevelTopics }
+        return leaf.takeIf { prefix in topics && leaf in topLevelTopics }
     }
 
     /** Returns the build-generated JSON Schema for the edit-batch Notation, embedded as a classpath resource. */
@@ -85,10 +86,12 @@ object ExplainTopics {
         checkNotNull(javaClass.getResourceAsStream("/model-edit.schema.json")) { "generated edit schema missing" }
             .bufferedReader().use { it.readText() }
 
-    private fun summaryOf(topic: String): String {
-        val firstLine = (readResource(topic) ?: return "").lineSequence().firstOrNull().orEmpty().trim()
-        val dash = firstLine.indexOf('—')
-        return if (dash >= 0) firstLine.substring(dash + 1).trim() else firstLine
+    /** Returns the summary of [topic]: the part of its page's first paragraph after the dash, on one line. */
+    fun summaryOf(topic: String): String {
+        val page = readResource(topic) ?: return ""
+        val firstParagraph = page.lineSequence().takeWhile { it.isNotBlank() }.joinToString(" ") { it.trim() }
+        val dash = firstParagraph.indexOf('—')
+        return if (dash >= 0) firstParagraph.substring(dash + 1).trim() else firstParagraph
     }
 
     private fun readResource(path: String): String? =
@@ -97,12 +100,12 @@ object ExplainTopics {
     private fun unknownTopic(path: String): UnknownTopicException {
         val parts = path.split(".")
         val parentPrefix = parts.dropLast(1).joinToString(".")
-        val siblings = allTopics.filter { candidate ->
+        val siblings = topics.filter { candidate ->
             val candidateParts = candidate.split(".")
             candidateParts.size == parts.size && candidateParts.dropLast(1).joinToString(".") == parentPrefix
-        }.ifEmpty { allTopics }
+        }.ifEmpty { topics }
         // Qualified top-level aliases (see resolve) are invocable too, so offer them as suggestions.
-        val aliases = if (parentPrefix in allTopics) topLevelTopics.map { "$parentPrefix.$it" } else emptyList()
+        val aliases = if (parentPrefix in topics) topLevelTopics.map { "$parentPrefix.$it" } else emptyList()
         // Nearest sibling by edit distance, but credit a shared prefix so `edit.addNode` suggests `edit.addChild`
         // (which shares the `edit.add` prefix) over an equidistant `edit.moveAsChild`.
         val suggestion = (siblings + aliases).minByOrNull { levenshteinDistance(path, it) - commonPrefixLength(path, it) }
