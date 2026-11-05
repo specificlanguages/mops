@@ -31,14 +31,16 @@ object MopsLookupExtensions {
         return ModelNodeResolver(DaemonLogger()).findModelUnique(lookup.mops.project, target)
     }
 
-    /** Resolves a node reference, returning null on a miss and rejecting malformed references. Access: read. */
+    /**
+     * Resolves a node target in the notations the CLI accepts: `<model>/<node ID>` or a serialized node reference, with
+     * the node ID in decimal or encoded spelling. Returns null on a miss and rejects malformed targets and ambiguous
+     * models. Access: read.
+     */
     @CodeModeExtension(MpsAccessLevel.READ)
     @JvmStatic
-    fun node(lookup: MopsLookup, reference: String): SNode? {
+    fun node(lookup: MopsLookup, target: String): SNode? {
         requireRead(lookup.mops, "mops.lookup.node")
-        val parsed = runCatching { persistence.createNodeReference(reference) }.getOrNull()
-            ?: throw IllegalArgumentException("invalid node reference: $reference")
-        return parsed.resolve(lookup.mops.project.repository)
+        return ModelNodeResolver(DaemonLogger()).findNode(lookup.mops.project, target)
     }
 
     /** Resolves a concept name, returning null on a miss. Ambiguity and untrusted runtimes remain errors. Access: read. */
@@ -69,11 +71,11 @@ object MopsLookupExtensions {
     fun requireModel(lookup: MopsLookup, target: String): SModel =
         model(lookup, target) ?: throw IllegalArgumentException("model not found: $target")
 
-    /** Resolves exactly one node reference, throwing on a miss. Access: read. */
+    /** Resolves exactly one node target, throwing on a miss. Accepts the same notations as [node]. Access: read. */
     @CodeModeExtension(MpsAccessLevel.READ)
     @JvmStatic
-    fun requireNode(lookup: MopsLookup, reference: String): SNode =
-        node(lookup, reference) ?: throw IllegalArgumentException("node not found: $reference")
+    fun requireNode(lookup: MopsLookup, target: String): SNode =
+        node(lookup, target) ?: throw IllegalArgumentException("node not found: $target; accepted notations: $NODE_TARGET_NOTATIONS")
 
     /** Resolves exactly one concept name, throwing with diagnostics on a miss. Access: read. */
     @CodeModeExtension(MpsAccessLevel.READ)
