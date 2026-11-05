@@ -17,7 +17,6 @@ class RuntimeHomesTest {
         val project = tempDir.resolve("project").createDirectories()
         val command = MopsCommand(workingDirectory = tempDir).apply {
             mpsHome = "deleted-mps"
-            javaHome = tempDir.resolve("deleted-java").pathString
             projectRoot = "project"
         }
 
@@ -25,7 +24,7 @@ class RuntimeHomesTest {
 
         assertEquals(
             "MPS home does not exist: ${tempDir.resolve("deleted-mps")}. If a mops wrapper passed it, the wrapper " +
-                "is out of date: run mops wrapper $project to write it again.",
+                "is out of date: run mops wrapper --project-root $project to write it again.",
             failure.message,
         )
     }

@@ -170,10 +170,12 @@ class MopsCommand(
 
     fun resolveMpsHome(): Path? = mpsHome?.let(workingDirectory::resolve)
 
-    private fun requireHome(description: String, home: Path) {
+    private fun requireHome(homeName: String, home: Path) {
         if (!home.exists()) {
-            val wrapperStart = projectRoot?.let { workingDirectory.resolve(it).normalize() } ?: workingDirectory
-            throw RuntimeHomeNotFoundException(description, home.normalize(), wrapperStart)
+            val regenerateCommand = projectRoot
+                ?.let { "mops wrapper --project-root ${workingDirectory.resolve(it).normalize()}" }
+                ?: "mops wrapper $workingDirectory"
+            throw RuntimeHomeNotFoundException(homeName, home.normalize(), regenerateCommand)
         }
     }
 
