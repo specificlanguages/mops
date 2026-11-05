@@ -62,6 +62,7 @@ fun main(args: Array<String>) {
     System.setOut(utf8PrintStream(FileDescriptor.out))
     System.setErr(utf8PrintStream(FileDescriptor.err))
     val commandLine = newCommandLine()
+    // picocli does not encode its own writers with the charset of System.out and System.err.
     commandLine.out = PrintWriter(System.out, true, Charsets.UTF_8)
     commandLine.err = PrintWriter(System.err, true, Charsets.UTF_8)
     exitProcess(commandLine.execute(*args))

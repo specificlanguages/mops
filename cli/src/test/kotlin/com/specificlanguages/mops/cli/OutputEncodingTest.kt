@@ -33,7 +33,7 @@ class OutputEncodingTest {
 
     @ParameterizedTest
     @EnumSource
-    fun `stdout is UTF-8`(encodings: JvmEncodings) {
+    fun `stdout is UTF-8`(codePage: CodePageProperties) {
         val response = ModelCheckResponse(
             limit = 0,
             truncated = false,
@@ -41,7 +41,7 @@ class OutputEncodingTest {
             findings = listOf(ModelCheckFindingJson(severity = FindingSeverity.ERROR, message = MESSAGE)),
         )
 
-        val output = runCli(encodings, response, "check", "model", "--format", "jsonl", MODEL)
+        val output = runCli(codePage, response, "check", "model", "--format", "jsonl", MODEL)
 
         assertEquals(1, output.exitCode, output.stderr.decodeUtf8())
         assertTrue(output.stdout.decodeUtf8().contains(MESSAGE), output.stdout.decodeUtf8())
@@ -49,10 +49,10 @@ class OutputEncodingTest {
 
     @ParameterizedTest
     @EnumSource
-    fun `stderr is UTF-8`(encodings: JvmEncodings) {
+    fun `stderr is UTF-8`(codePage: CodePageProperties) {
         val response = DaemonErrorResponse(errorCode = "FAILED", message = MESSAGE, workspacePath = "/project")
 
-        val output = runCli(encodings, response, "check", "model", MODEL)
+        val output = runCli(codePage, response, "check", "model", MODEL)
 
         assertEquals(1, output.exitCode, output.stderr.decodeUtf8())
         assertTrue(output.stderr.decodeUtf8().contains(MESSAGE), output.stderr.decodeUtf8())
@@ -60,7 +60,7 @@ class OutputEncodingTest {
 
     private class CliOutput(val exitCode: Int, val stdout: ByteArray, val stderr: ByteArray)
 
-    private fun runCli(encodings: JvmEncodings, response: DaemonResponse, vararg args: String): CliOutput {
+    private fun runCli(codePage: CodePageProperties, response: DaemonResponse, vararg args: String): CliOutput {
         val project = tempDir.mpsProject()
         val daemonHome = tempDir.resolve("daemon-home")
         val mpsHome = tempDir.mpsHome()
@@ -77,7 +77,7 @@ class OutputEncodingTest {
         val stderrFile = tempDir.resolve("stderr")
         val process = ProcessBuilder(
             javaHome.resolve("bin/java").pathString,
-            *encodings.properties.map { "-D$it=windows-1252" }.toTypedArray(),
+            *codePage.properties.map { "-D$it=windows-1252" }.toTypedArray(),
             "-cp", System.getProperty("java.class.path"),
             "com.specificlanguages.mops.cli.MainKt",
             "--daemon-home", daemonHome.pathString,
@@ -107,11 +107,11 @@ class OutputEncodingTest {
         const val MESSAGE = "‹+› cannot be applied to types ‹boolean› and ‹number[1]{0}›"
     }
 
-    enum class JvmEncodings(vararg val properties: String) {
+    enum class CodePageProperties(vararg val properties: String) {
         /** Western Windows when stdout is a pipe or a file: the streams use the code page, the default charset is UTF-8. */
-        STREAMS("stdout.encoding", "stderr.encoding", "sun.stdout.encoding", "sun.stderr.encoding"),
+        STREAMS_ONLY("stdout.encoding", "stderr.encoding", "sun.stdout.encoding", "sun.stderr.encoding"),
 
         /** The streams and the default charset use the code page, so only explicit charsets produce UTF-8. */
-        STREAMS_AND_DEFAULT_CHARSET(*STREAMS.properties, "file.encoding"),
+        STREAMS_AND_DEFAULT_CHARSET(*STREAMS_ONLY.properties, "file.encoding"),
     }
 }
