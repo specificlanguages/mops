@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.serializer
 
 /**
  * Two-pass, notation-level decoder for an edit batch: parse the text to a [JsonElement], then validate and decode each
@@ -37,7 +38,7 @@ internal object BatchNotationDecoder {
         operations.forEachIndexed { index, element ->
             validateOperation(json, index, element)?.let { return it }
         }
-        return BatchDecodeResult.Success(json.decodeFromJsonElement(EditBatch.serializer(), root))
+        return BatchDecodeResult.Success(json.decodeFromJsonElement(serializer<EditBatch>(), root))
     }
 
     private fun validateOperation(json: Json, index: Int, element: JsonElement): BatchDecodeResult.Failure? {
@@ -85,7 +86,7 @@ internal object BatchNotationDecoder {
         // verbatim and point at the inline-subtree page where the leaf and reference grammar lives. Other
         // [ProtocolJsonException]s fall back to this op's page.
         return try {
-            json.decodeFromJsonElement(EditOperation.serializer(), element)
+            json.decodeFromJsonElement(serializer<EditOperation>(), element)
             null
         } catch (exception: InlineSubtreeException) {
             failure(index, op, BatchDecodeErrorCategory.WrongType,

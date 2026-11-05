@@ -37,6 +37,15 @@ the allowed types when it rejects one. GitHub release notes list the merged pull
 
 Commit messages on pull request branches are free-form.
 
+Before you open a pull request:
+
+- Cherry-picks and rebases don't run the `pre-commit` hook, so prek may not have checked commits made that way.
+- Run `./gradlew detektMain` (see [Code structure checks](#code-structure-checks)).
+- Run the focused tests for what you changed, for example one test class on one MPS version.
+- After changing anything under `examples/`, run `./gradlew :cli:updateExamples` and commit the regenerated
+  `skills/mops/references/` pages.
+- Keep `.kt` and `.md` files under the `file-size` hook's limit. Split a file instead of growing it.
+
 ## Release
 
 Releases are published from explicit release commits on `main`:
@@ -86,7 +95,7 @@ changes, the `markdownlint-cli2-all` hook lints every Markdown file that Git doe
 mps-platform-cache. `./gradlew :daemon:testAllMpsVersions` runs all of them. Each task keeps its MPS state under
 `daemon/build/mps-test-<version>/` and its reports under `daemon/build/reports/tests/<task-name>/`, so the tasks can run
 side by side. `check` runs `:daemon:test` and, through `testOtherMpsVersions`, the tasks for the other supported
-versions. CI runs every version's task in its own `daemon-versions` matrix job instead.
+versions. CI runs these tasks in `daemon-versions` matrix jobs instead.
 
 ## Integration tests
 
@@ -124,54 +133,8 @@ to it. A test that must not see such changes passes its own `copy` key. Tests th
 daemon, run a separate builder daemon or a modified MPS distribution, or run MPS tests in worker processes, create a
 private daemon home in their own `@TempDir` and stop it with `stopDaemons`.
 
-CI has two tiers. The full tier runs in the merge queue, on pushes to `main`, and on manual workflow dispatch. It runs
-the daemon tests and the CLI integration suite on every version in `supportedMpsVersions`, the CLI smoke suite on macOS
-and Windows, and an Ubuntu verification job. Linux has no separate smoke job: the integration job for the last supported
-version runs every smoke test on Ubuntu. The pull request tier runs the verification job, the daemon tests on the oldest
-and the newest release in `supportedMpsVersions` (not `Prerelease`), and the CLI integration suite on the newest release
-only. To run the full tier on a branch before it enters the merge queue, dispatch the workflow on it:
-
-```sh
-gh workflow run ci.yml --ref <branch>
-```
-
-The verification job runs `check -x :cli:integrationTest -x :daemon:test -x :daemon:testOtherMpsVersions`, covering all
-subprojects' unit tests, daemon checks, Gradle discovery tests, and packaging checks, and then runs the `prek` hooks on
-all files. The separate `daemon-versions` and integration matrices cover the excluded daemon tests and CLI integration
-suite. The `plan` job (`.github/scripts/plan.sh`) picks the tier and the versions and prints them in its summary. The
-`CI passed` job requires every job to succeed or to be skipped by the plan. It is the required check in both tiers.
-Release validation runs the complete `check`, including the full integration matrix.
-
-A docs-only run skips the test jobs, and its verification job runs only the `prek` hooks, without Gradle. A run is
-docs-only when every changed file is under `docs/` or is a Markdown file in the repository root, and none is under
-`docs/reference/`. That folder is left out for the generated command reference pages proposed in PR #175, which a Gradle
-check compares with the CLI. A renamed file counts as changed at both paths. No build task or test reads the other
-files.
-
-Changes to the configuration that only the `prek` hooks read also count as docs-only: `.markdownlint-cli2.yaml`,
-`.pre-commit-config.yaml`, `.prettierrc.yaml`, `.prettierignore`, `.editorconfig`, and the hook scripts under
-`tools/markdownlint/` and `tools/pre-commit/`. The verification job runs the hooks on all files, so it checks the whole
-repository against the changed configuration. In a docs-only run the build does not generate the pages under
-`cli/build/generated/examples/pages/`, so markdownlint does not lint them, but it lints their checked-in copies under
-`skills/mops/references/`.
-
-A pull request compares its merge commit with the base branch. A merge queue run compares with the target branch, so the
-changes of earlier groups in the queue count too. A push to `main` compares with the previous head. Pushes to `main` do
-not cancel each other, so every push is compared with a head that CI also checks. Everything runs on a manual dispatch,
-a force push, a push without a previous head, a base that is not in the history, and an empty diff.
-
-When every planned job succeeds and the test jobs ran, `CI passed` saves a cache entry for the tested git tree:
-`ci-passed-<tree>` in the full tier, `ci-passed-pr-<tree>` in the pull request tier. Docs-only runs and merge queue runs
-save no entry; pull request runs cannot read entries saved on merge queue refs. For a pull request the tested tree is
-the tree of the merge commit, and the `plan` job prints it in its summary. A pull request run that finds either entry
-for its tree skips the verification and test jobs, and `CI passed` still succeeds, for example after a stacked pull
-request is rebased onto `main` without changing its code. Re-running a skipped run skips again.
-
-Entries saved by a pull request run are visible only to later runs of the same pull request; entries saved by runs on
-`main` are visible to all pull requests. Merge queue runs, pushes to `main`, and manual dispatches never look up an
-entry, so a pull request tier entry never replaces a full tier run. To make a pull request run without skipping, delete
-both entries with `gh cache delete ci-passed-<tree>` and `gh cache delete ci-passed-pr-<tree>`, then re-run the
-workflow.
+CI has a pull request tier and a full tier, which runs in the merge queue and on `main`. [ci.md](ci.md) describes the
+tiers, the test shards of pull request runs, docs-only runs, and how runs of an already tested tree are skipped.
 
 To test an already extracted distribution, use the separate local task:
 
@@ -253,45 +216,6 @@ runs in `check`. Change the command's help text or the explain page, never the g
 
 ### Test-running integration tests
 
-`TestFamiliesIntegrationTest` checks native BaseLanguage, language, generator, Jupiter, parameterized, and legacy JUnit
-results. Its test methods share immutable reports from a completed full-project run and a parameterized-case selection
-run. The fixture daemon stops before any method inspects those reports. Slow and crashing models are removed from that
-fixture copy. Each request still executes in a separate worker process.
-
-Integration JUnit output includes `MOPS_CLI_TIMING` for calls through the `runCommandLine` test helper. The
-`stopDaemons` helper emits `MOPS_DAEMON_STOP_TIMING` for daemon shutdown including its exit wait. CLI duration includes
-daemon startup when a call starts a daemon. Before deleting fixtures, `stopDaemons` copies test-run reports and
-preparation/Ant logs to `cli/build/test-results/test-run-diagnostics/<MPS version>/<run ID>/`, included in CI's
-test-report artifact. A job killed before fixture teardown may not retain these files.
-
-Each test report's `timingsMillis` records process-local monotonic durations: `preparationStartup` measures preparation
-entry to project opening (or the no-build shortcut), `build` includes generation/compilation and saving,
-`antStartupAndDiscovery` includes Ant setup and worker startup through discovery, `execution` ends when the test plan
-finishes, and `antShutdown` ends when Ant exits. Event collection has 50 ms polling resolution. `workerLifetime` is the
-parent's enclosing spawn-to-exit measurement and overlaps the worker phases; do not add it to them. Missing phases were
-not reached or could not be saved before a process was killed. These timings do not separately measure plugin loading or
-indexing. Per-event report writes checkpoint the active duration, and orderly failures/timeouts close it.
-
-`TestRunningIntegrationTest` uses fresh project copies for root test-case/model/module/project selection, multiple test
-modules, preparation failures, and worker lifecycle behavior. The fixtures live in `test-projects/testing`, and the
-project-library and path-macro fixture in `test-projects/project-library`. The lifecycle test reacts to report updates
-instead of waiting out deadlines, apart from one 15-second test execution limit. Runtime reload and daemon lifecycle
-tests also retain their independent process boundaries.
-
-`WrapperIntegrationTest` puts a copy of the project-library fixture into a Gradle build, makes its project library path
-use a path macro, runs the installed `mops wrapper`, and runs a command through the written `mopsw`.
-
-```sh
-./gradlew :cli:integrationTestMps2024.1.6 --tests '*TestRunningIntegrationTest' --tests '*TestFamiliesIntegrationTest' \
-  :cli:integrationTestMps2025.1.4 --tests '*TestRunningIntegrationTest' --tests '*TestFamiliesIntegrationTest' \
-  :cli:integrationTestMps2026.1.1 --tests '*TestRunningIntegrationTest' --tests '*TestFamiliesIntegrationTest'
-```
-
-The build pins MPS 2026.1.1 in `gradle/libs.versions.toml`. To test an MPS 2026.2 development distribution, use
-`integrationTestLocal` with `--tests '*TestRunningIntegrationTest' --tests '*TestFamiliesIntegrationTest'` and the
-extracted distribution/JBR paths. For distributions containing `lib/intellij.libraries.junit5.jar`, the integration
-fixture adjusts Jupiter API imports to the `JUnit` module in its temporary copy.
-
-On macOS, MPS's IDEA environment still initializes AWT in headless mode. A sandbox that prevents application
-registration can abort the JVM before tests start. Run with `--no-daemon` outside that sandbox so an existing sandboxed
-Gradle daemon is not reused.
+[Test-running integration tests](test-running-integration-tests.md) covers the test-running fixtures, the timing output
+and test report timings, how to run the tests on each MPS version or an MPS development distribution, and the macOS
+sandbox limitation.
