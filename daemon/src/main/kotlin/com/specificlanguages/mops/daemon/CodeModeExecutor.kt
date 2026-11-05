@@ -52,6 +52,12 @@ class CodeModeExecutor(
         }
     }
 
+    private fun rejectDependencyInjection(source: String) {
+        require(!Regex("(?m)^\\s*@(?:groovy\\.lang\\.)?(?:Grab|Grapes|GrabConfig|GrabResolver)\\b").containsMatchIn(source)) {
+            "Groovy dependency injection is disabled in code mode; use classes from the daemon/MPS classpath"
+        }
+    }
+
     private companion object {
         // Groovy resolves these after the program's own classes and imports.
         val DEFAULT_STAR_IMPORTS = arrayOf(
@@ -59,12 +65,6 @@ class CodeModeExecutor(
             "org.jetbrains.mps.openapi.language",
             "org.jetbrains.mps.openapi.module",
         )
-    }
-
-    private fun rejectDependencyInjection(source: String) {
-        require(!Regex("(?m)^\\s*@(?:groovy\\.lang\\.)?(?:Grab|Grapes|GrabConfig|GrabResolver)\\b").containsMatchIn(source)) {
-            "Groovy dependency injection is disabled in code mode; use classes from the daemon/MPS classpath"
-        }
     }
 }
 
