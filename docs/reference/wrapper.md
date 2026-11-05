@@ -22,7 +22,8 @@ distributions; it does not run preparation or language build task actions. If
 discovery finds only some paths, it prints them, writes no wrapper, and exits
 with status 1. When both paths are known, it writes the wrappers and exits with
 status 0, with warnings when the paths are not usable yet, so wrappers can be
-written before the project's preparation steps.
+written before the project's preparation steps. Warnings and the reason no
+wrapper was written go to stderr.
 Parameters:
       [PATH]                Starting point of discovery; default is
                               --project-root when supplied, otherwise the
@@ -54,18 +55,18 @@ deleted periodically.
 
 Path macros: the global option --macro NAME=PATH defines a path macro, such as
 one that .mps/libraries.xml or .mps/modules.xml uses as ${NAME}; repeat it for
-more macros. PATH is an existing directory, absolute or relative to the
-directory where mops was started. The daemon defines the macros in MPS before
-it opens the project, and test runs pass them to the test worker. A running
-daemon started with other macros is not reused: the command fails, and after
-mops daemon stop the next command starts a daemon with the new macros.
-Project-relative paths ($PROJECT_DIR$) and the macros MPS defines itself
-(project, mps_home, platform_lib, lib_ext) need no --macro.
+more path macros. PATH is an existing directory, absolute or relative to the
+directory where mops was started. The daemon defines the path macros in MPS
+before it opens the project, and test runs pass them to the test worker. A
+running daemon started with other path macros is not reused: the command fails,
+and after mops daemon stop the next command starts a daemon with the new path
+macros. Project-relative paths ($PROJECT_DIR$) and the path macros MPS defines
+itself (project, mps_home, platform_lib, lib_ext) need no --macro.
 
-Each wrapper passes the --macro values given to mops wrapper. For a macro that
-.mps/libraries.xml or .mps/modules.xml uses without a --macro value, mops
+Each wrapper passes the --macro values given to mops wrapper. For a path macro
+that .mps/libraries.xml or .mps/modules.xml uses without a --macro value, mops
 wrapper guesses the root of the project's Git repository, writes it into the
-wrapper, and prints a warning; rerun mops wrapper --macro NAME=PATH to set
-another value. Outside a Git repository, the command fails and names the macro
-that needs --macro.
+wrapper, and prints a warning on stderr; rerun mops wrapper --macro NAME=PATH
+to set another value. Outside a Git repository, the command fails and names the
+path macro that needs --macro.
 ```
