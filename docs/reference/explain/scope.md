@@ -60,8 +60,9 @@ RESOLUTION
   unambiguously, and with the `<module> <model>` path that selects a model
   candidate. A segment that matches nothing fails as not found. For several
   segments, the error says that mops read them as one path and names the form
-  that works: drop a kind word such as `model`, which is not a keyword; name
-  one target per scope; start a path through a model at its module.
+  that works: drop a word such as `model` before a segment, which is not a
+  keyword; name one target per call; start a path through a model at its
+  module.
 
 EXAMPLE
   mops find instances ConceptDeclaration in com.specificlanguages.json

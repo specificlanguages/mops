@@ -14,7 +14,7 @@ private const val MISSING_MODEL_LISTING_LIMIT = 20
 // The order of segments in a multi-segment path, as a missing path's error states it.
 private const val PATH_GRAMMAR = "module, model, root node, child nodes"
 
-// Names of target kinds, which a path does not take as keywords before a segment.
+// Names of target kinds. The path grammar has no keywords, so such a word before a segment is reported as one to drop.
 private val KIND_WORDS = setOf("module", "model", "root", "node", "solution", "language", "generator", "devkit")
 
 /** What a **Navigation Target** resolved to: a module, a model, a root node, or a nested node. */
