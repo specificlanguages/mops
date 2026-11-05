@@ -39,7 +39,7 @@ class ProjectPathsTest {
     fun `explicit project root without mps directory is reported without an upward search`() {
         val worktree = tempDir.resolve("worktree").createDirectories().toRealPath()
 
-        val error = assertThrows<ProjectPathNotFoundException> { explicitRoot(worktree).resolveProjectPath() }
+        val error = assertThrows<ProjectPathNotFoundException> { commandWithProjectRoot(worktree).resolveProjectPath() }
 
         assertEquals("--project-root $worktree has no .mps directory", error.message)
     }
@@ -50,10 +50,10 @@ class ProjectPathsTest {
         val extensions = worktree.resolve("code").mpsProject("extensions")
         worktree.resolve("a/b/c/d").mpsProject("too-deep")
 
-        val error = assertThrows<ProjectPathNotFoundException> { explicitRoot(worktree).resolveProjectPath() }
+        val error = assertThrows<ProjectPathNotFoundException> { commandWithProjectRoot(worktree).resolveProjectPath() }
 
         assertEquals(
-            "--project-root $worktree has no .mps directory; MPS projects below it: $extensions",
+            "--project-root $worktree has no .mps directory; MPS projects below it, pass one as --project-root: $extensions",
             error.message,
         )
     }
@@ -64,15 +64,15 @@ class ProjectPathsTest {
         val near = worktree.mpsProject("near")
         val deeper = listOf("p1", "p2", "p3").map { worktree.resolve("x").mpsProject(it) }
 
-        val error = assertThrows<ProjectPathNotFoundException> { explicitRoot(worktree).resolveProjectPath() }
+        val error = assertThrows<ProjectPathNotFoundException> { commandWithProjectRoot(worktree).resolveProjectPath() }
 
-        val listed = error.message!!.substringAfter("MPS projects below it: ").split(", ")
+        val listed = error.message!!.substringAfter("--project-root: ").split(", ")
         assertEquals(3, listed.size)
         assertEquals(near.toString(), listed.first())
         assertTrue(listed.drop(1).all { it in deeper.map(Path::toString) })
     }
 
-    private fun explicitRoot(root: Path) =
+    private fun commandWithProjectRoot(root: Path) =
         MopsCommand(workingDirectory = tempDir.resolve("outside").createDirectories()).apply {
             projectRoot = root.pathString
         }

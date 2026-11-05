@@ -181,10 +181,10 @@ class MopsCommand(
     override fun projectPath(start: Path): Path {
         projectRoot?.let { configuredProjectRoot ->
             val resolved = workingDirectory.resolve(configuredProjectRoot).normalize()
-            if (resolved.resolve(".mps").isDirectory()) {
+            if (resolved.isMpsProject()) {
                 return resolved
             }
-            throw ProjectPathNotFoundException.explicitRoot(resolved)
+            throw ProjectPathNotFoundException.explicitRoot(resolved, findMpsProjectsBelow(resolved))
         }
 
         return MopsCommand.resolveProjectPath(start)
@@ -198,7 +198,7 @@ class MopsCommand(
             var current: Path? = start.normalize()
 
             while (current != null) {
-                if (current.resolve(".mps").isDirectory()) {
+                if (current.isMpsProject()) {
                     return current
                 }
                 current = current.parent
