@@ -24,6 +24,7 @@
     <ID>LongParameterList:ModuleCreator.kt:ModuleCreator$private fun planEntry</ID>
     <ID>LongParameterList:MpsListExporter.kt:MpsListExporter$private fun nodeTargetEntry: MpsListEntryJson</ID>
     <ID>NestedBlockDepth:ProjectDaemon.kt:ProjectDaemon$fun serve</ID>
+    <ID>TooGenericExceptionThrown:MopsDaemonCommand.kt:DaemonRunner$throw RuntimeException(failure.message)</ID>
     <ID>TooManyFunctions:CodeModeExtensions.kt:CodeModeExtensions</ID>
   </CurrentIssues>
 </SmellBaseline>

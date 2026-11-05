@@ -17,7 +17,7 @@ object MopsRuntimeExtensions {
         val classLoader = runtime.mops.project.getComponent(ClassLoaderManager::class.java).getClassLoader(module)
         return try {
             classLoader.loadClass(className)
-        } catch (missing: ClassNotFoundException) {
+        } catch (_: ClassNotFoundException) {
             null
         }
     }

@@ -63,13 +63,16 @@ and publishes both files in a GitHub Release with notes generated from the merge
 
 `check` runs two kinds of structure checks on the Kotlin modules:
 
-- **detekt** (`./gradlew detektMain`) runs only the complexity rule set from `config/detekt/detekt.yml` on the main
-  source sets, with type resolution: method length, cyclomatic and cognitive complexity, nesting depth, parameter count,
-  and class and file size. Test sources are not checked. Reports are written to `<module>/build/reports/detekt/`. detekt
-  runs in a separate worker process (`detekt.use.worker.api` in `gradle.properties`).
-- **Module boundary tests** in `architecture-tests/` (`./gradlew :architecture-tests:test`) use
-  [Konsist](https://docs.konsist.lemonappdev.com/) to check which packages each module imports, for example that
-  `protocol` and `daemon-core` do not use MPS, and that CLI command packages do not depend on each other.
+- **detekt** (`./gradlew detektMain`) runs the complexity and exceptions rule sets from `config/detekt/detekt.yml` on
+  the main source sets, with type resolution. The complexity rules check method length, cyclomatic and cognitive
+  complexity, nesting depth, parameter count, and class and file size. The exceptions rules check how exceptions are
+  thrown and caught. Name a caught exception that is deliberately ignored `_`. Test sources are not checked. Reports are
+  written to `<module>/build/reports/detekt/`. detekt runs in a separate worker process (`detekt.use.worker.api` in
+  `gradle.properties`).
+- **Architecture tests** in `architecture-tests/` (`./gradlew :architecture-tests:test`) use
+  [Konsist](https://docs.konsist.lemonappdev.com/) to check dependencies that Gradle cannot see. They check that CLI
+  command packages (`cli.find`, `cli.get`, ...) do not depend on each other. Gradle module dependencies already decide
+  which modules can use MPS or each other.
 
 Each module's `detekt-baseline-main.xml` lists the detekt findings that existed when the rules were introduced. These
 findings do not fail the build; new findings do. Fix a new finding instead of adding it to the baseline. After fixing a
