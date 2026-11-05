@@ -3,8 +3,8 @@ package com.specificlanguages.mops.protocol
 import kotlinx.serialization.Serializable
 
 /**
- * One end-user-facing message reported by MPS during a make, with its kind and text. Information messages are carried
- * back only when the make request sets a message level.
+ * One end-user-facing message reported by MPS during a make, with its kind and text. Which kinds are carried back
+ * depends on the make request's message level; without one, information messages are left out.
  */
 @Serializable
 data class MakeMessageJson(

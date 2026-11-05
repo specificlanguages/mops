@@ -36,8 +36,8 @@ class MakeGenerationOptionsMixin {
         paramLabel = "LEVEL",
         converter = [MessageLevelConverter::class],
         description = [
-            "Which generator messages MPS reports: error, warning, or info. With this option the result also " +
-                "has the info messages of the other make steps; without it, the result has no info messages.",
+            "The lowest severity of messages the result has, from every make step: error, warning, or info. " +
+                "Without it, the result has errors and warnings but no info messages.",
         ],
     )
     var messages: MakeMessageLevel? = null

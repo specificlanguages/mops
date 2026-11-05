@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
  *
  * - [threads]: generation thread count; 1 generates sequentially, a larger number in parallel within each model.
  * - [strict]: MPS strict generation mode. Parallel generation needs it.
- * - [messages]: which generator messages MPS reports.
+ * - [messages]: the lowest severity of messages the make reports, from every make step.
  * - [saveTransientModels]: keep the intermediate models of each generation step.
  * - [performanceTracing]: report how long generation steps take.
  */
@@ -20,7 +20,7 @@ data class MakeGenerationOptions(
     val performanceTracing: PerformanceTracingLevel? = null,
 )
 
-/** The lowest severity of generator messages MPS reports during a make. */
+/** The lowest severity of messages a make reports, from the generator and every other make step. */
 @Serializable
 enum class MakeMessageLevel {
     ERROR,

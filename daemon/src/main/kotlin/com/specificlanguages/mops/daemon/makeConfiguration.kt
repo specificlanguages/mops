@@ -3,6 +3,7 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.MakeGenerationOptions
+import com.specificlanguages.mops.protocol.MakeMessageKind
 import com.specificlanguages.mops.protocol.MakeMessageLevel
 import com.specificlanguages.mops.protocol.PerformanceTracingLevel
 import jetbrains.mps.generator.GenerationOptions
@@ -48,6 +49,16 @@ internal fun makeGenerationOptions(
         options.warnDynamicToStatic(showWarnings && settings.warnDynamicToStaticReference())
     }
     return options
+}
+
+/**
+ * Whether a make with this message level reports a message of [kind], from any make step. Without a level, the make
+ * reports errors and warnings but no info messages.
+ */
+internal fun MakeMessageLevel?.reports(kind: MakeMessageKind): Boolean = when (this) {
+    null, MakeMessageLevel.WARNING -> kind != MakeMessageKind.INFO
+    MakeMessageLevel.ERROR -> kind == MakeMessageKind.ERROR
+    MakeMessageLevel.INFO -> true
 }
 
 /**

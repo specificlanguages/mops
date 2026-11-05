@@ -3,6 +3,7 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.MakeGenerationOptions
+import com.specificlanguages.mops.protocol.MakeMessageKind
 import com.specificlanguages.mops.protocol.MakeMessageLevel
 import com.specificlanguages.mops.protocol.PerformanceTracingLevel
 import jetbrains.mps.baseLanguage.tuples.runtime.Tuples
@@ -145,6 +146,16 @@ class MakeConfigurationTest {
         assertFalse(options.isShowWarnings)
         assertFalse(options.isShowBadChildWarning)
         assertFalse(options.warnDynamicToStaticFailed())
+    }
+
+    @Test
+    fun `the message level selects the reported message kinds`() {
+        fun reported(level: MakeMessageLevel?) = MakeMessageKind.entries.filter { level.reports(it) }
+
+        assertEquals(listOf(MakeMessageKind.ERROR, MakeMessageKind.WARNING), reported(null))
+        assertEquals(listOf(MakeMessageKind.ERROR), reported(MakeMessageLevel.ERROR))
+        assertEquals(listOf(MakeMessageKind.ERROR, MakeMessageKind.WARNING), reported(MakeMessageLevel.WARNING))
+        assertEquals(MakeMessageKind.entries, reported(MakeMessageLevel.INFO))
     }
 
     @Test

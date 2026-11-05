@@ -37,30 +37,34 @@ class MakeOptionsSemanticsTest {
     }
 
     @Test
-    fun `the make for a test run keeps files it does not generate`() {
+    fun `the make used by test runs and Code Mode deletes files it no longer generates`() {
         SharedMpsEnvironment.withOpenProjectCopy(prepare = ::addStrayOutput) { project, projectPath ->
             val response = ProjectMake(project).makeModules(listOf("json.sandbox"))
 
             assertSucceeded(response)
-            assertTrue(projectPath.resolve(SANDBOX_STRAY).exists(), "an incremental make must keep the stray file")
+            assertFalse(projectPath.resolve(SANDBOX_STRAY).exists(), "the sandbox's stray file must be deleted")
         }
     }
 
     @Test
-    fun `info messages are reported only with the info message level`() {
-        val (plain, info) = SharedMpsEnvironment.withProjectCopy { access, _ ->
-            access.extra { makeModules(listOf("json.sandbox")) } to
-                access.extra {
-                    makeModules(listOf("json.sandbox"), MakeGenerationOptions(messages = MakeMessageLevel.INFO))
-                }
+    fun `info messages from every make step are reported only with the info message level`() {
+        val (plain, warning, info) = SharedMpsEnvironment.withProjectCopy { access, _ ->
+            fun make(level: MakeMessageLevel?) =
+                access.extra { makeModules(listOf("json.sandbox"), MakeGenerationOptions(messages = level)) }
+            Triple(make(null), make(MakeMessageLevel.WARNING), make(MakeMessageLevel.INFO))
         }
 
-        assertSucceeded(plain)
-        assertSucceeded(info)
+        listOf(plain, warning, info).forEach(::assertSucceeded)
         assertTrue(plain.messages.none { it.kind == MakeMessageKind.INFO }, "got ${plain.messages}")
+        assertTrue(warning.messages.none { it.kind == MakeMessageKind.INFO }, "got ${warning.messages}")
         assertTrue(
             info.messages.any { it.kind == MakeMessageKind.INFO && it.text.contains("json.sandbox") },
             "expected generator info about the sandbox model, got ${info.messages}",
+        )
+        // The make script, not the generator, reports how long each make target took.
+        assertTrue(
+            info.messages.any { it.kind == MakeMessageKind.INFO && it.text.contains("target execution time") },
+            "expected make target timing info, got ${info.messages}",
         )
     }
 
@@ -110,7 +114,7 @@ class MakeOptionsSemanticsTest {
                 performanceTracing = PerformanceTracingLevel.TYPES,
             )
 
-            ProjectMake(project).makeModules(listOf("json.sandbox"), cancelled, options, clean = true)
+            ProjectMake(project).makeModules(listOf("json.sandbox"), cancelled, options)
 
             assertFalse(settings(project).isSaveTransientModels)
             assertEquals(0, settings(project).performanceTracingLevel)
@@ -122,7 +126,7 @@ class MakeOptionsSemanticsTest {
         SharedMpsEnvironment.withOpenProjectCopy(projectName = SANDBOX, prepare = ::breakCalculator) { project, _ ->
             val options = MakeGenerationOptions(saveTransientModels = true)
 
-            val response = ProjectMake(project).makeProject(options, clean = true)
+            val response = ProjectMake(project).makeProject(options)
 
             assertEquals(MakeOutcome.FAILED, response.outcome)
             assertFalse(settings(project).isSaveTransientModels)

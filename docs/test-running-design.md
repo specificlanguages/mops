@@ -100,11 +100,11 @@ on project-library modules cannot load classes. A project library whose path kee
 with a report diagnostic. The Ant file passes the folders as `<modules dir>` and the path macros as `<macro name path>`,
 so tests that open a project through a `TestInfo.projectPath` that uses a path macro find it.
 
-The daemon performs the optional incremental build itself, with the same make that `mops make` uses, and saves the
-project. The daemon already has the project open, so a build does not start a second normal-mode MPS environment with
-its own startup, memory, and system directory. The make checks the run's cancellation between its steps, so cancelling
-during the build stops the run before the worker starts. A Code Mode deadline that terminates the daemon during the
-build leaves the report incomplete in the build phase.
+The daemon performs the optional build itself, with the same clean make that `mops make` uses, and saves the project.
+The daemon already has the project open, so a build does not start a second normal-mode MPS environment with its own
+startup, memory, and system directory. The make checks the run's cancellation between its steps, so cancelling during
+the build stops the run before the worker starts. A Code Mode deadline that terminates the daemon during the build
+leaves the report incomplete in the build phase.
 
 The daemon then starts a small supervisor JVM on the daemon's classpath, without an MPS environment. The supervisor
 starts the selected distribution's Ant `launchtests` task on an independent classpath. Ant constructs the test JVM
