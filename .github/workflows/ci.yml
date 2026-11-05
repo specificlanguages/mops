@@ -18,16 +18,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Picks the tier and the MPS versions of this run, and whether the test jobs can be skipped. docs/development.md
-  # describes the tiers, the docs-only filter, and the `ci-passed-<tree>` cache entries.
+  # Picks the tier, the MPS versions, and the test shards of this run, and whether the test jobs can be skipped.
+  # docs/ci.md describes the tiers, the shards, the docs-only filter, and the `ci-passed-<tree>` cache entries.
   plan:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       tier: ${{ steps.plan.outputs.tier }}
       docs-only: ${{ steps.plan.outputs.docs-only }}
-      daemon-versions: ${{ steps.plan.outputs.daemon-versions }}
-      integration-versions: ${{ steps.plan.outputs.integration-versions }}
+      daemon-jobs: ${{ steps.plan.outputs.daemon-jobs }}
+      integration-jobs: ${{ steps.plan.outputs.integration-jobs }}
       marker-key: ${{ steps.plan.outputs.marker-key }}
       already-passed: ${{ steps.full-marker.outputs.cache-hit == 'true' || steps.pr-marker.outputs.cache-hit == 'true' }}
       run-tests: >-
@@ -83,10 +83,22 @@ jobs:
           java-version: 25
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
         if: needs.plan.outputs.docs-only != 'true'
+        with:
+          gradle-home-cache-excludes: &mps-distributions |
+            caches/modules-2/files-2.1/com.jetbrains/mps
+            caches/modules-2/files-2.1/com.jetbrains.mps/mps-prerelease
+      - uses: $/.github/actions/mps-distributions
+        if: needs.plan.outputs.docs-only != 'true'
+        with:
+          mode: restore
       - name: Run unit tests and verification checks
         if: needs.plan.outputs.docs-only != 'true'
-        # The daemon-versions matrix runs the MPS-backed daemon tests, one job per supported MPS version.
+        # The daemon-versions matrix runs the MPS-backed daemon tests.
         run: xvfb-run -a ./gradlew --continue check -x :cli:integrationTest -x :daemon:test -x :daemon:testOtherMpsVersions
+      - uses: $/.github/actions/mps-distributions
+        if: ${{ !cancelled() && needs.plan.outputs.docs-only != 'true' && github.event_name == 'push' }}
+        with:
+          mode: save
       - uses: j178/prek-action@44924fe9ef4a6f88253c4b6b1bf11c689d3ce53d # v3.1.0
         if: ${{ !cancelled() }}
         with:
@@ -120,9 +132,23 @@ jobs:
           distribution: temurin
           java-version: 25
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
+        with:
+          gradle-home-cache-excludes: *mps-distributions
+      # Windows jobs download MPS. Their Gradle user home is D:\a\.gradle rather than ~/.gradle, and actions/cache keeps
+      # Windows entries apart from Linux and macOS ones, so sharing the entries would need Windows copies of them.
+      - uses: $/.github/actions/mps-distributions
+        if: runner.os != 'Windows'
+        with:
+          mode: restore
+          mps-version: smoke
       - name: Test CLI smoke suite
         shell: bash
         run: ./gradlew --continue :cli:smokeTest
+      - uses: $/.github/actions/mps-distributions
+        if: ${{ !cancelled() && runner.os != 'Windows' && github.event_name == 'push' }}
+        with:
+          mode: save
+          mps-version: smoke
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -132,13 +158,16 @@ jobs:
             cli/build/test-results/
             cli/build/reports/tests/
 
+  # The matrix entries name an MPS version and one of the shards of its tests; see the `shards` function in plan.sh.
   daemon-versions:
+    name: >-
+      daemon-versions (${{ matrix.mps }}${{ matrix.shards > 1 && format(', {0}/{1}', matrix.shard, matrix.shards) || '' }})
     needs: plan
     if: needs.plan.outputs.run-tests == 'true'
     strategy:
       fail-fast: false
       matrix:
-        mps: ${{ fromJSON(needs.plan.outputs.daemon-versions) }}
+        include: ${{ fromJSON(needs.plan.outputs.daemon-jobs) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -150,26 +179,40 @@ jobs:
           distribution: temurin
           java-version: 25
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
+        with:
+          gradle-home-cache-excludes: *mps-distributions
+      - uses: $/.github/actions/mps-distributions
+        with:
+          mode: restore
+          mps-version: ${{ matrix.mps }}
       - name: Test daemon against MPS ${{ matrix.mps }}
         env:
           MPS_VERSION: ${{ matrix.mps }}
-        run: xvfb-run -a ./gradlew --continue ":daemon:testMps${MPS_VERSION}"
+          SHARD: ${{ matrix.shard }}/${{ matrix.shards }}
+        run: xvfb-run -a ./gradlew --continue ":daemon:testMps${MPS_VERSION}" "-PtestShard=${SHARD}"
+      - uses: $/.github/actions/mps-distributions
+        if: ${{ !cancelled() && github.event_name == 'push' }}
+        with:
+          mode: save
+          mps-version: ${{ matrix.mps }}
       - name: Upload test reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: daemon-test-reports-mps-${{ matrix.mps }}
+          name: daemon-test-reports-mps-${{ matrix.mps }}-shard-${{ matrix.shard }}-of-${{ matrix.shards }}
           path: |
             daemon/build/test-results/
             daemon/build/reports/tests/
 
   integration:
+    name: >-
+      integration (${{ matrix.mps }}${{ matrix.shards > 1 && format(', {0}/{1}', matrix.shard, matrix.shards) || '' }})
     needs: plan
     if: needs.plan.outputs.run-tests == 'true'
     strategy:
       fail-fast: false
       matrix:
-        mps: ${{ fromJSON(needs.plan.outputs.integration-versions) }}
+        include: ${{ fromJSON(needs.plan.outputs.integration-jobs) }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -181,15 +224,27 @@ jobs:
           distribution: temurin
           java-version: 25
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
+        with:
+          gradle-home-cache-excludes: *mps-distributions
+      - uses: $/.github/actions/mps-distributions
+        with:
+          mode: restore
+          mps-version: ${{ matrix.mps }}
       - name: Test CLI against MPS ${{ matrix.mps }}
         env:
           MPS_VERSION: ${{ matrix.mps }}
-        run: xvfb-run -a ./gradlew --continue ":cli:integrationTestMps${MPS_VERSION}"
+          SHARD: ${{ matrix.shard }}/${{ matrix.shards }}
+        run: xvfb-run -a ./gradlew --continue ":cli:integrationTestMps${MPS_VERSION}" "-PtestShard=${SHARD}"
+      - uses: $/.github/actions/mps-distributions
+        if: ${{ !cancelled() && github.event_name == 'push' }}
+        with:
+          mode: save
+          mps-version: ${{ matrix.mps }}
       - name: Upload test reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: cli-integration-test-reports-mps-${{ matrix.mps }}
+          name: cli-integration-test-reports-mps-${{ matrix.mps }}-shard-${{ matrix.shard }}-of-${{ matrix.shards }}
           path: |
             cli/build/test-results/
             cli/build/reports/tests/

@@ -28,7 +28,7 @@ import java.util.concurrent.Callable
             "or language build task actions. If discovery finds only some paths, it prints them, writes no " +
             "wrapper, and exits with status 1. When both paths are known, it writes the wrappers and exits with " +
             "status 0, with warnings when the paths are not usable yet, so wrappers can be written before the " +
-            "project's preparation steps.",
+            "project's preparation steps. Warnings and the reason no wrapper was written go to stderr.",
     ],
     footer = [
         "",
@@ -48,17 +48,17 @@ import java.util.concurrent.Callable
             "deleted periodically.",
         "",
         "Path macros: the global option --macro NAME=PATH defines a path macro, such as one that " +
-            ".mps/libraries.xml or .mps/modules.xml uses as \$\${NAME}; repeat it for more macros. PATH is an " +
+            ".mps/libraries.xml or .mps/modules.xml uses as \$\${NAME}; repeat it for more path macros. PATH is an " +
             "existing directory, absolute or relative to the directory where mops was started. The daemon defines " +
-            "the macros in MPS before it opens the project, and test runs pass them to the test worker. A running " +
-            "daemon started with other macros is not reused: the command fails, and after mops daemon stop the " +
-            "next command starts a daemon with the new macros. Project-relative paths (\$PROJECT_DIR\$) and the " +
-            "macros MPS defines itself (project, mps_home, platform_lib, lib_ext) need no --macro.",
+            "the path macros in MPS before it opens the project, and test runs pass them to the test worker. A running " +
+            "daemon started with other path macros is not reused: the command fails, and after mops daemon stop the " +
+            "next command starts a daemon with the new path macros. Project-relative paths (\$PROJECT_DIR\$) and the " +
+            "path macros MPS defines itself (project, mps_home, platform_lib, lib_ext) need no --macro.",
         "",
-        "Each wrapper passes the --macro values given to mops wrapper. For a macro that .mps/libraries.xml or " +
+        "Each wrapper passes the --macro values given to mops wrapper. For a path macro that .mps/libraries.xml or " +
             ".mps/modules.xml uses without a --macro value, mops wrapper guesses the root of the project's Git " +
-            "repository, writes it into the wrapper, and prints a warning; rerun mops wrapper --macro NAME=PATH to " +
-            "set another value. Outside a Git repository, the command fails and names the macro that needs --macro.",
+            "repository, writes it into the wrapper, and prints a warning on stderr; rerun mops wrapper --macro NAME=PATH to " +
+            "set another value. Outside a Git repository, the command fails and names the path macro that needs --macro.",
     ],
 )
 class WrapperCommand(
@@ -108,23 +108,25 @@ class WrapperCommand(
                     "Pass --mps-home and --java-home directly to other mops commands."
             )
         val out = spec.commandLine().out
+        val err = spec.commandLine().err
         out.println("Source: ${runtime.source} in ${displayPath(runtime.projectDir, root.workingDirectory)}")
         out.println("MPS home: ${runtime.mpsHome?.let { displayPath(it, root.workingDirectory) } ?: "unknown"}")
         out.println("Java home: ${runtime.javaHome?.let { displayPath(it, root.workingDirectory) } ?: "unknown"}")
         if (runtime.mpsHome != null && !runtime.usableMps) {
-            out.println("Warning: MPS home is missing: ${displayPath(runtime.mpsHome, root.workingDirectory)}")
+            err.println("Warning: MPS home is missing: ${displayPath(runtime.mpsHome, root.workingDirectory)}")
         }
         if (runtime.javaHome != null && !runtime.usableJava) {
-            out.println("Warning: Java home is missing or has no usable bin/java: ${displayPath(runtime.javaHome, root.workingDirectory)}")
+            err.println("Warning: Java home is missing or has no usable bin/java: ${displayPath(runtime.javaHome, root.workingDirectory)}")
         }
         if (!runtime.hasKnownHomes) {
-            out.println("Discovery is partial; no wrapper was written. Configure both runtime paths and try again.")
+            err.println("Discovery is partial; no wrapper was written. Configure both runtime paths and try again.")
         } else if (targets.isEmpty()) {
-            out.println("No MPS projects were found; no wrapper was written.")
+            err.println("No MPS projects were found; no wrapper was written.")
         } else {
             writeWrappers(runtime, targets)
         }
         out.flush()
+        err.flush()
         return if (runtime.hasKnownHomes && targets.isNotEmpty()) 0 else 1
     }
 

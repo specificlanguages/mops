@@ -8,7 +8,7 @@ kotlin.compilerOptions.jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM
 
 detekt {
     buildUponDefaultConfig = true
-    config.setFrom(isolated.rootProject.projectDirectory.file("config/detekt/detekt.yml"))
+    config.setFrom(layout.settingsDirectory.file("config/detekt/detekt.yml"))
     // detektMain reads and detektBaselineMain writes detekt-baseline-main.xml.
     baseline = layout.projectDirectory.file("detekt-baseline.xml")
 }

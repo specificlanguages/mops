@@ -6,6 +6,7 @@ import com.specificlanguages.mops.cli.find.FindInstancesCommand
 import com.specificlanguages.mops.cli.output.NodeReferenceFormat
 import com.specificlanguages.mops.cli.get.ModelGetNodeCommand
 import com.specificlanguages.mops.daemoncomms.DaemonClient
+import com.specificlanguages.mops.protocol.ConceptTargetJson
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.ModelGetNodeResponse
 import com.specificlanguages.mops.protocol.MpsNodeJson
@@ -14,6 +15,8 @@ import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import com.specificlanguages.mops.protocol.NodeFilter
 import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.ProtocolJson
+import com.specificlanguages.mops.protocol.SearchScopeJson
+import com.specificlanguages.mops.protocol.SearchScopeKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.parallel.ResourceLock
@@ -25,6 +28,88 @@ import picocli.CommandLine
 
 @ResourceLock("system-streams")
 class FindInstancesCommandTest {
+    @Test
+    fun `find instances names the concept, filters, and scope when nothing matches`() {
+        val client = mock<DaemonClient>()
+        val filters = listOf(NodeFilter.Named("Foo*"), NodeFilter.Role("members"))
+        val module = SearchScopeJson(
+            kind = SearchScopeKind.MODULE,
+            reference = "fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json)",
+            name = "com.specificlanguages.json",
+            models = 3,
+        )
+        whenever(
+            client.findInstances(
+                "ConceptDeclaration",
+                true,
+                scope = listOf("com.specificlanguages.json"),
+                filters = filters,
+                limit = 100,
+            ),
+        ).thenReturn(
+            FindInstancesResponse(
+                target = ConceptTargetJson(CONCEPT),
+                scope = module,
+                limit = 100,
+                truncated = false,
+                nodes = emptyList(),
+            ),
+        )
+        var exitCode = Int.MIN_VALUE
+        var stdout = ""
+
+        val stderr = tapSystemErr {
+            stdout = tapSystemOut {
+                exitCode = CommandLine(FindInstancesCommand(client))
+                    .setExecutionExceptionHandler(PrintErrorAndExit)
+                    .execute(
+                        "--exact",
+                        "--named",
+                        "Foo*",
+                        "--role",
+                        "members",
+                        "ConceptDeclaration",
+                        "in",
+                        "com.specificlanguages.json",
+                    )
+            }
+        }
+
+        assertEquals(0, exitCode)
+        assertEquals(
+            "# no exact instances of $CONCEPT matching --named Foo* --role members in module " +
+                "com.specificlanguages.json (searched 3 models)" + System.lineSeparator(),
+            stdout,
+        )
+        assertEquals("", stderr)
+    }
+
+    @Test
+    fun `find instances reports an empty --refs-only result on stderr keeping stdout empty`() {
+        val client = mock<DaemonClient>()
+        whenever(client.findInstances(CONCEPT, false, limit = 100)).thenReturn(
+            FindInstancesResponse(
+                target = ConceptTargetJson(CONCEPT),
+                scope = SearchScopeJson(SearchScopeKind.REPOSITORY, models = 1),
+                limit = 100,
+                truncated = false,
+                nodes = emptyList(),
+            ),
+        )
+        var stdout = ""
+
+        val stderr = tapSystemErr {
+            stdout = tapSystemOut {
+                CommandLine(FindInstancesCommand(client))
+                    .setExecutionExceptionHandler(PrintErrorAndExit)
+                    .execute("--refs-only", CONCEPT)
+            }
+        }
+
+        assertEquals("", stdout)
+        assertEquals("# no instances of $CONCEPT in the repository (searched 1 model)" + System.lineSeparator(), stderr)
+    }
+
     @Test
     fun `find instances prints tab-separated rows for a concept`() {
         val client = mock<DaemonClient>()
@@ -300,7 +385,13 @@ class FindInstancesCommandTest {
             ),
         )
         whenever(client.findInstances(CONCEPT, false, limit = 100)).thenReturn(
-            FindInstancesResponse(limit = 100, truncated = false, nodes = listOf(node)),
+            FindInstancesResponse(
+                target = testConceptTarget,
+                scope = testScope,
+                limit = 100,
+                truncated = false,
+                nodes = listOf(node),
+            ),
         )
         var exitCode = Int.MIN_VALUE
 
@@ -353,7 +444,13 @@ class FindInstancesCommandTest {
             ),
         )
         whenever(client.findInstances(CONCEPT, false, limit = 100)).thenReturn(
-            FindInstancesResponse(limit = 100, truncated = false, nodes = listOf(node)),
+            FindInstancesResponse(
+                target = testConceptTarget,
+                scope = testScope,
+                limit = 100,
+                truncated = false,
+                nodes = listOf(node),
+            ),
         )
         var exitCode = Int.MIN_VALUE
 
@@ -528,6 +625,8 @@ class FindInstancesCommandTest {
 
     private fun sampleInstancesResponse(limit: Int = 100, name: String? = "JsonObject") =
         FindInstancesResponse(
+            target = testConceptTarget,
+            scope = testScope,
             limit = limit,
             truncated = false,
             nodes = listOf(

@@ -211,7 +211,8 @@ class JetBrainsMpsAccess(
 
         override fun findUsages(target: NodeTarget, scope: ResolvedScope, limit: Int): FindUsagesResponse {
             val node = resolveNode(target)
-            val references = when (val domain = searchDomainFor(scope)) {
+            val domain = searchDomainFor(scope)
+            val references = when (domain) {
                 is SearchDomain.MpsScope -> {
                     val collected = CollectConsumer<SReference>()
                     FindUsagesFacade.getInstance()
@@ -230,6 +231,8 @@ class JetBrainsMpsAccess(
             val selected = if (limit > 0) references.take(limit) else references
 
             return FindUsagesResponse(
+                target = nodeSummary(node, persistence),
+                scope = searchedScope(domain),
                 limit = limit,
                 truncated = selected.size < references.size,
                 usages = selected.map {
@@ -238,11 +241,14 @@ class JetBrainsMpsAccess(
             )
         }
 
-        override fun findSubconcepts(concept: String, concreteOnly: Boolean, direct: Boolean): FindSubconceptsResponse =
-            FindSubconceptsResponse(
-                ConceptHierarchy.subConceptsOf(ConceptResolver(project).resolve(concept), concreteOnly, direct)
-                    .map { it.qualifiedName },
+        override fun findSubconcepts(concept: String, concreteOnly: Boolean, direct: Boolean): FindSubconceptsResponse {
+            val mpsConcept = ConceptResolver(project).resolve(concept)
+            return FindSubconceptsResponse(
+                target = ConceptTargetJson(mpsConcept.qualifiedName),
+                scope = SearchScopeJson(SearchScopeKind.LOADED_LANGUAGES),
+                concepts = ConceptHierarchy.subConceptsOf(mpsConcept, concreteOnly, direct).map { it.qualifiedName },
             )
+        }
 
         override fun findInstances(
             concept: String,
@@ -252,7 +258,8 @@ class JetBrainsMpsAccess(
             limit: Int,
         ): FindInstancesResponse {
             val mpsConcept = ConceptResolver(project).resolve(concept)
-            val matches = when (val domain = searchDomainFor(scope)) {
+            val domain = searchDomainFor(scope)
+            val matches = when (domain) {
                 is SearchDomain.MpsScope -> {
                     val collected = CollectConsumer<SNode>()
                     FindUsagesFacade.getInstance()
@@ -269,6 +276,8 @@ class JetBrainsMpsAccess(
             val selected = if (limit > 0) instances.take(limit) else instances
 
             return FindInstancesResponse(
+                target = ConceptTargetJson(mpsConcept.qualifiedName),
+                scope = searchedScope(domain),
                 limit = limit,
                 truncated = selected.size < instances.size,
                 nodes = selected.map { nodeSummary(it, persistence) },
@@ -278,9 +287,9 @@ class JetBrainsMpsAccess(
         override fun findByName(pattern: String, scope: ResolvedScope, limit: Int): FindByNameResponse {
             val matcher = nameMatcher(pattern)
 
-            val searchScope = rootBearingScope(scope)
+            val domain = rootBearingDomain(scope)
             val matches = mutableListOf<Pair<SNode, Int>>()
-            for (model in searchScope.models) {
+            for (model in domain.searchScope.models) {
                 for (root in model.rootNodes) {
                     val name = nodeName(root) ?: continue
                     if (matcher.matches(name)) {
@@ -299,6 +308,8 @@ class JetBrainsMpsAccess(
             val selected = if (limit > 0) ordered.take(limit) else ordered
 
             return FindByNameResponse(
+                target = NamePatternTargetJson(pattern),
+                scope = searchedScope(domain),
                 limit = limit,
                 truncated = selected.size < ordered.size,
                 nodes = selected.map { nodeSummary(it, persistence) },
@@ -314,7 +325,8 @@ class JetBrainsMpsAccess(
 
             // A Node ID is unique within a model, so at most one node per model matches; collecting across the scope's
             // models yields one row per model that holds it, never a guess between them.
-            val matches = when (val domain = searchDomainFor(scope)) {
+            val domain = searchDomainFor(scope)
+            val matches = when (domain) {
                 is SearchDomain.MpsScope -> domain.searchScope.models.mapNotNull { it.getNode(id) }
                 is SearchDomain.Subtree -> subtreeNodes(domain.root).filter { it.nodeId == id }.toList()
             }
@@ -323,6 +335,8 @@ class JetBrainsMpsAccess(
             val selected = if (limit > 0) ordered.take(limit) else ordered
 
             return FindNodeByIdResponse(
+                target = NodeIdTargetJson(id.toString()),
+                scope = searchedScope(domain),
                 limit = limit,
                 truncated = selected.size < ordered.size,
                 nodes = selected.map { nodeSummary(it, persistence) },
@@ -338,13 +352,10 @@ class JetBrainsMpsAccess(
         // `find root-by-name` searches root nodes only, so its scope must bear roots: the default editable project
         // sources, the whole repository, a module, or a model. A subtree scope (a root node or nested node) has no
         // roots of its own, so it is rejected with a pointer to the named-descendant search instead.
-        private fun rootBearingScope(scope: ResolvedScope): SearchScope =
-            when (scope) {
-                ResolvedScope.EditableProjectSources -> EditableFilteringScope(project.scope)
-                ResolvedScope.Repository -> GlobalScope(project.repository)
-                is ResolvedScope.Module -> ModulesScope(listOf(resolveModule(scope.moduleReference)))
-                is ResolvedScope.Model -> ModelsScope(listOf(resolveModel(scope.modelReference)))
-                is ResolvedScope.Subtree -> throw MpsRequestException(
+        private fun rootBearingDomain(scope: ResolvedScope): SearchDomain.MpsScope =
+            when (val domain = searchDomainFor(scope)) {
+                is SearchDomain.MpsScope -> domain
+                is SearchDomain.Subtree -> throw MpsRequestException(
                     code = MpsErrorCode.UNSUPPORTED_TARGET,
                     message = "find root-by-name searches root nodes only, and a node or root-node scope holds none — " +
                         "use `mops find instances <concept> --named <pattern>` to search named descendants of a node.\n" +
@@ -384,11 +395,39 @@ class JetBrainsMpsAccess(
         // because resolution already ruled out ambiguity.
         private fun searchDomainFor(scope: ResolvedScope): SearchDomain =
             when (scope) {
-                ResolvedScope.EditableProjectSources -> SearchDomain.MpsScope(EditableFilteringScope(project.scope))
-                ResolvedScope.Repository -> SearchDomain.MpsScope(GlobalScope(project.repository))
-                is ResolvedScope.Module -> SearchDomain.MpsScope(ModulesScope(listOf(resolveModule(scope.moduleReference))))
-                is ResolvedScope.Model -> SearchDomain.MpsScope(ModelsScope(listOf(resolveModel(scope.modelReference))))
+                ResolvedScope.EditableProjectSources -> SearchDomain.MpsScope(
+                    EditableFilteringScope(project.scope),
+                    SearchScopeJson(SearchScopeKind.EDITABLE_PROJECT_SOURCES),
+                )
+                ResolvedScope.Repository -> SearchDomain.MpsScope(
+                    GlobalScope(project.repository),
+                    SearchScopeJson(SearchScopeKind.REPOSITORY),
+                )
+                is ResolvedScope.Module -> resolveModule(scope.moduleReference).let {
+                    SearchDomain.MpsScope(
+                        ModulesScope(listOf(it)),
+                        SearchScopeJson(SearchScopeKind.MODULE, scope.moduleReference, it.moduleName),
+                    )
+                }
+                is ResolvedScope.Model -> resolveModel(scope.modelReference).let {
+                    SearchDomain.MpsScope(
+                        ModelsScope(listOf(it)),
+                        SearchScopeJson(SearchScopeKind.MODEL, scope.modelReference, it.name.value),
+                    )
+                }
                 is ResolvedScope.Subtree -> SearchDomain.Subtree(resolveSubtreeNode(scope.nodeReference))
+            }
+
+        // Describes the domain a find searched for its response. The model count is that of the MPS search scope the
+        // find ran over; a subtree is walked node by node, so it carries no count.
+        private fun searchedScope(domain: SearchDomain): SearchScopeJson =
+            when (domain) {
+                is SearchDomain.MpsScope -> domain.description.copy(models = domain.searchScope.models.count())
+                is SearchDomain.Subtree -> SearchScopeJson(
+                    kind = SearchScopeKind.SUBTREE,
+                    reference = persistence.asString(domain.root.reference),
+                    name = nodeName(domain.root),
+                )
             }
 
         private fun resolveModule(reference: String): SModule =
@@ -440,7 +479,7 @@ class JetBrainsMpsAccess(
         override fun saveProject() = saveProjectSettings(project)
 
         override fun makeModules(modules: List<String>, threads: Int?): MakeResponse =
-            projectMake.makeModules(modules, threads)
+            projectMake.makeModules(modules, threads = threads)
 
         override fun makeProject(threads: Int?): MakeResponse = projectMake.makeProject(threads)
 
@@ -506,7 +545,8 @@ class JetBrainsMpsAccess(
     // The domain a find runs over. An [MpsScope] is searched with the platform's index-backed FindUsagesFacade; a
     // [Subtree] is walked node-by-node, which is cheaper than searching the node's whole model and discarding the rest.
     private sealed interface SearchDomain {
-        data class MpsScope(val searchScope: SearchScope) : SearchDomain
+        // [description] names the scope without its model count, which `searchedScope` adds.
+        data class MpsScope(val searchScope: SearchScope, val description: SearchScopeJson) : SearchDomain
         data class Subtree(val root: SNode) : SearchDomain
     }
 

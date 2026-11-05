@@ -29,12 +29,13 @@ import picocli.CommandLine.Parameters
         "A bare short name that names concepts in several languages fails with AMBIGUOUS_TARGET and lists the " +
             "qualified candidates. While a project language is unbuilt, a bare short name fails with " +
             "LANGUAGE_NOT_LOADED instead of guessing, since the unbuilt language could define it too. An existing " +
-            "concept with no matches succeeds with no rows.",
+            "concept with no matches succeeds with a `# no instances of <concept> in <scope>` line instead of rows, " +
+            "naming --exact, --named, and --role when given.",
         "",
         "Text output is one tab-separated row per node: `root` or `node`, the node name (or <unnamed>), the node's " +
             "concept, and its serialized reference. A non-root node appends `parent` and the parent's name (or " +
-            "<unnamed>), concept, and reference. --json prints an object with `limit`, `truncated`, and a `nodes` " +
-            "array whose non-root entries carry a nested `parent` summary. See `mops explain output`.",
+            "<unnamed>), concept, and reference. --json prints an object with `target` (the qualified " +
+            "`concept`), `scope`, `limit`, `truncated`, and a `nodes` array whose non-root entries carry a nested `parent` summary. See `mops explain output`.",
     ],
 )
 class FindInstancesCommand(environment: CommandEnvironment) : NodeSearchCommand(environment) {
@@ -93,6 +94,12 @@ class FindInstancesCommand(environment: CommandEnvironment) : NodeSearchCommand(
             filters = filters,
             limit = limit,
         )
-        printResults(response, response.nodes, response.truncated)
+        printResults(response, response.nodes, response.truncated, subject(response.target.concept), response.scope)
+    }
+
+    private fun subject(resolvedConcept: String): String {
+        val filterOptions = listOfNotNull(named?.let { "--named $it" }, role?.let { "--role $it" })
+        val matching = if (filterOptions.isEmpty()) "" else " matching ${filterOptions.joinToString(" ")}"
+        return "${if (exact) "exact " else ""}instances of $resolvedConcept$matching"
     }
 }

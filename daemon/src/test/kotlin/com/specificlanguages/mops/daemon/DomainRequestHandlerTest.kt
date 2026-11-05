@@ -133,7 +133,7 @@ class DomainRequestHandlerTest {
 
     @Test
     fun `find-instances resolves the scope then reads and returns the response directly`() {
-        val expected = FindInstancesResponse(limit = 10, truncated = true, nodes = emptyList())
+        val expected = emptyInstancesResponse(limit = 10, truncated = true)
         whenever(operations.resolveScope(null)).thenReturn(ResolvedScope.EditableProjectSources)
         whenever(operations.findInstances("some.Concept", true, ResolvedScope.EditableProjectSources, limit = 10))
             .thenReturn(expected)
@@ -160,7 +160,7 @@ class DomainRequestHandlerTest {
                 filters,
                 limit = 10,
             ),
-        ).thenReturn(FindInstancesResponse(limit = 10, truncated = false, nodes = emptyList()))
+        ).thenReturn(emptyInstancesResponse(limit = 10))
 
         handler.handleDomainRequest(
             FindInstancesRequest(
@@ -187,7 +187,7 @@ class DomainRequestHandlerTest {
         val moduleScope = ResolvedScope.Module("ref(com.example)")
         whenever(operations.resolveScope(segments)).thenReturn(moduleScope)
         whenever(operations.findInstances("some.Concept", false, moduleScope, limit = 10))
-            .thenReturn(FindInstancesResponse(limit = 10, truncated = false, nodes = emptyList()))
+            .thenReturn(emptyInstancesResponse(limit = 10))
 
         handler.handleDomainRequest(
             FindInstancesRequest(TOKEN, concept = "some.Concept", exact = false, limit = 10, scope = segments),
@@ -199,7 +199,7 @@ class DomainRequestHandlerTest {
         val target = NodeTarget.InModel("some.model", "7")
         whenever(operations.resolveScope(listOf("/"))).thenReturn(ResolvedScope.Repository)
         whenever(operations.findUsages(target, ResolvedScope.Repository, limit = 5))
-            .thenReturn(FindUsagesResponse(limit = 5, truncated = false, usages = emptyList()))
+            .thenReturn(emptyUsagesResponse(limit = 5))
 
         handler.handleDomainRequest(FindUsagesRequest(TOKEN, target, limit = 5, scope = listOf("/")))
 
@@ -209,7 +209,7 @@ class DomainRequestHandlerTest {
 
     @Test
     fun `find-by-name resolves the scope then reads and returns the response directly`() {
-        val expected = FindByNameResponse(limit = 10, truncated = false, nodes = emptyList())
+        val expected = emptyByNameResponse(limit = 10)
         whenever(operations.resolveScope(listOf("/"))).thenReturn(ResolvedScope.Repository)
         whenever(operations.findByName("Json", ResolvedScope.Repository, limit = 10)).thenReturn(expected)
 
@@ -225,7 +225,7 @@ class DomainRequestHandlerTest {
 
     @Test
     fun `find-usages resolves the scope then reads and returns the response directly`() {
-        val expected = FindUsagesResponse(limit = 5, truncated = false, usages = emptyList())
+        val expected = emptyUsagesResponse(limit = 5)
         val target = NodeTarget.InModel("some.model", "7")
         whenever(operations.resolveScope(null)).thenReturn(ResolvedScope.EditableProjectSources)
         whenever(operations.findUsages(target, ResolvedScope.EditableProjectSources, limit = 5)).thenReturn(expected)

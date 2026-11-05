@@ -45,6 +45,8 @@ dependencies {
     // Test-only guard that the generated schema matches what the serializer accepts. Never shipped in the CLI runtime.
     testImplementation(libs.json.schema.validator)
     testRuntimeOnly(libs.junit.platform.launcher)
+    // TestShardMethodFilter implements a JUnit Platform launcher interface.
+    integrationTest.implementationConfigurationName(libs.junit.platform.launcher)
 
     testImplementation(libs.groovy)
     testImplementation("org.apache.groovy:groovy-json:${libs.versions.groovy.get()}")
@@ -265,6 +267,7 @@ fun Test.configureIntegrationTest(mpsHome: Provider<File>, jbrHome: Provider<Fil
             "-Dtest.cliInstall=${tasks.installDist.get().destinationDir}",
             "-Dtest.groovyVersion=${libs.versions.groovy.get()}",
             "-Dtest.projectsDir=${rootDir.resolve("test-projects")}",
+            "-Dtest.repoRoot=${rootDir.absolutePath}",
             "-Dmops.daemon.classpath=${daemonRuntimeClasspath.get().asPath}",
             "-Dmops.daemon.mps.plugin=${daemonMpsPlugin.get().singleFile.absolutePath}"
         )
@@ -323,6 +326,14 @@ val integrationTests = supportedMpsVersions.map { mpsVersion ->
     tasks.register<Test>("integrationTestMps$mpsVersion") {
         description = "Runs CLI integration tests against MPS $mpsVersion and its matching JBR."
         configureIntegrationTest(mpsHome, jbrHome)
+        // The methods of these classes share no state, and each class takes several minutes as a whole.
+        shardTests(
+            splitClasses = listOf(
+                "com.specificlanguages.mops.cli.CodeModeIntegrationTest",
+                "com.specificlanguages.mops.cli.DaemonControlIntegrationTest",
+                "com.specificlanguages.mops.cli.TestRunningIntegrationTest",
+            )
+        )
     }
 }
 

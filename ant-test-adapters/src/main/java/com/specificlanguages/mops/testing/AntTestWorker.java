@@ -48,7 +48,7 @@ public class AntTestWorker extends LaunchTestWorker {
    * Brings the VFS up to date with the given folders on disk and lets MPS reload what changed. A reused IntelliJ system
    * directory keeps VFS records from earlier runs, and the test-mode platform skips its initial VFS refresh. The
    * files the VFS has stored under the folders are loaded into memory before the refresh; docs/test-running-design.md
-   * explains why. refreshFromDisk.kt in the daemon does the same in the preparation environment: keep the two in step.
+   * explains why. ExternalProjectRefresh in the daemon loads stored files the same way: keep the two in step.
    */
   private static void refreshFromDisk(String[] folders) {
     List<VirtualFile> files = new ArrayList<>();
