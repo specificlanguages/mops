@@ -9,3 +9,9 @@ class MpsHomeRequiredException : RuntimeException(
 
 class ProjectPathNotFoundException(startingPath: Path) :
     RuntimeException("no .mps directory found from $startingPath upward")
+
+/** An MPS or Java home given on the command line does not exist. */
+class RuntimeHomeNotFoundException(description: String, home: Path, wrapperStart: Path) : RuntimeException(
+    "$description does not exist: $home. If a mops wrapper passed it, the wrapper is out of date: " +
+        "run mops wrapper $wrapperStart to write it again."
+)
