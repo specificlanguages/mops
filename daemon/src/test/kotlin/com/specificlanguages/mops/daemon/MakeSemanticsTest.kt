@@ -2,6 +2,7 @@ package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
+import com.specificlanguages.mops.protocol.MakeGenerationOptions
 import com.specificlanguages.mops.protocol.MakeMessageKind
 import com.specificlanguages.mops.protocol.MakeOutcome
 import java.nio.file.Path
@@ -52,7 +53,7 @@ class MakeSemanticsTest {
     @Test
     fun `a make with several generation threads succeeds`() {
         val response = SharedMpsEnvironment.withProjectCopy { access, _ ->
-            access.extra { makeModules(listOf("json.sandbox"), threads = 2) }
+            access.extra { makeModules(listOf("json.sandbox"), MakeGenerationOptions(threads = 2)) }
         }
 
         val errors = response.messages.filter { it.kind == MakeMessageKind.ERROR }

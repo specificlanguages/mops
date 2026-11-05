@@ -4,6 +4,7 @@
 | -------------------------------------------------- | -------------------------------------------------------- |
 | Make selected modules and their dependencies       | `mops make module sample.language sample.solution`       |
 | Make modules, generating with 4 threads            | `mops make module --threads 4 sample.language`           |
+| Make modules and report generator info messages    | `mops make module --messages info sample.language`       |
 | Make all generatable project modules               | `mops make project`                                      |
 | Check a model, including typesystem/checking rules | `mops check model sample.model`                          |
 | Check selected modules                             | `mops check module sample.language sample.solution`      |

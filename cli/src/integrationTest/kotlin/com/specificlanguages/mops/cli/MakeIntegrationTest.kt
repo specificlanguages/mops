@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.cli
 
+import com.specificlanguages.mops.protocol.MakeMessageKind
 import com.specificlanguages.mops.protocol.MakeOutcome
 import com.specificlanguages.mops.protocol.MakeResponse
 import com.specificlanguages.mops.protocol.ProtocolJson
@@ -13,13 +14,19 @@ import kotlin.test.assertTrue
 @ResourceLock("system-streams")
 class MakeIntegrationTest {
     @Test
-    fun `make module generates with several threads`() {
-        val result = daemons.project("mps-json").run("make", "module", "--threads", "2", "--json", "json.sandbox")
+    fun `make module passes its generation options to MPS`() {
+        val result = daemons.project("mps-json").run(
+            "make", "module", "--threads", "2", "--strict", "--messages", "info", "--json", "json.sandbox",
+        )
 
         assertEquals(0, result.exitCode, result.output)
         val response = ProtocolJson.decodeResponse(result.stdout) as MakeResponse
         assertEquals(MakeOutcome.SUCCESS, response.outcome, result.output)
         assertTrue(response.moduleCount >= 2, "expected the language to be made too, got ${response.moduleCount}")
+        assertTrue(
+            response.messages.any { it.kind == MakeMessageKind.INFO && it.text.contains("using 2 threads") },
+            "expected MPS to report generating with 2 threads, got ${response.messages}",
+        )
     }
 
     companion object {

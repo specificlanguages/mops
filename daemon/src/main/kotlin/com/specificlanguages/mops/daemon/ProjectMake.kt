@@ -2,12 +2,13 @@ package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
+import com.specificlanguages.mops.protocol.MakeGenerationOptions
 import com.specificlanguages.mops.protocol.MakeMessageJson
 import com.specificlanguages.mops.protocol.MakeMessageKind
 import com.specificlanguages.mops.protocol.MakeOutcome
 import com.specificlanguages.mops.protocol.MakeResponse
-import jetbrains.mps.generator.GenerationOptions
 import jetbrains.mps.generator.GenerationSettingsProvider
+import jetbrains.mps.generator.IModifiableGenerationSettings
 import jetbrains.mps.make.MakeSession
 import jetbrains.mps.make.dependencies.MakeSequence
 import jetbrains.mps.make.resources.IResource
@@ -35,14 +36,17 @@ import org.jetbrains.mps.openapi.util.ProgressMonitor
  * The make framework builds exactly the modules whose models it is handed — it never pulls in a dependency that is not
  * in the set, it only orders what it is given. So to make un-made dependencies too, [makeModules] first expands the
  * requested modules to their transitive compile-dependency closure ([GlobalModuleDependenciesManager]); already-built
- * library dependencies drop out because [ModelsToResources] keeps only generatable models. The make itself is
- * incremental (clean = false), so up-to-date models in the closure are cheap.
+ * library dependencies drop out because [ModelsToResources] keeps only generatable models. Every model handed to the
+ * make is generated; nothing skips unmodified models.
  *
  * Model collection runs inside short read actions; the make call runs outside any model action, on the calling thread,
  * because the make framework acquires its own model locks.
  *
- * A thread count passed to [makeModules] or [makeProject] reaches the Generate facet as generation options of that make
- * session only ([makeGenerationOptions]); the project's generation settings are not changed.
+ * The generation options of a make request reach the Generate facet as generation options of that make session only
+ * ([makeGenerationOptions]), except saving transient models and performance tracing, which the Generate facet reads
+ * from the process-wide generation settings; those two are set for the duration of the make
+ * ([withMakeGenerationSettings]). See
+ * https://github.com/specificlanguages/mps-api-research/blob/main/docs/generation-options-per-make.md.
  *
  * See https://github.com/specificlanguages/mps-api-research/blob/main/make-generation.md for the verified API contract.
  */
@@ -50,60 +54,93 @@ class ProjectMake(private val project: Project) {
     private val persistence: PersistenceFacade = PersistenceFacade.getInstance()
 
     /**
-     * Makes [moduleNames] and their dependencies, generating with [threads] threads when it is not null. The make checks
-     * [monitor] for cancellation between its steps.
+     * Makes [moduleNames] and their dependencies with the [generation] options, clean when [clean] is set (see
+     * [runMake]). The make checks [monitor] for cancellation between its steps.
      */
     fun makeModules(
         moduleNames: List<String>,
         monitor: ProgressMonitor = EmptyProgressMonitor(),
-        threads: Int? = null,
+        generation: MakeGenerationOptions = MakeGenerationOptions(),
+        clean: Boolean = false,
     ): MakeResponse {
-        val options = generationOptions(threads)
-        val models = project.modelAccess.computeReadAction<List<SModel>> {
-            collectMakeSet(moduleNames.map(::resolveProjectModule)).flatMap { it.models }
+        val modules = project.modelAccess.computeReadAction<Set<SModule>> {
+            collectMakeSet(moduleNames.map(::resolveProjectModule))
         }
-        return runMake(models, options, monitor)
+        return runMake(modules, clean, generation, monitor)
     }
 
-    fun makeProject(threads: Int? = null): MakeResponse {
-        val options = generationOptions(threads)
-        val models = project.modelAccess.computeReadAction<List<SModel>> {
-            project.projectModulesWithGenerators.flatMap { it.models }
+    /** Makes every project module with the [generation] options, clean when [clean] is set (see [runMake]). */
+    fun makeProject(generation: MakeGenerationOptions = MakeGenerationOptions(), clean: Boolean = false): MakeResponse {
+        val modules = project.modelAccess.computeReadAction<Set<SModule>> {
+            project.projectModulesWithGenerators.toSet()
         }
-        return runMake(models, options, EmptyProgressMonitor())
+        return runMake(modules, clean, generation, EmptyProgressMonitor())
     }
 
-    private fun generationOptions(threads: Int?): GenerationOptions.OptionsBuilder? =
-        makeGenerationOptions(project.getComponent(GenerationSettingsProvider::class.java).generationSettings, threads)
+    private val generationSettings: IModifiableGenerationSettings
+        get() = project.getComponent(GenerationSettingsProvider::class.java).generationSettings
 
+    /**
+     * Makes every model of [modules]. MPS generates each model it is handed in full, so the make writes every current
+     * output file again (or keeps it when its content is unchanged).
+     *
+     * With [clean], each module whose output folders hold only its own output is made clean: MPS treats every file under
+     * its output roots as stale, so files that no model generates any more are deleted, even when no earlier make
+     * recorded them. Clean make is a property of each module's make resource (MakeKeys.CLEAN_MAKE), not of the make
+     * session. A module that shares an output folder with another project module is made incrementally, with a warning,
+     * because a clean make would delete the other module's files.
+     */
     private fun runMake(
-        models: List<SModel>,
-        options: GenerationOptions.OptionsBuilder?,
+        modules: Set<SModule>,
+        clean: Boolean,
+        generation: MakeGenerationOptions,
         monitor: ProgressMonitor,
     ): MakeResponse {
+        val options = makeGenerationOptions(generationSettings, generation)
+        val warnings = mutableListOf<MakeMessageJson>()
         // resources() reads the model graph and keeps only generatable models, grouped one MResource per module.
         // But "generatable" is not the same as "writable": MPS ships its library languages and runtime solutions as
         // *source* models inside `-src.jar` files, and those models report themselves generatable, so they survive
         // ModelsToResources — yet writing their generation output into the jar fails ("Write for jar files is not
-        // supported"). We only ever intend to make project sources, so drop models of read-only (packaged) modules
-        // first. See https://github.com/specificlanguages/mps-api-research/blob/main/make-generation.md.
+        // supported"). We only ever intend to make project sources, so drop read-only (packaged) modules first.
+        // See https://github.com/specificlanguages/mps-api-research/blob/main/make-generation.md.
         val resources: List<IResource> = project.modelAccess.computeReadAction<List<IResource>> {
-            ModelsToResources(models.filter { it.isInWritableModule() }).resources().toList()
+            val writable = modules.filter { !it.isReadOnlyModule() }
+            val cleanModules = if (clean) {
+                val roots = project.projectModulesWithGenerators.associateWith(::generatedOutputRoots)
+                modulesWithOwnOutputRoots(writable, roots).also { own ->
+                    (writable - own).mapTo(warnings) {
+                        MakeMessageJson(
+                            MakeMessageKind.WARNING,
+                            "${it.moduleName} was made incrementally, not clean: its output folders overlap those of " +
+                                "another module",
+                        )
+                    }
+                }
+            } else {
+                emptySet()
+            }
+            val (cleanMade, incremental) = writable.partition { it in cleanModules }
+            ModelsToResources(cleanMade.flatMap { it.models }, true).resources().toList() +
+                ModelsToResources(incremental.flatMap { it.models }, false).resources().toList()
         }
 
         if (resources.isEmpty()) {
             return MakeResponse(MakeOutcome.NOTHING_TO_GENERATE, moduleCount = 0, messages = emptyList())
         }
 
-        val handler = CollectingMessageHandler()
+        val handler = CollectingMessageHandler(reportInfo = generation.messages != null)
+        // MakeSession's own clean flag only names the IDE's make script; the resources above carry the clean make.
         val session = MakeSession(project, handler, /* cleanMake = */ false)
         // Reimplements BuildMakeService.doMake using classes from mps-core: BuildMakeService itself ships only in
         // lib/mpsant/mps-tool.jar, which is not on the daemon classpath. A null script lets MPS build the correct
         // per-cluster script; a null-controller default is IScriptController.Stub2. See the mps-api-research notes.
         val controller: IScriptController = makeScriptController(session, options)
         val task = CoreMakeTask(MakeSequence(resources, null, session), controller, handler)
-        task.run(monitor)
-        val result = task.getResult()
+        val result = withMakeGenerationSettings(generationSettings, generation) {
+            task.run(monitor)
+            task.getResult()
+        }
 
         // MPS's make result is not reliable on its own — it can report success while errors were reported — so a run
         // counts as successful only when the result is successful AND no error message was seen.
@@ -111,7 +148,7 @@ class ProjectMake(private val project: Project) {
         return MakeResponse(
             outcome = if (succeeded) MakeOutcome.SUCCESS else MakeOutcome.FAILED,
             moduleCount = resources.size,
-            messages = handler.messages,
+            messages = warnings + handler.messages,
         )
     }
 
@@ -150,11 +187,8 @@ class ProjectMake(private val project: Project) {
         return result
     }
 
-    // A model belongs to a writable module when its owning module is not read-only. Read-only modules are the deployed,
-    // jar-packaged libraries MPS ships pre-built; they must never be regenerated. Models with no resolvable module are
-    // kept — they are not the packaged-library case this guards against.
-    private fun SModel.isInWritableModule(): Boolean =
-        (module as? AbstractModule)?.isReadOnly != true
+    // Read-only modules are the deployed, jar-packaged libraries MPS ships pre-built; they must never be regenerated.
+    private fun SModule.isReadOnlyModule(): Boolean = (this as? AbstractModule)?.isReadOnly == true
 
     private fun resolveProjectModule(name: String): SModule {
         val matches = project.projectModulesWithGenerators.filter {
@@ -171,17 +205,19 @@ class ProjectMake(private val project: Project) {
     }
 
     /**
-     * Collects the error and warning messages MPS reports during the make and records whether any error was seen. A
-     * message with no kind is treated as an error, matching how MPS's own headless tooling handles it.
+     * Collects the messages MPS reports during the make and records whether any error was seen. Information messages
+     * are collected only with [reportInfo]; MPS itself decides which generator messages it reports. A message with no
+     * kind is treated as an error, matching how MPS's own headless tooling handles it.
      */
-    private class CollectingMessageHandler : IMessageHandler {
+    private class CollectingMessageHandler(private val reportInfo: Boolean) : IMessageHandler {
         val messages = mutableListOf<MakeMessageJson>()
         var errorOccurred = false
             private set
 
         override fun handle(msg: IMessage) {
             when (msg.kind) {
-                MessageKind.INFORMATION -> Unit
+                MessageKind.INFORMATION ->
+                    if (reportInfo) messages.add(MakeMessageJson(MakeMessageKind.INFO, msg.text.orEmpty()))
                 MessageKind.WARNING -> messages.add(MakeMessageJson(MakeMessageKind.WARNING, msg.text.orEmpty()))
                 MessageKind.ERROR -> record(msg)
                 else -> record(msg) // null kind: treat as error

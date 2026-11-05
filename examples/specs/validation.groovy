@@ -12,6 +12,11 @@
                 code: '''mops make module --threads 4 sample.language''',
             ],
             [
+                title: 'Make modules and report generator info messages',
+                kind: 'cli',
+                code: '''mops make module --messages info sample.language''',
+            ],
+            [
                 title: 'Make all generatable project modules',
                 kind: 'cli',
                 code: '''mops make project''',

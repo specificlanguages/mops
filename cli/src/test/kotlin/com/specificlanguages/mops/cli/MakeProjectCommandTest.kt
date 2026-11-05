@@ -3,6 +3,8 @@ package com.specificlanguages.mops.cli
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.cli.make.MakeProjectCommand
 import com.specificlanguages.mops.daemoncomms.DaemonClient
+import com.specificlanguages.mops.protocol.MakeGenerationOptions
+import com.specificlanguages.mops.protocol.MakeMessageLevel
 import com.specificlanguages.mops.protocol.MakeOutcome
 import com.specificlanguages.mops.protocol.MakeResponse
 import kotlin.test.Test
@@ -18,19 +20,19 @@ class MakeProjectCommandTest {
     @Test
     fun `make project makes the whole project and prints a success summary with exit 0`() {
         val client = mock<DaemonClient>()
-        whenever(client.makeProject(null))
+        whenever(client.makeProject(MakeGenerationOptions()))
             .thenReturn(MakeResponse(MakeOutcome.SUCCESS, moduleCount = 12, messages = emptyList()))
 
         val stdout = tapSystemOut { assertEquals(0, run(client)) }
 
-        verify(client).makeProject(null)
+        verify(client).makeProject(MakeGenerationOptions())
         assertEquals("made 12 module(s): success" + nl, stdout)
     }
 
     @Test
     fun `make project reports nothing to generate with exit 0`() {
         val client = mock<DaemonClient>()
-        whenever(client.makeProject(null))
+        whenever(client.makeProject(MakeGenerationOptions()))
             .thenReturn(MakeResponse(MakeOutcome.NOTHING_TO_GENERATE, moduleCount = 0, messages = emptyList()))
 
         val stdout = tapSystemOut { assertEquals(0, run(client)) }
@@ -39,14 +41,15 @@ class MakeProjectCommandTest {
     }
 
     @Test
-    fun `make project forwards the generation thread count`() {
+    fun `make project forwards the generation options`() {
         val client = mock<DaemonClient>()
-        whenever(client.makeProject(2))
+        val options = MakeGenerationOptions(threads = 2, messages = MakeMessageLevel.ERROR)
+        whenever(client.makeProject(options))
             .thenReturn(MakeResponse(MakeOutcome.SUCCESS, moduleCount = 12, messages = emptyList()))
 
-        tapSystemOut { assertEquals(0, run(client, "--threads", "2")) }
+        tapSystemOut { assertEquals(0, run(client, "--threads", "2", "--messages", "error")) }
 
-        verify(client).makeProject(2)
+        verify(client).makeProject(options)
     }
 
     private fun run(client: DaemonClient, vararg args: String): Int =

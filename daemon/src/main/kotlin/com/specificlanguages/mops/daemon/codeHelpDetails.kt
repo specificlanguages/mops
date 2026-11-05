@@ -86,7 +86,7 @@ internal val resultMembers = mapOf(
         member("TestResult", name, if (name in listOf("source", "className", "methodName", "detail")) "String?" else "String", "Test result $name.")
     },
     "MakeMessageJson" to listOf(
-        member("MakeMessageJson", "kind", "MakeMessageKind", "Warning or error severity."),
+        member("MakeMessageJson", "kind", "MakeMessageKind", "Error, warning, or info severity."),
         member("MakeMessageJson", "text", "String", "Make diagnostic text."),
     ),
     "MakeResponse" to listOf(

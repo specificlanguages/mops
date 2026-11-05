@@ -20,7 +20,7 @@ import picocli.CommandLine.Parameters
     description = [
         "Make the named modules and their transitive dependency closure, so an un-made dependency is made too.",
     ],
-    footer = ["", MAKE_OUTPUT_HELP, "", MAKE_THREADS_HELP],
+    footer = ["", MAKE_OUTPUT_HELP, "", MAKE_CLEAN_HELP, "", MAKE_GENERATION_HELP],
 )
 class MakeModulesCommand(private val environment: CommandEnvironment) : CliCommand(), IExitCodeGenerator {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
@@ -29,7 +29,7 @@ class MakeModulesCommand(private val environment: CommandEnvironment) : CliComma
     var json: Boolean = false
 
     @Mixin
-    val threadsOption = GenerationThreadsOption()
+    val generationOptions = MakeGenerationOptionsMixin()
 
     @Parameters(
         arity = "1..*",
@@ -42,7 +42,7 @@ class MakeModulesCommand(private val environment: CommandEnvironment) : CliComma
 
     override fun run() {
         val client = environment.daemon()
-        exitCode = renderMakeResult(client.makeModules(modules, threadsOption.threads), json)
+        exitCode = renderMakeResult(client.makeModules(modules, generationOptions.toProtocol()), json)
     }
 
     override fun getExitCode(): Int = exitCode

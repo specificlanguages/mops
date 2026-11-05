@@ -3,8 +3,8 @@ package com.specificlanguages.mops.protocol
 import kotlinx.serialization.Serializable
 
 /**
- * One end-user-facing message reported by MPS during a make: an error or a warning, with its text. Information-level
- * make messages (progress, timing) are not carried back.
+ * One end-user-facing message reported by MPS during a make, with its kind and text. Information messages are carried
+ * back only when the make request sets a message level.
  */
 @Serializable
 data class MakeMessageJson(
@@ -19,4 +19,5 @@ data class MakeMessageJson(
 enum class MakeMessageKind {
     ERROR,
     WARNING,
+    INFO,
 }
