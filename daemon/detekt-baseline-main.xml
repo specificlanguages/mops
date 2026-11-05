@@ -9,7 +9,6 @@
     <ID>CognitiveComplexMethod:EditBatchExecutor.kt:EditBatchExecutor$private fun evaluateConstraints: List&lt;EditConstraintViolation&gt;</ID>
     <ID>CognitiveComplexMethod:ProjectDaemon.kt:ProjectDaemon$fun serve</ID>
     <ID>CognitiveComplexMethod:ProjectRequestGate.kt:ProjectRequestGate$fun &lt;T&gt; run: T</ID>
-    <ID>CognitiveComplexMethod:testPreparation.kt:fun main</ID>
     <ID>ComplexCondition:CodeCatalog.kt:CodeCatalog$subject is Mops || subject is MopsEditing || subject is MopsEditingBuild || subject is MopsParsing || subject is MopsTesting || subject is MopsSearch || subject is MopsLookup || subject is MopsRuntime || subject is JavaSnippetParser</ID>
     <ID>CyclomaticComplexMethod:AntTestExecution.kt:AntTestExecution$fun run</ID>
     <ID>CyclomaticComplexMethod:CodeCatalog.kt:CodeCatalog$internal fun document: CodeHelpDocument</ID>
@@ -23,7 +22,6 @@
     <ID>LongMethod:EditBatchExecutor.kt:EditBatchExecutor$private fun applyTracked: ModelEditResponse</ID>
     <ID>LongMethod:EditBatchExecutor.kt:EditBatchExecutor$private fun evaluateConstraints: List&lt;EditConstraintViolation&gt;</ID>
     <ID>LongMethod:ProjectDaemon.kt:ProjectDaemon$fun serve</ID>
-    <ID>LongMethod:testPreparation.kt:fun main</ID>
     <ID>LongParameterList:JetBrainsMpsAccess.kt:JetBrainsMpsAccess</ID>
     <ID>LongParameterList:ModuleCreator.kt:ModuleCreator$private fun createGeneratorModule: Generator</ID>
     <ID>LongParameterList:ModuleCreator.kt:ModuleCreator$private fun planEntry</ID>

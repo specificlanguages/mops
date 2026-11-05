@@ -3,6 +3,10 @@ package com.specificlanguages.mops.daemon
 import com.intellij.openapi.vfs.JarFileSystem
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtil
+import com.intellij.openapi.vfs.VfsUtilCore
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileVisitor
+import com.intellij.openapi.vfs.newvfs.NewVirtualFile
 import jetbrains.mps.extapi.persistence.FileBasedModelRoot
 import jetbrains.mps.project.AbstractModule
 import jetbrains.mps.project.Project
@@ -50,3 +54,11 @@ internal fun moduleFolders(project: Project, mpsHome: Path): List<Path> {
 private fun sourceLocations(module: AbstractModule): List<IFile> =
     listOfNotNull(module.moduleSourceDir) +
         module.modelRoots.filterIsInstance<FileBasedModelRoot>().mapNotNull { it.contentDirectory }
+
+/** Loads into memory the files the VFS has stored under [folder], without listing folders on disk. */
+internal fun loadStoredFiles(folder: VirtualFile) {
+    VfsUtilCore.visitChildrenRecursively(folder, object : VirtualFileVisitor<Unit>() {
+        override fun getChildrenIterable(file: VirtualFile): Iterable<VirtualFile> =
+            (file as NewVirtualFile).iterInDbChildren()
+    })
+}

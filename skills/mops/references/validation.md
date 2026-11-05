@@ -77,9 +77,9 @@ root test case), so check that it is the one you meant. A diagnostic that lists 
 classes of explains a `ClassNotFoundException` for test classes: a dependency is missing from the worker's repository,
 which holds the project modules and project libraries as the daemon loaded them.
 
-Use `reportPath` to retain the report. Inspect the adjacent `worker.log` for preparation failures and `ant.log` for test
-execution failures. When the run is evidence for a bug report, record the mops version (`mops --version`) together
-with the MPS and Java versions and the preparation commands.
+Use `reportPath` to retain the report. Build failures are in the report's `build` messages. Inspect the adjacent
+`worker.log` for test supervisor failures and `ant.log` for test execution failures. When the run is evidence for a bug
+report, record the mops version (`mops --version`) together with the MPS and Java versions and the preparation commands.
 
 ### Run from Code Mode
 

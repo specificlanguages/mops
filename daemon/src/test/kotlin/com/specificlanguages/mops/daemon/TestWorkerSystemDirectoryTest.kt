@@ -8,54 +8,51 @@ import kotlin.io.path.writeText
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-class PersistentSystemDirectoriesTest {
+class TestWorkerSystemDirectoryTest {
     @TempDir
     lateinit var directory: Path
 
     @Test
-    fun `a free role gets the persistent directory of its MPS build again after release`() {
+    fun `a released directory is acquired again, one per MPS build`() {
         val cache = directory.resolve("cache")
-        val directories = PersistentSystemDirectories(cache, "MPS-241.19416.1452")
-        directories.acquire("worker", "test worker", directory.resolve("run-1")).use { worker ->
+        val directories = TestWorkerSystemDirectory(cache, "MPS-241.19416.1452")
+        directories.acquire(directory.resolve("run-1")).use { worker ->
             assertEquals(cache.resolve("MPS-241.19416.1452/worker"), worker.path)
             assertNull(worker.diagnostic)
         }
-        directories.acquire("worker", "test worker", directory.resolve("run-2")).use { worker ->
+        directories.acquire(directory.resolve("run-2")).use { worker ->
             assertEquals(cache.resolve("MPS-241.19416.1452/worker"), worker.path)
         }
-        PersistentSystemDirectories(cache, "MPS-251.28293.10283").acquire("worker", "test worker", directory.resolve("run-3")).use {
+        TestWorkerSystemDirectory(cache, "MPS-251.28293.10283").acquire(directory.resolve("run-3")).use {
             assertEquals(cache.resolve("MPS-251.28293.10283/worker"), it.path)
         }
     }
 
     @Test
-    fun `a role locked by another process falls back to the run's own directory and says so`() {
+    fun `a directory locked by another process falls back to the run's own directory and says so`() {
         val cache = directory.resolve("cache")
-        val directories = PersistentSystemDirectories(cache, "MPS-241.19416.1452")
+        val directories = TestWorkerSystemDirectory(cache, "MPS-241.19416.1452")
         val holder = holdLock(cache.resolve("MPS-241.19416.1452/worker.lock"))
         try {
-            directories.acquire("worker", "test worker", directory.resolve("run/test-system")).use { worker ->
+            directories.acquire(directory.resolve("run/test-system")).use { worker ->
                 assertEquals(directory.resolve("run/test-system"), worker.path)
                 assertEquals("The test worker's system directory ${cache.resolve("MPS-241.19416.1452/worker")} is in use by " +
                     "another test run; this run uses the fresh directory ${directory.resolve("run/test-system")} and indexes " +
                     "the MPS distribution again.", worker.diagnostic)
             }
-            directories.acquire("preparation", "preparation environment", directory.resolve("run/idea-system")).use {
-                assertEquals(cache.resolve("MPS-241.19416.1452/preparation"), it.path)
-            }
         } finally {
             holder.destroyForcibly().waitFor()
         }
-        directories.acquire("worker", "test worker", directory.resolve("run/test-system")).use {
+        directories.acquire(directory.resolve("run/test-system")).use {
             assertEquals(cache.resolve("MPS-241.19416.1452/worker"), it.path)
         }
     }
 
     @Test
-    fun `a role held in this process is busy for a second run that leaves the first run's lock in place`() {
-        val directories = PersistentSystemDirectories(directory, "MPS-241.19416.1452")
-        directories.acquire("worker", "test worker", directory.resolve("run-1")).use {
-            directories.acquire("worker", "test worker", directory.resolve("run-2")).use { second ->
+    fun `a directory held in this process is busy for a second run that leaves the first run's lock in place`() {
+        val directories = TestWorkerSystemDirectory(directory, "MPS-241.19416.1452")
+        directories.acquire(directory.resolve("run-1")).use {
+            directories.acquire(directory.resolve("run-2")).use { second ->
                 assertEquals(directory.resolve("run-2"), second.path)
             }
             assertEquals("busy", probeLock(directory.resolve("MPS-241.19416.1452/worker.lock")))

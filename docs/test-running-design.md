@@ -100,42 +100,44 @@ project-library modules cannot load classes. A project library whose path keeps 
 report diagnostic. The Ant file passes the folders as `<modules dir>` and the macros as `<macro name path>`, so tests
 that open a project through a macro-based `TestInfo.projectPath` find it.
 
-A separate controller performs the optional incremental build in a normal-mode preparation environment, with the same
-path macros, and saves the project. No-build runs start Ant without initializing a preparation MPS environment. It
+The daemon performs the optional incremental build itself, with the same make that `mops make` uses, and saves the
+project. The daemon already has the project open, so a build does not start a second normal-mode MPS environment with
+its own startup, memory, and system directory. The make checks the run's cancellation between its steps, so cancelling
+during the build stops the run before the worker starts. A Code Mode deadline that terminates the daemon during the
+build leaves the report incomplete in the build phase.
+
+The daemon then starts a small supervisor JVM on the daemon's classpath, without an MPS environment. The supervisor
 starts the selected distribution's Ant `launchtests` task on an independent classpath. Ant constructs the test JVM
 arguments and classpath; a small `LaunchTestWorker` subclass inherits test-mode environment startup and loads a
 version-specific launcher adapter through the stock launcher module's classloader. The adapter filters stock module
 discovery, forwards listener callbacks to the stock failure detector, and publishes atomic protocol events.
 
-The preparation process collects those events while supervising the Ant process. When a run is unsuccessful, it adds the
-worker's class-loading warnings from `test-log/idea.log` (modules MPS marked invalid for class loading) to the report's
+The supervisor collects those events while supervising the Ant process. When a run is unsuccessful, it adds the worker's
+class-loading warnings from `test-log/idea.log` (modules MPS marked invalid for class loading) to the report's
 diagnostics, so a missing dependency is not visible only as a `ClassNotFoundException`. Cancellation, deadline
-expiration, and parent termination kill the whole process tree.
+expiration, and parent termination kill the whole process tree. The supervisor outlives a killed daemon, so it records
+the parent termination in the report.
 
 In test mode, MPS waits for indexes before it opens a project, and it indexes the source roots of every repository
-module, including the whole distribution. So that a run does not scan and index all of it again, the test worker and the
-preparation environment keep their IntelliJ system directories (VFS, indexes, caches) between runs, in
-`test-system-cache/<MPS build number>/worker` and `.../preparation` under the daemon home, shared by all projects of
-that daemon home. The two run at the same time, so each has its own directory, and the build number in the path keeps
-one build from reading another build's indexes. Configuration and logs stay per run. MPS 2026.3 deletes the test-mode
-system directory at startup unless `mps.test.keep.system.dir` is set, so the worker sets it.
+module, including the whole distribution. So that a run does not scan and index all of it again, the test worker keeps
+its IntelliJ system directory (VFS, indexes, caches) between runs, in `test-system-cache/<MPS build number>/worker`
+under the daemon home, shared by all projects of that daemon home. The build number in the path keeps one build from
+reading another build's indexes. Configuration and logs stay per run. MPS 2026.3 deletes the test-mode system directory
+at startup unless `mps.test.keep.system.dir` is set, so the worker sets it.
 
-The daemon takes an exclusive file lock on a directory until the run's processes have exited; killing a process tree
+The daemon takes an exclusive file lock on the directory until the run's processes have exited; killing a process tree
 waits for the descendants to exit. IntelliJ does not protect a system directory shared by processes: the test-mode
-application takes no directory lock, and the normal-mode preparation environment keeps its lock file in the per-run
-config directory, so a second preparation environment would find the first one's port file in the shared system
-directory and pass its command line to it instead of starting. When another run, for example in another project's
-daemon, holds the lock, the run uses a fresh directory under its run directory and adds a report diagnostic naming both
-directories. No-build runs lock only the worker's directory.
+application takes no directory lock. When another run, for example in another project's daemon, holds the lock, the run
+uses a fresh directory under its run directory and adds a report diagnostic naming both directories.
 
 A reused VFS keeps file records and content from earlier runs, and the headless platform does not refresh them
-synchronously when it opens a project; the test-mode platform skips that refresh. So before use, both processes refresh
+synchronously when it opens a project; the test-mode platform skips that refresh. So before use, the worker refreshes
 from disk the project folder, the repository folders, and the module folders of the selection that are not inside
-another of these folders, and MPS reloads what changed. The preparation environment also refreshes the archives of
-packaged modules outside the distribution. A recursive refresh checks only files loaded into memory, and a file loaded
-later keeps its stored timestamp, length, and content (IJPL-219404), so both processes first load every file the VFS has
-stored under these folders. IntelliJ's own version and corruption checks rebuild outdated or broken storage. mops adds
-no check of its own: deleting the cache is the documented way out and costs one cold run.
+another of these folders, and MPS reloads what changed. A recursive refresh checks only files loaded into memory, and a
+file loaded later keeps its stored timestamp, length, and content (IJPL-219404), so the worker first loads every file
+the VFS has stored under these folders. The daemon refreshes its own persistent VFS the same way before each request.
+IntelliJ's own version and corruption checks rebuild outdated or broken storage. mops adds no check of its own: deleting
+the cache is the documented way out and costs one cold run.
 
 The load includes generated output folders: generation compares new output with the content the VFS holds and skips
 unchanged files, and it finds and deletes stale files through the VFS. Test-worker class loading reads `deps.cp` from

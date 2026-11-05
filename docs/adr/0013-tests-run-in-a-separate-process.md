@@ -3,8 +3,9 @@
 Test execution uses a separate process for correctness and robustness. The supported scope includes all test families
 recognized by the selected MPS testing framework, including tests that cannot run inside an existing MPS process.
 Process isolation provides an enforceable termination boundary for cancellation and timeouts without relying on tests to
-cooperate, at the cost of process and MPS initialization time. To keep that cost down, the worker processes keep their
-IntelliJ system directories (VFS, indexes, caches) between runs.
+cooperate, at the cost of process and MPS initialization time. To keep that cost down, the test worker keeps its
+IntelliJ system directory (VFS, indexes, caches) between runs, and the optional build before the tests runs in the
+daemon, which checks for cancellation between make steps.
 
 The project is saved before worker launch, and other domain operations on that project wait until the run finishes to
 prevent mops edits or builds from changing its inputs during execution. The worker uses the existing checkout; process
