@@ -135,9 +135,9 @@ synchronously when it opens a project; the test-mode platform skips that refresh
 from disk the project folder, the repository folders, and the module folders of the selection that are not inside
 another of these folders, and MPS reloads what changed. A recursive refresh checks only files loaded into memory, and a
 file loaded later keeps its stored timestamp, length, and content (IJPL-219404), so the worker first loads every file
-the VFS has stored under these folders. The daemon refreshes its own persistent VFS the same way before each request.
-IntelliJ's own version and corruption checks rebuild outdated or broken storage. mops adds no check of its own: deleting
-the cache is the documented way out and costs one cold run.
+the VFS has stored under these folders. The daemon refreshes its own persistent VFS the same way before its first
+request. IntelliJ's own version and corruption checks rebuild outdated or broken storage. mops adds no check of its own:
+deleting the cache is the documented way out and costs one cold run.
 
 The load includes generated output folders: generation compares new output with the content the VFS holds and skips
 unchanged files, and it finds and deletes stale files through the VFS. Test-worker class loading reads `deps.cp` from
