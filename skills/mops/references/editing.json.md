@@ -19,16 +19,17 @@ Copy a member subtree into a class, preserving its references and assigning fres
 printf '%s\n' '{"operations":[{"op":"copyAsChild","target":"CLASS_REF","source":"MEMBER_REF","role":"member","position":"last"}]}' | mops edit model
 ```
 
-| Task                                        | Command                                                    |
-| ------------------------------------------- | ---------------------------------------------------------- |
-| Apply a saved batch                         | `mops edit model --file edits.json`                        |
-| Require all concepts to be checkable        | `mops edit model --file edits.json --constraints strict`   |
-| Apply while reporting constraint violations | `mops edit model --file edits.json --constraints advisory` |
-| Discover subtree creation notation          | `mops explain edit.addRoot`                                |
-| Discover replacement notation               | `mops explain edit.replace`                                |
-| Discover wrapping notation                  | `mops explain edit.wrap`                                   |
-| Discover copying notation                   | `mops explain edit.copyAsChild`                            |
-| Export the batch schema                     | `mops explain --schema edit`                               |
+| Task                                        | Command                                                        |
+| ------------------------------------------- | -------------------------------------------------------------- |
+| Apply a saved batch                         | `mops edit model --file edits.json`                            |
+| Skip concepts whose languages did not load  | `mops edit model --file edits.json --ignore-missing-languages` |
+| Apply while reporting constraint violations | `mops edit model --file edits.json --constraints advisory`     |
+| Discover subtree creation notation          | `mops explain edit.addRoot`                                    |
+| Discover replacement notation               | `mops explain edit.replace`                                    |
+| Discover wrapping notation                  | `mops explain edit.wrap`                                       |
+| Discover copying notation                   | `mops explain edit.copyAsChild`                                |
+| Export the batch schema                     | `mops explain --schema edit`                                   |
 
-The default `best-effort` constraint mode blocks violations but warns and skips checking concepts whose languages are
-unloaded. Constraint checks are distinct from a full model check.
+The default `strict` constraint mode blocks a batch with violations; `advisory` reports them and applies the batch. A
+concept whose language did not load cannot be checked and fails the batch unless you pass `--ignore-missing-languages`,
+which skips it with a warning. Constraint checks are distinct from a full model check.

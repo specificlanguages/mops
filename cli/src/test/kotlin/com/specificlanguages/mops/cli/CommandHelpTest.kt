@@ -174,6 +174,7 @@ class CommandHelpTest {
         assertContains(output, "Usage:")
         assertContains(output, "--file")
         assertContains(output, "--constraints")
+        assertContains(output, "--[no-]ignore-missing-languages")
         assertContains(output, "Operation reference: mops explain edit")
     }
 

@@ -10,8 +10,9 @@ import org.jetbrains.mps.openapi.persistence.PersistenceFacade
  * language was never compiled.
  *
  * Read commands annotate such a node (`conceptValid = false`) rather than failing. The write path uses these helpers to
- * abort under strict enforcement and to name the unloaded language when it reports a skipped check as a warning. Code
- * Mode role and property lookups fail on such a node, because its concept has no roles or properties to look up.
+ * abort unless missing languages are ignored, and to name the unloaded language when it reports a skipped check as a
+ * warning. Code Mode role and property lookups fail on such a node, because its concept has no roles or properties to
+ * look up.
  */
 object ConceptValidityGuard {
 

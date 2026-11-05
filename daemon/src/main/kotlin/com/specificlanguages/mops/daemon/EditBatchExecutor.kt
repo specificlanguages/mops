@@ -3,7 +3,7 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.ChildPosition
-import com.specificlanguages.mops.protocol.ConstraintEnforcement
+import com.specificlanguages.mops.protocol.ConstraintMode
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditConstraintViolation
 import com.specificlanguages.mops.protocol.EditOperation
@@ -45,13 +45,14 @@ class EditBatchExecutor(
         project: Project,
         batch: EditBatch,
         writeScope: WriteTransaction.WriteScope,
-        enforcement: ConstraintEnforcement = ConstraintEnforcement.BEST_EFFORT,
+        constraints: ConstraintMode = ConstraintMode.STRICT,
+        ignoreMissingLanguages: Boolean = false,
     ): ModelEditResponse {
         // Every affected model is unchanged when the batch first touches it, so any unsaved change it holds after a
         // failure is the batch's own.
         val affectedModels = linkedSetOf<EditableSModel>()
         return try {
-            applyTracked(project, batch, writeScope, enforcement, affectedModels)
+            applyTracked(project, batch, writeScope, constraints, ignoreMissingLanguages, affectedModels)
         } catch (failure: Throwable) {
             discardUnsavedChanges(affectedModels).forEach(failure::addSuppressed)
             throw failure
@@ -62,7 +63,8 @@ class EditBatchExecutor(
         project: Project,
         batch: EditBatch,
         writeScope: WriteTransaction.WriteScope,
-        enforcement: ConstraintEnforcement,
+        constraints: ConstraintMode,
+        ignoreMissingLanguages: Boolean,
         affectedModels: MutableSet<EditableSModel>,
     ): ModelEditResponse {
         if (batch.operations.isEmpty()) {
@@ -149,11 +151,15 @@ class EditBatchExecutor(
             }
             val resolved = node ?: fail(MpsErrorCode.NODE_NOT_FOUND, "operation $index target node not found")
             // A node whose concept did not resolve (uncompiled language) carries only placeholder concept information.
-            // Under strict enforcement that aborts the batch; otherwise it is recorded as an unchecked language and the
-            // operation proceeds (and typically fails later at property/role resolution, which is fine).
+            // That aborts the batch unless missing languages are ignored; then it is recorded as an unchecked language and
+            // the operation proceeds (and typically fails later at property/role resolution, which is fine).
             if (!resolved.concept.isValid) {
-                if (enforcement == ConstraintEnforcement.STRICT) {
-                    fail(MpsErrorCode.LANGUAGE_NOT_LOADED, "operation $index target: ${ConceptValidityGuard.messageFor(resolved)}")
+                if (!ignoreMissingLanguages) {
+                    fail(
+                        MpsErrorCode.LANGUAGE_NOT_LOADED,
+                        "operation $index target: ${ConceptValidityGuard.messageFor(resolved)}, " +
+                            "or rerun with --ignore-missing-languages to skip its unchecked constraints",
+                    )
                 }
                 uncheckable.add(resolved.concept)
             }
@@ -597,15 +603,15 @@ class EditBatchExecutor(
 
         val violations = evaluateConstraints(placements, rootPlacements, referencePlacements, uncheckable)
 
-        // Strict enforcement refuses to apply anything it could not fully check.
-        if (enforcement == ConstraintEnforcement.STRICT && !uncheckable.isEmpty) {
-            fail(MpsErrorCode.LANGUAGE_NOT_LOADED, uncheckable.strictFailureMessage())
+        // Unless missing languages are ignored, refuse to apply anything that could not be fully checked.
+        if (!ignoreMissingLanguages && !uncheckable.isEmpty) {
+            fail(MpsErrorCode.LANGUAGE_NOT_LOADED, uncheckable.failureMessage())
         }
 
         val warnings = uncheckable.warnings()
 
-        // Advisory applies and saves despite violations; best-effort and strict block on any violation.
-        if (violations.isNotEmpty() && enforcement != ConstraintEnforcement.ADVISORY) {
+        // Advisory applies and saves despite violations; strict blocks on any violation.
+        if (violations.isNotEmpty() && constraints == ConstraintMode.STRICT) {
             // Block: revert the in-memory batch and report the violations without saving.
             discardUnsavedChanges(affectedModels).firstOrNull()?.let { throw it }
             return ModelEditResponse(created = emptyMap(), violations = violations, warnings = warnings)
@@ -964,10 +970,10 @@ private class UncheckableLanguages {
 
     val isEmpty: Boolean get() = languages.isEmpty()
 
-    fun strictFailureMessage(): String =
+    fun failureMessage(): String =
         "constraints could not be checked because these languages are not loaded: " +
             "${languages.joinToString()} — build them (e.g. 'mops make module ${languages.joinToString(" ")}') and " +
-            "retry, or rerun with --constraints=best-effort to skip the unchecked constraints"
+            "retry, or rerun with --ignore-missing-languages to skip the unchecked constraints"
 
     fun warnings(): List<String> = uncheckableLanguageWarnings(languages.toList())
 }

@@ -184,7 +184,12 @@ data class FindNodeByIdRequest(
 data class ModelEditRequest(
     override val token: String,
     val batch: EditBatch,
-    val constraints: ConstraintEnforcement = ConstraintEnforcement.BEST_EFFORT,
+    val constraints: ConstraintMode = ConstraintMode.STRICT,
+    /**
+     * When false, a concept whose constraints cannot be checked because its language did not load fails the batch.
+     * When true, it is skipped and reported as a warning.
+     */
+    val ignoreMissingLanguages: Boolean = false,
 ) : DomainRequest
 
 /**

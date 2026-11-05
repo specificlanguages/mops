@@ -116,7 +116,9 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
 
             is ModuleCheckRequest -> exclusive { mpsAccess.read { checkModules(request.modules, request.limit) } }
 
-            is ModelEditRequest -> exclusiveSaving { mpsAccess.write { modelEdit(request.batch, request.constraints) } }
+            is ModelEditRequest -> exclusiveSaving {
+                mpsAccess.write { modelEdit(request.batch, request.constraints, request.ignoreMissingLanguages) }
+            }
 
             is MakeModulesRequest -> exclusiveSaving { mpsAccess.extra { makeModules(request.modules) } }
 
