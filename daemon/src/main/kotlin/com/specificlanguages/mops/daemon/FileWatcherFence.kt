@@ -31,7 +31,7 @@ import kotlin.io.path.deleteIfExists
 internal class FileWatcherFence private constructor(private val root: Path) {
     private val pending = ConcurrentHashMap<String, CountDownLatch>()
 
-    /** Returns `true` once the watcher reported the fence, or `false` after [timeout]. */
+    /** Returns `true` once the watcher reported the fence, or `false` after [timeout] or when it cannot be written. */
     fun pass(timeout: Duration): Boolean {
         val marker = root.resolve(UUID.randomUUID().toString())
         val reported = CountDownLatch(1)
@@ -40,6 +40,8 @@ internal class FileWatcherFence private constructor(private val root: Path) {
             Files.createDirectory(marker)
             Files.createFile(marker.resolve("fence"))
             return reported.await(timeout.toMillis(), TimeUnit.MILLISECONDS)
+        } catch (_: IOException) {
+            return false
         } finally {
             pending.remove(marker.toString())
             deleteQuietly(marker)
@@ -74,7 +76,11 @@ internal class FileWatcherFence private constructor(private val root: Path) {
             }
             if (hook.get(fileWatcher) != null) return null
             // Reported paths are canonical and system-dependent, so the root is too.
-            val root = Path.of(PathManager.getSystemPath(), "mops-file-watcher-fence").createDirectories().toRealPath()
+            val root = try {
+                Path.of(PathManager.getSystemPath(), "mops-file-watcher-fence").createDirectories().toRealPath()
+            } catch (_: IOException) {
+                return null
+            }
             root.toFile().listFiles()?.forEach { FileUtil.delete(it) }
             LocalFileSystem.getInstance().addRootToWatch(FileUtil.toSystemIndependentName(root.toString()), true)
             val fence = FileWatcherFence(root)
