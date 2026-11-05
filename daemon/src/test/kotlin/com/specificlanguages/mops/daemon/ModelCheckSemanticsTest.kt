@@ -28,6 +28,16 @@ class ModelCheckSemanticsTest {
 
         val errors = response.findings.filter { it.severity == FindingSeverity.ERROR }
         assertTrue(errors.isEmpty(), "the clean Calculator model must report no errors; got $errors")
+        assertEquals(1, response.rootsChecked, "the Calculator class is the model's only root")
+    }
+
+    @Test
+    fun `a model without roots reports zero roots checked`() {
+        val response = SharedMpsEnvironment.withProjectCopy(projectName = EXPRESSION_LANGUAGE) { access, _ ->
+            access.read { checkModel(EMPTY_MODEL_NAME, limit = 0) }
+        }
+
+        assertEquals(0, response.rootsChecked)
     }
 
     @Test
@@ -74,6 +84,7 @@ class ModelCheckSemanticsTest {
         }
 
         assertTrue(response.findings.any { it.severity == FindingSeverity.ERROR })
+        assertEquals(1, response.rootsChecked, "the sandbox project has a single root, the Calculator class")
     }
 
     @Test
@@ -103,6 +114,8 @@ class ModelCheckSemanticsTest {
         val actualFindings = responses.third.findings.groupingBy { it }.eachCount()
         assertEquals(expectedFindings, actualFindings)
         assertEquals(responses.first.totals.total + responses.second.totals.total, responses.third.totals.total)
+        assertEquals(responses.first.rootsChecked + responses.second.rootsChecked, responses.third.rootsChecked)
+        assertTrue(responses.third.rootsChecked > 0)
     }
 
     @Test
@@ -157,6 +170,8 @@ class ModelCheckSemanticsTest {
         const val MODULE_NAME = "baselanguage.sandbox"
         const val JSON_LANGUAGE = "com.specificlanguages.json"
         const val JSON_SANDBOX = "json.sandbox"
+        const val EXPRESSION_LANGUAGE = "expression-language"
+        const val EMPTY_MODEL_NAME = "exprs.behavior"
         const val MODEL_REFERENCE = "r:9363093b-3fa9-4e39-87cb-26240d0efa37(baselanguage.sandbox)"
     }
 }

@@ -10,7 +10,8 @@ import picocli.CommandLine.Command
     name = "project",
     header = ["Run MPS's full check over every project module and its models."],
     description = [
-        "Run MPS's full check over every project module and its models. Exits 1 when any finding is an error.",
+        "Run MPS's full check over every project module and its models. Exits 1 when any finding is an error " +
+            "or when the selection has no root nodes.",
     ],
     footer = ["", CHECK_OUTPUT_HELP, "", CHECK_JSONL_HELP],
 )
@@ -18,4 +19,6 @@ class ProjectCheckCommand(environment: CommandEnvironment) : CheckCommand(enviro
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
 
     override fun check(client: DaemonClient): ModelCheckResponse = client.checkProject(limit)
+
+    override fun selectionWithoutRoots(): String = "the project has no roots"
 }

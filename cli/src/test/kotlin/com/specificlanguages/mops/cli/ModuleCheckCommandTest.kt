@@ -48,7 +48,7 @@ class ModuleCheckCommandTest {
         }
 
         verify(client).checkModules(modules, 20)
-        assertEquals("# no findings", stdout.trim())
+        assertEquals("# checked 3 roots: no findings", stdout.trim())
     }
 
     @Test
@@ -80,7 +80,7 @@ class ModuleCheckCommandTest {
         }
 
         assertEquals(0, exitCode, stdout)
-        assertEquals(listOf("warning\tmodel-level note", "# 0 errors, 1 warning, 0 infos"), stdout.trim().lines())
+        assertEquals(listOf("warning\tmodel-level note", "# checked 3 roots: 0 errors, 1 warning, 0 infos"), stdout.trim().lines())
     }
 
     @Test
@@ -88,6 +88,7 @@ class ModuleCheckCommandTest {
         val client = mock<DaemonClient>()
         whenever(client.checkModules(listOf("FOO"), 1)).thenReturn(
             ModelCheckResponse(
+                rootsChecked = 3,
                 limit = 1,
                 truncated = true,
                 totals = ModelCheckFindingCounts(errors = 0, warnings = 3, infos = 0),
@@ -105,6 +106,7 @@ class ModuleCheckCommandTest {
         assertEquals(2, lines.size, stdout)
         assertEquals(
             ModelCheckSummaryJson(
+                rootsChecked = 3,
                 shown = 1,
                 total = 3,
                 errors = 0,
@@ -118,8 +120,48 @@ class ModuleCheckCommandTest {
         )
     }
 
+    @Test
+    fun `module check fails when the named modules have no roots`() {
+        val client = mock<DaemonClient>()
+        val modules = listOf("FOO", "BAR")
+        whenever(client.checkModules(modules, 20)).thenReturn(EMPTY)
+        var exitCode = Int.MIN_VALUE
+
+        val stderr = tapSystemErr {
+            exitCode = CommandLine(ModuleCheckCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(*modules.toTypedArray())
+        }
+
+        assertEquals(1, exitCode)
+        assertEquals("modules FOO, BAR have no roots; nothing was checked", stderr.trim())
+    }
+
+    @Test
+    fun `module check of one module without roots names it in the singular`() {
+        val client = mock<DaemonClient>()
+        whenever(client.checkModules(listOf("FOO"), 20)).thenReturn(EMPTY)
+
+        val stderr = tapSystemErr {
+            CommandLine(ModuleCheckCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("FOO")
+        }
+
+        assertEquals("module FOO has no roots; nothing was checked", stderr.trim())
+    }
+
     private companion object {
+        val EMPTY = ModelCheckResponse(
+            rootsChecked = 0,
+            limit = 20,
+            truncated = false,
+            totals = ModelCheckFindingCounts(errors = 0, warnings = 0, infos = 0),
+            findings = emptyList(),
+        )
+
         val NO_FINDINGS = ModelCheckResponse(
+            rootsChecked = 3,
             limit = 20,
             truncated = false,
             totals = ModelCheckFindingCounts(errors = 0, warnings = 0, infos = 0),
@@ -127,6 +169,7 @@ class ModuleCheckCommandTest {
         )
 
         val ONE_ERROR = ModelCheckResponse(
+            rootsChecked = 3,
             limit = 20,
             truncated = false,
             totals = ModelCheckFindingCounts(errors = 1, warnings = 0, infos = 0),
@@ -134,6 +177,7 @@ class ModuleCheckCommandTest {
         )
 
         val ONE_WARNING = ModelCheckResponse(
+            rootsChecked = 3,
             limit = 20,
             truncated = false,
             totals = ModelCheckFindingCounts(errors = 0, warnings = 1, infos = 0),

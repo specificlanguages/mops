@@ -10,7 +10,8 @@ import picocli.CommandLine.Option
 /**
  * Base of the `check` subcommands. Owns the output format and finding limit options, prints the daemon's response, and
  * exits with `1` when the check found at least one error-severity finding (counted over all findings, not only the
- * ones shown). Subclasses only choose what to check.
+ * ones shown). A selection without any root nodes fails with an error instead of printing a result. Subclasses only
+ * choose what to check and how to name it.
  */
 abstract class CheckCommand(private val environment: CommandEnvironment) : CliCommand(), IExitCodeGenerator {
     @Option(
@@ -38,9 +39,14 @@ abstract class CheckCommand(private val environment: CommandEnvironment) : CliCo
 
     protected abstract fun check(client: DaemonClient): ModelCheckResponse
 
+    /** Names the checked selection in the error for a selection without roots, e.g. `model foo has no roots`. */
+    protected abstract fun selectionWithoutRoots(): String
+
     final override fun run() {
         require(limit >= 0) { "limit must not be negative" }
-        exitCode = renderCheckResponse(check(environment.daemon()), format, environment.nodeReferenceFormat)
+        val response = check(environment.daemon())
+        check(response.rootsChecked > 0) { "${selectionWithoutRoots()}; nothing was checked" }
+        exitCode = renderCheckResponse(response, format, environment.nodeReferenceFormat)
     }
 
     override fun getExitCode(): Int = exitCode

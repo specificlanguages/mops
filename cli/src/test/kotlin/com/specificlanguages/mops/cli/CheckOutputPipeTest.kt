@@ -41,6 +41,7 @@ class CheckOutputPipeTest {
         assertEquals(listOf(null, null, "summary"), records.map { it["type"]?.jsonPrimitive?.content })
         assertEquals(
             ModelCheckSummaryJson(
+                rootsChecked = 3,
                 shown = 2,
                 total = 4,
                 errors = 1,
@@ -62,7 +63,7 @@ class CheckOutputPipeTest {
         assertEquals(1, output.exitCode, output.stderr)
         assertEquals(response.findings.size, output.stdout.lines().filterNot { it.startsWith("#") }.size, output.stdout)
         assertEquals(
-            listOf("# 1 error, 2 warnings, 1 info", "# truncated: showing 2 of 4 findings; pass --limit 0 for all"),
+            listOf("# checked 3 roots: 1 error, 2 warnings, 1 info", "# truncated: showing 2 of 4 findings; pass --limit 0 for all"),
             output.stdout.lines().filter { it.startsWith("#") },
         )
     }
@@ -99,6 +100,7 @@ class CheckOutputPipeTest {
     }
 
     private fun truncatedResponse() = ModelCheckResponse(
+        rootsChecked = 3,
         limit = 2,
         truncated = true,
         totals = ModelCheckFindingCounts(errors = 1, warnings = 2, infos = 1),
