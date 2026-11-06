@@ -63,8 +63,10 @@ internal fun daemonRecord(
         startupTime = startupTime,
     )
 
-internal fun startPrerecordedDaemon(vararg responses: DaemonResponse): RecordingDaemon {
-    val daemon = RecordingDaemon(responses.iterator())
+internal fun startPrerecordedDaemon(vararg responses: DaemonResponse): RecordingDaemon =
+    startPrerecordedDaemon(RecordingDaemon(responses.iterator()))
+
+internal fun startPrerecordedDaemon(daemon: RecordingDaemon): RecordingDaemon {
     daemon.start()
     assertTrue(daemon.serverReady.await(5, TimeUnit.SECONDS), "fake daemon did not bind")
     return daemon

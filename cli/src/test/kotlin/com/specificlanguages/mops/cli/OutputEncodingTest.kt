@@ -4,36 +4,42 @@ import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.DaemonResponse
 import com.specificlanguages.mops.protocol.FindingSeverity
+import com.specificlanguages.mops.protocol.MakeMessageJson
+import com.specificlanguages.mops.protocol.MakeMessageKind
+import com.specificlanguages.mops.protocol.MakeOutcome
+import com.specificlanguages.mops.protocol.MakeResponse
 import com.specificlanguages.mops.protocol.ModelCheckFindingCounts
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
 import com.specificlanguages.mops.protocol.ModelCheckResponse
 import com.specificlanguages.mops.protocol.PongResponse
+import com.specificlanguages.mops.protocol.ProtocolJson
 import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.pathString
 import kotlin.io.path.readBytes
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.EnumSource
 
 /**
- * Runs the CLI in a child JVM with windows-1252 encodings and checks that stdout and stderr still carry UTF-8 bytes.
- * The message comes from a fake daemon over the socket, so the test also covers how the CLI decodes daemon responses.
+ * Runs the CLI in a child JVM whose stream and default encodings are all windows-1252 and checks that the CLI still
+ * writes UTF-8 to stdout, stderr and the daemon socket.
+ *
+ * The fake daemon writes non-ASCII characters in its responses as JSON `\u` escapes, so the stdout and stderr checks
+ * do not depend on how the CLI decodes the socket.
  */
 @Tag("smoke")
 class OutputEncodingTest {
     @TempDir(cleanup = CleanupMode.ON_SUCCESS)
     lateinit var tempDir: Path
 
-    @ParameterizedTest
-    @EnumSource
-    fun `stdout is UTF-8`(codePage: CodePageProperties) {
+    @Test
+    fun `stdout is UTF-8`() {
         val response = ModelCheckResponse(
             limit = 0,
             truncated = false,
@@ -41,43 +47,66 @@ class OutputEncodingTest {
             findings = listOf(ModelCheckFindingJson(severity = FindingSeverity.ERROR, message = MESSAGE)),
         )
 
-        val output = runCli(codePage, response, "check", "model", "--format", "jsonl", MODEL)
+        val output = runCli(response, "check", "model", "--format", "jsonl", MODEL)
 
         assertEquals(1, output.exitCode, output.stderr.decodeUtf8())
         assertTrue(output.stdout.decodeUtf8().contains(MESSAGE), output.stdout.decodeUtf8())
     }
 
-    @ParameterizedTest
-    @EnumSource
-    fun `stderr is UTF-8`(codePage: CodePageProperties) {
-        val response = DaemonErrorResponse(errorCode = "FAILED", message = MESSAGE, workspacePath = "/project")
+    @Test
+    fun `stderr written through System err is UTF-8`() {
+        val response = MakeResponse(
+            outcome = MakeOutcome.FAILED,
+            moduleCount = 1,
+            messages = listOf(MakeMessageJson(kind = MakeMessageKind.ERROR, text = MESSAGE)),
+        )
 
-        val output = runCli(codePage, response, "check", "model", MODEL)
+        val output = runCli(response, "make", "project")
 
         assertEquals(1, output.exitCode, output.stderr.decodeUtf8())
         assertTrue(output.stderr.decodeUtf8().contains(MESSAGE), output.stderr.decodeUtf8())
     }
 
-    private class CliOutput(val exitCode: Int, val stdout: ByteArray, val stderr: ByteArray)
+    @Test
+    fun `stderr written by picocli is UTF-8`() {
+        val output = runCli(null, "--$WORD")
 
-    private fun runCli(codePage: CodePageProperties, response: DaemonResponse, vararg args: String): CliOutput {
+        assertEquals(2, output.exitCode, output.stderr.decodeUtf8())
+        assertTrue(output.stderr.decodeUtf8().contains("Unknown option: '--$WORD'"), output.stderr.decodeUtf8())
+    }
+
+    @Test
+    fun `daemon requests are UTF-8`() {
+        val output = runCli(DaemonErrorResponse(errorCode = "FAILED", message = "failed", workspacePath = "/project"),
+            "find", "root-by-name", WORD)
+
+        assertEquals(1, output.exitCode, output.stderr.decodeUtf8())
+        assertTrue(output.daemonRequests.last().contains(WORD), output.daemonRequests.last())
+    }
+
+    private class CliOutput(val exitCode: Int, val stdout: ByteArray, val stderr: ByteArray, val daemonRequests: List<String>)
+
+    /** Runs the CLI against a fake daemon that answers a ping and then [response], or against no daemon if it is null. */
+    private fun runCli(response: DaemonResponse?, vararg args: String): CliOutput {
         val project = tempDir.mpsProject()
         val daemonHome = tempDir.resolve("daemon-home")
         val mpsHome = tempDir.mpsHome()
         val javaHome = Path.of(System.getProperty("java.home"))
-        val daemon = startPrerecordedDaemon(
-            PongResponse(projectPath = project.pathString, mpsHome = mpsHome.pathString, workspacePath = "/project"),
-            response,
-        )
-        DaemonRecordStore.forDaemonHome(daemonHome).write(
-            daemonRecord(port = daemon.port, project = project, mpsHome = mpsHome, workspace = Path.of("/project")),
-        )
+        val daemon = response?.let {
+            val pong = PongResponse(projectPath = project.pathString, mpsHome = mpsHome.pathString, workspacePath = "/project")
+            startPrerecordedDaemon(RecordingDaemon(listOf(pong, it).iterator()) { escapeNonAscii(ProtocolJson.encodeResponse(it)) })
+        }
+        if (daemon != null) {
+            DaemonRecordStore.forDaemonHome(daemonHome).write(
+                daemonRecord(port = daemon.port, project = project, mpsHome = mpsHome, workspace = Path.of("/project")),
+            )
+        }
 
         val stdoutFile = tempDir.resolve("stdout")
         val stderrFile = tempDir.resolve("stderr")
         val process = ProcessBuilder(
             javaHome.resolve("bin/java").pathString,
-            *codePage.properties.map { "-D$it=windows-1252" }.toTypedArray(),
+            *WINDOWS_1252_PROPERTIES.map { "-D$it=windows-1252" }.toTypedArray(),
             "-cp", System.getProperty("java.class.path"),
             "com.specificlanguages.mops.cli.MainKt",
             "--daemon-home", daemonHome.pathString,
@@ -90,9 +119,18 @@ class OutputEncodingTest {
             .redirectError(stderrFile.toFile())
             .start()
         assertTrue(process.waitFor(60, TimeUnit.SECONDS), "CLI did not exit")
-        daemon.join(5_000)
-        return CliOutput(process.exitValue(), stdoutFile.readBytes(), stderrFile.readBytes())
+        daemon?.join(5_000)
+        return CliOutput(
+            process.exitValue(),
+            stdoutFile.readBytes(),
+            stderrFile.readBytes(),
+            daemon?.requestsReceived.orEmpty(),
+        )
     }
+
+    /** Writes every non-ASCII character of a JSON document as a `\u` escape, which is valid only inside strings. */
+    private fun escapeNonAscii(json: String): String =
+        json.map { if (it.code < 0x80) it.toString() else "\\u%04x".format(it.code) }.joinToString("")
 
     /** Decodes strictly, so bytes in any other encoding fail the test instead of turning into replacement characters. */
     private fun ByteArray.decodeUtf8(): String =
@@ -105,13 +143,15 @@ class OutputEncodingTest {
     private companion object {
         const val MODEL = "r:9363093b-3fa9-4e39-87cb-26240d0efa37(baselanguage.sandbox)"
         const val MESSAGE = "‹+› cannot be applied to types ‹boolean› and ‹number[1]{0}›"
-    }
+        const val WORD = "‹boolean›"
 
-    enum class CodePageProperties(vararg val properties: String) {
-        /** Western Windows when stdout is a pipe or a file: the streams use the code page, the default charset is UTF-8. */
-        STREAMS_ONLY("stdout.encoding", "stderr.encoding", "sun.stdout.encoding", "sun.stderr.encoding"),
-
-        /** The streams and the default charset use the code page, so only explicit charsets produce UTF-8. */
-        STREAMS_AND_DEFAULT_CHARSET(*STREAMS_ONLY.properties, "file.encoding"),
+        /** Every JVM property that selects the encoding of stdout, stderr or the default charset. */
+        val WINDOWS_1252_PROPERTIES = listOf(
+            "stdout.encoding",
+            "stderr.encoding",
+            "sun.stdout.encoding",
+            "sun.stderr.encoding",
+            "file.encoding",
+        )
     }
 }

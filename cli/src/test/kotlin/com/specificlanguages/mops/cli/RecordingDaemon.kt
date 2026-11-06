@@ -12,9 +12,12 @@ import java.util.concurrent.CountDownLatch
 /**
  * A fake daemon that answers each request with the next prerecorded response and exits once they are used up. Clients
  * open one connection per request, so the server accepts connections until the responses run out. The request trace
- * goes to stderr so tests can inspect the CLI's stdout verbatim.
+ * goes to stderr so tests can inspect the CLI's stdout verbatim. [encodeResponse] turns a response into the line sent.
  */
-internal class RecordingDaemon(val responseIterator: Iterator<DaemonResponse>) : Thread() {
+internal class RecordingDaemon(
+    val responseIterator: Iterator<DaemonResponse>,
+    private val encodeResponse: (DaemonResponse) -> String = ProtocolJson::encodeResponse,
+) : Thread() {
     lateinit var server: ServerSocket
     val serverReady = CountDownLatch(1)
     val port get() = server.localPort
@@ -39,10 +42,10 @@ internal class RecordingDaemon(val responseIterator: Iterator<DaemonResponse>) :
                                 requestsReceived.add(requestLine)
                                 val response = responseIterator.next()
 
-                                writer.println(ProtocolJson.encodeResponse(response))
+                                writer.println(encodeResponse(response))
 
                                 System.err.println("request: $requestLine")
-                                System.err.println(" -> response: ${ProtocolJson.encodeResponse(response)}")
+                                System.err.println(" -> response: ${encodeResponse(response)}")
                             }
                         }
                     }
