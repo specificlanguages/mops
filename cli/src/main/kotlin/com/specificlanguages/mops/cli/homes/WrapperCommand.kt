@@ -40,7 +40,8 @@ import java.util.concurrent.Callable
         "",
         "Each wrapper supplies the shared MPS and Java homes and its MPS project directory, and forwards its " +
             "arguments to mops. It runs the full path of the mops installation that wrote it, so mops need not be " +
-            "in PATH. The POSIX wrappers are executable. --project-root can also precede `wrapper`.",
+            "in PATH. The POSIX wrappers are executable. When an MPS or Java home that a wrapper names no longer " +
+            "exists, commands fail and say to run mops wrapper again. --project-root can also precede `wrapper`.",
         "",
         "Provider resolution failures stop discovery and keep Gradle's dependency diagnostics; check the " +
             "configured runtime versions and repositories. If a pinned MPS prerelease is no longer available, " +

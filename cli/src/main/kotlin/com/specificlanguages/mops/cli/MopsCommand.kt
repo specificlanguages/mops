@@ -10,6 +10,7 @@ import com.specificlanguages.mops.launcher.MpsDistributionLayout
 import com.specificlanguages.mops.protocol.DaemonContext
 import java.nio.file.Path
 import java.util.Stack
+import kotlin.io.path.exists
 import kotlin.io.path.isDirectory
 import picocli.CommandLine
 import picocli.CommandLine.Command
@@ -147,9 +148,10 @@ class MopsCommand(
     }
 
     fun createDaemonContext(projectPathHint: Path): DaemonContext {
-        val resolvedMpsHome = resolveMpsHome() ?: throw MpsHomeRequiredException()
+        val resolvedMpsHome = resolveMpsHome()?.also { requireHome("MPS home", it) }
+            ?: throw MpsHomeRequiredException()
         val resolvedJavaHome =
-            javaHome?.let(workingDirectory::resolve)
+            javaHome?.let(workingDirectory::resolve)?.also { requireHome("Java home", it) }
                 ?: MpsDistributionLayout.findBundledJavaHome(resolvedMpsHome)
                 ?: throw IllegalStateException(
                     "MPS distribution at $resolvedMpsHome does not bundle Java; pass --java-home <path>, " +
@@ -167,6 +169,15 @@ class MopsCommand(
     }
 
     fun resolveMpsHome(): Path? = mpsHome?.let(workingDirectory::resolve)
+
+    private fun requireHome(homeName: String, home: Path) {
+        if (!home.exists()) {
+            val regenerateCommand = projectRoot
+                ?.let { "mops wrapper --project-root ${workingDirectory.resolve(it).normalize()}" }
+                ?: "mops wrapper $workingDirectory"
+            throw RuntimeHomeNotFoundException(homeName, home.normalize(), regenerateCommand)
+        }
+    }
 
     /** The `--macro` values as absolute paths, checked to be directories, since MPS ignores a macro that is not one. */
     fun resolveMacros(): Map<String, Path> = macros.mapValues { (name, value) ->
