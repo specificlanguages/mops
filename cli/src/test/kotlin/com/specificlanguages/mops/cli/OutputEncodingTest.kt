@@ -12,7 +12,6 @@ import com.specificlanguages.mops.protocol.ModelCheckFindingCounts
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
 import com.specificlanguages.mops.protocol.ModelCheckResponse
 import com.specificlanguages.mops.protocol.PongResponse
-import com.specificlanguages.mops.protocol.ProtocolJson
 import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
 import java.nio.file.Path
@@ -29,9 +28,6 @@ import org.junit.jupiter.api.io.TempDir
 /**
  * Runs the CLI in a child JVM whose stream and default encodings are all windows-1252 and checks that the CLI still
  * writes UTF-8 to stdout, stderr and the daemon socket.
- *
- * The fake daemon writes non-ASCII characters in its responses as JSON `\u` escapes, so the stdout and stderr checks
- * do not depend on how the CLI decodes the socket.
  */
 @Tag("smoke")
 class OutputEncodingTest {
@@ -94,7 +90,7 @@ class OutputEncodingTest {
         val javaHome = Path.of(System.getProperty("java.home"))
         val daemon = response?.let {
             val pong = PongResponse(projectPath = project.pathString, mpsHome = mpsHome.pathString, workspacePath = "/project")
-            startPrerecordedDaemon(RecordingDaemon(listOf(pong, it).iterator()) { escapeNonAscii(ProtocolJson.encodeResponse(it)) })
+            startPrerecordedDaemon(pong, it)
         }
         if (daemon != null) {
             DaemonRecordStore.forDaemonHome(daemonHome).write(
@@ -127,10 +123,6 @@ class OutputEncodingTest {
             daemon?.requestsReceived.orEmpty(),
         )
     }
-
-    /** Writes every non-ASCII character of a JSON document as a `\u` escape, which is valid only inside strings. */
-    private fun escapeNonAscii(json: String): String =
-        json.map { if (it.code < 0x80) it.toString() else "\\u%04x".format(it.code) }.joinToString("")
 
     /** Decodes strictly, so bytes in any other encoding fail the test instead of turning into replacement characters. */
     private fun ByteArray.decodeUtf8(): String =
