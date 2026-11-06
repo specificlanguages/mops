@@ -65,8 +65,7 @@ internal object CodeResultAdapter {
         is SModule -> value.moduleReference.let(persistence::asString)
         is TestRunReport -> ProtocolJson.testReport.encode(value)
         is MakeResponse -> ProtocolJson.makeResponse.encode(value)
-        is String -> value
-        is Char, is Boolean, is Number, is File, is Path -> value.toString()
+        is CharSequence, is Char, is Boolean, is Number, is File, is Path -> value.toString()
         is Map<*, *> -> value.entries.joinToString(",", "{", "}") { json(it.key.toString()) + ":" + renderJson(it.value) }
         is Iterable<*> -> value.joinToString(",", "[", "]") { renderJson(it) }
         is Array<*> -> value.joinToString(",", "[", "]") { renderJson(it) }
@@ -80,7 +79,7 @@ internal object CodeResultAdapter {
     private fun renderJson(value: Any?): String = when (value) {
         null -> "null"
         is SNode, is SModel, is SModule -> render(value)?.let(::json) ?: "null"
-        is String, is Char, is File, is Path -> json(value.toString())
+        is CharSequence, is Char, is File, is Path -> json(value.toString())
         is Boolean, is Number -> value.toString()
         is TestRunReport, is MakeResponse -> render(value)!!
         is Map<*, *>, is Iterable<*>, is Array<*>, is BooleanArray, is IntArray, is LongArray, is DoubleArray -> render(value)!!

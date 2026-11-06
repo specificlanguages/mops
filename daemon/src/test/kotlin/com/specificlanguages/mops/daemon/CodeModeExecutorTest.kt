@@ -29,6 +29,13 @@ class CodeModeExecutorTest {
     }
 
     @Test
+    fun `adapts GStrings and other character sequences as strings`() {
+        assertEquals("n1", run("return \"n\${1}\""))
+        assertEquals("[\"n1\",\"n2\"]", run("[1, 2].collect { \"n\${it}\" }"))
+        assertEquals("{\"key\":\"ab\"}", run("[key: new StringBuilder('ab')]"))
+    }
+
+    @Test
     fun `each invocation receives a fresh binding`() {
         assertEquals("set", run("leaked = 'value'; 'set'"))
         val failure = assertFailsWith<Throwable> { run("leaked") }
@@ -43,8 +50,8 @@ class CodeModeExecutorTest {
 
     @Test
     fun `unsupported values identify their JVM class`() {
-        val failure = assertFailsWith<IllegalStateException> { run("new StringBuilder()") }
-        assertTrue(failure.message.orEmpty().contains("java.lang.StringBuilder"))
+        val failure = assertFailsWith<IllegalStateException> { run("new Object()") }
+        assertTrue(failure.message.orEmpty().contains("java.lang.Object"))
     }
 
     @Test
