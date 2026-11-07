@@ -226,20 +226,26 @@ data class DiagnoseModuleRequest(
 /**
  * Request to run the MPS make (generation and compilation) on the named [modules] (each a module name or serialized
  * module reference) together with their transitive dependency closure, so that any un-made dependency is made too.
+ * [generation] applies to this make only.
  */
 @Serializable
 @SerialName("make-modules")
 data class MakeModulesRequest(
     override val token: String,
     val modules: List<String>,
+    val generation: MakeGenerationOptions = MakeGenerationOptions(),
 ) : DomainRequest
 
 /**
  * Request to run the MPS make (generation and compilation) on every generatable module in the project.
+ * [generation] applies to this make only.
  */
 @Serializable
 @SerialName("make-project")
-data class MakeProjectRequest(override val token: String) : DomainRequest
+data class MakeProjectRequest(
+    override val token: String,
+    val generation: MakeGenerationOptions = MakeGenerationOptions(),
+) : DomainRequest
 
 @Serializable
 @SerialName("code-run")

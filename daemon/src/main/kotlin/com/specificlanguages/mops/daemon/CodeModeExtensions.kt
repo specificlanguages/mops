@@ -80,7 +80,7 @@ object CodeModeExtensions {
         }
     }
 
-    /** Makes every generatable project module. Access: extra. */
+    /** Makes every generatable project module; the make is clean, like `mops make project`. Access: extra. */
     @CodeModeExtension(MpsAccessLevel.EXTRA)
     @JvmStatic
     fun make(project: Project): MakeResponse {

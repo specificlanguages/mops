@@ -23,6 +23,7 @@ import com.specificlanguages.mops.protocol.GetModuleRequest
 import com.specificlanguages.mops.protocol.GetModuleResponse
 import com.specificlanguages.mops.protocol.MakeModulesRequest
 import com.specificlanguages.mops.protocol.MakeProjectRequest
+import com.specificlanguages.mops.protocol.MakeGenerationOptions
 import com.specificlanguages.mops.protocol.MakeResponse
 import com.specificlanguages.mops.protocol.ModelCheckRequest
 import com.specificlanguages.mops.protocol.ModelCheckResponse
@@ -199,16 +200,16 @@ class DefaultDaemonClient(
             ModuleDiagnosticResponse::class.java
         )
 
-    override fun makeModules(modules: List<String>): MakeResponse =
+    override fun makeModules(modules: List<String>, generation: MakeGenerationOptions): MakeResponse =
         exchange(
-            MakeModulesRequest(token = token, modules = modules),
+            MakeModulesRequest(token = token, modules = modules, generation = generation),
             MakeResponse::class.java,
             timeout = MAKE_TIMEOUT,
         )
 
-    override fun makeProject(): MakeResponse =
+    override fun makeProject(generation: MakeGenerationOptions): MakeResponse =
         exchange(
-            MakeProjectRequest(token = token),
+            MakeProjectRequest(token = token, generation = generation),
             MakeResponse::class.java,
             timeout = MAKE_TIMEOUT,
         )

@@ -5,6 +5,7 @@ import com.specificlanguages.mops.daemon.core.MpsExtra
 import com.specificlanguages.mops.daemon.core.MpsRead
 import com.specificlanguages.mops.daemon.core.MpsWrite
 import com.specificlanguages.mops.protocol.CodeRunRequest
+import com.specificlanguages.mops.protocol.MakeGenerationOptions
 import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.TestRunRequest
 
@@ -25,8 +26,8 @@ fun mpsAccessOver(operations: MpsWrite, extra: MpsExtra = UnstubbedExtra): MpsAc
 private object UnstubbedExtra : MpsExtra {
     override fun refreshExternalChanges() = Unit
     override fun saveProject() = Unit
-    override fun makeModules(modules: List<String>) = error("MpsExtra.makeModules not stubbed in this test")
-    override fun makeProject() = error("MpsExtra.makeProject not stubbed in this test")
+    override fun makeModules(modules: List<String>, generation: MakeGenerationOptions) = error("MpsExtra.makeModules not stubbed in this test")
+    override fun makeProject(generation: MakeGenerationOptions) = error("MpsExtra.makeProject not stubbed in this test")
     override fun renderNode(target: NodeTarget, allowReflective: Boolean) =
         error("MpsExtra.renderNode not stubbed in this test")
     override fun runTests(request: TestRunRequest) = error("MpsExtra.runTests not stubbed in this test")

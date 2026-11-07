@@ -6,6 +6,7 @@ import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import picocli.CommandLine.Command
 import picocli.CommandLine.IExitCodeGenerator
+import picocli.CommandLine.Mixin
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 
@@ -19,13 +20,16 @@ import picocli.CommandLine.Parameters
     description = [
         "Make the named modules and their transitive dependency closure, so an un-made dependency is made too.",
     ],
-    footer = ["", MAKE_OUTPUT_HELP],
+    footer = ["", MAKE_OUTPUT_HELP, "", MAKE_CLEAN_HELP, "", MAKE_GENERATION_HELP],
 )
 class MakeModulesCommand(private val environment: CommandEnvironment) : CliCommand(), IExitCodeGenerator {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
 
     @Option(names = ["--json"], description = ["Print the make result as JSON."])
     var json: Boolean = false
+
+    @Mixin
+    val generationOptions = MakeGenerationOptionsMixin()
 
     @Parameters(
         arity = "1..*",
@@ -38,7 +42,7 @@ class MakeModulesCommand(private val environment: CommandEnvironment) : CliComma
 
     override fun run() {
         val client = environment.daemon()
-        exitCode = renderMakeResult(client.makeModules(modules), json)
+        exitCode = renderMakeResult(client.makeModules(modules, generationOptions.toProtocol()), json)
     }
 
     override fun getExitCode(): Int = exitCode
