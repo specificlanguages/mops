@@ -44,11 +44,12 @@ Every command's output has three kinds of content, and each has a fixed home:
 
 - **Results go to stdout.** Rows, JSON, rendered text, references, and an action's report ("made 2 modules").
 - **Metadata travels with the result, in a shape the format can tell apart from a result.** Metadata is what mops
-  understood and what it left out: truncation, the scope searched, the resolved target, "zero matches". In row-shaped
-  text it is `#`-prefixed lines on stdout; in JSON it is fields of the envelope; in JSONL it is a final record with its
-  own type; free text such as a rendered node has no such shape, so there it goes to stderr. A notice caused by a
-  default the caller did not choose names the option that lifts it.
-- **Diagnostics go to stderr.** Warnings, errors, and hints.
+  understood, what it filled in on the caller's behalf, and what it left out: truncation, the scope searched, the
+  resolved target, "zero matches", an edit's **Hints** and the checks it skipped. In row-shaped text it is `#`-prefixed
+  lines on stdout; in JSON it is fields of the envelope; in JSONL it is a final record with its own type; free text such
+  as a rendered node has no such shape, so there it goes to stderr. A notice caused by a default the caller did not
+  choose names the option that lifts it.
+- **Diagnostics go to stderr.** Warnings, errors, and advice such as a suggested option.
 
 **Composability is a value**, and automation is its persona. Every data-producing command offers a machine format
 (`--json`, `--refs-only`, JSONL) whose stdout can be piped without filtering.

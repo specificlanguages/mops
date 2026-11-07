@@ -210,8 +210,17 @@ Instance** of a declared concept. Its automatic adjustments are disclosed throug
 qualification (MPS languages have a plugin aspect), hook _Related_: Materialize, Hint, Concept Instance
 
 **Hint**: A free-text disclosure in an edit response describing something done automatically on the user's behalf, such
-as an **Edit Plugin**'s adjustment. A **Hint** reports work done, not a problem — it is distinct from a warning.
-_Avoid_: warning, notice _Related_: Edit Plugin
+as an **Edit Plugin**'s adjustment or a **Meta-id** assigned to a materialized **Structure Declaration**. A **Hint**
+reports work done, not a problem — it is distinct from a warning. _Avoid_: warning, notice _Related_: Edit Plugin,
+Meta-id
+
+**Structure Declaration**: An **MPS Node** in a language's structure aspect that declares part of the language: a
+concept, interface, property, link, datatype, or enumeration member. _Avoid_: structure node, concept definition
+_Related_: MPS Concept, Meta-id
+
+**Meta-id**: The numeric identity of a **Structure Declaration**, by which models refer to the concept, property, link,
+datatype, or enumeration member it declares independently of its name. It must be unique among the declaration's peers
+of the same kind. _Avoid_: concept id _Related_: Structure Declaration, Node ID, Hint
 
 **Constraint**: A language-defined rule that restricts whether an edit is well-formed, such as which **MPS Concepts**
 may fill an **MPS Link**, a link's cardinality, or whether a node may be a **Child** of another node. _Avoid_: rule,

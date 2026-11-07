@@ -79,6 +79,7 @@ class EditBatchExecutor(
         val uncheckable = UncheckableLanguages()
         val conceptResolver = ConceptResolver(project)
         val moduleLoadDiagnostics = ModuleLoadDiagnostics(project)
+        val structureMetaIds = StructureMetaIds(persistence)
 
         fun fail(code: MpsErrorCode, message: String): Nothing =
             throw MpsRequestException(code = code, message = message)
@@ -359,6 +360,13 @@ class EditBatchExecutor(
             placements.add(Placement(index, parent, link, source))
         }
 
+        // Every node an operation materializes is created by [createNode] or copied by [copyNode], which record it for
+        // [StructureMetaIds]. Do not call `SModel.createNode` or `CopyUtil.copy` directly.
+        fun createNode(model: SModel, concept: SConcept): SNode =
+            model.createNode(concept).also(structureMetaIds::recordFresh)
+
+        fun copyNode(source: SNode): SNode = CopyUtil.copy(source).also(structureMetaIds::recordCopy)
+
         fun setPropertyOrFail(index: Int, node: SNode, property: SProperty, value: String?) {
             try {
                 writePropertyText(node, property, value)
@@ -393,7 +401,7 @@ class EditBatchExecutor(
                 val link = resolveContainmentOrFail(index, node, role)
                 when (child) {
                     is InlineChild.Fresh -> {
-                        val childNode = model.createNode(resolveConceptOrFail(index, child.concept))
+                        val childNode = createNode(model, resolveConceptOrFail(index, child.concept))
                         node.addChild(link, childNode)
                         placements.add(Placement(index, node, link, childNode))
                         populate(index, model, childNode, child.properties, child.references, child.children)
@@ -404,7 +412,7 @@ class EditBatchExecutor(
                     }
                     is InlineChild.Copy -> {
                         val source = resolveNode(index, child.source)
-                        val copy = CopyUtil.copy(source)
+                        val copy = copyNode(source)
                         node.addChild(link, copy)
                         placements.add(Placement(index, node, link, copy))
                     }
@@ -476,7 +484,7 @@ class EditBatchExecutor(
                     val link = resolveContainmentOrFail(index, node, operation.role)
                     val concept = resolveConceptOrFail(index, operation.concept)
                     val model = node.model!!
-                    val child = model.createNode(concept)
+                    val child = createNode(model, concept)
                     attach(index, node, link, child, operation.position)
                     placements.add(Placement(index, node, link, child))
                     populate(index, model, child, operation.properties, operation.references, operation.children)
@@ -508,7 +516,7 @@ class EditBatchExecutor(
                     val node = requireEditableNode(index, operation.target)
                     val link = resolveContainmentOrFail(index, node, operation.role)
                     val source = resolveNode(index, operation.source)
-                    val copy = CopyUtil.copy(source)
+                    val copy = copyNode(source)
                     attach(index, node, link, copy, operation.position)
                     placements.add(Placement(index, node, link, copy))
                     bindAlias(index, operation.alias, copy)
@@ -517,7 +525,7 @@ class EditBatchExecutor(
                 is EditOperation.AddRoot -> {
                     val model = requireEditableModel(index, operation.model)
                     val concept = resolveConceptOrFail(index, operation.concept)
-                    val root = model.createNode(concept)
+                    val root = createNode(model, concept)
                     model.addRootNode(root)
                     rootPlacements.add(RootPlacement(index, model, root))
                     populate(index, model, root, operation.properties, operation.references, operation.children)
@@ -527,7 +535,7 @@ class EditBatchExecutor(
                 is EditOperation.CopyAsRoot -> {
                     val model = requireEditableModel(index, operation.model)
                     val source = resolveNode(index, operation.source)
-                    val copy = CopyUtil.copy(source)
+                    val copy = copyNode(source)
                     model.addRootNode(copy)
                     rootPlacements.add(RootPlacement(index, model, copy))
                     bindAlias(index, operation.alias, copy)
@@ -549,7 +557,7 @@ class EditBatchExecutor(
                     val replacement = when (val with = operation.with) {
                         is InlineChild.Fresh -> {
                             val concept = resolveConceptOrFail(index, with.concept)
-                            val node = model.createNode(concept)
+                            val node = createNode(model, concept)
                             populate(index, model, node, with.properties, with.references, with.children)
                             node
                         }
@@ -562,7 +570,7 @@ class EditBatchExecutor(
                         }
                         is InlineChild.Copy -> {
                             val source = resolveNode(index, with.source)
-                            CopyUtil.copy(source)
+                            copyNode(source)
                         }
                     }
                     replaceInPlace(index, target, replacement)
@@ -573,7 +581,7 @@ class EditBatchExecutor(
                     val target = requireEditableNode(index, operation.target)
                     val model = target.model!!
                     val concept = resolveConceptOrFail(index, operation.concept)
-                    val wrapper = model.createNode(concept)
+                    val wrapper = createNode(model, concept)
                     val link = resolveContainmentOrFail(index, wrapper, operation.role)
                     // Build the wrapper's other inline structure first, then swap it into the target's slot, then adopt
                     // the target under the wrapper's role among any inline-built siblings.
@@ -593,6 +601,7 @@ class EditBatchExecutor(
                     replaceInPlace(index, target, keep)
                 }
             }
+            structureMetaIds.assignRecorded()
         }
 
         val violations = evaluateConstraints(placements, rootPlacements, referencePlacements, uncheckable)
@@ -622,6 +631,7 @@ class EditBatchExecutor(
                 created = aliases.mapValues { (_, node) -> persistence.asString(node.reference) },
                 violations = violations,
                 warnings = warnings,
+                hints = structureMetaIds.hints(),
             )
             is SaveOutcome.SaveFailed -> fail(
                 MpsErrorCode.SAVE_FAILED,

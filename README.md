@@ -39,6 +39,13 @@ mops get node --summary 'NODE_REF'
 
 Apply a JSON batch of edit operations; `mops explain edit` describes the notation:
 
+When an operation creates or copies a structure-language declaration (a concept, interface, property, link, datatype, or
+enumeration member), mops gives it a meta-id (`conceptId`, `propertyId`, `linkId`, `datatypeId`, or `memberId`) the way
+MPS does: the declaration's own node ID, or a random number when another declaration in the same scope already has that
+ID. A copy always gets a new meta-id; a created declaration keeps a meta-id set in the operation. The response's `hints`
+list each assigned meta-id that is still in place when the batch ends: a later `setProperty` in the same batch that
+overrides it, or a later `delete` of the node, drops its hint.
+
 ```sh
 mops edit model --file edit-batch.json
 ```

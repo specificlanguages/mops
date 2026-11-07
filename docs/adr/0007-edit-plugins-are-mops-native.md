@@ -1,8 +1,9 @@
 # Edit Plugins are mops-native; MPS-registered editing behaviors are not invoked
 
 > **Status: PLANNED — NOT IMPLEMENTED.** This ADR records a design decision that has not been built. There is no
-> `mops-plugin-api` artifact, no plugin dispatch in the write-executor, and no `hints` field in the edit response. The
-> design below stands as the intended direction, not a description of current behavior.
+> `mops-plugin-api` artifact and no plugin dispatch in the write-executor, so the design below describes the intended
+> direction, not current behavior. What exists is the interim step listed under Considered Options: the write-executor
+> handles the structure language's meta-ids itself and reports them as **Hints** in the edit response's `hints` field.
 
 When an **Edit Operation** **Materializes** nodes — creates them fresh or as copies — mops dispatches **Edit Plugins**:
 JVM implementations of a mops-owned SPI published as `mops-plugin-api` (the SPI interface and context object are mops's
@@ -29,8 +30,10 @@ use.
   [node creation research](https://github.com/specificlanguages/mps-api-research/blob/main/node-creation-factories-and-paste.md).
 - **Node factories (`NodeFactoryManager.setupNode`) to fix up copies** — rejected: factories assume a blank node and
   clobber real data; the structure language's own factory unconditionally resets a concept's `extends`.
-- **Hardcode `conceptId` handling in the write-executor** — rejected: solves one built-in language and leaves every user
-  DSL unserved.
+- **Hardcode `conceptId` handling in the write-executor** — rejected as the end state: solves one built-in language and
+  leaves every user DSL unserved. It is built as an interim step (#149) until the mechanism exists: `StructureMetaIds`
+  receives each operation's materialized nodes after the operation and reports **Hints**, as the bundled Edit Plugin
+  will.
 - **Code Mode plugins (ADR-0008)** — deferred: the Edit Plugin mechanism must not wait for Code Mode or its separate
   classpath-provider follow-up.
 - **MPS-aspect-discovered plugins** (a `mops`/`hooks` aspect on a language) — deferred: a possible future front end that
