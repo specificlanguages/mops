@@ -43,7 +43,7 @@ class ExternalRuntimeReloadIntegrationTest {
             val first = succeed(target, "find", "instances", "--json", "com.specificlanguages.json.structure.JsonFile")
             assertTrue((ProtocolJson.decodeResponse(first.stdout) as FindInstancesResponse).nodes.isNotEmpty())
             val store = DaemonRecordStore.forDaemonHome(daemonHome)
-            val pid = assertNotNull(store.read(target)).record.pid
+            val pid = assertNotNull(store.readForProject(target).singleOrNull()).record.pid
 
             setProperty("name", "ReloadedJsonFile")
             succeed(builder, "make", "module", "json.sandbox")
@@ -77,7 +77,7 @@ class ExternalRuntimeReloadIntegrationTest {
             }
             assertEquals(stamps.keys, replacedFiles, "compiled output paths must be preserved")
             assertContains(succeed(target, "code", "run", program.pathString).stdout, "NewAlias")
-            assertEquals(pid, assertNotNull(store.read(target)).record.pid)
+            assertEquals(pid, assertNotNull(store.readForProject(target).singleOrNull()).record.pid)
         } finally {
             stopDaemons(builder, daemonHome)
             if (target.exists()) stopDaemons(target, daemonHome)

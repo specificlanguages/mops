@@ -12,16 +12,23 @@ import kotlin.io.path.pathString
 /**
  * Filesystem-backed registry of daemon records.
  *
- * Records live outside the MPS project under the daemon state directory. The project path is hashed into the directory
- * name so the CLI can find, reuse, stop, or discard project-specific daemons without scanning process tables.
+ * Records live outside the MPS project under the daemon state directory, one per daemon workspace. The CLI finds, reuses,
+ * stops, or discards daemons by their workspace without scanning process tables.
  */
 class DaemonRecordStore(val paths: DaemonPaths) {
+    /** Writes [record] and the metadata of its workspace, the way the CLI and a started daemon do together. */
     fun write(record: DaemonRecord) {
-        val projectPath = record.context.realProjectPath
-        paths.workspace(projectPath).writeDaemonRecord(record)
+        val workspace = paths.workspace(record.context)
+        WorkspaceMetadata.of(record.context).writeTo(workspace)
+        workspace.writeDaemonRecord(record)
     }
 
-    fun read(projectPath: Path): StoredDaemonRecord? = paths.workspace(projectPath).readDaemonRecord()
+    /** The record of the daemon in the workspace of [context], whatever context that daemon was started with. */
+    fun read(context: DaemonContext): StoredDaemonRecord? = paths.workspace(context).readDaemonRecord()
+
+    /** The records of the daemons in all workspaces of the project at [projectPath]. */
+    fun readForProject(projectPath: Path): List<StoredDaemonRecord> =
+        paths.workspacesOf(projectPath).mapNotNull { it.readDaemonRecord() }
 
     fun readAll(): List<StoredDaemonRecord> {
         val projectsDir = paths.projects
@@ -46,15 +53,15 @@ class DaemonRecordStore(val paths: DaemonPaths) {
         Files.deleteIfExists(recordPath)
     }
 
-    fun recordPath(projectPath: Path): Path =
-        paths.workspace(projectPath).recordPath()
+    fun recordPath(context: DaemonContext): Path =
+        paths.workspace(context).recordPath()
 
-    fun workspacePath(projectPath: Path): Path =
-        paths.workspace(projectPath).path
+    fun workspacePath(context: DaemonContext): Path =
+        paths.workspace(context).path
 
-    fun checkRecordWasWrittenForProject(realProjectPath: Path) {
-        read(realProjectPath)
-            ?: throw IllegalStateException("daemon did not write its project record under ${recordPath(realProjectPath)}")
+    fun checkRecordWasWritten(context: DaemonContext) {
+        read(context)
+            ?: throw IllegalStateException("daemon did not write its record under ${recordPath(context)}")
     }
 
     companion object {
@@ -62,20 +69,31 @@ class DaemonRecordStore(val paths: DaemonPaths) {
     }
 }
 
+/**
+ * The directories under a daemon home. Each daemon workspace belongs to one project and one MPS home and build, so a
+ * project used with two MPS versions has two workspaces, each with its own IntelliJ directories.
+ */
 class DaemonPaths(root: Path) {
     val projects: Path = root.resolve("projects")
 
-    /** IntelliJ system directories that test runs of all projects keep between runs, one set per MPS build. */
-    val testSystemCache: Path = root.resolve("test-system-cache")
+    fun workspace(context: DaemonContext): DaemonWorkspace =
+        DaemonWorkspace(projects.resolve(workspaceKey(context)))
 
-    fun workspace(projectPath: Path): DaemonWorkspace =
-        DaemonWorkspace(workspacePath(projectPath))
+    /** The workspaces of the project at [projectPath], found by their [WorkspaceMetadata]. */
+    fun workspacesOf(projectPath: Path): List<DaemonWorkspace> {
+        if (!Files.isDirectory(projects)) {
+            return emptyList()
+        }
+        val realProjectPath = projectPath.toRealPath()
+        return Files.list(projects).use { directories ->
+            directories.map(::DaemonWorkspace)
+                .filter { WorkspaceMetadata.readFrom(it)?.realProjectPath == realProjectPath }
+                .toList()
+        }
+    }
 
-    fun workspacePath(projectPath: Path): Path =
-        projects.resolve(projectKey(projectPath))
-
-    fun projectKey(projectPath: Path): String =
-        sha256(projectPath.toRealPath().pathString)
+    private fun workspaceKey(context: DaemonContext): String =
+        sha256(listOf(context.realProjectPath.pathString, context.realMpsHome.pathString, context.mpsBuild).joinToString("\n"))
 
     private fun sha256(value: String): String {
         val digest = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
@@ -84,19 +102,13 @@ class DaemonPaths(root: Path) {
 }
 
 class DaemonWorkspace(val path: Path) {
+    /** The file that holds the [WorkspaceMetadata] of this workspace. */
+    val metadataPath: Path = path.resolve("workspace.json")
+
     fun recordPath(): Path = path.resolve("daemon.json")
 
     fun writeDaemonRecord(record: DaemonRecord) {
-        val recordPath = recordPath()
-        recordPath.parent.createDirectories()
-        val temporary = recordPath.resolveSibling("${recordPath.fileName}.tmp")
-        writeString(temporary, ProtocolJson.record.encode(record))
-        move(
-            temporary,
-            recordPath,
-            StandardCopyOption.ATOMIC_MOVE,
-            StandardCopyOption.REPLACE_EXISTING,
-        )
+        writeAtomically(recordPath(), ProtocolJson.record.encode(record))
     }
 
     fun readDaemonRecord(): StoredDaemonRecord? {
@@ -124,10 +136,26 @@ class DaemonWorkspace(val path: Path) {
     fun logDir(): Path = path.resolve("logs")
     fun logFile(): Path = logDir().resolve("daemon.log")
 
+    /** The IntelliJ system directory (VFS, indexes, caches) that the test worker keeps between test runs. */
+    fun testWorkerSystemDir(): Path = path.resolve("test-worker-system")
+
     fun createDirectories() {
         daemonWorkingDir().createDirectories()
         ideaConfigDir().createDirectories()
         ideaSystemDir().createDirectories()
         logDir().createDirectories()
     }
+}
+
+/** Replaces [target] with [text] in one step, so a reader never sees a partly written file. */
+internal fun writeAtomically(target: Path, text: String) {
+    target.parent.createDirectories()
+    val temporary = target.resolveSibling("${target.fileName}.tmp")
+    writeString(temporary, text)
+    move(
+        temporary,
+        target,
+        StandardCopyOption.ATOMIC_MOVE,
+        StandardCopyOption.REPLACE_EXISTING,
+    )
 }

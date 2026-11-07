@@ -119,7 +119,7 @@ class ExternalDependencyReloadIntegrationTest {
         }
         assertContains(value(), "before")
         val store = DaemonRecordStore.forDaemonHome(shared.daemonHome)
-        val pid = assertNotNull(store.read(project)).record.pid
+        val pid = assertNotNull(store.readForProject(project).singleOrNull()).record.pid
         val consumerBytes = consumer.resolve("classes_gen/Consumer.class").readBytes()
         val artifact = if (archive) libraryPath else dependencyOutput.resolve("Value.class")
         val stamp = Files.getLastModifiedTime(artifact)
@@ -130,7 +130,7 @@ class ExternalDependencyReloadIntegrationTest {
         Files.setLastModifiedTime(artifact, stamp)
         assertContains(value(), "after!")
         assertContentEquals(consumerBytes, consumer.resolve("classes_gen/Consumer.class").readBytes())
-        assertEquals(pid, assertNotNull(store.read(project)).record.pid)
+        assertEquals(pid, assertNotNull(store.readForProject(project).singleOrNull()).record.pid)
     }
 
     companion object {

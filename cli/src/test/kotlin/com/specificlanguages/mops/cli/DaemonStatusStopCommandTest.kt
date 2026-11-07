@@ -87,7 +87,7 @@ class DaemonStatusStopCommandTest {
         }
         daemon.join(5_000)
         assertTrue(stdout.lineSequence().any { it.startsWith("unreachable ") }, stdout)
-        assertEquals(record, store.read(project)?.record)
+        assertEquals(record, store.readForProject(project).singleOrNull()?.record)
     }
 
     @Test
@@ -105,7 +105,7 @@ class DaemonStatusStopCommandTest {
                     "--daemon-home", daemonHome.pathString, "daemon", "status"))
             }
             assertTrue(stdout.startsWith("unreachable "), stdout)
-            assertEquals(record, store.read(project)?.record)
+            assertEquals(record, store.readForProject(project).singleOrNull()?.record)
         }
     }
 
@@ -136,7 +136,7 @@ class DaemonStatusStopCommandTest {
 
         assertEquals(0, exitCode)
         assertTrue(stdout.startsWith("unreachable "), stdout)
-        assertEquals(record, store.read(project)?.record)
+        assertEquals(record, store.readForProject(project).singleOrNull()?.record)
         assertContains(stdout, project.pathString)
         assertContains(stdout, "4322")
     }
@@ -350,18 +350,17 @@ class DaemonStatusStopCommandTest {
         val mpsHome = tempDir.mpsHome("deleted-mps-$port")
         val javaHome = Path.of(System.getProperty("java.home")).toRealPath()
         val store = DaemonRecordStore.forDaemonHome(daemonHome)
-        store.write(
-            daemonRecord(
-                port = port,
-                token = "stale-token",
-                pid = 999_999L,
-                project = projectPath,
-                mpsHome = mpsHome,
-                workspace = daemonHome.resolve("projects/stale"),
-                startupTime = "2026-05-12T12:02:00Z",
-            ),
+        val record = daemonRecord(
+            port = port,
+            token = "stale-token",
+            pid = 999_999L,
+            project = projectPath,
+            mpsHome = mpsHome,
+            workspace = daemonHome.resolve("projects/stale"),
+            startupTime = "2026-05-12T12:02:00Z",
         )
-        val recordPath = store.recordPath(projectPath)
+        store.write(record)
+        val recordPath = store.recordPath(record.context)
 
         deleteRecursively(projectPath)
         deleteRecursively(mpsHome)

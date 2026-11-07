@@ -71,7 +71,7 @@ object SharedMpsEnvironment {
 
     /** A [JetBrainsMpsAccess] over [project] with the shared environment's platform and a temporary workspace. */
     fun mpsAccess(project: MPSProject): JetBrainsMpsAccess =
-        JetBrainsMpsAccess(project, DaemonLogger(), workspace, workspace.resolve("test-system-cache"), platform)
+        JetBrainsMpsAccess(project, DaemonLogger(), workspace, TestWorkerSystemDirectory(workspace.resolve("test-worker-system"), deleteAfterUncleanRun = true), platform)
 
     /**
      * Runs [block] against a fresh copy of the fixture project, opened after [prepare] has had a chance to mutate the

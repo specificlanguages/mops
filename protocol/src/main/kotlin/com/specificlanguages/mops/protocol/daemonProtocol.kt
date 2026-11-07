@@ -110,6 +110,7 @@ object ProtocolJson {
     val modelCreationPlan: JsonCodec<ModelCreationPlan> = codec(serializer<ModelCreationPlan>())
     val modelCreationReport: JsonCodec<ModelCreationReport> = codec(serializer<ModelCreationReport>())
     val record: JsonCodec<DaemonRecord> = codec(serializer<DaemonRecord>())
+    val workspaceMetadata: JsonCodec<WorkspaceMetadata> = codec(serializer<WorkspaceMetadata>())
 
     private fun <T> codec(serializer: KSerializer<T>): JsonCodec<T> = JsonCodec(json, prettyJson, serializer)
 }
