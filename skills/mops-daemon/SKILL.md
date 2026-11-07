@@ -82,6 +82,7 @@ reported workspace rather than assuming a hash. A workspace holds:
   workspace path, and startup time.
 - `logs/daemon.log`: the daemon's startup and runtime log.
 - `daemon/config` and `daemon/system`: the isolated IDEA directories passed to the daemon JVM.
+- `fsnotifier/`: the native file watcher executable copied from the MPS distribution.
 
 Deleting a live daemon's record or cache does not stop it. Stale records are removed when the recorded process or socket
 is no longer reachable. Commands reach the daemon over a loopback socket with a per-daemon token.
@@ -105,5 +106,10 @@ again. A run that finds a directory in use by another run, for example of anothe
 directory under its `test-runs/<run-id>/` and says so in the report's diagnostics. Set `MOPS_TEST_SYSTEM_CACHE` to use
 another directory for a newly started daemon. The cache is safe to delete while no test runs; delete it if test results
 contradict the sources, and to free the disk space of MPS builds no longer in use.
+
+Before each request the daemon picks up external file changes. It relies on the native file watcher of the IntelliJ
+platform and walks the project and module folders when the watcher is unavailable or cannot be trusted; each refresh
+writes a line to the daemon log that names how it went. `MOPS_DAEMON_JAVA_OPTIONS=-Didea.filewatcher.disabled=true`
+turns the watcher off.
 
 Stop existing daemons after updating mops.

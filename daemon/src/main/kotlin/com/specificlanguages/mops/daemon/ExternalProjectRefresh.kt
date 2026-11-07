@@ -3,7 +3,6 @@ package com.specificlanguages.mops.daemon
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.configurationStore.StoreReloadManager
 import com.intellij.openapi.vfs.LocalFileSystem
-import com.intellij.openapi.vfs.VfsUtil
 import jetbrains.mps.classloading.ClassLoaderManager
 import jetbrains.mps.ide.platform.watching.ReloadManager
 import jetbrains.mps.project.MPSProject
@@ -11,7 +10,6 @@ import jetbrains.mps.project.Project
 import jetbrains.mps.project.facets.JavaModuleFacet
 import jetbrains.mps.project.dependency.GlobalModuleDependenciesManager
 import jetbrains.mps.util.PathManager
-import jetbrains.mps.vfs.refresh.DefaultCachingContext
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.mps.openapi.module.SModuleReference
 import java.nio.file.Files
@@ -19,25 +17,28 @@ import java.nio.file.Path
 
 /**
  * Refreshes project files, the folders of source modules, and the archives of packaged modules, and replaces runtimes
- * whose Java classpath contents changed between requests.
+ * whose Java classpath contents changed between requests. [WatchedFolderRefresh] decides how folders are refreshed.
  */
-internal class ExternalProjectRefresh(private val project: Project) {
+internal class ExternalProjectRefresh(private val project: Project, private val logger: DaemonLogger) {
+    private val folderRefresh = WatchedFolderRefresh()
     private val classPathFingerprints = ClassPathFingerprints()
     private var outputs = snapshot()
     private var archiveStamps: Map<Path, ArchiveStamp?>? = null
     private val foldersWithStoredFilesLoaded = mutableSetOf<Path>()
     private val mpsHome = Path.of(PathManager.getHomePath())
 
-    fun refresh() {
+    /** Refreshes external changes and returns how the folders were refreshed. */
+    fun refresh(): WatchedFolderRefresh.Pass {
         val mpsProject = project as MPSProject
+        val pass = folderRefresh.begin()
         ApplicationManager.getApplication().invokeAndWait {
             val settings = Path.of(requireNotNull(mpsProject.project.basePath)).resolve(".mps")
-            mpsProject.fileSystem.getFile(settings.toString()).refresh(DefaultCachingContext(true, true))
+            LocalFileSystem.getInstance().refreshAndFindFileByNioFile(settings)?.let { pass.refresh(listOf(it)) }
         }
         // The component store reloads project membership separately from MPS's model/module reload sessions.
         runBlocking { StoreReloadManager.getInstance(mpsProject.project).reloadChangedStorageFiles() }
         ApplicationManager.getApplication().invokeAndWait {
-            refreshModuleFolders()
+            refreshModuleFolders(pass)
             refreshModuleArchives()
             ReloadManager.getInstance().flush()
             val current = snapshot()
@@ -50,6 +51,8 @@ internal class ExternalProjectRefresh(private val project: Project) {
             }
             outputs = current
         }
+        logger.log(pass.summary())
+        return pass
     }
 
     /**
@@ -58,11 +61,11 @@ internal class ExternalProjectRefresh(private val project: Project) {
      * folder is seen, the files the VFS has stored under it are loaded into memory before the refresh;
      * docs/test-running-design.md explains why.
      */
-    private fun refreshModuleFolders() {
+    private fun refreshModuleFolders(pass: WatchedFolderRefresh.Pass) {
         val folders = project.modelAccess.computeReadAction { moduleFolders(project, mpsHome) }
             .mapNotNull { LocalFileSystem.getInstance().findFileByNioFile(it) }
         folders.filter { foldersWithStoredFilesLoaded.add(it.toNioPath()) }.forEach(::loadStoredFiles)
-        VfsUtil.markDirtyAndRefresh(false, true, true, *folders.toTypedArray())
+        pass.refresh(folders)
     }
 
     /**
