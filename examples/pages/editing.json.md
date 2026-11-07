@@ -21,5 +21,6 @@ Copy a member subtree into a class, preserving its references and assigning fres
 
 {{table:commands|Command}}
 
-The default `best-effort` constraint mode blocks violations but warns and skips checking concepts whose languages are
-unloaded. Constraint checks are distinct from a full model check.
+The default `strict` constraint mode blocks a batch with violations; `advisory` reports them and applies the batch. A
+concept whose language did not load cannot be checked and fails the batch unless you pass `--ignore-missing-languages`,
+which skips it with a warning. Constraint checks are distinct from a full model check.

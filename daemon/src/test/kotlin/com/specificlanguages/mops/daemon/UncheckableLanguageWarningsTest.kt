@@ -32,6 +32,21 @@ class UncheckableLanguageWarningsTest {
     }
 
     @Test
+    fun `missing-language failure names each language with its concepts and the ignore option`() {
+        val message = missingLanguagesFailureMessage(
+            linkedMapOf("com.a" to setOf("com.a.structure.X", "com.a.structure.Y"), "com.b" to setOf("com.b.structure.Z")),
+        )
+
+        assertEquals(
+            "constraints could not be checked because these languages are not loaded: " +
+                "com.a (com.a.structure.X, com.a.structure.Y), com.b (com.b.structure.Z) — build them " +
+                "(e.g. 'mops make module com.a com.b') and retry, or rerun with --ignore-missing-languages to skip " +
+                "the unchecked constraints",
+            message,
+        )
+    }
+
+    @Test
     fun `emits nothing when no language was skipped`() {
         assertEquals(emptyList(), uncheckableLanguageWarnings(emptyList()))
     }

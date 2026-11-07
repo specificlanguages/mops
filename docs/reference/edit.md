@@ -20,19 +20,20 @@ Options:
 Apply a JSON batch of edit operations.
 
 ```text
-Usage: mops edit model [-h] [--constraints=MODE] [--file=PATH]
+Usage: mops edit model [-h] [--[no-]ignore-missing-languages]
+                       [--constraints=MODE] [--file=PATH]
 Apply a JSON batch of edit operations.
 Options:
-      --constraints=MODE    How to enforce constraints: advisory (evaluate,
-                              report, and apply anyway), best-effort (block on
-                              violations and save nothing; skip with a warning
-                              a concept that cannot be checked because its
-                              language did not load; default), or strict (fail
-                              on violations or on a concept that cannot be
-                              checked).
+      --constraints=MODE    What a constraint violation does: advisory (report
+                              it and apply the batch anyway) or strict (report
+                              it and block the batch, saving nothing; default).
       --file=PATH           Read the edit batch from a JSON file instead of
                               stdin.
   -h, --help                Show this help message and exit.
+      --[no-]ignore-missing-languages
+                            Skip with a warning a concept whose constraints
+                              cannot be checked because its language did not
+                              load. By default such a concept fails the batch.
 
 An operation that names a concept resolves it the same way `mops find
 instances` does: a dropped `.structure.` infix is forgiven, and a name that
