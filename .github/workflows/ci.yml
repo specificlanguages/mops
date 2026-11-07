@@ -102,7 +102,7 @@ jobs:
       - uses: j178/prek-action@44924fe9ef4a6f88253c4b6b1bf11c689d3ce53d # v3.1.0
         if: ${{ !cancelled() }}
         with:
-          prek-version: v0.5.9
+          prek-version: v0.5.10
           extra-args: --all-files
       - name: Upload test reports
         if: ${{ !cancelled() && needs.plan.outputs.docs-only != 'true' }}
