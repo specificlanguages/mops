@@ -4,6 +4,7 @@ import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
 import com.specificlanguages.mops.cli.output.renderJson
+import com.specificlanguages.mops.cli.output.textRow
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.ModuleLocationsJson
 import picocli.CommandLine.Command
@@ -52,7 +53,7 @@ class GetModuleCommand(private val environment: CommandEnvironment) : CliCommand
             println(renderJson(response))
             return
         }
-        rows(response.module).forEach { (key, value) -> println("$key\t$value") }
+        rows(response.module).forEach { (key, value) -> println(textRow(listOf(key, value))) }
     }
 
     // One row per present field, keyed by the JSON field name so text and JSON output read the same; a list field

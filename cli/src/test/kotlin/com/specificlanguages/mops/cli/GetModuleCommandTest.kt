@@ -55,6 +55,31 @@ class GetModuleCommandTest {
     }
 
     @Test
+    fun `get module keeps a path with a newline on one row`() {
+        val client = mock<DaemonClient>()
+        whenever(client.getModule(SOURCE_MODULE)).thenReturn(
+            GetModuleResponse(
+                ModuleLocationsJson(
+                    kind = "language",
+                    name = SOURCE_MODULE,
+                    reference = SOURCE_REFERENCE,
+                    sourceDirectory = "/work/odd\nname",
+                ),
+            ),
+        )
+
+        val stdout = tapSystemOut { assertEquals(0, run(client, SOURCE_MODULE)) }
+
+        assertEquals(
+            "kind\tlanguage" + nl +
+                "name\tcom.specificlanguages.json" + nl +
+                "reference\t$SOURCE_REFERENCE" + nl +
+                "sourceDirectory\t/work/odd\\nname" + nl,
+            stdout,
+        )
+    }
+
+    @Test
     fun `get module prints the jar-side rows of a packaged module and repeats list rows`() {
         val client = mock<DaemonClient>()
         whenever(client.getModule(PACKAGED_MODULE)).thenReturn(
