@@ -38,13 +38,15 @@ class CodeModeExecutor(
         try {
             val result = GroovyShell(loader, Binding(), configuration).evaluate(request.source, request.sourceName)
             // Accessors and native collections returned from an access block read the model while they are rendered.
-            return CodeResultResponse(access.read { CodeResultAdapter.render(result) })
+            return CodeResultResponse(access.read { CodeResultAdapter.render(result) }, mops.notes.toList())
         } catch (failure: Throwable) {
             val line = failure.stackTrace.firstOrNull {
                 it.fileName == request.sourceName || request.sourceName.endsWith("/${it.fileName}")
             }?.lineNumber
             val location = if (line != null && line > 0) "${request.sourceName}:$line" else request.sourceName
-            throw IllegalStateException("$location: ${failure.message ?: failure.javaClass.name}", failure)
+            val message = "$location: ${failure.message ?: failure.javaClass.name}"
+            // Commands that completed before the failure have saved what they added.
+            throw IllegalStateException((listOf(message) + mops.notes).joinToString("\n"), failure)
         } finally {
             CodeModeProjectProvider.clear(mops)
             loader.clearCache()

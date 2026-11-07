@@ -30,5 +30,8 @@ printf '%s\n' '{"operations":[{"op":"copyAsChild","target":"CLASS_REF","source":
 | Discover copying notation                   | `mops explain edit.copyAsChild`                            |
 | Export the batch schema                     | `mops explain --schema edit`                               |
 
+A saved batch adds the used languages and model imports that its new nodes and references need. The response's `notes`
+field lists each one added, with the same wording as `code run` notes.
+
 The default `best-effort` constraint mode blocks violations but warns and skips checking concepts whose languages are
 unloaded. Constraint checks are distinct from a full model check.

@@ -36,7 +36,11 @@ class ModelEditCommandTest {
     fun `model edit reads batch from stdin and prints user-facing response payload`() {
         val client = mock<DaemonClient>()
         val batch = sampleBatch()
-        val response = ModelEditResponse(created = emptyMap(), violations = emptyList())
+        val response = ModelEditResponse(
+            created = emptyMap(),
+            violations = emptyList(),
+            notes = listOf("added used language jetbrains.mps.baseLanguage to model main"),
+        )
         whenever(client.modelEdit(batch)).thenReturn(response)
         var exitCode = Int.MIN_VALUE
         var stdout = ""

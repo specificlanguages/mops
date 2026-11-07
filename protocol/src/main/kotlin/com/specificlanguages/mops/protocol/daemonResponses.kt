@@ -149,6 +149,9 @@ data class ModelEditResponse(
     // Non-fatal notices, e.g. constraints skipped because a concept's language was not loaded. One line per language,
     // capped, with a final summary line when more languages were affected.
     val warnings: List<String> = emptyList(),
+    // What the edit added on the caller's behalf: one line per used language or model import added to a model, worded
+    // as in CodeResultResponse.notes.
+    val notes: List<String> = emptyList(),
 ) : DaemonResponse
 
 /**
@@ -193,9 +196,13 @@ data class MakeResponse(
     val messages: List<MakeMessageJson>,
 ) : DaemonResponse
 
+/**
+ * Successful response carrying a Code Mode program's rendered [output] and [notes] on what mops did on the program's
+ * behalf, such as imports it added to changed models.
+ */
 @Serializable
 @SerialName("code-result")
-data class CodeResultResponse(val output: String?) : DaemonResponse
+data class CodeResultResponse(val output: String?, val notes: List<String> = emptyList()) : DaemonResponse
 
 @Serializable
 @SerialName("code-catalog")

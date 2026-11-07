@@ -39,6 +39,7 @@ class CodeRunCommand(private val environment: CommandEnvironment) : CliCommand()
             path.readText()
         }
         val response = environment.daemon().runCode(source, sourceName, Duration.ofSeconds(timeoutSeconds))
+        response.notes.forEach(System.err::println)
         response.output?.let(::print)
     }
 }

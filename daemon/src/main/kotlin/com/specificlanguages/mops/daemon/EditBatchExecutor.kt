@@ -20,8 +20,6 @@ import jetbrains.mps.core.aspects.constraints.rules.kinds.ContainmentContext
 import jetbrains.mps.project.Project
 import jetbrains.mps.scope.ErrorScope
 import jetbrains.mps.smodel.CopyUtil
-import jetbrains.mps.smodel.ModelDependencyScanner
-import jetbrains.mps.smodel.ModelImports
 import jetbrains.mps.smodel.SModelInternal
 import jetbrains.mps.smodel.constraints.ConstraintsCanBeFacade
 import jetbrains.mps.smodel.constraints.ModelConstraints
@@ -615,13 +613,14 @@ class EditBatchExecutor(
         // holds, so a headless edit does not leave a model using an undeclared language or referencing an unimported
         // model. This is reached only on a saving path — a batch that failed or was blocked left before here — so a
         // rejected edit adds no imports.
-        ensureUsedImports(affectedModels, placements, rootPlacements, referencePlacements)
+        val notes = addMissingImports(affectedModels, placements, rootPlacements, referencePlacements)
 
         return when (val saveOutcome = writeScope.saveWithResolveInfo(affectedModels)) {
             SaveOutcome.Saved -> ModelEditResponse(
                 created = aliases.mapValues { (_, node) -> persistence.asString(node.reference) },
                 violations = violations,
                 warnings = warnings,
+                notes = notes,
             )
             is SaveOutcome.SaveFailed -> fail(
                 MpsErrorCode.SAVE_FAILED,
@@ -639,41 +638,22 @@ class EditBatchExecutor(
      * The scan covers the whole subtree of each created, copied, or moved root — so inline children and copied
      * descendants contribute their languages and cross-model references, not just the operation's top node — plus any
      * pre-existing node that had a reference set on it, whose (possibly cross-model) target would otherwise be missed.
-     * Only imports genuinely absent are added, leaving existing (including implicit) imports untouched. Runs inside the
-     * edit's write transaction, so the added imports are saved together with the edit or discarded together with it.
+     * Declared imports follow [addMissingImportsTo]: languages of used devkits and accessory models of used languages
+     * count as declared. Returns one note per added language or import. Runs inside the edit's write transaction, so
+     * the added imports are saved together with the edit or discarded together with it.
      */
-    private fun ensureUsedImports(
+    private fun addMissingImports(
         affectedModels: Iterable<EditableSModel>,
         placements: List<Placement>,
         rootPlacements: List<RootPlacement>,
         referencePlacements: List<ReferencePlacement>,
-    ) {
+    ): List<String> {
         val createdRoots = placements.map { it.child } + rootPlacements.map { it.node }
-        for (model in affectedModels) {
+        return affectedModels.flatMap { model ->
             val createdInModel = createdRoots.filter { it.model === model }
             val referenceSourcesInModel = referencePlacements.map { it.node }.filter { it.model === model }
-            val scanned = SNodeUtil.getDescendants(createdInModel).toMutableList()
-            scanned.addAll(referenceSourcesInModel)
-            if (scanned.isEmpty()) {
-                continue
-            }
-
-            val scanner = ModelDependencyScanner().walk(scanned)
-            val imports = ModelImports(model)
-
-            addMissing(scanner.usedLanguages, imports.usedLanguages, imports::addUsedLanguage)
-            addMissing(scanner.crossModelReferences, imports.importedModels, imports::addModelImport)
-        }
-    }
-
-    // Adds each of [required] not already in [declared] via [add], so an existing (including implicit) import is left
-    // untouched and only genuinely absent dependencies are introduced.
-    private fun <T> addMissing(required: Iterable<T>, declared: Collection<T>, add: (T) -> Unit) {
-        val present = declared.toHashSet()
-        for (item in required) {
-            if (present.add(item)) {
-                add(item)
-            }
+            val scanned = SNodeUtil.getDescendants(createdInModel) + referenceSourcesInModel
+            if (scanned.isEmpty()) emptyList() else addMissingImportsTo(model, scanned)
         }
     }
 
