@@ -69,15 +69,17 @@ CI build; check that build's test configuration separately.
 `mops test` exits zero only for a complete, successful run; otherwise it exits nonzero. Use `--json` to inspect
 `outcome`, `complete`, `diagnostics`, `build`, and per-test `results` (including `status`, `detail`, and source references
 when available). Read container failures too: fixture setup can fail before any individual test runs. Distinguish
-assertion failures from build, discovery, startup, timeout, and worker failures. A discovery failure with no tests names
-the selection that resolved to nothing (the project, or the module, model, or root test case), so check that it is the
-one you meant. Partial results after an interrupted worker are not evidence of a successful run. Use `reportPath` to
-retain the report. Inspect the adjacent `worker.log` for preparation failures and `ant.log` for test execution failures.
-A diagnostic that lists modules the test worker could not load classes of explains a `ClassNotFoundException` for test
-classes: a dependency is missing from the worker's repository, which holds the project modules and project libraries as
-the daemon loaded them.
-When the run is evidence for a bug report, record the mops version (`mops --version`) together with the MPS and Java
-versions and the preparation commands.
+assertion failures from build, discovery, startup, timeout, and worker failures. Partial results after an interrupted
+worker are not evidence of a successful run.
+
+A discovery failure with no tests names the selection that resolved to nothing (the project, or the module, model, or
+root test case), so check that it is the one you meant. A diagnostic that lists modules the test worker could not load
+classes of explains a `ClassNotFoundException` for test classes: a dependency is missing from the worker's repository,
+which holds the project modules and project libraries as the daemon loaded them.
+
+Use `reportPath` to retain the report. Build failures are in the report's `build` messages. Inspect the adjacent
+`worker.log` for test supervisor failures and `ant.log` for test execution failures. When the run is evidence for a bug
+report, record the mops version (`mops --version`) together with the MPS and Java versions and the preparation commands.
 
 ### Run from Code Mode
 

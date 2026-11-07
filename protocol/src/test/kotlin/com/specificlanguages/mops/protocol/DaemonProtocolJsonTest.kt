@@ -274,7 +274,13 @@ class DaemonProtocolJsonTest {
                 reference = "$model/200",
             ),
         )
-        val response = FindInstancesResponse(limit = 100, truncated = false, nodes = listOf(summary))
+        val response = FindInstancesResponse(
+            target = testConceptTarget,
+            scope = testScope,
+            limit = 100,
+            truncated = false,
+            nodes = listOf(summary),
+        )
         val encodedSummary = ProtocolJson.encodeResponse(response)
         assertContains(encodedSummary, """"parent":{""")
         assertEquals(response, ProtocolJson.decodeResponse(encodedSummary))
@@ -343,7 +349,14 @@ class DaemonProtocolJsonTest {
         assertEquals(ModelGetNodeSummaryResponse(summary), ProtocolJson.decodeResponse(ProtocolJson.encodeResponse(ModelGetNodeSummaryResponse(summary))))
 
         // find and check summaries never carry counts, so the key stays off their output.
-        assertFalse(ProtocolJson.encodeResponse(FindInstancesResponse(limit = 1, truncated = false, nodes = listOf(summary.copy(children = null)))).contains("children"))
+        val withoutChildren = FindInstancesResponse(
+            target = testConceptTarget,
+            scope = testScope,
+            limit = 1,
+            truncated = false,
+            nodes = listOf(summary.copy(children = null)),
+        )
+        assertFalse(ProtocolJson.encodeResponse(withoutChildren).contains("children"))
     }
 
     @Test
@@ -939,6 +952,8 @@ class DaemonProtocolJsonTest {
 
         assertEquals(
             FindUsagesResponse(
+                target = testUsagesTarget,
+                scope = testScope,
                 limit = 100,
                 truncated = false,
                 usages = listOf(
@@ -954,7 +969,7 @@ class DaemonProtocolJsonTest {
                 ),
             ),
             ProtocolJson.decodeResponse(
-                """{"type":"usages","limit":100,"truncated":false,"usages":[{"role":"concept","owner":{"type":"node","name":"JsonObject","concept":"jetbrains.mps.lang.structure.structure.ConceptDeclaration","reference":"r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905"}}]}""",
+                """{"type":"usages","target":{"type":"root","name":"Target","concept":"example.structure.Target","reference":"r:00000000-0000-0000-0000-000000000001(example.model)/1"},"scope":{"kind":"editable-project-sources","models":1},"limit":100,"truncated":false,"usages":[{"role":"concept","owner":{"type":"node","name":"JsonObject","concept":"jetbrains.mps.lang.structure.structure.ConceptDeclaration","reference":"r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905"}}]}""",
             ),
         )
     }
@@ -979,6 +994,8 @@ class DaemonProtocolJsonTest {
         )
 
         val response = FindInstancesResponse(
+            target = testConceptTarget,
+            scope = testScope,
             limit = 100,
             truncated = false,
             nodes = listOf(
@@ -994,7 +1011,7 @@ class DaemonProtocolJsonTest {
 
         assertContains(serializedResponse, """"type":"nodes"""")
         assertFalse(serializedResponse.contains(""""id"""), "node summary must omit model-local id: $serializedResponse")
-        assertFalse(serializedResponse.contains(""""model"""), "node summary must omit separate model: $serializedResponse")
+        assertFalse(serializedResponse.contains(""""model":"""), "node summary must omit separate model: $serializedResponse")
         assertEquals(
             response,
             ProtocolJson.decodeResponse(serializedResponse),
@@ -1013,6 +1030,8 @@ class DaemonProtocolJsonTest {
         assertEquals(request, ProtocolJson.decodeRequest(serializedRequest))
 
         val response = FindByNameResponse(
+            target = testPatternTarget,
+            scope = testScope,
             limit = 100,
             truncated = false,
             nodes = listOf(
@@ -1049,6 +1068,8 @@ class DaemonProtocolJsonTest {
         )
 
         val response = FindNodeByIdResponse(
+            target = testNodeIdTarget,
+            scope = testScope,
             limit = 100,
             truncated = false,
             nodes = listOf(
@@ -1255,4 +1276,93 @@ class DaemonProtocolJsonTest {
             decoded,
         )
     }
+
+    @Test
+    fun `empty find responses carry the resolved target and the searched scope`() {
+        val usages = FindUsagesResponse(
+            target = MpsNodeSummaryJson(
+                type = "root",
+                name = "JsonObject",
+                concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905",
+            ),
+            scope = SearchScopeJson(kind = SearchScopeKind.EDITABLE_PROJECT_SOURCES, models = 12),
+            limit = 100,
+            truncated = false,
+            usages = emptyList(),
+        )
+        val serializedUsages = ProtocolJson.encodeResponse(usages)
+        assertEquals(
+            """{"type":"usages","target":{"type":"root","name":"JsonObject",""" +
+                """"concept":"jetbrains.mps.lang.structure.structure.ConceptDeclaration",""" +
+                """"reference":"r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905"},""" +
+                """"scope":{"kind":"editable-project-sources","models":12},"limit":100,"truncated":false,"usages":[]}""",
+            serializedUsages,
+        )
+        assertEquals(usages, ProtocolJson.decodeResponse(serializedUsages))
+
+        val subtree = SearchScopeJson(
+            kind = SearchScopeKind.SUBTREE,
+            reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905",
+            name = "JsonObject",
+        )
+        val responses = listOf(
+            FindInstancesResponse(
+                target = ConceptTargetJson("jetbrains.mps.lang.structure.structure.ConceptDeclaration"),
+                scope = subtree,
+                limit = 100,
+                truncated = false,
+                nodes = emptyList(),
+            ),
+            FindByNameResponse(
+                target = NamePatternTargetJson("Json*"),
+                scope = SearchScopeJson(
+                    kind = SearchScopeKind.MODEL,
+                    reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)",
+                    name = "com.specificlanguages.json.structure",
+                    models = 1,
+                ),
+                limit = 100,
+                truncated = false,
+                nodes = emptyList(),
+            ),
+            FindNodeByIdResponse(
+                target = NodeIdTargetJson("2110045694544566905"),
+                scope = SearchScopeJson(kind = SearchScopeKind.REPOSITORY, models = 900),
+                limit = 100,
+                truncated = false,
+                nodes = emptyList(),
+            ),
+            FindSubconceptsResponse(
+                target = ConceptTargetJson("jetbrains.mps.lang.core.structure.BaseConcept"),
+                scope = SearchScopeJson(kind = SearchScopeKind.LOADED_LANGUAGES),
+                concepts = emptyList(),
+            ),
+        )
+        responses.forEach { assertEquals(it, ProtocolJson.decodeResponse(ProtocolJson.encodeResponse(it))) }
+        assertContains(
+            ProtocolJson.encodeResponse(responses[0]),
+            """"target":{"concept":"jetbrains.mps.lang.structure.structure.ConceptDeclaration"},""" +
+                """"scope":{"kind":"subtree","reference":"r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6""" +
+                """(com.specificlanguages.json.structure)/2110045694544566905","name":"JsonObject"}""",
+        )
+        assertContains(ProtocolJson.encodeResponse(responses[1]), """"target":{"pattern":"Json*"}""")
+        assertContains(ProtocolJson.encodeResponse(responses[2]), """"target":{"nodeId":"2110045694544566905"}""")
+        assertContains(ProtocolJson.encodeResponse(responses[3]), """"scope":{"kind":"loaded-languages"}""")
+    }
 }
+
+private val testScope = SearchScopeJson(SearchScopeKind.EDITABLE_PROJECT_SOURCES, models = 1)
+
+private val testConceptTarget = ConceptTargetJson("example.structure.Target")
+
+private val testNodeIdTarget = NodeIdTargetJson("1")
+
+private val testPatternTarget = NamePatternTargetJson("Target*")
+
+private val testUsagesTarget = MpsNodeSummaryJson(
+    type = "root",
+    name = "Target",
+    concept = "example.structure.Target",
+    reference = "r:00000000-0000-0000-0000-000000000001(example.model)/1",
+)

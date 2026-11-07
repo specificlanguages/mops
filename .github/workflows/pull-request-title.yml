@@ -1,15 +1,18 @@
 name: Pull request title
 
 # Pull requests are squash-merged with the title as the commit message, so the title must follow Conventional Commits.
+# In a merge queue the job checks nothing and succeeds, because the title was checked on the pull request.
 on:
   pull_request:
     types: [opened, edited, reopened, synchronize]
+  merge_group:
+    types: [checks_requested]
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -23,8 +26,10 @@ jobs:
       - name: Write the squash commit message
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
+        if: github.event_name == 'pull_request'
         run: printf '%s\n' "$PR_TITLE" > "$RUNNER_TEMP/pull-request-title.txt"
       - uses: j178/prek-action@44924fe9ef4a6f88253c4b6b1bf11c689d3ce53d # v3.1.0
+        if: github.event_name == 'pull_request'
         with:
           prek-version: v0.5.9
           extra-args: >-

@@ -13,6 +13,7 @@ import picocli.CommandLine.Parameters
     description = [
         "Run MPS's full check over one or more project modules and their models. Exits 1 when any finding is an error.",
     ],
+    footer = ["", CHECK_OUTPUT_HELP, "", CHECK_JSONL_HELP],
 )
 class ModuleCheckCommand(environment: CommandEnvironment) : CheckCommand(environment) {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))

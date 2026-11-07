@@ -13,6 +13,6 @@ class MopsDaemonVersionProviderTest {
             assertEquals(0, CommandLine(MopsDaemonCommand()).execute("--version"))
         }
 
-        assertEquals("mops-daemon ${MopsBuild.version}\n", output)
+        assertEquals("mops-daemon ${MopsBuild.fullVersion}\n", output)
     }
 }

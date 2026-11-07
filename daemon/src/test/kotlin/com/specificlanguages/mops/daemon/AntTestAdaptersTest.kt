@@ -25,7 +25,8 @@ class AntTestAdaptersTest {
                 }
             }
         }
-        assertEquals(setOf("AntTestWorker", "MopsLaunchTestTask", "LauncherApi"), classes.getValue("boot"))
+        val bootTopLevel = classes.getValue("boot").map { it.substringBefore('$') }.toSet()
+        assertEquals(setOf("AntTestWorker", "MopsLaunchTestTask", "LauncherApi"), bootTopLevel)
         for (variant in listOf("legacy", "current")) {
             val names = classes.getValue(variant)
             assertTrue(names.containsAll(setOf("ModelLauncher", "SelectionSupport")), variant)

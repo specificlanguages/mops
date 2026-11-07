@@ -10,6 +10,7 @@ import com.specificlanguages.mops.launcher.MpsDistributionLayout
 import com.specificlanguages.mops.protocol.DaemonContext
 import java.nio.file.Path
 import java.util.Stack
+import kotlin.io.path.exists
 import kotlin.io.path.isDirectory
 import picocli.CommandLine
 import picocli.CommandLine.Command
@@ -23,7 +24,13 @@ import picocli.CommandLine.Spec
     mixinStandardHelpOptions = true,
     versionProvider = MopsVersionProvider::class,
     description = ["Kotlin CLI for the daemon-backed MPS prototype."],
-    footer = ["Start with mops examples for task recipes; mops examples editing helps choose an editing approach."],
+    footer = [
+        "",
+        "Global options can appear before, between, or after command names; command options belong after their " +
+            "command name. mops explain output describes how output separates results, metadata, and diagnostics.",
+        "",
+        "Start with mops examples for task recipes; mops examples editing helps choose an editing approach.",
+    ],
 )
 class MopsCommand(
     /**
@@ -48,7 +55,10 @@ class MopsCommand(
         names = ["--project-root"],
         scope = ScopeType.INHERIT,
         paramLabel = "PATH",
-        description = ["Explicit MPS project root, absolute or relative to the directory where mops was started. Overrides upward inference from the working directory."],
+        description = [
+            "Explicit MPS project root, absolute or relative to the directory where mops was started. Overrides " +
+                "upward inference from the working directory.",
+        ],
     )
     var projectRoot: String? = null
 
@@ -73,9 +83,9 @@ class MopsCommand(
         scope = ScopeType.INHERIT,
         paramLabel = "NAME=PATH",
         description = [
-            "Path macro the daemon defines in MPS before it opens the project; repeatable. PATH is an existing " +
-                "directory, absolute or relative to the directory where mops was started. A running daemon with " +
-                "other macros is not reused; stop it with mops daemon stop.",
+            "Path macro for MPS, such as one used as \$\${NAME} in .mps/libraries.xml or .mps/modules.xml; " +
+                "repeatable. \$PROJECT_DIR\$ needs no path macro. A running daemon started with other path macros is not " +
+                "reused. See mops wrapper --help.",
         ],
         parameterConsumer = MacroConsumer::class,
     )
@@ -106,7 +116,11 @@ class MopsCommand(
 
     override var nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED
 
-    @Option(names = ["--refs-as-urls"], scope = ScopeType.INHERIT, description = ["Render node references as MPS URLs in text output."])
+    @Option(
+        names = ["--refs-as-urls"],
+        scope = ScopeType.INHERIT,
+        description = ["Render node references as MPS URLs in text output; JSON output is unchanged."],
+    )
     fun setRefsAsUrls(enabled: Boolean) {
         nodeReferenceFormat = if (enabled) NodeReferenceFormat.URL else NodeReferenceFormat.SERIALIZED
     }
@@ -134,9 +148,10 @@ class MopsCommand(
     }
 
     fun createDaemonContext(projectPathHint: Path): DaemonContext {
-        val resolvedMpsHome = resolveMpsHome() ?: throw MpsHomeRequiredException()
+        val resolvedMpsHome = resolveMpsHome()?.also { requireHome("MPS home", it) }
+            ?: throw MpsHomeRequiredException()
         val resolvedJavaHome =
-            javaHome?.let(workingDirectory::resolve)
+            javaHome?.let(workingDirectory::resolve)?.also { requireHome("Java home", it) }
                 ?: MpsDistributionLayout.findBundledJavaHome(resolvedMpsHome)
                 ?: throw IllegalStateException(
                     "MPS distribution at $resolvedMpsHome does not bundle Java; pass --java-home <path>, " +
@@ -155,6 +170,15 @@ class MopsCommand(
 
     fun resolveMpsHome(): Path? = mpsHome?.let(workingDirectory::resolve)
 
+    private fun requireHome(homeName: String, home: Path) {
+        if (!home.exists()) {
+            val regenerateCommand = projectRoot
+                ?.let { "mops wrapper --project-root ${workingDirectory.resolve(it).normalize()}" }
+                ?: "mops wrapper $workingDirectory"
+            throw RuntimeHomeNotFoundException(homeName, home.normalize(), regenerateCommand)
+        }
+    }
+
     /** The `--macro` values as absolute paths, checked to be directories, since MPS ignores a macro that is not one. */
     fun resolveMacros(): Map<String, Path> = macros.mapValues { (name, value) ->
         require(name !in mpsBuiltInPathMacros) {
@@ -168,10 +192,10 @@ class MopsCommand(
     override fun projectPath(start: Path): Path {
         projectRoot?.let { configuredProjectRoot ->
             val resolved = workingDirectory.resolve(configuredProjectRoot).normalize()
-            if (resolved.resolve(".mps").isDirectory()) {
+            if (resolved.isMpsProject()) {
                 return resolved
             }
-            throw ProjectPathNotFoundException(resolved)
+            throw ProjectPathNotFoundException.explicitRoot(resolved, findMpsProjectsBelow(resolved))
         }
 
         return MopsCommand.resolveProjectPath(start)
@@ -185,13 +209,13 @@ class MopsCommand(
             var current: Path? = start.normalize()
 
             while (current != null) {
-                if (current.resolve(".mps").isDirectory()) {
+                if (current.isMpsProject()) {
                     return current
                 }
                 current = current.parent
             }
 
-            throw ProjectPathNotFoundException(start)
+            throw ProjectPathNotFoundException.upwardFrom(start)
         }
 
     }

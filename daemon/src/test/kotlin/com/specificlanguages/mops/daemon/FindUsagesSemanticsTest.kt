@@ -1,6 +1,8 @@
 package com.specificlanguages.mops.daemon
 
+import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import com.specificlanguages.mops.protocol.NodeTarget
+import com.specificlanguages.mops.protocol.SearchScopeKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -31,6 +33,23 @@ class FindUsagesSemanticsTest {
 
         assertTrue(payload.usages.isNotEmpty())
         assertTrue(payload.usages.any { it.role == "intfc" }, "expected an implements usage, got: ${payload.usages}")
+    }
+
+    @Test
+    fun `reports the resolved target node in its decimal reference spelling`() {
+        val payload = SharedMpsEnvironment.sharedMpsAccess.read {
+            findUsages(NodeTarget.NodeReference(IJSON_VALUE_ENCODED_REFERENCE), limit = DEFAULT_LIMIT)
+        }
+
+        assertEquals(
+            MpsNodeSummaryJson(
+                type = "root",
+                name = "IJsonValue",
+                concept = "jetbrains.mps.lang.structure.structure.InterfaceConceptDeclaration",
+                reference = IJSON_VALUE_REFERENCE,
+            ),
+            payload.target,
+        )
     }
 
     @Test
@@ -100,6 +119,9 @@ class FindUsagesSemanticsTest {
         val repositoryUsages = inRepository.usages.map { it.role to it.owner.reference }.toSet()
 
         assertTrue(moduleUsages.isNotEmpty(), "the language module should hold usages of BaseConcept")
+        assertEquals(SearchScopeKind.MODULE, inModule.scope.kind)
+        assertEquals(LANGUAGE_MODULE, inModule.scope.name)
+        assertTrue(assertNotNull(inModule.scope.models) > 0, "the language module holds models: ${inModule.scope}")
         assertTrue(
             repositoryUsages.size > moduleUsages.size,
             "the repository holds BaseConcept usages beyond the one module",

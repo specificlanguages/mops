@@ -2,7 +2,10 @@ package com.specificlanguages.mops.testing;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VfsUtil;
+import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.openapi.vfs.VirtualFileVisitor;
+import com.intellij.openapi.vfs.newvfs.NewVirtualFile;
 import java.io.File;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -43,7 +46,9 @@ public class AntTestWorker extends LaunchTestWorker {
 
   /**
    * Brings the VFS up to date with the given folders on disk and lets MPS reload what changed. A reused IntelliJ system
-   * directory keeps VFS records from earlier runs, and the test-mode platform skips its initial VFS refresh.
+   * directory keeps VFS records from earlier runs, and the test-mode platform skips its initial VFS refresh. The
+   * files the VFS has stored under the folders are loaded into memory before the refresh; docs/test-running-design.md
+   * explains why. ExternalProjectRefresh in the daemon loads stored files the same way: keep the two in step.
    */
   private static void refreshFromDisk(String[] folders) {
     List<VirtualFile> files = new ArrayList<>();
@@ -52,8 +57,18 @@ public class AntTestWorker extends LaunchTestWorker {
       if (file != null) files.add(file);
     }
     ApplicationManager.getApplication().invokeAndWait(() -> {
+      for (VirtualFile file : files) loadStoredFiles(file);
       VfsUtil.markDirtyAndRefresh(false, true, true, files.toArray(VirtualFile.EMPTY_ARRAY));
       ReloadManager.getInstance().flush();
+    });
+  }
+
+  /** Loads into memory the files the VFS has stored under the folder, without listing folders on disk. */
+  private static void loadStoredFiles(VirtualFile folder) {
+    VfsUtilCore.visitChildrenRecursively(folder, new VirtualFileVisitor<Void>() {
+      @Override public Iterable<VirtualFile> getChildrenIterable(VirtualFile file) {
+        return ((NewVirtualFile) file).iterInDbChildren();
+      }
     });
   }
 }

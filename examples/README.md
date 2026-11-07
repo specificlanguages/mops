@@ -60,5 +60,5 @@ runner. Specs with `untested` requirements appear as skipped tests.
 Commit the catalog, templates, and regenerated skill references together. `checkExamples` verifies the checked-in pages
 without starting MPS.
 
-The pre-commit CI job generates the pages before running Markdown lint. `.markdownlint-cli2.yaml` includes the build's
-generated pages in every lint run. MD013 limits prose to 120 characters and excludes code blocks and tables globally.
+Markdown lint checks the source pages and the checked-in skill references; `checkExamples` keeps those references equal
+to the generated pages. MD013 limits prose to 120 characters and excludes code blocks and tables globally.

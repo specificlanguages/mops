@@ -8,29 +8,29 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.io.path.createDirectories
 
 /**
- * IntelliJ system directories (VFS, indexes, caches) that test runs keep between runs, so that the processes of a run do
- * not scan and index the whole MPS distribution again each time.
+ * The IntelliJ system directory (VFS, indexes, caches) that the test worker keeps between runs, so that it does not scan
+ * and index the whole MPS distribution again each time.
  *
- * [cache] holds one directory per role and MPS build, so a run never reuses the indexes of another build. One run at a
- * time uses a role's directory: [acquire] takes an exclusive file lock, which also excludes runs in other daemons. When
- * the directory is busy, the run gets its own fresh fallback directory and a diagnostic that says so.
+ * [cache] holds one directory per MPS build, so a run never reuses the indexes of another build. One run at a time uses
+ * it: [acquire] takes an exclusive file lock, which also excludes runs in other daemons. When the directory is busy, the
+ * run gets its own fresh fallback directory and a diagnostic that says so.
  */
-class PersistentSystemDirectories(cache: Path, mpsBuild: String) {
+class TestWorkerSystemDirectory(cache: Path, mpsBuild: String) {
     private val root = cache.toAbsolutePath().normalize().resolve(mpsBuild)
 
     /**
-     * Locks the persistent directory of [role] until the returned directory is closed. When another run holds it,
-     * returns [fallback] instead, with a diagnostic naming the [process] that uses it.
+     * Locks the persistent directory until the returned directory is closed. When another run holds it, returns
+     * [fallback] instead, with a diagnostic.
      */
-    fun acquire(role: String, process: String, fallback: Path): SystemDirectory {
-        val lockFile = root.resolve("$role.lock")
+    fun acquire(fallback: Path): SystemDirectory {
+        val lockFile = root.resolve("worker.lock")
         // Closing any channel of a file releases all locks this JVM holds on it, so a second run in this JVM must not
         // open the lock file while the first holds it.
         if (heldInThisProcess.add(lockFile)) {
             root.createDirectories()
             val channel = FileChannel.open(lockFile, CREATE, WRITE)
             if (channel.tryLock() != null) {
-                return SystemDirectory(root.resolve(role), null) {
+                return SystemDirectory(root.resolve("worker"), null) {
                     channel.close()
                     heldInThisProcess.remove(lockFile)
                 }
@@ -38,7 +38,7 @@ class PersistentSystemDirectories(cache: Path, mpsBuild: String) {
             channel.close()
             heldInThisProcess.remove(lockFile)
         }
-        return SystemDirectory(fallback, "The $process's system directory ${root.resolve(role)} is in use by another " +
+        return SystemDirectory(fallback, "The test worker's system directory ${root.resolve("worker")} is in use by another " +
             "test run; this run uses the fresh directory $fallback and indexes the MPS distribution again.")
     }
 

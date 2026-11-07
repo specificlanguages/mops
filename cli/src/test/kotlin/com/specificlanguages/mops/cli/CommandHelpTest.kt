@@ -2,6 +2,7 @@ package com.specificlanguages.mops.cli
 
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.cli.output.NodeReferenceFormat
+import com.specificlanguages.mops.protocol.MopsBuild
 import org.junit.jupiter.api.parallel.ResourceLock
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -39,6 +40,13 @@ class CommandHelpTest {
         assertContains(output, "check")
         assertContains(output, "--project-root")
         assertContains(output, "--refs-as-urls")
+    }
+
+    @Test
+    fun `root help starts with the mops version`() {
+        val output = runHelp("--help")
+
+        assertEquals("mops ${MopsBuild.fullVersion}", output.lineSequence().first())
     }
 
     @Test
@@ -127,7 +135,10 @@ class CommandHelpTest {
             for (option in listOf("--mps-home", "--project-root", "--daemon-home", "--java-home", "--refs-as-urls")) {
                 assertContains(output.substring(globalOptions), option)
             }
-            assertFalse(output.substring(globalOptions).contains("--help"), "$name help should keep --help out of global options")
+            assertFalse(
+                output.substring(globalOptions).contains("-h, --help"),
+                "$name help should keep --help out of global options",
+            )
         }
     }
 
@@ -229,7 +240,7 @@ class CommandHelpTest {
         assertContains(output, "--output")
         assertContains(output, "--project-root")
         assertContains(output, "every discovered MPS project")
-        assertContains(output, "warnings when their paths are not usable yet")
+        assertContains(output, "warnings when the paths are not usable yet")
     }
 
     private fun runHelp(vararg args: String): String {

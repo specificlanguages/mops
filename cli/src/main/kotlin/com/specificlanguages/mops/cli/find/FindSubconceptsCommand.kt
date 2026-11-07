@@ -14,7 +14,21 @@ import picocli.CommandLine.Parameters
     header = ["Find subconcepts of one MPS concept."],
     description = [
         "Find extending concepts and interface implementors in all loaded language runtimes, including libraries. " +
-            "Excludes the queried concept; prints qualified names in sorted order. Unloaded languages contribute no results.",
+            "By default the results include transitive descendants, abstract concepts, and interfaces. Excludes the " +
+            "queried concept; prints qualified names in sorted order. Unloaded languages contribute no results.",
+    ],
+    footer = [
+        "",
+        "Text output is one qualified concept name per line; when there are none, it is one " +
+            "`# no subconcepts of <concept> in loaded languages` line, naming --concrete and --direct when given. " +
+            "--json prints a `concepts` array of qualified names, with the qualified concept as `target` and " +
+            "`scope` set to `{\"kind\":\"loaded-languages\"}`. " +
+            "Build project languages before querying their hierarchy. CONCEPT resolves the same way as in " +
+            "`mops find instances`.",
+        "",
+        "In Code Mode, mops.search.subConceptsOf(concept, concreteOnly, direct) returns a sorted list of " +
+            "SAbstractConcept objects with the same filters; pass the booleans positionally. See " +
+            "`mops code help mops.search.subConceptsOf`.",
     ],
 )
 class FindSubconceptsCommand(private val environment: CommandEnvironment) : CliCommand() {
@@ -34,6 +48,14 @@ class FindSubconceptsCommand(private val environment: CommandEnvironment) : CliC
 
     override fun run() {
         val response = environment.daemon().findSubconcepts(concept, concreteOnly, direct)
-        if (json) println(renderJson(response)) else response.concepts.forEach(::println)
+        when {
+            json -> println(renderJson(response))
+            response.concepts.isEmpty() -> {
+                val filters = listOfNotNull("concrete".takeIf { concreteOnly }, "direct".takeIf { direct })
+                val subject = (filters + "subconcepts of ${response.target.concept}").joinToString(" ")
+                println(emptyResultLine(subject, response.scope, environment.nodeReferenceFormat))
+            }
+            else -> response.concepts.forEach(::println)
+        }
     }
 }

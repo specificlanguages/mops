@@ -1,0 +1,40 @@
+# mops explain node-ref
+
+Generated from `mops explain node-ref` by `./gradlew :cli:updateReference`. Do not edit this page. Back to the
+[index](../index.md).
+
+```text
+node-ref — the node reference notation.
+
+FORMS
+  r:<model-id>(<model-name>)/<node-id>
+
+  A node reference is a globally usable handle to one MPS node. Decompose it to
+  orient yourself:
+    <model-id>    the model's stable UUID
+    <model-name>  the model's qualified name, in parentheses
+    <node-id>     the node's ID within that model, after the slash
+
+  The <node-id> has two interchangeable spellings: the decimal form mops prints,
+  and the shorter encoded form persisted in .mps files (e.g. 1P8oQ4NaXDS). A
+  reference resolves the same whichever spelling its ID uses, so one copied from
+  a .mps file works verbatim.
+
+  It is half-opaque: read the parts to understand what you are looking at, but
+  copy a node reference WHOLE from mops output. Never construct one from pieces.
+
+EXAMPLE
+{
+  "operations": [
+    {
+      "op": "setProperty",
+      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+      "name": "name",
+      "value": "Renamed"
+    }
+  ]
+}
+
+SEE ALSO
+  target, edit
+```

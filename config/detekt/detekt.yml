@@ -1,5 +1,6 @@
-# Only the complexity rule set is active. Every other rule set is turned off, so detekt reports method length,
-# complexity, nesting, parameter count, and class and file size, and nothing about style or naming.
+# Only the complexity and exceptions rule sets are active. Every other rule set is turned off, so detekt reports method
+# length, complexity, nesting, parameter count, class and file size, and exception handling, and nothing about style or
+# naming.
 # See "Code structure checks" in docs/development.md for how the per-module baselines work.
 
 complexity:
@@ -25,7 +26,12 @@ coroutines:
 empty-blocks:
   active: false
 exceptions:
-  active: false
+  active: true
+  PrintStackTrace:
+    active: true
+    ignoreFunction: ["main(kotlin.Array)"] # Allow printing stack traces in main() only
+  TooGenericExceptionCaught:
+    active: false
 naming:
   active: false
 performance:

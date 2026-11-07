@@ -2,6 +2,7 @@ package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.protocol.DaemonContext
+import com.specificlanguages.mops.protocol.MopsBuild
 import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.DaemonRecord
 import com.specificlanguages.mops.protocol.DaemonWorkspace
@@ -58,7 +59,7 @@ class ProjectDaemon(
                     port = server.localPort,
                     token = token,
                     pid = ProcessHandle.current().pid(),
-                    daemonVersion = "0.3.0-SNAPSHOT",
+                    daemonVersion = MopsBuild.fullVersion,
                     context = context,
                     workspace = workspace.path,
                     startupTime = Instant.now().toString(),
@@ -126,7 +127,7 @@ class ProjectDaemon(
     }
 
     private fun connection(socket: Socket, handler: DomainRequestHandler, stop: () -> Unit) {
-        val requestLine = BufferedReader(InputStreamReader(socket.getInputStream())).readLine()
+        val requestLine = BufferedReader(InputStreamReader(socket.getInputStream(), Charsets.UTF_8)).readLine()
 
         val response = run {
             val request = try {
@@ -164,7 +165,7 @@ class ProjectDaemon(
         }
 
         try {
-            PrintWriter(socket.getOutputStream(), true).use { writer ->
+            PrintWriter(socket.getOutputStream(), true, Charsets.UTF_8).use { writer ->
                 writer.println(ProtocolJson.encodeResponse(response))
             }
         } finally {

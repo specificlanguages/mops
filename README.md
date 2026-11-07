@@ -1,115 +1,43 @@
 # mops
 
-`mops` is a small CLI for letting coding agents work with JetBrains MPS projects. This checkout is a Gradle-rooted
-Kotlin prototype with two application subprojects: `cli/` and `daemon/`.
+mops lets coding agents inspect, search, edit, build, check, and test JetBrains MPS projects from a terminal, without
+the MPS IDE and without reading `.mps` XML. A per-project daemon keeps the project open between commands, and Code Mode
+runs Groovy programs against the native MPS API. [docs/VISION.md](docs/VISION.md) says who mops is for, the principles
+it follows, and what is out of scope.
 
-## Usage
+## Install
+
+Download the ZIP distribution from [GitHub Releases](https://github.com/specificlanguages/mops/releases), extract it,
+and put its `bin/` directory on `PATH`. To install from a checkout, run `./gradlew installMops`: it installs mops into
+`~/.local/share/mops` and links `~/.local/bin/mops`.
+
+mops needs an MPS distribution and a Java runtime. In a project built with Gradle, let mops find both and write a
+wrapper:
 
 ```sh
-mops --help
 mops wrapper
-mops --mps-home /path/to/mps daemon ping
-mops --mps-home /path/to/mps edit model --file edit-batch.json
-mops daemon status
-mops daemon stop
 ```
 
-The CLI starts or reuses a per-project daemon process for most commands.
+It prints the path of each `mopsw` (or `mopsw.cmd` on Windows) it writes. Run the wrapper in place of `mops`. Without a
+wrapper, pass `--mps-home PATH` and, when the distribution bundles no Java, `--java-home PATH`.
 
-Global options (`--mps-home`, `--java-home`, `--daemon-home`, `--project-root`, `--macro`, and `--refs-as-urls`) can
-appear before, between, or after command names. Command-specific options belong after their command name.
+## A short tour
 
-Pass `--macro NAME=PATH` to define a path macro, such as one that `.mps/libraries.xml` or `.mps/modules.xml` uses as
-`${NAME}`. Repeat it for more macros. PATH must be an existing directory, absolute or relative to the directory where
-`mops` was started. The daemon defines the macros in MPS before it opens the project, and test runs pass them to the
-test worker. A running daemon started with other macros is not reused: the command fails, and `mops daemon stop` lets
-the next command start a daemon with the new macros. Paths relative to the project (`$PROJECT_DIR$`) need no macro.
-
-Pass `--project-root PATH` to select an MPS project explicitly. The path can be absolute or relative to the directory
-where `mops` was started, for example `mops --project-root ../my-project daemon status`.
-
-Pass `--refs-as-urls` to render node references in text output as MPS URLs, for example
-`mops --refs-as-urls find instances <concept>`. JSON output is unchanged.
-
-If you do not know where MPS and Java are installed, run `mops wrapper [PATH]` from the project checkout. PATH is the
-starting point of discovery, defaulting to `--project-root` when supplied, or the working directory. `wrapper` uses the
-nearest Gradle wrapper to inspect `mpsDefaults` of the `com.specificlanguages.mps` Gradle plugin or `RunAntScript` tasks
-of the `de.itemis.mps.gradle.common` plugin. By default it writes a wrapper for every MPS project in every Gradle
-project in the build. Each `mopsw` on macOS and Linux, or `mopsw.cmd` on Windows, is written directly in the Gradle
-project's build directory when it has one detected MPS project. With multiple MPS projects, wrappers are written under
-`<build-directory>/mops/<MPS-project-name>/`. Pass `mops wrapper --project-root PATH` to write only that MPS project's
-wrapper; `--project-root` can also precede `wrapper`. Reported paths are relative to the working directory. When one
-wrapper is selected, `--output PATH` selects its exact file; a relative path is resolved from the directory where `mops`
-was started. The POSIX wrappers are executable. Each wrapper supplies the shared discovered MPS and Java homes and its
-MPS project directory. MPS projects come from configured `mpsBuilds` entries and `.mps` project markers in the Gradle
-build. Each wrapper invokes the full path of the mops installation that generated it, so mops need not be in `PATH`. Run
-the generated wrapper in place of `mops`; arguments passed to it are forwarded to `mops`. No MPS home or daemon is
-required in the CLI invocation that writes the wrapper; Java must be available to run Gradle.
-
-Each wrapper also passes the `--macro NAME=PATH` values given to `mops wrapper`. `mops wrapper` looks for path macros
-used in each project's `.mps/libraries.xml` and `.mps/modules.xml`, apart from those MPS defines itself (`project`,
-`mps_home`, `platform_lib`, `lib_ext`). For a used macro without a `--macro` value, it guesses the root of the Git
-repository that holds the project, writes that into the wrapper, and prints a warning; rerun `mops wrapper` with
-`--macro NAME=PATH` to set another value. When the project is not in a Git repository, `mops wrapper` fails and names
-the macro that needs `--macro`.
-
-Discovery queries configured providers, which can download and extract distributions. It does not execute preparation or
-language build task actions. It inspects all Gradle projects in the build and uses a discovered `mpsDefaults` extension
-or conventional `RunAntScript` task for the shared runtime paths. Provider resolution failures stop discovery and retain
-Gradle’s dependency diagnostics; check the configured runtime versions and repositories. Partial discoveries show
-available paths without writing a wrapper and exit with status 1; when both paths are known, the command writes the
-wrappers and exits with status 0. Missing or unusable runtime directories are reported as warnings, so wrappers can be
-created before the project's documented preparation steps. If a pinned MPS prerelease is no longer available, update the
-project’s MPS prerelease version to the newest available version; prerelease artifacts are periodically deleted.
-Task-action overrides, included builds, and custom Ant property loading are outside this heuristic; Specific Languages
-values are project defaults.
-
-## Agent skill
-
-Run `mops skill path` to print the absolute path to the bundled `mops/SKILL.md`. Ask your coding agent to load that
-file, or symlink its containing directory into your agent's skills directory to follow mops upgrades. This command works
-without an MPS project or daemon.
-
-Use `mops skill path daemon` for daemon coordination, restart, and recovery guidance.
-
-The mops skill covers project preparation, command selection, model navigation, editing, builds, checks, tests, and Code
-Mode. Its Groovy examples are executed directly from the skill file by daemon unit tests.
-
-For short task-oriented examples, run `mops examples` or read the
-[bundled topic index](skills/mops/references/README.md). Start with `mops examples editing` to choose an editing
-approach, then read a focused topic such as `mops examples editing.java`. `mops examples runtime` shows how Code Mode
-loads compiled language runtime and plugin classes through a module's class loader (`mops.runtime.loadClass` and
-`requireClass`). `mops examples all` prints the full collection. Examples work offline without a daemon.
-
-## Commands
-
-Commands that operate on MPS data use a verb-first shape: `mops <verb> <object>`. Operational commands use a concrete
-subsystem or artifact name, such as `daemon`, `code`, and `wrapper`.
+List the project's modules, or the roots of one model:
 
 ```sh
-mops --mps-home <path> daemon ping
+mops list
+mops list sample.solution .main
 ```
 
-Starts or reuses the persistent daemon for the current MPS project, exchanges one ping request over a loopback socket,
-and prints the structured response. The command walks upward from the current directory until it finds a `.mps`
-directory.
+Find nodes by concept, and get one of them as JSON by its reference:
 
 ```sh
-mops --mps-home <path> edit model [--file PATH] [--constraints advisory|best-effort|strict]
+mops find instances jetbrains.mps.baseLanguage.ClassConcept
+mops get node --summary 'NODE_REF'
 ```
 
-Applies a JSON batch of edit operations through the daemon. Run `mops explain edit` for the operation reference. An
-operation that names a concept resolves it the same way `find instances` does: a dropped `.structure.` infix is
-forgiven, and a name that does not resolve fails the batch (changing nothing) with the same diagnosis — unknown
-language, unloaded language, or a "did you mean" among a loaded language's concepts.
-
-`--constraints` selects how the batch treats MPS constraints and concepts whose language did not load (default
-`best-effort`):
-
-- `advisory` - evaluate constraints and report violations, but apply and save the batch anyway.
-- `best-effort` - a violation blocks the batch (nothing is saved); a concept that cannot be checked because its language
-  did not load is skipped and reported as a warning.
-- `strict` - like `best-effort` for violations, but a concept that cannot be checked aborts the batch.
+Apply a JSON batch of edit operations; `mops explain edit` describes the notation:
 
 When an operation creates or copies a structure-language declaration (a concept, interface, property, link, datatype, or
 enumeration member), mops gives it a meta-id (`conceptId`, `propertyId`, `linkId`, `datatypeId`, or `memberId`) the way
@@ -119,381 +47,27 @@ list each assigned meta-id that is still in place when the batch ends: a later `
 overrides it, or a later `delete` of the node, drops its hint.
 
 ```sh
-mops --mps-home <path> get node [--ancestry] [--depth N | --summary] [--compact] <node-reference>
-mops --mps-home <path> get node [--ancestry] [--depth N | --summary] [--compact] <model-target> <node-id>
+mops edit model --file edit-batch.json
 ```
 
-Exports one resolved node as a JSON tree through the daemon, addressed by a serialized node reference or by a model
-target plus node ID. An unresolved target fails with `NODE_NOT_FOUND`. The exported object carries the node's concept,
-id, properties, references, and child subtree, plus a `parent` object describing its immediate containing node: the
-containment `role` by which the node sits in it, a `type` of `root` or `node`, and the parent's name, concept, and
-reference. A root node has no `parent`. `--ancestry` nests `parent` recursively up to the root node instead of carrying
-only the immediate parent.
-
-Output is pretty-printed, with `concept`, `id`, and `parent` ahead of `properties`, `references`, and `children`, so
-`head` shows the identifying part first; `--compact` prints the same object as a single line.
-
-`--depth N` bounds the export: N containment levels below the node are exported in full, and the nodes at level N are
-emitted as stubs carrying only `role`, `concept`, `name` (when the node has one), `reference`, and `childCount`. The
-top-level object gains `truncatedAt: N` so a stub (`childCount` present) is never mistaken for a leaf; `--depth 0`
-leaves `children` out entirely. `--summary` prints the same summary object `find` emits (`type`, `name`, `concept`,
-`reference`, `parent`) plus `children` as a role-to-count map, without serializing the subtree; it cannot be combined
-with `--depth`. When neither is given and the export exceeds about 16 KB, a hint on stderr points at both options.
+Check a model, then build and run the project's tests:
 
 ```sh
-mops --mps-home <path> get module [--json] <module>
+mops check model sample.model
+mops test
 ```
 
-Reports where MPS locates one module's files, addressed by module name or serialized module reference and found anywhere
-in the repository, library modules included. Text output is one `key<TAB>value` row per location MPS reports, keyed by
-the JSON field name: `kind`, `name`, `reference`, `packaged`, then `descriptor` (the `.mpl`/`.msd`/`.devkit` of a source
-module, or `name.jar!/META-INF/module.xml` of a deployed one), `jar` and `sourcesJar` (the deployed module's archive and
-the sources archive its deployment descriptor names), `sourceDescriptor` (the source descriptor inside that archive),
-`sourceDirectory` (a source module's descriptor directory), `classesGen` (a source module's compiled-class output, when
-its Java facet declares one), `classPath` (one row per entry of the Java facet's runtime classpath) and `modelRoots`
-(one row per file-based model root). A location MPS does not record for the module is omitted rather than guessed from a
-naming convention. `--json` prints the daemon response, with the same fields under `module`. An unknown module fails
-with `MODULE_NOT_FOUND`; a name shared by several modules fails and lists their serialized references, so a reference
-disambiguates it.
+## Reference
 
-```sh
-mops --mps-home <path> list [--depth N] [--limit N] [--summary] [--role ROLE] [--full-concept] [--json] [TARGET_SEGMENT...]
-mops --mps-home <path> ls   [--depth N] [--limit N] [--summary] [--role ROLE] [--full-concept] [--json] [TARGET_SEGMENT...]
-```
-
-Lists an MPS navigation target as a bounded tree. Space-separated target segments address a module, model, or node; omit
-them for the project root, or pass `/` for the repository root. After a module, a `.suffix` model segment expands
-against the module name, and a bare `.` names the model whose name equals the module name; that name alone is ambiguous
-between the module and the model. `--depth` bounds the descendant depth from 0 to 8 (default 1). Text output is one
-indented tab-separated row per entry, tagged by kind (`project`, `repository`, `module`, `model`, `root`, or `node`);
-`--json` prints the semantic tree.
-
-`--limit N` caps how many children each level shows (default 50; `0` is unlimited). A level wider than the cap is
-truncated and ends in an indented `# truncated: showing <shown> of <total> children; pass --limit 0 for all` line, so
-the omission is explicit and the line is told apart from a row by its `#`. `--summary` replaces the target's children
-with grouped counts — per **role** (with the dominant concepts) for a node, per concept for a model's roots, per model
-for a module, per kind for the project or repository — and cannot be combined with `--depth`. `--role ROLE` lists only
-the target node's children in one containment role and is valid only for a node target.
-
-Text output shows short concept names; `--full-concept` restores the fully qualified names. JSON output keeps qualified
-concept names regardless.
-
-```sh
-mops --mps-home <path> render node [--allow-reflective] <node-reference>
-mops --mps-home <path> render node [--allow-reflective] <model-target> <node-id>
-```
-
-Renders one resolved node as the plain text of its default editor — the way it would appear in the MPS editor — and
-prints it with the editor's line breaks and indentation, trimming trailing whitespace from each line. Addressed the same
-way as `get node`: a serialized node reference, or a model target plus node ID. An unresolved target fails with
-`NODE_NOT_FOUND`. Any node is renderable, not only root nodes; the output is a quick overview for reading, not a
-round-trippable serialization.
-
-If any concept in the node's subtree does not resolve — its language is not loaded — the command fails with
-`LANGUAGE_NOT_LOADED`. It diagnoses each unloaded language through the same machinery as `find instances` (naming the
-root cause: not built, absent, or a broken dependency) and points at `mops make module <language>` and
-`mops diagnose module <language>`. Pass `--allow-reflective` to render anyway. A concept whose language _is_ loaded but
-that simply defines no editor is not an error: MPS renders it with its generic reflective editor (concept aliases and
-roles rather than the language's own notation), which the command prints as-is.
-
-Concept hierarchy lookup searches concepts in all loaded language runtimes, including libraries:
-
-```sh
-mops find subconcepts jetbrains.mps.baseLanguage.Expression
-mops find subconcepts jetbrains.mps.lang.core.INamedConcept --concrete --direct
-```
-
-Results exclude the queried concept and contain extending concepts and interface implementors, sorted by qualified name.
-The default includes transitive descendants, abstract concepts, and interfaces. `--direct` keeps only immediate
-superclass or interface relationships; `--concrete` excludes abstract concepts and interfaces. Text output is one
-qualified concept name per line; `--json` returns a `concepts` array of qualified names. Unloaded languages contribute
-no results; build project languages before querying their hierarchy. Concept names resolve using the same rules as
-`find instances`.
-
-In Code Mode, use native concepts inside a read block:
-
-```groovy
-return project.read {
-    def concept = mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.Expression')
-    mops.search.subConceptsOf(concept, true, false).collect { it.qualifiedName }
-}
-```
-
-`mops.search.subConceptsOf(concept, concreteOnly = false, direct = false)` returns a sorted list of native
-`SAbstractConcept` objects with the same hierarchy filters as the CLI. Pass booleans positionally in Groovy.
-
-```sh
-mops --mps-home <path> find instances [--exact] [--limit N] [--full-concept] [--refs-only] [--json] <concept>
-```
-
-Searches **editable project sources** for nodes that are instances of an MPS concept, including subconcepts and MPS
-interface matches by default. The concept may be named three ways: its qualified name
-(`<language>.structure.<ConceptName>`), the same name with `.structure.` dropped, or a bare short name that is unique
-across loaded languages. `--exact` restricts results to nodes whose direct concept is the queried one. An existing
-concept with no matches succeeds with no rows.
-
-A concept that does not resolve fails with `CONCEPT_NOT_FOUND`, and the error explains which of the causes applies: the
-name is not well formed; the owning language is unknown to the project; the owning language is present but not loaded
-(in which case it reports that language's load diagnosis and points at `diagnose module`, since only loaded languages
-contribute concepts to name lookup); or the language is loaded but has no such concept (in which case it suggests
-similarly named concepts from that language). A bare short name is resolved by counting matches across loaded languages:
-one that names concepts in several languages fails with `AMBIGUOUS_TARGET` and lists the qualified candidates, and one
-offered while a project language is unbuilt fails with `LANGUAGE_NOT_LOADED` rather than guessing, since the unbuilt
-language could define it too.
-
-Text output is tab-separated rows of `root` or `node`, the node name (or `<unnamed>`), the node's actual concept, and
-its serialized node reference; a non-root node appends its immediate parent as trailing `parent`, parent name (or
-`<unnamed>`), parent concept, and parent reference columns. Concept columns show short names by default;
-`--full-concept` restores the fully qualified names, while JSON output keeps them regardless. `--refs-only` prints just
-one serialized node reference per line — nothing else — so results pipe straight into `mops get node`; it is mutually
-exclusive with `--json` and reports any truncation on stderr. `--json` prints an object with `limit`, `truncated`, and a
-`nodes` array whose non-root entries carry a nested `parent` summary.
-
-```sh
-mops --mps-home <path> find usages [--limit N] [--full-concept] [--refs-only] [--json] <node-reference>
-mops --mps-home <path> find usages [--limit N] [--full-concept] [--refs-only] [--json] <model-target> <node-id>
-```
-
-Searches **editable project sources** for references to one resolved target node, addressed the same way as `get node`.
-An unresolved target fails with `NODE_NOT_FOUND`. Text output is tab-separated rows of `usage`, the reference role, and
-the owning node's name (or `<unnamed>`), concept, and reference; the owner is typed `root` or `node` by its position in
-its model. A non-root owner appends its immediate parent as trailing `parent`, parent name (or `<unnamed>`), parent
-concept, and parent reference columns. `--json` prints an object with `limit`, `truncated`, and a `usages` array whose
-entries carry the reference `role` and a nested `owner` node summary, itself carrying a nested `parent` summary for a
-non-root owner. Concept columns follow the same short-name default, `--full-concept`, and JSON-keeps-qualified rules as
-`find instances`; `--refs-only` prints one serialized reference per referencing node. Both `find` modes default to
-`--limit 100`, treat `--limit 0` as unlimited, reject negative limits, and append a
-`# truncated: showing <shown>; pass --limit 0 for all` line (in text) or set `truncated` (in JSON) only when more
-matches exist than were returned. Lines starting with `#` are metadata, never results, so `grep -v '^#'` leaves only
-rows.
-
-```sh
-mops --mps-home <path> find root-by-name [--limit N] [--full-concept] [--refs-only] [--json] <pattern> [in <scope-segment>...]
-```
-
-Finds root nodes by name using MPS Go-to-Node pattern matching. The pattern supports camel-hump and `*` wildcards (see
-`mops explain name-pattern`). By default it searches **editable project sources**; append `in <scope-segments>` to
-search a module, model, or the whole repository (`in /`), where only root-bearing scopes are valid (see
-`mops explain scope`). It defaults to `--limit 100`, treats `--limit 0` as unlimited, and rejects negative limits. Text
-output is tab-separated rows in the same shape as `find instances`, including the short-concept default with
-`--full-concept` and the `--refs-only` piping mode; `--json` prints the structured response.
-
-```sh
-mops --mps-home <path> diagnose project [--all] [--json]
-```
-
-Reports the load state of the project's languages and every other project module that has a Java facet, so a
-`CONCEPT_NOT_FOUND` from `find instances` can be traced to its cause: a concept resolves by name only if its owning
-language's runtime is loaded. Text output starts with a `modules\t<loaded>/<total> loaded\t<failed> failed` summary row
-(the summary is part of the report, so it is a result row, not metadata), then one tab-separated row per failed module —
-its name, `kind`, and a reason code — followed, when the reason is `BROKEN_DEPENDENCIES`, by indented rows naming the
-root-cause modules to fix. It ends with a `#` metadata line saying what the listing left out: modules without a Java
-facet are not listed and can be inspected individually with `diagnose module`. Lines starting with `#` are metadata,
-never results, so `grep -v '^#'` leaves only rows. `--all` also lists the modules that loaded; `--json` prints the full
-structured diagnosis.
-
-```sh
-mops --mps-home <path> diagnose module [--json] <module>
-```
-
-Diagnoses one module, addressed by module name or serialized module reference, including modules not shown by
-`diagnose project` (those without a Java facet, or absent from the repository). Text output is a header row (`module`,
-`kind`, `present=<bool>`, `loaded=<bool>`) followed by the module's load-problem tree, indented by depth so a dependency
-chain reads from the module down to its root causes; `--json` prints the structured diagnosis. The command exits 1 when
-the module failed to load (`loaded=false`, a blocking problem, which includes an absent module) and 0 when it is loaded,
-in text and `--json` modes alike; the output is the same either way. An informational problem, such as a missing Java
-facet on a non-language module, is still reported but does not fail the command. `diagnose project` is a listing and
-exits 0 regardless of failed modules.
-
-Both commands classify an unloaded module with a reason code: `ABSENT` (not in the repository), `NOT_A_MODULE` (resolves
-to something that does not load classes), `NO_JAVA_FACET` (no Java facet — a defect for a language, informational for
-another module), `CLASSES_DISABLED` (the Java facet is configured not to load classes), `NOT_BUILT` (classes not
-generated/compiled yet), `BROKEN_DEPENDENCIES` (blocked by depended-on modules, reported recursively), and
-`RUNTIME_LOAD_FAILED` (everything present but the runtime still did not register — usually a class-link or version error
-in the daemon log).
-
-```sh
-mops --mps-home <path> make module [--json] <module>...
-mops --mps-home <path> make project [--json]
-```
-
-Runs the MPS make (generation and compilation) through the daemon. `make module` makes the named modules (by module name
-or serialized module reference) and their transitive dependency closure, so an un-made dependency is made too;
-`make project` makes every generatable module in the project. Text output prints the make messages as `<kind>\t<text>`
-lines on stderr (they are diagnostics) and the one-line action report — `made <N> module(s): success`,
-`made <N> module(s): FAILED (<N> error(s))`, or `nothing to generate` — on stdout. Both exit non-zero when the make
-reports errors; `--json` prints the make result as JSON.
-
-```sh
-mops --mps-home <path> check model [--format human|jsonl] [--limit N] <model>
-mops --mps-home <path> check module [--format human|jsonl] [--limit N] <module>...
-mops --mps-home <path> check project [--format human|jsonl] [--limit N]
-```
-
-Runs MPS's full model check (typesystem, model, module, and checking rules) over one model, the named project modules,
-or every project module, through the daemon. Findings print most severe first, capped at `--limit` (default 20; `0` is
-unlimited). Text output is one tab-separated row per finding (`severity`, message, and for a node-level finding the
-node's name, concept, and reference) followed by `#` metadata lines: `# <errors>, <warnings>, <infos>` (or
-`# no findings`) and, when the cap cut the list,
-`# truncated: showing <shown> of <total> findings; pass --limit 0 for all`. Lines starting with `#` are metadata, never
-findings, so `grep -v '^#'` leaves only rows. `--format jsonl` prints one finding object per line and ends with a
-`{"type":"summary",...}` record carrying `shown`, `total`, `errors`, `warnings`, `infos`, `limit`, `truncated`, and,
-when truncated, a `hint` naming `--limit 0`; findings have no `type` field, so a reader tells the two apart. Totals
-count every finding, not only the shown ones, and all three commands exit `1` when the totals include an error, in both
-formats.
-
-```sh
-mops create language [--descriptor FILE] [--with-generator] [--dry-run] [--json] <module-name>
-mops create solution [--descriptor FILE] [--usage-preset PRESET] [--dry-run] [--json] <module-name>
-mops create devkit [--descriptor FILE] [--dry-run] [--json] <module-name>
-mops create generator --language <lang> --alias <alias> [--standalone] [--descriptor FILE] [--dry-run] [--json]
-mops create model --module <module> [--file-per-root] [--dry-run] [--json] <model-name>
-```
-
-Creates project modules and models through the daemon and registers them with the project. Each module lands under the
-conventional directory for its kind (`languages/<name>/<name>.mpl`, `solutions/<name>/<name>.msd`, and so on) unless
-`--descriptor` names the descriptor file. `--dry-run` validates and prints what would be created without changing the
-project; `--json` prints the plan or report as JSON.
-
-A solution's generation-target facets come from `--usage-preset` (default `not-generated`): `not-generated` adds no
-facets, `text` generates plain text, `java` generates Java compiled and loaded by MPS, `java-tests` adds the tests facet
-to `java`, and `java-mps-plugin` lets the Java classes extend MPS as a plugin. The preset configures facets only;
-dependencies, used languages, devkits, and model contents are separate steps. Both the plan and the report name the
-preset applied and list every facet it produced, so the default is visible in the output.
-
-```sh
-mops test                            # all project tests, with an incremental build
-mops test my.module .tests MyCase    # navigation target: module, model, test case
-mops test '<test-node-reference>' --no-build --json
-mops test --timeout 60
-```
-
-Tests run in a separate MPS process using the selected distribution's testing framework. Selection accepts a project
-(omit the target), module, model, or root test case. Individual test methods are unsupported. The default build includes
-the owning modules and required dependencies. `--no-build` requires existing compiled classes. The timeout limits test
-execution, counted after build and discovery, and defaults to 900 seconds; `--timeout 0` disables it. Ctrl-C cancels the
-worker. Standalone cancellation and timeouts leave the daemon usable. Execution uses the distribution's Ant
-`launchtests` machinery in IDEA test mode, including its test session, failure detection, and XML reports. The test
-JVM's classpath is constructed independently of the normal daemon's boot classpath. The worker's module repository holds
-the project modules and the folders of the project libraries (`.mps/libraries.xml`) as the daemon loaded them, and the
-worker gets the path macros the daemon defines, including those given with `--macro`. A project library whose path uses
-a macro the daemon does not define is left out, with a diagnostic. When the worker cannot load classes of some modules,
-for example because a dependency is absent from its repository, the report's diagnostics list the modules from the
-worker's log. Plugins are discovered automatically. On MPS 2025.1 only, Images (`com.intellij.platform.images`) is
-disabled to avoid its SVG parser classloader defect; tests requiring Images are unsupported on that version. Model and
-test-case filtering occurs after module-wide class discovery, so broken unselected classes can also fail a run,
-particularly with `--no-build`. A matching JBR with `javac` is required to compile the version-specific adapter.
-
-Every run saves `report.json` under the daemon workspace's `test-runs/<run-id>/` directory and updates it as results
-arrive. Text output prints the action report on stdout: an `<outcome>: <N> passed, <N> failed, ...` summary line and a
-`Report: <path>` line. Diagnostics such as a failed discovery or a crashed test worker go to stderr, one line each.
-`--json` prints the report, with the diagnostics in its `diagnostics` field. Tests, containers, skips, assumption
-aborts, failures, and source node references are retained. No discovered tests, preparation failures, test or container
-failures, and incomplete runs exit 1; a run that discovers no tests reports which selection resolved to nothing (the
-project, or the module, model, or root test case named by the target). Skips and assumption aborts alone do not fail a
-run. Worker output is saved next to the report in `worker.log` (preparation) and `ant.log` (test execution); XML reports
-are in `xml-reports/`.
-
-Code Mode provides the same operation outside model-access blocks:
-
-```groovy
-def model = project.read { mops.lookup.requireModel('my.module.tests@tests') }
-def report = mops.testing.run(model, [build: true, timeout: 60])
-return report
-```
-
-The selection may also be the native project, module, or test node. Options default to `build: true, timeout: 900`. A
-failed report does not change the Code Mode exit status. The enclosing Code Mode deadline still terminates its daemon;
-the test worker detects that termination and saves an incomplete report. Project operations are serialized during a run,
-and changes are saved before launch. Tests use the existing checkout and may change its files.
-
-```sh
-mops explain [--schema] [PATH]
-```
-
-Prints reference pages for the mops notations, the textual formats mops exchanges with agents. It is pure and offline:
-it never starts a daemon, resolves a project root, or requires `--mps-home`. With no argument it lists the topics; a
-dot- path such as `edit` or `edit.copyAsChild` prints that page, and an unknown path exits non-zero with sibling
-suggestions. `--schema` prints the generated JSON Schema for the edit-batch notation (only with the `edit` topic).
-
-```sh
-mops daemon status [--all]
-mops daemon stop [--all]
-```
-
-Inspect or stop known per-project daemon processes. Without `--all`, the command infers the current project from the
-working directory. With `--all`, it reads every known daemon record. Status sends an authenticated ping with a
-two-second connection/read timeout and reports `running` or `unreachable`. It does not start daemons or remove
-unreachable records. A daemon can be unreachable because it is stopped, unresponsive, or unable to authenticate the
-request. Pings remain responsive during normal long operations. Stop prints one action report line per record
-(`stopped ...` or `removed stale daemon record ...`). When no record matches, both commands print the metadata line
-`# no mops daemons` and exit 0: a selection with nothing to list or stop is not a failure.
-
-Stop sends a stop request to each selected daemon and waits for its process to exit, force-killing it if necessary. A
-stopped daemon's record is removed and reported as `stopped`. If the stop request gets no response, the record is
-removed as stale and reported as `removed stale daemon record ...; process not signalled`; the recorded process is not
-killed. If the daemon acknowledges the stop but its process survives the force-kill, the record is kept so the next
-`daemon stop` retries it, the PID is reported on stderr, and the command exits non-zero.
-
-## Daemon State
-
-Daemons detach from the launching command's session on Unix and from its console on Windows. Their stdout and stderr are
-written to the daemon log, and stdin is closed. Filesystem and network sandbox restrictions still apply.
-
-The CLI allows 300 seconds (5 minutes) for initial daemon startup, including opening the MPS project. For larger
-projects, set `MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS` to a positive whole number of seconds, for example:
-
-```sh
-export MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS=600
-```
-
-This setting controls the wait for the daemon's readiness record. It does not change command execution timeouts. If
-startup times out, the CLI terminates the daemon and reports the timeout and daemon log path.
-
-`MOPS_DAEMON_JAVA_OPTIONS` adds whitespace-separated JVM options to a newly started daemon, for example
-`MOPS_DAEMON_JAVA_OPTIONS=-Xmx8g`. Test workers started by the daemon inherit them. Without it, the JVM picks its
-default maximum heap, a quarter of physical memory.
-
-Daemon records, logs, working files, and isolated IDEA config and system directories live outside the MPS project. By
-default the CLI stores them under `$XDG_CACHE_HOME/mops/daemon`, falling back to `~/.cache/mops/daemon` when
-`XDG_CACHE_HOME` is unset; pass `--daemon-home <path>` to use another directory. Each project gets a stable hashed
-subdirectory under `projects/`, including:
-
-- `daemon.json` - atomic daemon record with port, token, PID, daemon version, project path, MPS home, Java home,
-  workspace path, and startup time
-- `logs/daemon.log` - daemon startup and runtime log for the current prototype
-- `daemon/config` and `daemon/system` - isolated IDEA directories passed to the daemon JVM
-
-Test runs keep the IntelliJ system directories (VFS and indexes) of the test worker and of the preparation environment
-between runs in the daemon home's `test-system-cache/<MPS build number>/` directory, shared by all projects, so a run
-does not index the MPS distribution again. A run that finds a directory in use by another run, for example of another
-project's daemon, uses a fresh directory under its `test-runs/<run-id>/` and says so in the report's diagnostics. Set
-`MOPS_TEST_SYSTEM_CACHE` to use another directory for a newly started daemon. The cache is safe to delete while no test
-runs; delete it if test results contradict the sources, and to free the disk space of MPS builds no longer in use.
-
-Daemon commands use loopback socket IPC with a per-daemon token. Independent list, get-node, find, diagnostic, and Code
-Mode help requests can run in reader batches. Edits, creation, builds, tests, checks, rendering, and Code Mode execution
-have exclusive admission; ping and stop remain responsive independently of project work. Stale daemon records are
-removed when the recorded process or socket is no longer reachable.
+- `mops --help` and `mops <command> --help` describe every command and option.
+- `mops explain` prints the notations mops reads and writes, such as node references, edit batches, search scopes, and
+  how output separates results from metadata.
+- `mops examples` prints task recipes; they are also in the [bundled topic index](skills/mops/references/README.md).
+- [docs/reference/](docs/reference/index.md) holds all of the above as Markdown, generated from the command line.
+- `mops skill path` prints the path of the bundled agent skill. Ask your coding agent to load it, or symlink its
+  directory into your agent's skills directory to follow mops upgrades. `mops skill path daemon` prints the skill for
+  daemon coordination, restarts, and recovery.
 
 ## Development
 
-See the [developer documentation](docs/development.md) for building, running, and testing mops.
-
-## Release
-
-Releases are published from explicit release commits on `main`:
-
-1. Change `version` in `gradle.properties` from the development snapshot to the exact release version and merge the
-   release commit.
-2. Run the **Release mops** workflow from `main`, entering the version without the `v` prefix.
-3. After publication, change `gradle.properties` to the next development `-SNAPSHOT` version.
-
-The workflow verifies the version, runs all checks, smoke-tests the ZIP distribution, generates its SHA-256 checksum,
-and publishes both files in a GitHub Release with notes generated from the merged pull requests. It creates the
-`v<version>` tag at the tested release commit; release tags must not be created manually.
-
-## Code-mode runtime
-
-The distribution includes a pinned Groovy core runtime. The daemon uses MPS's Groovy runtime when present and the
-bundled core otherwise; no additional JAR or classpath override is required. Stop existing daemons after updating mops.
+See the [developer documentation](docs/development.md) for building, testing, and releasing mops.

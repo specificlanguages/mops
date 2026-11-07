@@ -5,10 +5,13 @@ import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.protocol.*
 import picocli.CommandLine.Option
 
+/** Help of the `--descriptor` option of the module creation commands. */
+internal const val DESCRIPTOR_OPTION_HELP = "Descriptor file to write instead of the conventional location."
+
 abstract class CreateModuleCommand(protected val environment: CommandEnvironment) : CliCommand() {
     @Option(names = ["--dry-run"], description = ["Validate and describe creation without changing the project."])
     var dryRun = false
-    @Option(names = ["--json"], description = ["Print structured JSON."])
+    @Option(names = ["--json"], description = ["Print the plan or report as JSON."])
     var json = false
     protected fun render(response: ModuleCreationResponse) {
         val plan = response.plan; val report = response.report

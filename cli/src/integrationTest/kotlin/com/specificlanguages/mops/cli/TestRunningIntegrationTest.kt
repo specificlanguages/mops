@@ -103,7 +103,7 @@ class TestRunningIntegrationTest {
             assertEquals("SUCCESS", warmReport.outcome, warm.output)
             assertTrue(warmReport.results.any { it.kind == "TEST" && it.status == "PASSED" }, warm.output)
             assertTrue(warmReport.timingsMillis.keys.containsAll(listOf(
-                "preparationStartup", "build", "antStartupAndDiscovery", "execution", "antShutdown", "workerLifetime",
+                "build", "antStartupAndDiscovery", "execution", "antShutdown", "workerLifetime",
             )), warmReport.toString())
             assertTrue(warmReport.timingsMillis.values.all { it >= 0 }, warmReport.toString())
             val run = Path.of(warmReport.reportPath).parent

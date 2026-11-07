@@ -19,6 +19,16 @@ import picocli.CommandLine.Parameters
         "Exits 1 when the module failed to load (a blocking problem, including an absent module), 0 when it is loaded.",
         "An informational problem, such as a missing Java facet on a non-language module, does not fail.",
     ],
+    footer = [
+        "",
+        "It covers modules that `diagnose project` does not list: those without a Java facet and those absent " +
+            "from the repository. Text output is a header row (`module`, kind, `present=<bool>`, `loaded=<bool>`) " +
+            "followed by the module's load-problem tree, indented by depth so a dependency chain reads from the " +
+            "module down to its root causes. --json prints the structured diagnosis. The exit code and the " +
+            "diagnosis are the same in text and --json modes.",
+        "",
+        REASON_CODES_HELP,
+    ],
 )
 class DiagnoseModuleCommand(private val environment: CommandEnvironment) : CliCommand(), IExitCodeGenerator {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))

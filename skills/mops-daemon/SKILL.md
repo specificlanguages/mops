@@ -71,10 +71,39 @@ interrupt that work.
    failed mutation: commands are non-transactional and a disconnected client does not establish whether an edit
    completed or was saved.
 
-The default daemon home is `$XDG_CACHE_HOME/mops/daemon`, or `~/.cache/mops/daemon` when that variable is unset.
-Per-project workspaces are hashed directories under `projects/`; use the reported workspace rather than assuming a hash.
-Deleting a live daemon's record or cache does not stop it.
+## Daemon home and settings
 
-Initial startup allows 300 seconds. For a project that needs longer, set `MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS` to a
-positive whole number. This changes startup waiting, not execution deadlines. A Code Mode timeout terminates the project
-daemon; ordinary query timeouts do not cancel the active request.
+Daemon records, logs, working files, and isolated IDEA config and system directories live outside the MPS project. The
+default daemon home is `$XDG_CACHE_HOME/mops/daemon`, or `~/.cache/mops/daemon` when that variable is unset; pass
+`--daemon-home PATH` to use another directory. Per-project workspaces are hashed directories under `projects/`; use the
+reported workspace rather than assuming a hash. A workspace holds:
+
+- `daemon.json`: the atomic daemon record with port, token, PID, daemon version, project path, MPS home, Java home,
+  workspace path, and startup time.
+- `logs/daemon.log`: the daemon's startup and runtime log.
+- `daemon/config` and `daemon/system`: the isolated IDEA directories passed to the daemon JVM.
+
+Deleting a live daemon's record or cache does not stop it. Stale records are removed when the recorded process or socket
+is no longer reachable. Commands reach the daemon over a loopback socket with a per-daemon token.
+
+Daemons detach from the launching command's session on Unix and from its console on Windows. Their stdout and stderr go
+to the daemon log, and stdin is closed. Filesystem and network sandbox restrictions still apply.
+
+Initial startup, including opening the MPS project, allows 300 seconds. For a project that needs longer, set
+`MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS` to a positive whole number of seconds. This controls the wait for the daemon's
+readiness record, not execution deadlines. If startup times out, the CLI terminates the daemon and reports the timeout
+and the daemon log path. A Code Mode timeout terminates the project daemon; ordinary query timeouts do not cancel the
+active request.
+
+`MOPS_DAEMON_JAVA_OPTIONS` adds whitespace-separated JVM options to a newly started daemon, for example
+`MOPS_DAEMON_JAVA_OPTIONS=-Xmx8g`. Test workers started by the daemon inherit them. Without it, the JVM picks its
+default maximum heap, a quarter of physical memory.
+
+Test runs keep the IntelliJ system directory (VFS and indexes) of the test worker between runs in the daemon home's
+`test-system-cache/<MPS build number>/` directory, shared by all projects, so a run does not index the MPS distribution
+again. A run that finds a directory in use by another run, for example of another project's daemon, uses a fresh
+directory under its `test-runs/<run-id>/` and says so in the report's diagnostics. Set `MOPS_TEST_SYSTEM_CACHE` to use
+another directory for a newly started daemon. The cache is safe to delete while no test runs; delete it if test results
+contradict the sources, and to free the disk space of MPS builds no longer in use.
+
+Stop existing daemons after updating mops.

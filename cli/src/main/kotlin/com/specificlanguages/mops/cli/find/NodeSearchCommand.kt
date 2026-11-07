@@ -7,6 +7,7 @@ import com.specificlanguages.mops.cli.output.renderNodeReference
 import com.specificlanguages.mops.cli.output.truncationLine
 import com.specificlanguages.mops.protocol.DaemonResponse
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
+import com.specificlanguages.mops.protocol.SearchScopeJson
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 
@@ -32,7 +33,7 @@ abstract class NodeSearchCommand(protected val environment: CommandEnvironment) 
         names = ["--refs-only"],
         description = [
             "Print one serialized node reference per line and nothing else, for piping. Cannot combine with --json; " +
-                "truncation is reported on stderr.",
+                "truncation and an empty result are reported on stderr.",
         ],
     )
     var refsOnly: Boolean = false
@@ -40,7 +41,10 @@ abstract class NodeSearchCommand(protected val environment: CommandEnvironment) 
     @Option(
         names = ["--limit"],
         paramLabel = "N",
-        description = ["Maximum nodes to return. Defaults to 100; 0 means unlimited."],
+        description = [
+            "Maximum nodes to return. Defaults to 100; 0 means unlimited; negative values are rejected. Only when " +
+                "more matches exist, text output ends with a `# truncated` line and JSON sets `truncated`.",
+        ],
     )
     var limit: Int = 100
 
@@ -58,7 +62,21 @@ abstract class NodeSearchCommand(protected val environment: CommandEnvironment) 
         return scopeClauseSegments(scopeClause)
     }
 
-    protected fun printResults(response: DaemonResponse, nodes: List<MpsNodeSummaryJson>, truncated: Boolean) {
+    /**
+     * Prints [nodes] in the chosen output mode. When there are none, text and `--refs-only` output carry an
+     * [emptyResultLine] naming [subject] and the searched [scope]; JSON output is the response alone.
+     */
+    protected fun printResults(
+        response: DaemonResponse,
+        nodes: List<MpsNodeSummaryJson>,
+        truncated: Boolean,
+        subject: String,
+        scope: SearchScopeJson,
+    ) {
+        if (!json && nodes.isEmpty()) {
+            printMetadata(emptyResultLine(subject, scope, environment.nodeReferenceFormat), refsOnly)
+            return
+        }
         when {
             json -> println(renderJson(response))
             refsOnly -> {

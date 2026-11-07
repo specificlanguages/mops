@@ -5,7 +5,10 @@ import com.specificlanguages.mops.cli.find.FindNodeByIdCommand
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.FindNodeByIdResponse
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
+import com.specificlanguages.mops.protocol.NodeIdTargetJson
 import com.specificlanguages.mops.protocol.ProtocolJson
+import com.specificlanguages.mops.protocol.SearchScopeJson
+import com.specificlanguages.mops.protocol.SearchScopeKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.parallel.ResourceLock
@@ -17,6 +20,30 @@ import picocli.CommandLine
 
 @ResourceLock("system-streams")
 class FindNodeByIdCommandTest {
+    @Test
+    fun `find node-by-id names the id and scope when no node carries it`() {
+        val client = mock<DaemonClient>()
+        whenever(client.findNodeById(ENCODED_ID, listOf("/"), limit = 100)).thenReturn(
+            FindNodeByIdResponse(
+                target = NodeIdTargetJson(ID),
+                scope = SearchScopeJson(SearchScopeKind.REPOSITORY, models = 900),
+                limit = 100,
+                truncated = false,
+                nodes = emptyList(),
+            ),
+        )
+        var exitCode = Int.MIN_VALUE
+
+        val stdout = tapSystemOut {
+            exitCode = CommandLine(FindNodeByIdCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(ENCODED_ID, "in", "/")
+        }
+
+        assertEquals(0, exitCode)
+        assertEquals("# no nodes with ID $ID in the repository (searched 900 models)" + System.lineSeparator(), stdout)
+    }
+
     @Test
     fun `find node-by-id prints tab-separated rows for an id`() {
         val client = mock<DaemonClient>()
@@ -241,6 +268,8 @@ class FindNodeByIdCommandTest {
 
     private fun sampleResponse(limit: Int = 100, name: String? = "JsonObject") =
         FindNodeByIdResponse(
+            target = testNodeIdTarget,
+            scope = testScope,
             limit = limit,
             truncated = false,
             nodes = listOf(

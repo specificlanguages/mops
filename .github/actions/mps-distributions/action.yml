@@ -1,0 +1,105 @@
+# docs/ci.md describes how CI uses this action. Jobs run it after setup-gradle, which skips restoring the Gradle user
+# home into an existing caches directory.
+name: MPS distributions
+description: >-
+  Restores or saves the MPS distribution archives in Gradle's dependency cache, one cache entry per MPS version.
+inputs:
+  mode:
+    description: "`restore` before the Gradle build, or `save` after it."
+    required: true
+  mps-version:
+    description: >-
+      A version from `supportedMpsVersions` that the job tests, or `smoke` for the version that `:cli:smokeTest` uses
+      (the last one that is not `Prerelease`). Restored in addition to the `mps` and `mps-legacy` versions in
+      gradle/libs.versions.toml that every build compiles against.
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    # Paths use `~` rather than the expanded home directory, so Linux and macOS jobs share the entries.
+    - name: Locate MPS distributions
+      id: dirs
+      shell: bash
+      env:
+        MPS_VERSION: ${{ inputs.mps-version }}
+      run: |
+        catalog_version() { sed -nE "s/^$1 = \"(.*)\"$/\1/p" gradle/libs.versions.toml; }
+        emit() {
+          local dir
+          if [ "$2" = Prerelease ]; then
+            dir="com.jetbrains.mps/mps-prerelease/$(catalog_version mps-prerelease)"
+          else
+            dir="com.jetbrains/mps/$2"
+          fi
+          echo "$1-path=~/.gradle/caches/modules-2/files-2.1/$dir"
+          echo "$1-key=mps-distribution-${dir//\//-}"
+          if [ -d "$HOME/.gradle/caches/modules-2/files-2.1/$dir" ]; then echo "$1-present=true"; fi
+        }
+        pinned="$(catalog_version mps)"
+        legacy="$(catalog_version mps-legacy)"
+        if [ "$MPS_VERSION" = smoke ]; then
+          MPS_VERSION="$(sed -nE 's/^supportedMpsVersions=//p' gradle.properties | tr ',' '\n' | grep -vx Prerelease | tail -n 1)"
+        fi
+        {
+          emit pinned "$pinned"
+          emit legacy "$legacy"
+          if [ -n "$MPS_VERSION" ] && [ "$MPS_VERSION" != "$pinned" ] && [ "$MPS_VERSION" != "$legacy" ]; then
+            emit tested "$MPS_VERSION"
+          fi
+        } | tee -a "$GITHUB_OUTPUT"
+
+    - if: inputs.mode == 'restore'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ${{ steps.dirs.outputs.pinned-path }}
+        key: ${{ steps.dirs.outputs.pinned-key }}
+    - if: inputs.mode == 'restore'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ${{ steps.dirs.outputs.legacy-path }}
+        key: ${{ steps.dirs.outputs.legacy-key }}
+    - if: inputs.mode == 'restore' && steps.dirs.outputs.tested-key != ''
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ${{ steps.dirs.outputs.tested-path }}
+        key: ${{ steps.dirs.outputs.tested-key }}
+
+    # Jobs of one run share versions, and saving a key that already exists fails with a warning, so each save first
+    # looks the key up.
+    - id: pinned-lookup
+      if: ${{ !cancelled() && inputs.mode == 'save' && steps.dirs.outputs.pinned-present == 'true' }}
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ${{ steps.dirs.outputs.pinned-path }}
+        key: ${{ steps.dirs.outputs.pinned-key }}
+        lookup-only: true
+    - if: ${{ !cancelled() && steps.pinned-lookup.conclusion == 'success' && steps.pinned-lookup.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ${{ steps.dirs.outputs.pinned-path }}
+        key: ${{ steps.dirs.outputs.pinned-key }}
+    - id: legacy-lookup
+      if: ${{ !cancelled() && inputs.mode == 'save' && steps.dirs.outputs.legacy-present == 'true' }}
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ${{ steps.dirs.outputs.legacy-path }}
+        key: ${{ steps.dirs.outputs.legacy-key }}
+        lookup-only: true
+    - if: ${{ !cancelled() && steps.legacy-lookup.conclusion == 'success' && steps.legacy-lookup.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ${{ steps.dirs.outputs.legacy-path }}
+        key: ${{ steps.dirs.outputs.legacy-key }}
+    - id: tested-lookup
+      if: ${{ !cancelled() && inputs.mode == 'save' && steps.dirs.outputs.tested-present == 'true' }}
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ${{ steps.dirs.outputs.tested-path }}
+        key: ${{ steps.dirs.outputs.tested-key }}
+        lookup-only: true
+    - if: ${{ !cancelled() && steps.tested-lookup.conclusion == 'success' && steps.tested-lookup.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ${{ steps.dirs.outputs.tested-path }}
+        key: ${{ steps.dirs.outputs.tested-key }}

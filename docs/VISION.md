@@ -20,7 +20,7 @@ explain pages, and skills addresses the reader directly and names "agent" or "hu
 
 ## Principles
 
-These are the decisions the ADRs in `docs/adr/` already encode, stated once:
+These are the product's principles, stated once. Most of them are decisions the ADRs in `docs/adr/` already encode:
 
 1. **MPS semantics, not persistence.** mops speaks in modules, models, nodes, concepts, roles, and references as MPS
    defines them, never in XML elements or file layout (ADR-0001).
@@ -29,12 +29,14 @@ These are the decisions the ADRs in `docs/adr/` already encode, stated once:
    recovering from it (ADR-0001, 0002, 0011, 0012).
 3. **Make every implicit choice visible.** When mops narrows, filters, or fills in a default on the caller's behalf, the
    output says so, and a default that quietly drops results is a defect. Defaults express the caller's intent rather
-   than MPS producer defaults (ADR-0009). Search scope is the standing example: a search names the scope it searched,
-   and scope names mean the same thing in every command and in Code Mode (revises ADR-0003, see #54).
+   than MPS producer defaults (ADR-0009). Search scope is the standing example: a search names the scope it searched
+   (revises ADR-0003, see #54).
 4. **Never silently break a model.** Edits are checked cheaply and every violation is reported (ADR-0004).
 5. **Native MPS knowledge transfers.** Someone who knows the MPS API should need few mops-specific concepts, in Code
    Mode above all (ADR-0008, 0012).
 6. **Correctness and robustness over speed.** Operations have an enforceable termination boundary (ADR-0013).
+7. **One meaning everywhere.** An input form, option, default, or output shape means the same thing in every command, in
+   Code Mode, and in edit batches, because inconsistencies confuse agents. Scope names are the standing example (#54).
 
 ## Output contract
 

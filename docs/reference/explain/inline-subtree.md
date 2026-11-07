@@ -1,0 +1,78 @@
+# mops explain inline-subtree
+
+Generated from `mops explain inline-subtree` by `./gradlew :cli:updateReference`. Do not edit this page. Back to the
+[index](../index.md).
+
+```text
+inline-subtree — the node-tree an edit operation builds: fresh nodes, move leaves, and copy leaves.
+
+SHAPE
+  Operations that create structure (addChild, addRoot) take inline "properties",
+  "references", and "children". The shape mirrors what `get-node` emits, so you can
+  paste a subtree from `get-node` and edit it. Replace's "with" is one such position
+  (a fresh spec or a bare move/copy leaf) that takes the replaced node's slot, and
+  wrap builds its wrapper from the same inline "properties"/"references"/"children".
+
+CHILDREN
+  Each entry in a "children" array is exactly one of:
+
+  fresh spec  {"role": <role>, "concept": <fqn>, "properties": [...],
+               "references": [...], "children": [...]}
+              a brand-new node, built recursively.
+
+  move leaf   {"role": <role>, "move": <target>}
+              adopts an existing node — with its whole subtree — into the new
+              structure. The node keeps its identity, so inbound references to it
+              keep resolving. It is detached from its current home first.
+
+  copy leaf   {"role": <role>, "copy": <target>}
+              deep-copies an existing node into the new structure with fresh node
+              IDs, rewiring references inside the copied subtree to the copy. The
+              source may be read-only.
+
+  A position holds one form only: a spec that also carries "move"/"copy", or a leaf
+  that carries both "move" and "copy", is rejected. <target> is any edit target (a
+  node reference, a {model, nodeId} object, or a $alias) — see target.
+
+  Move preserves identity; copy mints a new one. Reach for a move leaf when anything
+  references the node (rebuilding it from scratch would orphan those references);
+  reach for a copy leaf when you want an independent duplicate.
+
+  Ordering within one operation: every move leaf is detached from its current home
+  before any node is deleted; then the new structure is built and attached; then
+  (for replace and unwrap) the remainder of the old subtree is dropped. So a Move
+  Leaf may adopt a node from inside the very subtree being replaced or unwrapped —
+  it survives with its identity while the rest is discarded.
+
+REFERENCES
+  Each entry in a "references" array points a new node's reference at an existing
+  node:
+
+  {"role": <role>, "to": <target>}      the canonical form — the same "to" grammar
+                                        setReference uses (see target).
+  {"role": <role>, "target": {...}}     the get-node-shaped form, so get-node output
+                                        round-trips; enrichment fields (name, concept,
+                                        resolved) are ignored on input.
+
+  Setting both "to" and "target" on one reference is rejected.
+
+EXAMPLE
+  Create a JsonArray concept whose "items" link adopts an existing LinkDeclaration
+  (kept by identity) and copies another:
+{
+  "operations": [
+    {
+      "op": "addChild",
+      "target": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
+      "role": "linkDeclaration",
+      "concept": "jetbrains.mps.lang.structure.structure.LinkDeclaration",
+      "references": [
+        {"role": "target", "to": "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566909"}
+      ]
+    }
+  ]
+}
+
+SEE ALSO
+  edit, edit.addChild, edit.addRoot, edit.replace, edit.wrap, target, node-ref
+```

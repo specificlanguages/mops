@@ -180,12 +180,13 @@ class GradleHomeDiscoveryTest {
         """)
         root.resolve("MPS project/.mps").createDirectories()
         val wrapper = root.resolve("custom/mopsw")
-        val (exit, output) = run(root, "--output", wrapper.toString())
-        assertEquals(0, exit, output)
-        assertContains(output, "MPS home: missing MPS")
-        assertContains(output, "Warning: MPS home is missing: missing MPS")
-        assertContains(output, "Warning: Java home is missing or has no usable bin/java: missing Java")
-        assertContains(output, "Wrapper: ${root.relativize(wrapper)}")
+        val result = run(root, "--output", wrapper.toString())
+        assertEquals(0, result.exit, result.output)
+        assertContains(result.stdout, "MPS home: missing MPS")
+        assertContains(result.stderr, "Warning: MPS home is missing: missing MPS")
+        assertContains(result.stderr, "Warning: Java home is missing or has no usable bin/java: missing Java")
+        assertFalse(result.stdout.contains("Warning:"), result.stdout)
+        assertContains(result.stdout, "Wrapper: ${root.relativize(wrapper)}")
         assertContains(wrapper.readText(), "--mps-home='${root.resolve("missing MPS")}'")
         assertContains(wrapper.readText(), "--java-home='${root.resolve("missing Java")}'")
     }
@@ -281,11 +282,11 @@ class GradleHomeDiscoveryTest {
         root.resolve("MPS project/.mps").createDirectories()
         val wrapper = root.resolve("custom/mopsw")
 
-        val (exit, output) = run(root, "--output", wrapper.toString())
+        val result = run(root, "--output", wrapper.toString())
 
-        assertEquals(1, exit, output)
-        assertContains(output, "MPS home: unknown")
-        assertContains(output, "Discovery is partial; no wrapper was written.")
+        assertEquals(1, result.exit, result.output)
+        assertContains(result.stdout, "MPS home: unknown")
+        assertContains(result.stderr, "Discovery is partial; no wrapper was written.")
         assertFalse(wrapper.exists())
     }
 
@@ -402,19 +403,21 @@ class GradleHomeDiscoveryTest {
         assertTrue(home.resolve("bin/java").toFile().setExecutable(true))
     }
 
-    private fun run(directory: Path, vararg args: String): Pair<Int, String> {
-        val output = StringWriter()
-        val command = newCommandLine(directory, mopsExecutable = { directory.resolve("bin/mops") })
-        command.out = PrintWriter(output, true)
-        command.err = PrintWriter(output, true)
-        return command.execute("wrapper", *args) to output.toString()
-    }
+    /** [output] holds stdout followed by stderr. */
+    private data class WrapperRun(val exit: Int, val output: String, val stdout: String, val stderr: String)
 
-    private fun runForProject(directory: Path, projectRoot: Path, vararg args: String): Pair<Int, String> {
-        val output = StringWriter()
+    private fun run(directory: Path, vararg args: String): WrapperRun = execute(directory, "wrapper", *args)
+
+    private fun runForProject(directory: Path, projectRoot: Path, vararg args: String): WrapperRun =
+        execute(directory, "--project-root", projectRoot.toString(), "wrapper", *args)
+
+    private fun execute(directory: Path, vararg args: String): WrapperRun {
+        val stdout = StringWriter()
+        val stderr = StringWriter()
         val command = newCommandLine(directory, mopsExecutable = { directory.resolve("bin/mops") })
-        command.out = PrintWriter(output, true)
-        command.err = PrintWriter(output, true)
-        return command.execute("--project-root", projectRoot.toString(), "wrapper", *args) to output.toString()
+        command.out = PrintWriter(stdout, true)
+        command.err = PrintWriter(stderr, true)
+        val exit = command.execute(*args)
+        return WrapperRun(exit, "$stdout$stderr", stdout.toString(), stderr.toString())
     }
 }

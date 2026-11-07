@@ -2,9 +2,12 @@ package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
+import com.specificlanguages.mops.protocol.ConceptTargetJson
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.MakeOutcome
 import com.specificlanguages.mops.protocol.NodeFilter
+import com.specificlanguages.mops.protocol.SearchScopeJson
+import com.specificlanguages.mops.protocol.SearchScopeKind
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -40,7 +43,18 @@ class FindInstancesSemanticsTest {
             findInstances(ABSTRACT_CONCEPT_DECLARATION, exact = true, limit = DEFAULT_LIMIT)
         }
 
-        assertEquals(FindInstancesResponse(limit = DEFAULT_LIMIT, truncated = false, nodes = emptyList()), payload)
+        val models = assertNotNull(payload.scope.models)
+        assertTrue(models > 0, "editable project sources hold models: $payload")
+        assertEquals(
+            FindInstancesResponse(
+                target = ConceptTargetJson(ABSTRACT_CONCEPT_DECLARATION),
+                scope = SearchScopeJson(SearchScopeKind.EDITABLE_PROJECT_SOURCES, models = models),
+                limit = DEFAULT_LIMIT,
+                truncated = false,
+                nodes = emptyList(),
+            ),
+            payload,
+        )
     }
 
     @Test
@@ -63,6 +77,11 @@ class FindInstancesSemanticsTest {
         assertTrue(
             editableReferences.all { it in repositoryReferences },
             "editable results must remain a subset of the repository results",
+        )
+        assertEquals(SearchScopeKind.REPOSITORY, repository.scope.kind)
+        assertTrue(
+            assertNotNull(repository.scope.models) > assertNotNull(editable.scope.models),
+            "the repository holds more models than editable project sources: ${repository.scope} ${editable.scope}",
         )
     }
 
@@ -139,6 +158,13 @@ class FindInstancesSemanticsTest {
             )
         }
 
+        val jsonObject = SharedMpsEnvironment.sharedMpsAccess.read {
+            findByName("JsonObject", limit = 1, scope = resolveScope(listOf(LANGUAGE_MODULE, STRUCTURE_MODEL)))
+        }.nodes.single()
+        assertEquals(
+            SearchScopeJson(kind = SearchScopeKind.SUBTREE, reference = jsonObject.reference, name = "JsonObject"),
+            inSubtree.scope,
+        )
         assertTrue(inSubtree.nodes.isNotEmpty(), "JsonObject should own at least one link declaration")
         assertTrue(
             inSubtree.nodes.all { it.parent?.name == "JsonObject" },
@@ -325,6 +351,7 @@ class FindInstancesSemanticsTest {
         }
 
         assertTrue(canonical.nodes.isNotEmpty(), "fixture should hold concept declarations")
+        assertEquals(ConceptTargetJson(CONCEPT_DECLARATION), dropped.target)
         assertEquals(canonical, dropped, "the dropped-infix form should resolve to the same concept")
     }
 
