@@ -51,7 +51,12 @@ SEGMENTS
 RESOLUTION
   Segments resolve by counting actual matches, never by shape. An ambiguous
   segment fails with each candidate's serialized reference so you can retry
-  unambiguously; a segment that matches nothing fails as not found.
+  unambiguously, and with the `<module> <model>` path that selects a model
+  candidate. A segment that matches nothing fails as not found. For several
+  segments, the error says that mops read them as one path and names the form
+  that works: drop a word such as `model` before a segment, which is not a
+  keyword; name one target per call; start a path through a model at its
+  module.
 
 EXAMPLE
   mops find instances ConceptDeclaration in com.specificlanguages.json

@@ -25,6 +25,28 @@ import picocli.CommandLine
 @ResourceLock("system-streams")
 class ModelGetNodeCommandTest {
     @Test
+    fun `node get says how it read two node references and asks for one node per call`() {
+        val client = mock<DaemonClient>()
+        val first = "r:94e02c28-012c-4f06-a2fd-926432934072(json.sandbox)/4Twci\$d7zxq"
+        val second = "r:94e02c28-012c-4f06-a2fd-926432934072(json.sandbox)/4Twci\$d7zxr"
+        var exitCode = Int.MIN_VALUE
+
+        val stderr = tapSystemErr {
+            exitCode = CommandLine(ModelGetNodeCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(first, second)
+        }
+
+        assertEquals(1, exitCode)
+        verifyNoInteractions(client)
+        assertEquals(
+            "mops read `$first` as MODEL_TARGET and `$second` as NODE_ID, but `$first` is a serialized node " +
+                "reference, not a model target: pass one node reference per call" + System.lineSeparator(),
+            stderr,
+        )
+    }
+
+    @Test
     fun `model get-node requires a node reference or model target plus node ID`() {
         var exitCode = Int.MIN_VALUE
 

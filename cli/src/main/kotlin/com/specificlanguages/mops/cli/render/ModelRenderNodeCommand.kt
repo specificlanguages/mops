@@ -3,6 +3,7 @@ package com.specificlanguages.mops.cli.render
 import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
+import com.specificlanguages.mops.cli.common.modelTargetAndNodeId
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.NodeTarget
 import picocli.CommandLine.Command
@@ -55,7 +56,7 @@ class ModelRenderNodeCommand(private val environment: CommandEnvironment) : CliC
         val client = environment.daemon()
         val response = when (nodeTarget.size) {
             1 -> client.renderNode(NodeTarget.NodeReference(nodeTarget[0]), allowReflective)
-            2 -> client.renderNode(NodeTarget.InModel(modelTarget = nodeTarget[0], nodeId = nodeTarget[1]), allowReflective)
+            2 -> client.renderNode(modelTargetAndNodeId(nodeTarget[0], nodeTarget[1]), allowReflective)
             else -> error("expected one node reference or model target plus node ID")
         }
 

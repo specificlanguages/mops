@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.daemon
 
+import com.specificlanguages.mops.protocol.argumentReading
 import jetbrains.mps.project.MPSProject
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SNode
@@ -9,6 +10,12 @@ import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 
 // Rows shown when a model segment misses and the module's models are listed to help correct it.
 private const val MISSING_MODEL_LISTING_LIMIT = 20
+
+// The order of segments in a multi-segment path, as a missing path's error states it.
+private const val PATH_GRAMMAR = "module, model, root node, child nodes"
+
+// Names of target kinds. The path grammar has no keywords, so such a word before a segment is reported as one to drop.
+private val KIND_WORDS = setOf("module", "model", "root", "node", "solution", "language", "generator", "devkit")
 
 /** What a **Navigation Target** resolved to: a module, a model, a root node, or a nested node. */
 internal sealed interface NavigationTarget {
@@ -50,13 +57,28 @@ internal class NavigationTargetResolver(
             return resolveSingleSegment(segments.single())
         }
 
+        return when (val resolution = resolvePath(segments)) {
+            is NavigationTargetResolution.Missing -> NavigationTargetResolution.Missing(
+                listOfNotNull(
+                    argumentReading(segments.joinToString(" ") to "one target path ($PATH_GRAMMAR)"),
+                    resolution.detail,
+                ).joinToString("\n"),
+            )
+            else -> resolution
+        }
+    }
+
+    // Resolves a path of two or more segments: a project module or a serialized model reference, then the model (after
+    // a module), a root node, and child nodes.
+    private fun resolvePath(segments: List<String>): NavigationTargetResolution {
         resolveModelReference(segments[0])?.let {
             return resolveModelPath(it, segments.drop(1))
         }
 
         val module = when (val resolution = resolveProjectModule(segments[0])) {
             is NavigationTargetResolution.Found -> (resolution.target as NavigationTarget.Module).module
-            is NavigationTargetResolution.Ambiguous, is NavigationTargetResolution.Missing -> return resolution
+            is NavigationTargetResolution.Ambiguous -> return resolution
+            is NavigationTargetResolution.Missing -> return unstartablePath(segments)
         }
         val modelName = modelName(module, segments[1])
         val models = module.models
@@ -203,10 +225,42 @@ internal class NavigationTargetResolver(
         )
     }
 
-    private fun ambiguousSingleSegment(segment: String, targets: List<NavigationTarget>): NavigationTargetResolution.Ambiguous =
-        NavigationTargetResolution.Ambiguous(
-            "ambiguous target $segment:\n" + targets.joinToString("\n", transform = ::candidateRow),
+    // A path whose first segment is neither a project module nor a model reference. The detail names the working form
+    // for the likely intent: a kind name written as a keyword, several whole targets passed at once, or a model name
+    // where the path must start at its module.
+    private fun unstartablePath(segments: List<String>): NavigationTargetResolution.Missing {
+        val first = segments.first()
+        val rest = segments.drop(1).joinToString(" ")
+        val modelModuleName = matchingProjectModels(first).singleOrNull()?.module?.moduleName
+        val detail = when {
+            first in KIND_WORDS -> "`$first` is not a keyword; drop it: `$rest`"
+            segments.none { resolveSingleSegment(it) is NavigationTargetResolution.Missing } ->
+                "each segment names a target on its own; name one target per call"
+            modelModuleName != null ->
+                "`$first` is a model name; a path through it starts at its module: `$modelModuleName $first $rest`"
+            else -> "`$first` is neither a project module nor a model reference, so no path starts there"
+        }
+        return NavigationTargetResolution.Missing(detail)
+    }
+
+    private fun ambiguousSingleSegment(segment: String, targets: List<NavigationTarget>): NavigationTargetResolution.Ambiguous {
+        val modelPaths = targets.filterIsInstance<NavigationTarget.Model>().mapNotNull { selectingModulePath(it.model) }
+        val selection = listOf("pass one candidate's reference instead") + modelPaths
+        return NavigationTargetResolution.Ambiguous(
+            "ambiguous target $segment:\n" + targets.joinToString("\n", transform = ::candidateRow) + "\n" +
+                selection.joinToString(", or "),
         )
+    }
+
+    // The module-and-model path that selects [model], when one does: `<module> .` for the model named like its module,
+    // otherwise `<module> <model>`. The path is resolved before it is suggested.
+    private fun selectingModulePath(model: SModel): String? {
+        val moduleName = model.module?.moduleName ?: return null
+        val path = listOf(moduleName, if (model.name.value == moduleName) "." else model.name.value)
+        val resolution = resolvePath(path)
+        val selects = resolution is NavigationTargetResolution.Found && resolution.target == NavigationTarget.Model(model)
+        return if (selects) "select model ${model.name.value} with `${path.joinToString(" ")}`" else null
+    }
 
     // One candidate line of a mixed-kind single-segment ambiguity, using the same per-kind row format each single-kind
     // ambiguity below emits, so the "ambiguous …" listing reads the same however the candidates were counted.
