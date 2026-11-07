@@ -67,6 +67,14 @@ NOTES
   and reports but applies the batch anyway; best-effort (the default) blocks the
   batch on a violation and warns about concepts it could not check; strict also
   fails on a concept it could not check. See `mops edit model --help`.
+  Structure meta-ids: a created or copied structure declaration (concept,
+  interface, property, link, datatype, enumeration member) gets a meta-id
+  (conceptId, propertyId, linkId, datatypeId, memberId), as MPS does: its own node
+  ID, or a random number if another declaration in the same scope already has that
+  ID. A copy always gets a new one; a created node keeps one it was given. The
+  response's "hints" list each assigned meta-id still in place when the batch
+  ends; a later setProperty that overrides it, or a later delete of the node,
+  drops its hint.
 
 DRILL DOWN
   edit.setProperty, edit.setReference, edit.addChild, edit.copyAsChild,
