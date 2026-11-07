@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.cli
 
+import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.cli.check.ProjectCheckCommand
 import com.specificlanguages.mops.daemoncomms.DaemonClient
@@ -32,7 +33,7 @@ class ProjectCheckCommandTest {
         }
 
         verify(client).checkProject(20)
-        assertEquals("# no findings", stdout.trim())
+        assertEquals("# checked 3 roots: no findings", stdout.trim())
     }
 
     @Test
@@ -64,7 +65,7 @@ class ProjectCheckCommandTest {
         }
 
         assertEquals(0, exitCode, stdout)
-        assertEquals(listOf("warning\tmodel-level note", "# 0 errors, 1 warning, 0 infos"), stdout.trim().lines())
+        assertEquals(listOf("warning\tmodel-level note", "# checked 3 roots: 0 errors, 1 warning, 0 infos"), stdout.trim().lines())
     }
 
     @Test
@@ -72,6 +73,7 @@ class ProjectCheckCommandTest {
         val client = mock<DaemonClient>()
         whenever(client.checkProject(1)).thenReturn(
             ModelCheckResponse(
+                rootsChecked = 3,
                 limit = 1,
                 truncated = true,
                 totals = ModelCheckFindingCounts(errors = 0, warnings = 3, infos = 0),
@@ -89,6 +91,7 @@ class ProjectCheckCommandTest {
         assertEquals(2, lines.size, stdout)
         assertEquals(
             ModelCheckSummaryJson(
+                rootsChecked = 3,
                 shown = 1,
                 total = 3,
                 errors = 0,
@@ -102,8 +105,33 @@ class ProjectCheckCommandTest {
         )
     }
 
+    @Test
+    fun `project check fails when the project has no roots`() {
+        val client = mock<DaemonClient>()
+        whenever(client.checkProject(20)).thenReturn(EMPTY)
+        var exitCode = Int.MIN_VALUE
+
+        val stderr = tapSystemErr {
+            exitCode = CommandLine(ProjectCheckCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute()
+        }
+
+        assertEquals(1, exitCode)
+        assertEquals("the project has no roots; nothing was checked", stderr.trim())
+    }
+
     private companion object {
+        val EMPTY = ModelCheckResponse(
+            rootsChecked = 0,
+            limit = 20,
+            truncated = false,
+            totals = ModelCheckFindingCounts(errors = 0, warnings = 0, infos = 0),
+            findings = emptyList(),
+        )
+
         val NO_FINDINGS = ModelCheckResponse(
+            rootsChecked = 3,
             limit = 20,
             truncated = false,
             totals = ModelCheckFindingCounts(errors = 0, warnings = 0, infos = 0),
@@ -111,6 +139,7 @@ class ProjectCheckCommandTest {
         )
 
         val ONE_ERROR = ModelCheckResponse(
+            rootsChecked = 3,
             limit = 20,
             truncated = false,
             totals = ModelCheckFindingCounts(errors = 1, warnings = 0, infos = 0),
@@ -118,6 +147,7 @@ class ProjectCheckCommandTest {
         )
 
         val ONE_WARNING = ModelCheckResponse(
+            rootsChecked = 3,
             limit = 20,
             truncated = false,
             totals = ModelCheckFindingCounts(errors = 0, warnings = 1, infos = 0),

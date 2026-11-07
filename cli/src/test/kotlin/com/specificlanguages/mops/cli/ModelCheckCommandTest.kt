@@ -41,6 +41,7 @@ class ModelCheckCommandTest {
         val client = mock<DaemonClient>()
         whenever(client.checkModel(MODEL, 20)).thenReturn(
             ModelCheckResponse(
+                rootsChecked = 3,
                 limit = 20,
                 truncated = false,
                 totals = ModelCheckFindingCounts(errors = 1, warnings = 1, infos = 0),
@@ -68,6 +69,7 @@ class ModelCheckCommandTest {
         val client = mock<DaemonClient>()
         whenever(client.checkModel(MODEL, 20)).thenReturn(
             ModelCheckResponse(
+                rootsChecked = 3,
                 limit = 20,
                 truncated = false,
                 totals = ModelCheckFindingCounts(errors = 1, warnings = 1, infos = 0),
@@ -81,7 +83,7 @@ class ModelCheckCommandTest {
                 .execute(MODEL)
         }
 
-        assertEquals("# 1 error, 1 warning, 0 infos", stdout.trim().lines().last())
+        assertEquals("# checked 3 roots: 1 error, 1 warning, 0 infos", stdout.trim().lines().last())
     }
 
     @Test
@@ -89,6 +91,7 @@ class ModelCheckCommandTest {
         val client = mock<DaemonClient>()
         whenever(client.checkModel(MODEL, 20)).thenReturn(
             ModelCheckResponse(
+                rootsChecked = 3,
                 limit = 20,
                 truncated = false,
                 totals = ModelCheckFindingCounts(errors = 0, warnings = 3, infos = 12),
@@ -105,7 +108,7 @@ class ModelCheckCommandTest {
         }
 
         assertEquals(0, exitCode, "warnings and infos alone do not fail the check")
-        assertEquals("# 0 errors, 3 warnings, 12 infos", stdout.trim().lines().last())
+        assertEquals("# checked 3 roots: 0 errors, 3 warnings, 12 infos", stdout.trim().lines().last())
     }
 
     @Test
@@ -113,6 +116,7 @@ class ModelCheckCommandTest {
         val client = mock<DaemonClient>()
         whenever(client.checkModel(MODEL, 20)).thenReturn(
             ModelCheckResponse(
+                rootsChecked = 3,
                 limit = 20,
                 truncated = false,
                 totals = ModelCheckFindingCounts(errors = 0, warnings = 0, infos = 0),
@@ -126,7 +130,59 @@ class ModelCheckCommandTest {
                 .execute(MODEL)
         }
 
-        assertEquals("# no findings", stdout.trim())
+        assertEquals("# checked 3 roots: no findings", stdout.trim())
+    }
+
+    @Test
+    fun `a single checked root reads in the singular`() {
+        val client = mock<DaemonClient>()
+        whenever(client.checkModel(MODEL, 20)).thenReturn(
+            ModelCheckResponse(
+                rootsChecked = 1,
+                limit = 20,
+                truncated = false,
+                totals = ModelCheckFindingCounts(errors = 0, warnings = 0, infos = 0),
+                findings = emptyList(),
+            ),
+        )
+
+        val stdout = tapSystemOut {
+            CommandLine(ModelCheckCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(MODEL)
+        }
+
+        assertEquals("# checked 1 root: no findings", stdout.trim())
+    }
+
+    @Test
+    fun `a model without roots fails and says nothing was checked, in both formats`() {
+        val client = mock<DaemonClient>()
+        whenever(client.checkModel(MODEL, 20)).thenReturn(
+            ModelCheckResponse(
+                rootsChecked = 0,
+                limit = 20,
+                truncated = false,
+                totals = ModelCheckFindingCounts(errors = 0, warnings = 0, infos = 0),
+                findings = emptyList(),
+            ),
+        )
+
+        for (args in listOf(arrayOf(MODEL), arrayOf("--format", "jsonl", MODEL))) {
+            var exitCode = Int.MIN_VALUE
+            var stdout = ""
+            val stderr = tapSystemErr {
+                stdout = tapSystemOut {
+                    exitCode = CommandLine(ModelCheckCommand(client))
+                        .setExecutionExceptionHandler(PrintErrorAndExit)
+                        .execute(*args)
+                }
+            }
+
+            assertEquals(1, exitCode, "${args.toList()}")
+            assertEquals("", stdout, "${args.toList()}: no findings and no summary for an empty selection")
+            assertEquals("model $MODEL has no roots; nothing was checked", stderr.trim())
+        }
     }
 
     @Test
@@ -134,6 +190,7 @@ class ModelCheckCommandTest {
         val client = mock<DaemonClient>()
         whenever(client.checkModel(MODEL, 20)).thenReturn(
             ModelCheckResponse(
+                rootsChecked = 3,
                 limit = 20,
                 truncated = false,
                 totals = ModelCheckFindingCounts(errors = 1, warnings = 1, infos = 0),
@@ -155,6 +212,7 @@ class ModelCheckCommandTest {
         assertEquals(WARNING_FINDING, ProtocolJson.finding.decode(lines[1]))
         assertEquals(
             ModelCheckSummaryJson(
+                rootsChecked = 3,
                 shown = 2,
                 total = 2,
                 errors = 1,
@@ -174,6 +232,7 @@ class ModelCheckCommandTest {
         val client = mock<DaemonClient>()
         whenever(client.checkModel(MODEL, 1)).thenReturn(
             ModelCheckResponse(
+                rootsChecked = 3,
                 limit = 1,
                 truncated = true,
                 totals = ModelCheckFindingCounts(errors = 0, warnings = 2, infos = 5),
@@ -193,6 +252,7 @@ class ModelCheckCommandTest {
         assertEquals(2, lines.size, stdout)
         assertEquals(
             ModelCheckSummaryJson(
+                rootsChecked = 3,
                 shown = 1,
                 total = 7,
                 errors = 0,
@@ -211,6 +271,7 @@ class ModelCheckCommandTest {
         val client = mock<DaemonClient>()
         whenever(client.checkModel(MODEL, 1)).thenReturn(
             ModelCheckResponse(
+                rootsChecked = 3,
                 limit = 1,
                 truncated = true,
                 totals = ModelCheckFindingCounts(errors = 3, warnings = 2, infos = 5),
@@ -231,7 +292,7 @@ class ModelCheckCommandTest {
         assertEquals(
             listOf(
                 "error\tUnresolved reference\tb\tjetbrains.mps.baseLanguage.structure.VariableReference\t$MODEL/ref",
-                "# 3 errors, 2 warnings, 5 infos",
+                "# checked 3 roots: 3 errors, 2 warnings, 5 infos",
                 "# truncated: showing 1 of 10 findings; pass --limit 0 for all",
             ),
             stdout.trim().lines(),
@@ -243,6 +304,7 @@ class ModelCheckCommandTest {
         val client = mock<DaemonClient>()
         whenever(client.checkModel(MODEL, 20)).thenReturn(
             ModelCheckResponse(
+                rootsChecked = 3,
                 limit = 20,
                 truncated = false,
                 totals = ModelCheckFindingCounts(errors = 0, warnings = 0, infos = 0),

@@ -823,6 +823,7 @@ class DaemonProtocolJsonTest {
     fun `model-check response JSON carries findings with severity, node reference, name, and concept`() {
         val model = "r:9363093b-3fa9-4e39-87cb-26240d0efa37(baselanguage.sandbox)"
         val response = ModelCheckResponse(
+            rootsChecked = 3,
             limit = 20,
             truncated = true,
             totals = ModelCheckFindingCounts(errors = 1, warnings = 1, infos = 0),
@@ -850,6 +851,7 @@ class DaemonProtocolJsonTest {
         assertContains(serialized, """"severity":"warning"""")
         assertContains(serialized, """"concept":"jetbrains.mps.baseLanguage.structure.VariableReference"""")
         assertContains(serialized, """"reference":"$model/4LxqAFFLQFr"""")
+        assertContains(serialized, """"rootsChecked":3""")
         assertContains(serialized, """"truncated":true""")
         assertContains(serialized, """"totals":{"errors":1,"warnings":1,"infos":0}""")
         assertEquals(response, ProtocolJson.decodeResponse(serialized))
@@ -871,6 +873,7 @@ class DaemonProtocolJsonTest {
     @Test
     fun `the check summary record is typed and names the lifting option only when truncated`() {
         val truncated = ModelCheckSummaryJson(
+            rootsChecked = 4,
             shown = 1,
             total = 10,
             errors = 3,
@@ -883,14 +886,14 @@ class DaemonProtocolJsonTest {
         val encoded = ProtocolJson.checkSummary.encode(truncated)
 
         assertEquals(
-            """{"type":"summary","shown":1,"total":10,"errors":3,"warnings":2,"infos":5,"limit":1,"truncated":true,"hint":"pass --limit 0 for all"}""",
+            """{"type":"summary","rootsChecked":4,"shown":1,"total":10,"errors":3,"warnings":2,"infos":5,"limit":1,"truncated":true,"hint":"pass --limit 0 for all"}""",
             encoded,
         )
         assertEquals(truncated, ProtocolJson.checkSummary.decode(encoded))
 
         val complete = truncated.copy(shown = 10, limit = 0, truncated = false, hint = null)
         assertEquals(
-            """{"type":"summary","shown":10,"total":10,"errors":3,"warnings":2,"infos":5,"limit":0,"truncated":false}""",
+            """{"type":"summary","rootsChecked":4,"shown":10,"total":10,"errors":3,"warnings":2,"infos":5,"limit":0,"truncated":false}""",
             ProtocolJson.checkSummary.encode(complete),
         )
     }

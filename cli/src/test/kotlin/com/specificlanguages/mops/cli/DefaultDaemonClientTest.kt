@@ -237,6 +237,7 @@ class DefaultDaemonClientTest {
     @Test
     fun `check model sends target and limit request`() {
         val response = ModelCheckResponse(
+            rootsChecked = 3,
             limit = 20,
             truncated = false,
             totals = ModelCheckFindingCounts(errors = 1, warnings = 0, infos = 0),
@@ -293,6 +294,7 @@ class DefaultDaemonClientTest {
     }
 
     private fun emptyCheckResponse() = ModelCheckResponse(
+        rootsChecked = 3,
         limit = 20,
         truncated = false,
         totals = ModelCheckFindingCounts(errors = 0, warnings = 0, infos = 0),
