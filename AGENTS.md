@@ -36,5 +36,6 @@ Verified MPS API documentation lives in
 
 - [Kotlin](docs/agents/kotlin-coding-guidelines.md)
 - [Gradle](docs/agents/gradle-conventions.md)
+- [Prose](docs/agents/prose-guidelines.md): Markdown docs, help text, explain topics, examples, and skills
 - [Commits and pull requests](docs/development.md#commits-and-pull-requests): Conventional Commits for pull request
   titles
