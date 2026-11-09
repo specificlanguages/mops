@@ -82,6 +82,6 @@ Run Code Mode, edits, make, tests, checks, and rendering sequentially for a proj
 `code help` can run concurrently. Stop existing daemons after upgrading mops. If a language is missing/unloaded, use
 `diagnose module` and `make module` before retrying concept lookup. For startup delays,
 `MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS=600 mops daemon ping` extends the startup wait.
-Test runs keep IntelliJ indexes between runs in the daemon home's `test-system-cache/` directory. If test results
-contradict the sources, for example find-usages results that miss existing nodes, delete that directory while no test
-runs and run the tests again.
+Test runs keep IntelliJ indexes between runs in a test system cache. If test results contradict the sources, for example
+find-usages results that miss existing nodes, read the skill printed by `mops skill path daemon`: it says where the cache
+lives and when to delete it.
