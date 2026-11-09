@@ -7,7 +7,8 @@ import com.specificlanguages.mops.protocol.ModelCheckSummary
 
 /**
  * A `check` response for tests. The counts default to those of [findings], so a test that shows every finding names
- * only the findings; a truncated response passes the counts of the full result.
+ * only the findings; a truncated response passes the counts of the full result. The selection has 3 roots unless
+ * [rootsChecked] says otherwise.
  */
 internal fun checkResponse(
     findings: List<ModelCheckFindingJson> = emptyList(),
@@ -16,7 +17,15 @@ internal fun checkResponse(
     infos: Int = findings.count { it.severity == FindingSeverity.INFO },
     limit: Int = 20,
     truncated: Boolean = false,
+    rootsChecked: Int = 3,
 ): ModelCheckResponse = ModelCheckResponse(
-    summary = ModelCheckSummary(errors = errors, warnings = warnings, infos = infos, limit = limit, truncated = truncated),
+    summary = ModelCheckSummary(
+        rootsChecked = rootsChecked,
+        errors = errors,
+        warnings = warnings,
+        infos = infos,
+        limit = limit,
+        truncated = truncated,
+    ),
     findings = findings,
 )

@@ -37,7 +37,7 @@ class CheckOutputPipeTest {
         assertEquals(3, records.size, output.stdout)
         assertEquals(listOf(null, null, "summary"), records.map { it["type"]?.jsonPrimitive?.content })
         assertEquals(
-            """{"type":"summary","shown":2,"total":4,"errors":1,"warnings":2,"infos":1,"limit":2,"truncated":true,""" +
+            """{"type":"summary","shown":2,"total":4,"rootsChecked":3,"errors":1,"warnings":2,"infos":1,"limit":2,"truncated":true,""" +
                 """"hint":"pass --limit 0 for all"}""",
             output.stdout.lines().last(),
         )
@@ -51,7 +51,10 @@ class CheckOutputPipeTest {
         assertEquals(1, output.exitCode, output.stderr)
         assertEquals(response.findings.size, output.stdout.lines().filterNot { it.startsWith("#") }.size, output.stdout)
         assertEquals(
-            listOf("# 1 error, 2 warnings, 1 info", "# truncated: showing 2 of 4 findings; pass --limit 0 for all"),
+            listOf(
+                "# checked 3 roots: 1 error, 2 warnings, 1 info",
+                "# truncated: showing 2 of 4 findings; pass --limit 0 for all",
+            ),
             output.stdout.lines().filter { it.startsWith("#") },
         )
     }

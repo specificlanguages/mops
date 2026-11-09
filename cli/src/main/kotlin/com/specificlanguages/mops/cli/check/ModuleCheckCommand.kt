@@ -21,4 +21,11 @@ class ModuleCheckCommand(environment: CommandEnvironment) : CheckCommand(environ
     lateinit var modules: List<String>
 
     override fun check(client: DaemonClient): ModelCheckResponse = client.checkModules(modules, limit)
+
+    override fun noRootsError(): String =
+        if (modules.size == 1) {
+            "module ${modules.single()} has no roots"
+        } else {
+            "modules ${modules.joinToString(", ")} have no roots"
+        }
 }

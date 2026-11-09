@@ -23,7 +23,8 @@ internal fun renderCheckResponse(
     when (outputFormat) {
         CheckOutputFormat.HUMAN -> {
             response.findings.forEach { renderHuman(it, nodeReferenceFormat) }
-            println(metadataLine(countsText(response.summary)))
+            val roots = count(response.summary.rootsChecked, "root")
+            println(metadataLine("checked $roots: ${countsText(response.summary)}"))
             if (response.summary.truncated) {
                 println(truncationLine(response.findings.size, response.summary.total, unit = "findings"))
             }

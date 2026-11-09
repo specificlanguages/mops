@@ -823,7 +823,14 @@ class DaemonProtocolJsonTest {
     fun `model-check response JSON carries findings with severity, node reference, name, and concept`() {
         val model = "r:9363093b-3fa9-4e39-87cb-26240d0efa37(baselanguage.sandbox)"
         val response = ModelCheckResponse(
-            summary = ModelCheckSummary(errors = 1, warnings = 1, infos = 0, limit = 20, truncated = true),
+            summary = ModelCheckSummary(
+                rootsChecked = 3,
+                errors = 1,
+                warnings = 1,
+                infos = 0,
+                limit = 20,
+                truncated = true,
+            ),
             findings = listOf(
                 ModelCheckFindingJson(
                     severity = FindingSeverity.ERROR,
@@ -850,7 +857,7 @@ class DaemonProtocolJsonTest {
         assertContains(serialized, """"reference":"$model/4LxqAFFLQFr"""")
         assertContains(
             serialized,
-            """"summary":{"errors":1,"warnings":1,"infos":0,"limit":20,"truncated":true}""",
+            """"summary":{"rootsChecked":3,"errors":1,"warnings":1,"infos":0,"limit":20,"truncated":true}""",
         )
         assertEquals(response, ProtocolJson.decodeResponse(serialized))
     }
@@ -878,16 +885,16 @@ class DaemonProtocolJsonTest {
         )
 
         assertEquals(
-            ModelCheckSummary(errors = 1, warnings = 2, infos = 1, limit = 2, truncated = true),
-            ModelCheckSummary.of(findings, limit = 2),
+            ModelCheckSummary(rootsChecked = 3, errors = 1, warnings = 2, infos = 1, limit = 2, truncated = true),
+            ModelCheckSummary.of(findings, limit = 2, rootsChecked = 3),
         )
         assertEquals(
-            ModelCheckSummary(errors = 1, warnings = 2, infos = 1, limit = 4, truncated = false),
-            ModelCheckSummary.of(findings, limit = 4),
+            ModelCheckSummary(rootsChecked = 3, errors = 1, warnings = 2, infos = 1, limit = 4, truncated = false),
+            ModelCheckSummary.of(findings, limit = 4, rootsChecked = 3),
         )
         assertEquals(
-            ModelCheckSummary(errors = 1, warnings = 2, infos = 1, limit = 0, truncated = false),
-            ModelCheckSummary.of(findings, limit = 0),
+            ModelCheckSummary(rootsChecked = 3, errors = 1, warnings = 2, infos = 1, limit = 0, truncated = false),
+            ModelCheckSummary.of(findings, limit = 0, rootsChecked = 3),
         )
     }
 
@@ -895,13 +902,20 @@ class DaemonProtocolJsonTest {
     fun `the check summary record is typed and names the lifting option only when truncated`() {
         val truncated = ModelCheckSummaryJson(
             shown = 1,
-            summary = ModelCheckSummary(errors = 3, warnings = 2, infos = 5, limit = 1, truncated = true),
+            summary = ModelCheckSummary(
+                rootsChecked = 4,
+                errors = 3,
+                warnings = 2,
+                infos = 5,
+                limit = 1,
+                truncated = true,
+            ),
             hint = "pass --limit 0 for all",
         )
         val encoded = ProtocolJson.checkSummary.encode(truncated)
 
         assertEquals(
-            """{"type":"summary","shown":1,"total":10,"errors":3,"warnings":2,"infos":5,"limit":1,"truncated":true,"hint":"pass --limit 0 for all"}""",
+            """{"type":"summary","shown":1,"total":10,"rootsChecked":4,"errors":3,"warnings":2,"infos":5,"limit":1,"truncated":true,"hint":"pass --limit 0 for all"}""",
             encoded,
         )
         assertEquals(truncated, ProtocolJson.checkSummary.decode(encoded))
@@ -911,7 +925,7 @@ class DaemonProtocolJsonTest {
             summary = truncated.summary.copy(limit = 0, truncated = false),
         )
         assertEquals(
-            """{"type":"summary","shown":10,"total":10,"errors":3,"warnings":2,"infos":5,"limit":0,"truncated":false}""",
+            """{"type":"summary","shown":10,"total":10,"rootsChecked":4,"errors":3,"warnings":2,"infos":5,"limit":0,"truncated":false}""",
             ProtocolJson.checkSummary.encode(complete),
         )
     }

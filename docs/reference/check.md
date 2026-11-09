@@ -39,9 +39,10 @@ Options:
 The check covers typesystem, model, module, and checking rules. Findings print
 most severe first. Text output is one tab-separated row per finding (severity,
 message, and for a node-level finding the node's name, concept, and reference),
-followed by `#` metadata lines: `# <errors>, <warnings>, <infos>` (or `# no
-findings`) and, when --limit cut the list, `# truncated: showing <shown> of
-<total> findings; pass --limit 0 for all`. See `mops explain output`.
+followed by `#` metadata lines: `# checked <roots>: <errors>, <warnings>,
+<infos>` (or `# checked <roots>: no findings`) and, when --limit cut the list,
+`# truncated: showing <shown> of <total> findings; pass --limit 0 for all`. See
+`mops explain output`.
 
 --format jsonl prints one finding object per line and ends with a summary
 record, {"type":"summary",...}, with a field for every summary fact; the record
@@ -51,7 +52,8 @@ naming --limit 0. Findings have no type field.
 
 The totals and the exit code cover every finding, not only the shown ones, in
 both formats. The command exits 1 when any finding is an error and 0 for
-warnings and infos alone.
+warnings and infos alone. A selection with no root nodes has nothing to check:
+the command prints an error to stderr, no findings or summary, and exits 1.
 ```
 
 ## mops check module
@@ -76,9 +78,10 @@ Options:
 The check covers typesystem, model, module, and checking rules. Findings print
 most severe first. Text output is one tab-separated row per finding (severity,
 message, and for a node-level finding the node's name, concept, and reference),
-followed by `#` metadata lines: `# <errors>, <warnings>, <infos>` (or `# no
-findings`) and, when --limit cut the list, `# truncated: showing <shown> of
-<total> findings; pass --limit 0 for all`. See `mops explain output`.
+followed by `#` metadata lines: `# checked <roots>: <errors>, <warnings>,
+<infos>` (or `# checked <roots>: no findings`) and, when --limit cut the list,
+`# truncated: showing <shown> of <total> findings; pass --limit 0 for all`. See
+`mops explain output`.
 
 --format jsonl prints one finding object per line and ends with a summary
 record, {"type":"summary",...}, with a field for every summary fact; the record
@@ -88,7 +91,8 @@ naming --limit 0. Findings have no type field.
 
 The totals and the exit code cover every finding, not only the shown ones, in
 both formats. The command exits 1 when any finding is an error and 0 for
-warnings and infos alone.
+warnings and infos alone. A selection with no root nodes has nothing to check:
+the command prints an error to stderr, no findings or summary, and exits 1.
 ```
 
 ## mops check project
@@ -111,9 +115,10 @@ Options:
 The check covers typesystem, model, module, and checking rules. Findings print
 most severe first. Text output is one tab-separated row per finding (severity,
 message, and for a node-level finding the node's name, concept, and reference),
-followed by `#` metadata lines: `# <errors>, <warnings>, <infos>` (or `# no
-findings`) and, when --limit cut the list, `# truncated: showing <shown> of
-<total> findings; pass --limit 0 for all`. See `mops explain output`.
+followed by `#` metadata lines: `# checked <roots>: <errors>, <warnings>,
+<infos>` (or `# checked <roots>: no findings`) and, when --limit cut the list,
+`# truncated: showing <shown> of <total> findings; pass --limit 0 for all`. See
+`mops explain output`.
 
 --format jsonl prints one finding object per line and ends with a summary
 record, {"type":"summary",...}, with a field for every summary fact; the record
@@ -123,5 +128,6 @@ naming --limit 0. Findings have no type field.
 
 The totals and the exit code cover every finding, not only the shown ones, in
 both formats. The command exits 1 when any finding is an error and 0 for
-warnings and infos alone.
+warnings and infos alone. A selection with no root nodes has nothing to check:
+the command prints an error to stderr, no findings or summary, and exits 1.
 ```
