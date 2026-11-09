@@ -33,13 +33,18 @@ public final class MpsDistributionLayout {
         return javaHome;
     }
 
+    /**
+     * Returns the folder with the JNA native library for this JVM's architecture: {@code lib/jna/aarch64} or
+     * {@code lib/jna/amd64} in the generic distribution, or {@code lib/jna} in a platform-specific distribution such as
+     * the macOS {@code .app}.
+     */
     public static Path findJnaLibrary(Path mpsHome) {
         return findJnaLibrary(mpsHome, System.getProperty("os.arch"));
     }
 
     public static Path findJnaLibrary(Path mpsHome, String osArch) {
         Path base = mpsHome.resolve("lib/jna");
-        Path platformSpecific = base.resolve(osArch);
+        Path platformSpecific = base.resolve(osArch.equals("x86_64") ? "amd64" : osArch);
 
         if (Files.exists(platformSpecific)) {
             return platformSpecific;

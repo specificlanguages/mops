@@ -4,12 +4,9 @@ import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.FindingSeverity
-import com.specificlanguages.mops.protocol.ModelCheckFindingCounts
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
 import com.specificlanguages.mops.protocol.ModelCheckResponse
-import com.specificlanguages.mops.protocol.ModelCheckSummaryJson
 import com.specificlanguages.mops.protocol.PongResponse
-import com.specificlanguages.mops.protocol.ProtocolJson
 import java.nio.file.Path
 import kotlin.io.path.pathString
 import kotlin.test.Test
@@ -40,18 +37,9 @@ class CheckOutputPipeTest {
         assertEquals(3, records.size, output.stdout)
         assertEquals(listOf(null, null, "summary"), records.map { it["type"]?.jsonPrimitive?.content })
         assertEquals(
-            ModelCheckSummaryJson(
-                rootsChecked = 3,
-                shown = 2,
-                total = 4,
-                errors = 1,
-                warnings = 2,
-                infos = 1,
-                limit = 2,
-                truncated = true,
-                hint = "pass --limit 0 for all",
-            ),
-            ProtocolJson.checkSummary.decode(output.stdout.lines().last()),
+            """{"type":"summary","shown":2,"total":4,"errors":1,"warnings":2,"infos":1,"limit":2,"truncated":true,""" +
+                """"hint":"pass --limit 0 for all"}""",
+            output.stdout.lines().last(),
         )
     }
 
@@ -63,7 +51,7 @@ class CheckOutputPipeTest {
         assertEquals(1, output.exitCode, output.stderr)
         assertEquals(response.findings.size, output.stdout.lines().filterNot { it.startsWith("#") }.size, output.stdout)
         assertEquals(
-            listOf("# checked 3 roots: 1 error, 2 warnings, 1 info", "# truncated: showing 2 of 4 findings; pass --limit 0 for all"),
+            listOf("# 1 error, 2 warnings, 1 info", "# truncated: showing 2 of 4 findings; pass --limit 0 for all"),
             output.stdout.lines().filter { it.startsWith("#") },
         )
     }
@@ -99,15 +87,16 @@ class CheckOutputPipeTest {
         return CliOutput(exitCode, stdout.trimEnd('\r', '\n'), stderr)
     }
 
-    private fun truncatedResponse() = ModelCheckResponse(
-        rootsChecked = 3,
-        limit = 2,
-        truncated = true,
-        totals = ModelCheckFindingCounts(errors = 1, warnings = 2, infos = 1),
+    private fun truncatedResponse() = checkResponse(
         findings = listOf(
             ModelCheckFindingJson(severity = FindingSeverity.ERROR, message = "Unresolved reference"),
             ModelCheckFindingJson(severity = FindingSeverity.WARNING, message = "model-level note"),
         ),
+        errors = 1,
+        warnings = 2,
+        infos = 1,
+        limit = 2,
+        truncated = true,
     )
 
     private companion object {

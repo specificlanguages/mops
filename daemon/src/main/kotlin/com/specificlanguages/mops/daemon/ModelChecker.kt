@@ -1,9 +1,9 @@
 package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.protocol.FindingSeverity
-import com.specificlanguages.mops.protocol.ModelCheckFindingCounts
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
 import com.specificlanguages.mops.protocol.ModelCheckResponse
+import com.specificlanguages.mops.protocol.ModelCheckSummary
 import jetbrains.mps.checkers.ModelCheckerBuilder
 import jetbrains.mps.errors.CheckerRegistry
 import jetbrains.mps.errors.MessageStatus
@@ -36,6 +36,17 @@ class ModelChecker(private val persistence: PersistenceFacade = PersistenceFacad
     }
 
     private fun check(project: Project, models: List<SModel>, modules: List<SModule>, limit: Int): ModelCheckResponse {
+        val findings = collectFindings(project, models, modules)
+            .sortedBy { it.severity.ordinal }
+        val selected = if (limit > 0) findings.take(limit) else findings
+        return ModelCheckResponse(summary = ModelCheckSummary.of(findings, limit), findings = selected)
+    }
+
+    private fun collectFindings(
+        project: Project,
+        models: List<SModel>,
+        modules: List<SModule>,
+    ): List<ModelCheckFindingJson> {
         val registry = project.getComponent(CheckerRegistry::class.java)
             ?: error("CheckerRegistry component is not available")
 
@@ -46,26 +57,6 @@ class ModelChecker(private val persistence: PersistenceFacade = PersistenceFacad
         }
         extractor.includeStubs(false)
 
-        val findings = collectFindings(project, registry, extractor, models, modules)
-            .sortedBy { it.severity.ordinal }
-        val selected = if (limit > 0) findings.take(limit) else findings
-        val checkedModels = models + modules.flatMap(extractor::getModels)
-        return ModelCheckResponse(
-            rootsChecked = checkedModels.sumOf { it.rootNodes.count() },
-            limit = limit,
-            truncated = selected.size < findings.size,
-            totals = ModelCheckFindingCounts.of(findings),
-            findings = selected,
-        )
-    }
-
-    private fun collectFindings(
-        project: Project,
-        registry: CheckerRegistry,
-        extractor: ModelCheckerBuilder.ModelExtractor,
-        models: List<SModel>,
-        modules: List<SModule>,
-    ): List<ModelCheckFindingJson> {
         val checker = ModelCheckerBuilder(extractor).createChecker(registry.checkers)
         val collector = CollectConsumer<IssueKindReportItem>()
         checker.check(

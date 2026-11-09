@@ -10,6 +10,11 @@ This is a prototype:
 - Make breaking changes as necessary, do not maintain backward compatibility unless told otherwise.
 - Prefer simple code over defensive over-engineering, unless told otherwise.
 
+**Sibling paths.** When you change how mops reads, resolves, reports, or prints something, the commands, Code Mode
+paths, and edit batches that do the same thing are its sibling paths (`docs/VISION.md`, principle 7). Change every
+sibling path in the same pull request, through one shared implementation. You are done when each sibling path is changed
+or named in the pull request body as left for later.
+
 ## Agent skills
 
 ### Issue tracker
@@ -31,5 +36,6 @@ Verified MPS API documentation lives in
 
 - [Kotlin](docs/agents/kotlin-coding-guidelines.md)
 - [Gradle](docs/agents/gradle-conventions.md)
+- [Prose](docs/agents/prose-guidelines.md): Markdown docs, help text, explain topics, examples, and skills
 - [Commits and pull requests](docs/development.md#commits-and-pull-requests): Conventional Commits for pull request
   titles

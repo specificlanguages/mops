@@ -1,2 +1,3 @@
 examples/** text eol=lf
-skills/mops/references/** text eol=lf
+skills/mops/references/** text eol=lf linguist-generated=true
+docs/reference/** linguist-generated=true

@@ -87,6 +87,10 @@ or runtime not loaded (run `mops make module <module>` for an uncompiled source 
 
 The code is not sandboxed and runs with full access to the filesystem, network, process, reflection, and MPS.
 
+Programs import org.jetbrains.mps.openapi.model.*, org.jetbrains.mps.openapi.language.*, and
+org.jetbrains.mps.openapi.module.* by default, so SNode, SModel, SConcept, and SModule need no import. Classes the
+program declares or imports, including through its own star imports, take precedence over these default imports.
+
 Groovy dependency injection (`@Grab` and related transforms) is disabled to avoid classpath issues. A fresh environment
 (Groovy binding and script classloader) is used for every run.
 
@@ -99,7 +103,7 @@ Operation help includes parameter and return types, defaults, option keys and ac
 and Groovy examples. Follow a return type with `mops code help JavaParsingResult` or `mops code help TestRunReport`
 to inspect its fields. `--json` returns the same documentation in structured form.
 
-Inspect public native members through `help(project)`, `help(model)`, or `help(SNode)` after importing the class.
+Inspect public native members through `help(project)`, `help(model)`, or `help(SNode)`.
 The CLI accepts known simple type names such as SNode and fully qualified class names. Member listings include inherited
 methods, Groovy properties, fields, and declaring types alongside applicable mops extensions. They inspect class metadata
 without evaluating getters. Native signatures describe the selected MPS distribution; access requirements and behavior
