@@ -67,11 +67,10 @@ object SharedMpsEnvironment {
     val platform: Platform
         get() = environment.platform
 
-    private val workspace: Path by lazy { Files.createTempDirectory("mops-test-workspace") }
+    private val workspace: TestDaemonWorkspace by lazy { TestDaemonWorkspace() }
 
     /** A [JetBrainsMpsAccess] over [project] with the shared environment's platform and a temporary workspace. */
-    fun mpsAccess(project: MPSProject): JetBrainsMpsAccess =
-        JetBrainsMpsAccess(project, DaemonLogger(), workspace, TestWorkerSystemDirectory(workspace.resolve("test-worker-system"), deleteAfterUncleanRun = true), platform)
+    fun mpsAccess(project: MPSProject): JetBrainsMpsAccess = workspace.mpsAccess(project, platform)
 
     /**
      * Runs [block] against a fresh copy of the fixture project, opened after [prepare] has had a chance to mutate the

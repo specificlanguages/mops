@@ -1,6 +1,5 @@
 package com.specificlanguages.mops.daemon
 
-import com.specificlanguages.mops.protocol.ConstraintEnforcement
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
@@ -47,7 +46,7 @@ class ConstraintEditSemanticsTest {
     fun `advisory applies a disallowed child and still reports the violation`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
             val response = mpsAccess.write {
-                modelEdit(
+                advisoryEdit(
                     batchOf(
                         EditOperation.AddChild(
                             target = EditTarget.NodeReference(JSON_FILE_REF),
@@ -56,7 +55,6 @@ class ConstraintEditSemanticsTest {
                             properties = listOf(MpsNodePropertyJson(name = "role", value = "forced")),
                         ),
                     ),
-                    constraints = ConstraintEnforcement.ADVISORY,
                 )
             }
 
@@ -149,7 +147,7 @@ class ConstraintEditSemanticsTest {
     fun `advisory applies an out-of-scope reference and still reports the violation`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
             val response = mpsAccess.write {
-                modelEdit(
+                advisoryEdit(
                     batchOf(
                         EditOperation.SetReference(
                             target = EditTarget.NodeReference(JSON_FILE_REF),
@@ -157,7 +155,6 @@ class ConstraintEditSemanticsTest {
                             to = EditTarget.NodeReference(JSON_FILE_REF),
                         ),
                     ),
-                    constraints = ConstraintEnforcement.ADVISORY,
                 )
             }
 

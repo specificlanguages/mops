@@ -2,13 +2,9 @@ package com.specificlanguages.mops.cli
 
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
-import com.specificlanguages.mops.protocol.ConceptTargetJson
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.FindInstancesResponse
-import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import com.specificlanguages.mops.protocol.PongResponse
-import com.specificlanguages.mops.protocol.SearchScopeJson
-import com.specificlanguages.mops.protocol.SearchScopeKind
 import java.nio.file.Path
 import kotlin.io.path.pathString
 import kotlin.test.Test
@@ -78,26 +74,7 @@ class FindOutputPipeTest {
         return CliOutput(exitCode, stdout.trimEnd('\r', '\n'), stderr)
     }
 
-    private fun truncatedResponse() = FindInstancesResponse(
-        target = testConceptTarget,
-        scope = testScope,
-        limit = 2,
-        truncated = true,
-        nodes = listOf(
-            MpsNodeSummaryJson(
-                type = "root",
-                name = "JsonObject",
-                concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
-                reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905",
-            ),
-            MpsNodeSummaryJson(
-                type = "root",
-                name = "JsonArray",
-                concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
-                reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566906",
-            ),
-        ),
-    )
+    private fun truncatedResponse() = instancesResponse(nodes = listOf(testNode, testChildNode), limit = 2, truncated = true)
 
     private companion object {
         const val CONCEPT = "jetbrains.mps.lang.structure.structure.ConceptDeclaration"

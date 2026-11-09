@@ -3,7 +3,6 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.daemon.core.MpsAccess
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
-import com.specificlanguages.mops.protocol.ConstraintEnforcement
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
@@ -81,14 +80,13 @@ class RootEditSemanticsTest {
             // The fixture has no child whose concept is independently root-capable, so this exercises the move mechanics
             // under advisory enforcement; the can-be-root block itself is covered by the disallowed-root test.
             mpsAccess.write {
-                modelEdit(
+                advisoryEdit(
                     batchOf(
                         EditOperation.MoveAsRoot(
                             target = EditTarget.NodeReference("$STRUCTURE_MODEL/$JSON_STRING_VALUE_ID"),
                             model = ModelDestination(STRUCTURE_MODEL),
                         ),
                     ),
-                    constraints = ConstraintEnforcement.ADVISORY,
                 )
             }
 
@@ -107,14 +105,13 @@ class RootEditSemanticsTest {
             // First promote a child to a persisted root (advisory, since PropertyDeclaration is not root-capable), so
             // moveAsChild below operates on a genuine root node.
             mpsAccess.write {
-                modelEdit(
+                advisoryEdit(
                     batchOf(
                         EditOperation.MoveAsRoot(
                             target = EditTarget.NodeReference("$STRUCTURE_MODEL/$JSON_STRING_VALUE_ID"),
                             model = ModelDestination(STRUCTURE_MODEL),
                         ),
                     ),
-                    constraints = ConstraintEnforcement.ADVISORY,
                 )
             }
 
@@ -184,7 +181,7 @@ class RootEditSemanticsTest {
             assertEquals(before, editorModel(projectPath).readText())
 
             val forced = mpsAccess.write {
-                modelEdit(
+                advisoryEdit(
                     batchOf(
                         EditOperation.AddRoot(
                             model = ModelDestination(EDITOR_MODEL),
@@ -193,7 +190,6 @@ class RootEditSemanticsTest {
                             alias = "\$c",
                         ),
                     ),
-                    constraints = ConstraintEnforcement.ADVISORY,
                 )
             }
             assertTrue(forced.violations.any { it.constraint == "canBeRoot" })

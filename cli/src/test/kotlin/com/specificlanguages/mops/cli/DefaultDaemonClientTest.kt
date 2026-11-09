@@ -3,9 +3,7 @@ package com.specificlanguages.mops.cli
 import com.specificlanguages.mops.daemoncomms.DefaultDaemonClient
 import com.specificlanguages.mops.protocol.ConceptTargetJson
 import com.specificlanguages.mops.protocol.FindingSeverity
-import com.specificlanguages.mops.protocol.ModelCheckFindingCounts
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
-import com.specificlanguages.mops.protocol.ModelCheckResponse
 import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
@@ -236,10 +234,7 @@ class DefaultDaemonClientTest {
 
     @Test
     fun `check model sends target and limit request`() {
-        val response = ModelCheckResponse(
-            limit = 20,
-            truncated = false,
-            totals = ModelCheckFindingCounts(errors = 1, warnings = 0, infos = 0),
+        val response = checkResponse(
             findings = listOf(
                 ModelCheckFindingJson(
                     severity = FindingSeverity.ERROR,
@@ -266,7 +261,7 @@ class DefaultDaemonClientTest {
 
     @Test
     fun `check project sends the global limit request`() {
-        val response = emptyCheckResponse()
+        val response = checkResponse()
         val daemon = startPrerecordedDaemon(response)
 
         val actual = DefaultDaemonClient(daemon.port, "secret").checkProject(limit = 7)
@@ -279,7 +274,7 @@ class DefaultDaemonClientTest {
 
     @Test
     fun `check modules sends every module and the global limit request`() {
-        val response = emptyCheckResponse()
+        val response = checkResponse()
         val daemon = startPrerecordedDaemon(response)
 
         val actual = DefaultDaemonClient(daemon.port, "secret")
@@ -291,13 +286,6 @@ class DefaultDaemonClientTest {
         assertContains(daemon.requestsReceived.single(), "\"modules\":[\"FOO\",\"BAR\",\"BAZ\"]")
         assertContains(daemon.requestsReceived.single(), "\"limit\":9")
     }
-
-    private fun emptyCheckResponse() = ModelCheckResponse(
-        limit = 20,
-        truncated = false,
-        totals = ModelCheckFindingCounts(errors = 0, warnings = 0, infos = 0),
-        findings = emptyList(),
-    )
 
     @Test
     fun `model edit sends batch request`() {

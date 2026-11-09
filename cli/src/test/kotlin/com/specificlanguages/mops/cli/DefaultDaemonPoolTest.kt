@@ -27,6 +27,7 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 
 class DefaultDaemonPoolTest {
     @TempDir(cleanup = CleanupMode.ON_SUCCESS)
@@ -100,7 +101,7 @@ class DefaultDaemonPoolTest {
             )
         }
 
-        assertEquals(emptyList(), store.readForProject(project))
+        assertNull(store.recordOf(project))
     }
 
     @Test
@@ -211,7 +212,7 @@ class DefaultDaemonPoolTest {
             )
         }
 
-        assertEquals(emptyList(), store.readForProject(project))
+        assertNull(store.recordOf(project))
     }
 
     @Test
@@ -240,12 +241,12 @@ class DefaultDaemonPoolTest {
                 mock(),
                 stopGrace = Duration.ofMillis(200),
                 killGrace = Duration.ofSeconds(5),
-            ).stop(store.readForProject(project).single())
+            ).stop(store.recordOf(project)!!)
 
             fakeDaemon.join(5_000)
             assertEquals(DaemonPool.StopOutcome.STOPPED, outcome)
             assertFalse(stubborn.isAlive, "the stubborn daemon process should have been force-killed")
-            assertEquals(emptyList(), store.readForProject(project), "a stopped daemon's record must be removed")
+            assertNull(store.recordOf(project), "a stopped daemon's record must be removed")
         } finally {
             stubborn.destroyForcibly()
         }
@@ -262,10 +263,10 @@ class DefaultDaemonPoolTest {
             daemonRecord(port = 9, pid = 999_999L, project = project, mpsHome = mpsHome, workspace = Path.of("/x")),
         )
 
-        val outcome = DefaultDaemonPool(store, mock()).stop(store.readForProject(project).single())
+        val outcome = DefaultDaemonPool(store, mock()).stop(store.recordOf(project)!!)
 
         assertEquals(DaemonPool.StopOutcome.ALREADY_GONE, outcome)
-        assertEquals(emptyList(), store.readForProject(project))
+        assertNull(store.recordOf(project))
     }
 
     private fun launcherWithUnreachableExistingDaemon(): DaemonLauncher {
