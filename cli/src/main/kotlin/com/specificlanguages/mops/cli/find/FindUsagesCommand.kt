@@ -3,6 +3,7 @@ package com.specificlanguages.mops.cli.find
 import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
+import com.specificlanguages.mops.cli.common.modelTargetAndNodeId
 import com.specificlanguages.mops.cli.output.displayConcept
 import com.specificlanguages.mops.cli.output.renderJson
 import com.specificlanguages.mops.cli.output.renderNodeReference
@@ -107,7 +108,7 @@ class FindUsagesCommand(private val environment: CommandEnvironment) : CliComman
     private fun nodeTarget(targetTokens: List<String>): NodeTarget =
         when (targetTokens.size) {
             1 -> NodeTarget.NodeReference(targetTokens[0])
-            2 -> NodeTarget.InModel(modelTarget = targetTokens[0], nodeId = targetTokens[1])
+            2 -> modelTargetAndNodeId(targetTokens[0], targetTokens[1])
             else -> error("expected one node reference or model target plus node ID, optionally followed by `in <scope>`")
         }
 

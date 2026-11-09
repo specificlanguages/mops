@@ -40,6 +40,7 @@ class TestSelectionResolutionTest {
 
             assertEquals(
                 "test selection not found: $BUILD_MODULE .missing\n" +
+                    "mops read `$BUILD_MODULE .missing` as one target path (module, model, root node, child nodes)\n" +
                     "module $BUILD_MODULE has no model $BUILD_MODULE.missing; its models:\n" +
                     "model\t$BUILD_MODULE\t$BUILD_MODEL_REFERENCE",
                 exception.message,

@@ -3,6 +3,7 @@ package com.specificlanguages.mops.cli.get
 import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
+import com.specificlanguages.mops.cli.common.modelTargetAndNodeId
 import com.specificlanguages.mops.cli.output.renderJson
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.MpsNodeJson
@@ -87,7 +88,7 @@ class ModelGetNodeCommand(private val environment: CommandEnvironment) : CliComm
 
         val target = when (nodeTarget.size) {
             1 -> NodeTarget.NodeReference(nodeTarget[0])
-            2 -> NodeTarget.InModel(modelTarget = nodeTarget[0], nodeId = nodeTarget[1])
+            2 -> modelTargetAndNodeId(nodeTarget[0], nodeTarget[1])
             else -> error("expected one node reference or model target plus node ID")
         }
         val client = environment.daemon()

@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.cli
 
+import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.cli.find.FindNodeByIdCommand
 import com.specificlanguages.mops.daemoncomms.DaemonClient
@@ -144,6 +145,27 @@ class FindNodeByIdCommandTest {
 
         assertEquals(1, exitCode)
         verifyNoInteractions(client)
+    }
+
+    @Test
+    fun `find node-by-id says how it read a model and an id given without in`() {
+        val client = mock<DaemonClient>()
+        var exitCode = Int.MIN_VALUE
+
+        val stderr = tapSystemErr {
+            exitCode = CommandLine(FindNodeByIdCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute("com.specificlanguages.json.structure", ID)
+        }
+
+        assertEquals(1, exitCode)
+        verifyNoInteractions(client)
+        assertEquals(
+            "mops read `com.specificlanguages.json.structure` as ID and `$ID` as a scope clause, " +
+                "but a scope clause opens with `in`: write `ID in SCOPE_SEGMENT...`; see: mops explain scope" +
+                System.lineSeparator(),
+            stderr,
+        )
     }
 
     @Test

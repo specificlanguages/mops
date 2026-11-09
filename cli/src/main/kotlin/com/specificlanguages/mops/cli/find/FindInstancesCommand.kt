@@ -81,7 +81,7 @@ class FindInstancesCommand(environment: CommandEnvironment) : NodeSearchCommand(
     lateinit var concept: String
 
     override fun run() {
-        val scope = validatedScope()
+        val scope = validatedScope(concept to "CONCEPT")
         val filters = buildList {
             named?.let { add(NodeFilter.Named(it)) }
             role?.let { add(NodeFilter.Role(it)) }
