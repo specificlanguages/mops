@@ -6,7 +6,6 @@ import jetbrains.mps.project.MPSProject
 import jetbrains.mps.project.Project
 import org.jetbrains.mps.openapi.module.ModelAccess
 import org.mockito.kotlin.any
-import java.nio.file.Files
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
@@ -73,12 +72,13 @@ class ModelAccessBoundaryTest {
     private fun boundaryAccess(
         project: MPSProject,
         writeTransaction: WriteTransaction = mock(),
-    ): JetBrainsMpsAccess =
-        JetBrainsMpsAccess(
+    ): JetBrainsMpsAccess {
+        val workspace = TestDaemonWorkspace()
+        return JetBrainsMpsAccess(
             project = project,
             logger = DaemonLogger(),
-            workspace = Files.createTempDirectory("mops-test-workspace"),
-            testSystemCache = Files.createTempDirectory("mops-test-system-cache"),
+            workspace = workspace.path,
+            testSystemCache = workspace.testSystemCache,
             platform = mock(),
             mpsListExporter = mock(),
             jsonNodeExporter = mock(),
@@ -88,6 +88,7 @@ class ModelAccessBoundaryTest {
             persistence = mock(),
             writeTransaction = writeTransaction,
         )
+    }
 
     // Runs the computation MPS would dispatch, recording any throwable that escapes it (which is exactly what the
     // dispatcher logs as SEVERE), then rethrows so the caller-facing behavior is unchanged.
