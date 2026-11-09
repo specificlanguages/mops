@@ -30,7 +30,7 @@ object CodeCatalog {
         Entry("mops.parsing.java", "addJavaMembersFromString", "mops.parsing.java.addJavaMembersFromString(SNode classifier, String source, SNode beforeMember = null): JavaParsingResult", "command", "Parse fields, constructors, methods, and nested classes into a classifier."),
         Entry("mops.parsing.java", "addJavaStatementsFromString", "mops.parsing.java.addJavaStatementsFromString(SNode statementList, String source, SNode beforeStatement = null): JavaParsingResult", "command", "Parse statements into a statement list."),
         Entry("Project", "read", "Project.read(Closure<T> body): T", "none", "Run a non-nesting MPS read action."),
-        Entry("Project", "command", "Project.command(Closure<T> body): T", "none", "Run an MPS command and save after successful completion. On failure, reload every changed model from disk."),
+        Entry("Project", "command", "Project.command(Closure<T> body): T", "none", "Run an MPS command and save after successful completion. Before saving, add the used languages and model imports that added nodes and set references need; code run lists each on stderr. On failure, reload every changed model from disk."),
         Entry("Project", "make", "Project.make(): MakeResponse", "extra", "Make every generatable project module."),
         Entry("Project", "createLanguage", "Project.createLanguage(String name, Map options = [:]): Language", "command", "Create a language."),
         Entry("Project", "createSolution", "Project.createSolution(String name, Map options = [:]): Solution", "command", "Create a solution."),
@@ -59,8 +59,7 @@ object CodeCatalog {
         val document = document(subject)
         return buildString {
             appendLine("Code Mode Reference (mops-code-mode 1.0)")
-            appendLine("Access blocks cannot nest. command saves after success and reloads changed models from disk on failure.")
-            appendLine("Before saving, command adds the used languages and model imports that added nodes and set references need; code run lists each on stderr.")
+            appendLine("Access blocks cannot nest. help('Project.command') describes how command saves, adds missing imports, and reloads changed models on failure.")
             if (document.index.isNotEmpty()) {
                 appendLine("Use help('path') to inspect an operation or type; help(object) and help(Class) also work.")
                 document.index.forEach { appendLine("  $it") }
