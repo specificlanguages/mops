@@ -1,6 +1,7 @@
 # JSON edits
 
-Use batches when you want explicit edit operations and constraint diagnostics. This one-liner renames a node:
+Use batches when you want explicit edit operations and constraint diagnostics. `mops explain edit` describes the
+operations and what a batch does. This one-liner renames a node:
 
 ```sh
 printf '%s\n' '{"operations":[{"op":"setProperty","target":"NODE_REF","name":"name","value":"Renamed"}]}' | mops edit model
@@ -30,5 +31,5 @@ printf '%s\n' '{"operations":[{"op":"copyAsChild","target":"CLASS_REF","source":
 | Discover copying notation                   | `mops explain edit.copyAsChild`                            |
 | Export the batch schema                     | `mops explain --schema edit`                               |
 
-The default `best-effort` constraint mode blocks violations but warns and skips checking concepts whose languages are
-unloaded. Constraint checks are distinct from a full model check.
+`--constraints` decides whether a constraint violation blocks the batch; `mops edit model --help` lists the modes.
+Constraint checks are distinct from a full model check.
