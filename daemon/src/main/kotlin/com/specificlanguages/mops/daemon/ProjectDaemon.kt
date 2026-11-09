@@ -127,7 +127,7 @@ class ProjectDaemon(
     }
 
     private fun connection(socket: Socket, handler: DomainRequestHandler, stop: () -> Unit) {
-        val requestLine = BufferedReader(InputStreamReader(socket.getInputStream())).readLine()
+        val requestLine = BufferedReader(InputStreamReader(socket.getInputStream(), Charsets.UTF_8)).readLine()
 
         val response = run {
             val request = try {
@@ -165,7 +165,7 @@ class ProjectDaemon(
         }
 
         try {
-            PrintWriter(socket.getOutputStream(), true).use { writer ->
+            PrintWriter(socket.getOutputStream(), true, Charsets.UTF_8).use { writer ->
                 writer.println(ProtocolJson.encodeResponse(response))
             }
         } finally {

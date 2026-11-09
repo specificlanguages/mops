@@ -12,6 +12,7 @@ import groovy.lang.GroovyShell
 import jetbrains.mps.core.platform.Platform
 import jetbrains.mps.project.MPSProject
 import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.customizers.ImportCustomizer
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SNode
 import org.jetbrains.mps.openapi.module.SModule
@@ -27,7 +28,10 @@ class CodeModeExecutor(
 ) {
     fun execute(request: CodeRunRequest): CodeResultResponse {
         rejectDependencyInjection(request.source)
-        val configuration = CompilerConfiguration().apply { scriptBaseClass = CodeModeScript::class.java.name }
+        val configuration = CompilerConfiguration().apply {
+            scriptBaseClass = CodeModeScript::class.java.name
+            addCompilationCustomizers(ImportCustomizer().addStarImports(*DEFAULT_STAR_IMPORTS))
+        }
         val loader = GroovyClassLoader(javaClass.classLoader, configuration)
         val mops = Mops(project, access, platform, testingRunner)
         CodeModeProjectProvider.initialize(mops)
@@ -53,6 +57,15 @@ class CodeModeExecutor(
             "Groovy dependency injection is disabled in code mode; use classes from the daemon/MPS classpath"
         }
     }
+
+    private companion object {
+        // Groovy resolves these after the program's own classes and imports.
+        val DEFAULT_STAR_IMPORTS = arrayOf(
+            "org.jetbrains.mps.openapi.model",
+            "org.jetbrains.mps.openapi.language",
+            "org.jetbrains.mps.openapi.module",
+        )
+    }
 }
 
 internal object CodeResultAdapter {
@@ -65,8 +78,7 @@ internal object CodeResultAdapter {
         is SModule -> value.moduleReference.let(persistence::asString)
         is TestRunReport -> ProtocolJson.testReport.encode(value)
         is MakeResponse -> ProtocolJson.makeResponse.encode(value)
-        is String -> value
-        is Char, is Boolean, is Number, is File, is Path -> value.toString()
+        is CharSequence, is Char, is Boolean, is Number, is File, is Path -> value.toString()
         is Map<*, *> -> value.entries.joinToString(",", "{", "}") { json(it.key.toString()) + ":" + renderJson(it.value) }
         is Iterable<*> -> value.joinToString(",", "[", "]") { renderJson(it) }
         is Array<*> -> value.joinToString(",", "[", "]") { renderJson(it) }
@@ -80,7 +92,7 @@ internal object CodeResultAdapter {
     private fun renderJson(value: Any?): String = when (value) {
         null -> "null"
         is SNode, is SModel, is SModule -> render(value)?.let(::json) ?: "null"
-        is String, is Char, is File, is Path -> json(value.toString())
+        is CharSequence, is Char, is File, is Path -> json(value.toString())
         is Boolean, is Number -> value.toString()
         is TestRunReport, is MakeResponse -> render(value)!!
         is Map<*, *>, is Iterable<*>, is Array<*>, is BooleanArray, is IntArray, is LongArray, is DoubleArray -> render(value)!!

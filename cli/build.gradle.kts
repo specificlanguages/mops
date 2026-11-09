@@ -166,13 +166,19 @@ tasks.processResources {
     from(generateExamples.map { it.outputs.files.singleFile.resolve("pages") }) { into("examples") }
 }
 
+// Test helpers shared by the unit and integration tests.
+val testSupport = layout.projectDirectory.dir("src/testSupport/kotlin")
+
 sourceSets.test {
+    kotlin.srcDir(testSupport)
     resources.srcDir(generateExamples.map { it.outputs.files.singleFile.resolve("specs") })
 }
 
 tasks.processTestResources {
     from(exampleSources.file("generate.groovy"))
 }
+
+integrationTest.kotlin.srcDir(testSupport)
 
 integrationTest.resources {
     srcDir(generateExamples.map { it.outputs.files.singleFile.resolve("specs") })

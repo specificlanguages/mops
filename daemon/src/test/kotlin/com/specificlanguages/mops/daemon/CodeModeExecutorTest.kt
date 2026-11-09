@@ -29,10 +29,34 @@ class CodeModeExecutorTest {
     }
 
     @Test
+    fun `adapts GStrings and other character sequences as strings`() {
+        assertEquals("n1", run("return \"n\${1}\""))
+        assertEquals("[\"n1\",\"n2\"]", run("[1, 2].collect { \"n\${it}\" }"))
+        assertEquals("{\"key\":\"ab\"}", run("[key: new StringBuilder('ab')]"))
+    }
+
+    @Test
     fun `each invocation receives a fresh binding`() {
         assertEquals("set", run("leaked = 'value'; 'set'"))
         val failure = assertFailsWith<Throwable> { run("leaked") }
         assertTrue(failure.message.orEmpty().contains("leaked"))
+    }
+
+    @Test
+    fun `open API model language and module types resolve without imports`() {
+        assertNull(run("SNode n = null; n"))
+        assertEquals(
+            """["org.jetbrains.mps.openapi.model.SNode","org.jetbrains.mps.openapi.model.SModel",""" +
+                """"org.jetbrains.mps.openapi.language.SConcept","org.jetbrains.mps.openapi.module.SModule"]""",
+            run("SNode n = null; SModel m = null; SConcept c = null; [SNode, SModel, SConcept, SModule]*.name"),
+        )
+    }
+
+    @Test
+    fun `script imports and classes take precedence over default open API imports`() {
+        assertEquals("jetbrains.mps.smodel.SNode", run("import jetbrains.mps.smodel.SNode\nSNode.name"))
+        assertEquals("jetbrains.mps.smodel.SNodeId", run("import jetbrains.mps.smodel.*\nSNodeId.name"))
+        assertEquals("SModel", run("class SModel {}\nSModel.name"))
     }
 
     @Test
@@ -43,8 +67,8 @@ class CodeModeExecutorTest {
 
     @Test
     fun `unsupported values identify their JVM class`() {
-        val failure = assertFailsWith<IllegalStateException> { run("new StringBuilder()") }
-        assertTrue(failure.message.orEmpty().contains("java.lang.StringBuilder"))
+        val failure = assertFailsWith<IllegalStateException> { run("new Object()") }
+        assertTrue(failure.message.orEmpty().contains("java.lang.Object"))
     }
 
     @Test

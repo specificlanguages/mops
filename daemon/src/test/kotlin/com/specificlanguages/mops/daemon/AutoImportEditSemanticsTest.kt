@@ -1,6 +1,5 @@
 package com.specificlanguages.mops.daemon
 
-import com.specificlanguages.mops.protocol.ConstraintEnforcement
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
@@ -33,7 +32,7 @@ class AutoImportEditSemanticsTest {
             // ClassConcept is not a legal root of a structure model; advisory enforcement saves the edit despite the
             // can-be-root violation, so the import behavior can be observed in isolation.
             mpsAccess.write {
-                modelEdit(
+                advisoryEdit(
                     batchOf(
                         EditOperation.AddRoot(
                             model = ModelDestination(STRUCTURE_MODEL),
@@ -41,7 +40,6 @@ class AutoImportEditSemanticsTest {
                             properties = listOf(MpsNodePropertyJson(name = "name", value = "Helper")),
                         ),
                     ),
-                    constraints = ConstraintEnforcement.ADVISORY,
                 )
             }
 
@@ -59,7 +57,7 @@ class AutoImportEditSemanticsTest {
             // ClassConcept pulls in baseLanguage. Scanning the whole created subtree — not just its root — is what
             // surfaces it. Advisory saves despite the containment violation of the misplaced child.
             mpsAccess.write {
-                modelEdit(
+                advisoryEdit(
                     batchOf(
                         EditOperation.AddRoot(
                             model = ModelDestination(STRUCTURE_MODEL),
@@ -68,7 +66,6 @@ class AutoImportEditSemanticsTest {
                             children = listOf(InlineChild.Fresh(role = "propertyDeclaration", concept = CLASS_CONCEPT)),
                         ),
                     ),
-                    constraints = ConstraintEnforcement.ADVISORY,
                 )
             }
 
@@ -90,7 +87,7 @@ class AutoImportEditSemanticsTest {
             // Point an existing reference at a node in the sandbox model, which the structure model does not import.
             // Advisory saves despite the reference-scope violation, isolating the model-import behavior.
             mpsAccess.write {
-                modelEdit(
+                advisoryEdit(
                     batchOf(
                         EditOperation.SetReference(
                             target = EditTarget.NodeReference("$STRUCTURE_MODEL/$JSON_STRING_VALUE_ID"),
@@ -98,7 +95,6 @@ class AutoImportEditSemanticsTest {
                             to = EditTarget.NodeReference("$SANDBOX_MODEL/$SANDBOX_ROOT_ID"),
                         ),
                     ),
-                    constraints = ConstraintEnforcement.ADVISORY,
                 )
             }
 
@@ -120,7 +116,7 @@ class AutoImportEditSemanticsTest {
             // Create a baseLanguage node in the structure model, then copy it into the build model. baseLanguage can
             // reach the build model only through the copy's subtree, so this exercises the copy path specifically.
             mpsAccess.write {
-                modelEdit(
+                advisoryEdit(
                     batchOf(
                         EditOperation.AddRoot(
                             model = ModelDestination(STRUCTURE_MODEL),
@@ -133,7 +129,6 @@ class AutoImportEditSemanticsTest {
                             source = EditTarget.Alias("\$src"),
                         ),
                     ),
-                    constraints = ConstraintEnforcement.ADVISORY,
                 )
             }
 

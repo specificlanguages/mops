@@ -59,8 +59,8 @@ class TestFamiliesIntegrationTest {
     }
 
     @Test
-    fun `language and generator tests execute with MPS fixtures`() {
-        for (model in listOf("mops.tests.language@tests", "mops.tests.generator@tests")) {
+    fun `language generator and editor tests execute with MPS fixtures`() {
+        for (model in listOf("mops.tests.language@tests", "mops.tests.generator@tests", "mops.tests.editor@tests")) {
             assertTrue(reports.first.results.any {
                 it.kind == "TEST" && it.source?.contains("($model)") == true && it.status == "PASSED"
             }, reports.first.toString())
