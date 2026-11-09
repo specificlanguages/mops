@@ -1,17 +1,11 @@
 package com.specificlanguages.mops.cli.find
 
-import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
 import com.specificlanguages.mops.cli.output.displayConcept
-import com.specificlanguages.mops.cli.output.renderJson
-import com.specificlanguages.mops.cli.output.renderNodeReference
-import com.specificlanguages.mops.cli.output.truncationLine
 import com.specificlanguages.mops.daemoncomms.DaemonClient
-import com.specificlanguages.mops.protocol.DaemonResponse
 import com.specificlanguages.mops.protocol.NodeTarget
 import picocli.CommandLine.Command
-import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 
 @Command(
@@ -36,39 +30,8 @@ import picocli.CommandLine.Parameters
             "summary. --refs-only prints one reference per referencing node. See `mops explain output`.",
     ],
 )
-class FindUsagesCommand(private val environment: CommandEnvironment) : CliCommand() {
+class FindUsagesCommand(environment: CommandEnvironment) : SearchCommand(environment) {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
-
-    @Option(
-        names = ["--json"],
-        description = ["Print usage results as JSON."],
-    )
-    var json: Boolean = false
-
-    @Option(
-        names = ["--full-concept"],
-        description = ["Show fully qualified concept names in text output instead of short names."],
-    )
-    var fullConcept: Boolean = false
-
-    @Option(
-        names = ["--refs-only"],
-        description = [
-            "Print one serialized node reference per line and nothing else, for piping. Cannot combine with --json; " +
-                "truncation and an empty result are reported on stderr.",
-        ],
-    )
-    var refsOnly: Boolean = false
-
-    @Option(
-        names = ["--limit"],
-        paramLabel = "N",
-        description = [
-            "Maximum usages to return. Defaults to 100; 0 means unlimited; negative values are rejected. Only when " +
-                "more matches exist, text output ends with a `# truncated` line and JSON sets `truncated`.",
-        ],
-    )
-    var limit: Int = 100
 
     @Parameters(
         arity = "1..*",
@@ -77,31 +40,20 @@ class FindUsagesCommand(private val environment: CommandEnvironment) : CliComman
     )
     lateinit var arguments: Array<String>
 
-    override fun run() {
-        require(limit >= 0) { "limit must not be negative" }
-        require(!(refsOnly && json)) { "--refs-only cannot be combined with --json" }
+    override fun search(): SearchResults {
         val (targetTokens, scope) = splitUsagesArguments(arguments.toList())
         val client = environment.daemon()
         val response = client.findUsages(target = nodeTarget(targetTokens), limit = limit, scope = scope)
-        if (!json && response.usages.isEmpty()) {
-            val target = response.target
-            val subject = "usages of ${target.name ?: "<unnamed>"} (${displayConcept(target.concept, fullConcept)})"
-            printMetadata(emptyResultLine(subject, response.scope, environment.nodeReferenceFormat), refsOnly)
-            return
-        }
-        when {
-            json -> println(renderJson(response))
-            refsOnly -> {
-                response.usages.forEach {
-                    println(renderNodeReference(it.owner.reference, environment.nodeReferenceFormat, hyperlinks = false))
-                }
-                if (response.truncated) reportTruncationOnStderr(response.usages.size)
-            }
-            else -> {
-                response.usages.forEach { println(renderText(it, fullConcept, environment.nodeReferenceFormat)) }
-                if (response.truncated) println(truncationLine(shown = response.usages.size))
-            }
-        }
+        val target = response.target
+        return SearchResults(
+            response = response,
+            subject = "usages of ${target.name ?: "<unnamed>"} (${displayConcept(target.concept, fullConcept)})",
+            scope = response.scope,
+            matches = response.usages.map {
+                SearchMatch(it.owner.reference, renderText(it, fullConcept, environment.nodeReferenceFormat))
+            },
+            truncated = response.truncated,
+        )
     }
 
     private fun nodeTarget(targetTokens: List<String>): NodeTarget =
