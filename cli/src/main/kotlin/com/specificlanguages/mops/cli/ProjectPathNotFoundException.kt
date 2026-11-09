@@ -7,5 +7,19 @@ class MpsHomeRequiredException : RuntimeException(
         "and then run the wrapper path it prints"
 )
 
-class ProjectPathNotFoundException(startingPath: Path) :
-    RuntimeException("no .mps directory found from $startingPath upward")
+class ProjectPathNotFoundException private constructor(message: String) : RuntimeException(message) {
+    companion object {
+        /** No `.mps` directory in [start] or any of its ancestors. */
+        fun upwardFrom(start: Path) = ProjectPathNotFoundException("no .mps directory found from $start upward")
+
+        /** The explicitly given [root] has no `.mps` directory; [projectsBelow] are MPS projects found below it. */
+        fun explicitRoot(root: Path, projectsBelow: List<Path>): ProjectPathNotFoundException {
+            val hint = if (projectsBelow.isEmpty()) {
+                ""
+            } else {
+                "; MPS projects below it, pass one as --project-root: ${projectsBelow.joinToString(", ")}"
+            }
+            return ProjectPathNotFoundException("--project-root $root has no .mps directory$hint")
+        }
+    }
+}

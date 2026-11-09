@@ -4,14 +4,17 @@ import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.ModelCheckResponse
+import picocli.CommandLine.Command
 import picocli.CommandLine.IExitCodeGenerator
 import picocli.CommandLine.Option
 
 /**
  * Base of the `check` subcommands. Owns the output format and finding limit options, prints the daemon's response, and
  * exits with `1` when the check found at least one error-severity finding (counted over all findings, not only the
- * ones shown). Subclasses only choose what to check.
+ * ones shown). A selection without any root nodes fails with an error instead of printing a result. Subclasses only
+ * choose what to check and how to name it; their help inherits the footer that describes the output.
  */
+@Command(footer = ["", CHECK_OUTPUT_HELP, "", CHECK_JSONL_HELP, "", CHECK_EXIT_HELP])
 abstract class CheckCommand(private val environment: CommandEnvironment) : CliCommand(), IExitCodeGenerator {
     @Option(
         names = ["--format"],
@@ -38,9 +41,14 @@ abstract class CheckCommand(private val environment: CommandEnvironment) : CliCo
 
     protected abstract fun check(client: DaemonClient): ModelCheckResponse
 
+    /** The error for a selection without root nodes, e.g. `model foo has no roots`. */
+    protected abstract fun noRootsError(): String
+
     final override fun run() {
         require(limit >= 0) { "limit must not be negative" }
-        exitCode = renderCheckResponse(check(environment.daemon()), format, environment.nodeReferenceFormat)
+        val response = check(environment.daemon())
+        if (response.summary.rootsChecked == 0) error("${noRootsError()}; nothing was checked")
+        exitCode = renderCheckResponse(response, format, environment.nodeReferenceFormat)
     }
 
     override fun getExitCode(): Int = exitCode

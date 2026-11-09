@@ -22,7 +22,7 @@
             [
                 title: 'Call a static method that takes a node',
                 kind: 'groovy',
-                code: '''project.read { def operations = mops.runtime.requireClass('jetbrains.mps.lang.smodel', 'jetbrains.mps.lang.smodel.generator.smodelAdapter.SNodeOperations'); operations.getMethod('getConcept', org.jetbrains.mps.openapi.model.SNode).invoke(null, mops.lookup.requireNode('NODE_REF')).qualifiedName }''',
+                code: '''project.read { def operations = mops.runtime.requireClass('jetbrains.mps.lang.smodel', 'jetbrains.mps.lang.smodel.generator.smodelAdapter.SNodeOperations'); operations.getMethod('getConcept', SNode).invoke(null, mops.lookup.requireNode('NODE_REF')).qualifiedName }''',
                 verify: '''
                     assert result == 'jetbrains.mps.baseLanguage.structure.ClassConcept'
                 ''',
@@ -59,8 +59,7 @@
         ],
         'behavior': [
             kind: 'groovy',
-            code: '''import org.jetbrains.mps.openapi.model.SNode
-project.read {
+            code: '''project.read {
     def node = mops.lookup.requireNode('NODE_REF')
     def evaluator = mops.runtime.requireClass('sample.language', 'sample.language.runtime.Evaluator')
     evaluator.getMethod('evaluate', SNode).invoke(evaluator.getDeclaredConstructor().newInstance(), node).toString()
@@ -69,8 +68,7 @@ project.read {
         ],
         'plugin': [
             kind: 'groovy',
-            code: '''import org.jetbrains.mps.openapi.model.SModel
-project.read {
+            code: '''project.read {
     def model = mops.lookup.requireModel('sample.model')
     def statistics = mops.runtime.requireClass('sample.plugin', 'sample.plugin.util.ModelStatistics')
     statistics.getMethod('count', SModel).invoke(null, model)

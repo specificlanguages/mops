@@ -9,9 +9,9 @@ printf '%s\n' 'project.read { project.projectModules.collect { it.moduleName } }
 The following snippets are complete programs. `NODE_REF`, `CLASS_REF`, `TARGET_REF`, and `STATEMENTS_REF` are
 placeholders. Use a method node for the `body` child examples and a BaseLanguage `ClassifierType` node for the
 `classifier` reference examples. Reads and lookups belong in `project.read`; writes belong in `project.command`. Blocks
-cannot nest. Successful commands save changes; a command that throws reloads changed models from disk, dropping its
-model changes. Each invocation has fresh variables. Return useful data: strings print as text, maps/lists become JSON,
-and native nodes/models/modules become serialized references.
+cannot nest. `mops code help Project.command` describes what a command saves and what it reverts when it throws. Each
+invocation has fresh variables. Return useful data: strings print as text, maps/lists become JSON, and native
+nodes/models/modules become serialized references.
 
 | Task                                | Groovy program                                                                                                                                                                                                                   |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -1,8 +1,8 @@
 # Test-running fixtures
 
-This project contains native BaseLanguage tests, a language `NodesTestCase`, a generator transformation assertion,
-ordinary Jupiter tests, a parameterized test, and a legacy JUnit 3 test. Passing, failing, skipped, assumption-aborted,
-and failing-container cases are intentional.
+This project contains native BaseLanguage tests, a language `NodesTestCase`, a generator transformation assertion, an
+`EditorTestCase`, ordinary Jupiter tests, a parameterized test, and a legacy JUnit 3 test. Passing, failing, skipped,
+assumption-aborted, and failing-container cases are intentional.
 
 `slow.mps` completes one method before sleeping, and `crash.mps` completes one method before halting the worker JVM. The
 integration suite runs these separately to verify interruption and partial-report persistence. The full-project

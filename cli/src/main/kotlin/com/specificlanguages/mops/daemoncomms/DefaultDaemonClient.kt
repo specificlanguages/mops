@@ -268,8 +268,8 @@ class DefaultDaemonClient(
                 val timeoutMillis = timeout.toMillis().coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
                 socket.connect(InetSocketAddress(InetAddress.getLoopbackAddress(), port), timeoutMillis)
                 socket.soTimeout = timeoutMillis
-                PrintWriter(socket.getOutputStream(), true).use { writer ->
-                    BufferedReader(InputStreamReader(socket.getInputStream())).use { reader ->
+                PrintWriter(socket.getOutputStream(), true, Charsets.UTF_8).use { writer ->
+                    BufferedReader(InputStreamReader(socket.getInputStream(), Charsets.UTF_8)).use { reader ->
                         writer.println(ProtocolJson.encodeRequest(request))
                         reader.readLine() ?: throw IllegalStateException("daemon closed connection")
                     }
