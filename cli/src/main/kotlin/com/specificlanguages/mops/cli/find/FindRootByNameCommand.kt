@@ -30,7 +30,7 @@ class FindRootByNameCommand(environment: CommandEnvironment) : NodeSearchCommand
         require(pattern.isNotBlank()) { "pattern must not be blank" }
     }
 
-    override fun search(scope: List<String>?): SearchResults {
+    override fun searchIn(scope: List<String>?): SearchResults {
         val response = environment.daemon().findByName(pattern = pattern, limit = limit, scope = scope)
         return nodeResults(
             response,

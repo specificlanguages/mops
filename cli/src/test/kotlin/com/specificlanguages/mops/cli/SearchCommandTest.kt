@@ -266,7 +266,7 @@ class SearchCommandTest {
 
     @ParameterizedTest
     @MethodSource("subcommands")
-    fun `rejects the removed --all option`(subcommand: SearchSubcommand) {
+    fun `rejects an unknown --all option`(subcommand: SearchSubcommand) {
         val client = mock<DaemonClient>()
 
         val run = subcommand.run(client, "--all")

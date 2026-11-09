@@ -22,10 +22,10 @@ abstract class NodeSearchCommand(environment: CommandEnvironment) : SearchComman
     )
     var scopeClause: List<String> = emptyList()
 
-    final override fun search(): SearchResults = search(scopeClauseSegments(scopeClause))
+    final override fun search(): SearchResults = searchIn(scopeClauseSegments(scopeClause))
 
     /** Asks the daemon for the query in [scope], the parsed scope segments, or `null` for the default scope. */
-    protected abstract fun search(scope: List<String>?): SearchResults
+    protected abstract fun searchIn(scope: List<String>?): SearchResults
 
     /** The [nodes] of [response] as search results, with [subject] naming what was searched for. */
     protected fun nodeResults(

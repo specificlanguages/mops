@@ -32,7 +32,7 @@ class FindNodeByIdCommand(environment: CommandEnvironment) : NodeSearchCommand(e
         require(id.isNotBlank()) { "ID must not be blank" }
     }
 
-    override fun search(scope: List<String>?): SearchResults {
+    override fun searchIn(scope: List<String>?): SearchResults {
         val response = environment.daemon().findNodeById(nodeId = id, limit = limit, scope = scope)
         return nodeResults(
             response,
