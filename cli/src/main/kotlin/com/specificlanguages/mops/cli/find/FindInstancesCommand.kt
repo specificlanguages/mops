@@ -2,7 +2,6 @@ package com.specificlanguages.mops.cli.find
 
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
-import com.specificlanguages.mops.cli.output.NodeReferenceFormat
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.NodeFilter
 import picocli.CommandLine.Command
@@ -32,17 +31,11 @@ import picocli.CommandLine.Parameters
             "concept with no matches succeeds with a `# no instances of <concept> in <scope>` line instead of rows, " +
             "naming --exact, --named, and --role when given.",
         "",
-        "Text output is one tab-separated row per node: `root` or `node`, the node name (or <unnamed>), the node's " +
-            "concept, and its serialized reference. A non-root node appends `parent` and the parent's name (or " +
-            "<unnamed>), concept, and reference. --json prints an object with `target` (the qualified " +
-            "`concept`), `scope`, `limit`, `truncated`, and a `nodes` array whose non-root entries carry a nested `parent` summary. See `mops explain output`.",
+        NODE_RESULTS_HELP,
     ],
 )
 class FindInstancesCommand(environment: CommandEnvironment) : NodeSearchCommand(environment) {
-    constructor(
-        daemonClient: DaemonClient,
-        nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED,
-    ) : this(DaemonClientCommandEnvironment(daemonClient, nodeReferenceFormat))
+    constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
 
     @Option(
         names = ["--exact"],
@@ -80,8 +73,7 @@ class FindInstancesCommand(environment: CommandEnvironment) : NodeSearchCommand(
     )
     lateinit var concept: String
 
-    override fun run() {
-        val scope = validatedScope()
+    override fun searchIn(scope: List<String>?): SearchResults {
         val filters = buildList {
             named?.let { add(NodeFilter.Named(it)) }
             role?.let { add(NodeFilter.Role(it)) }
@@ -94,7 +86,13 @@ class FindInstancesCommand(environment: CommandEnvironment) : NodeSearchCommand(
             filters = filters,
             limit = limit,
         )
-        printResults(response, response.nodes, response.truncated, subject(response.target.concept), response.scope)
+        return nodeResults(
+            response,
+            subject(response.target.concept),
+            response.scope,
+            response.nodes,
+            response.truncated,
+        )
     }
 
     private fun subject(resolvedConcept: String): String {

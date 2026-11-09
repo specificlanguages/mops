@@ -14,12 +14,12 @@ class ProjectTestingBuildTest {
     @Test
     fun `a cancelled build stops the run before the test worker starts`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
-            val workspace = Files.createTempDirectory("mops-test-workspace")
+            val workspace = TestDaemonWorkspace()
             val cancellation = Files.createTempDirectory("mops-test-cancel").resolve("cancel")
             Files.writeString(cancellation, "cancel")
-            val access = JetBrainsMpsAccess(project, DaemonLogger(), workspace, workspace.resolve("test-system-cache"), SharedMpsEnvironment.platform)
+            val access = workspace.mpsAccess(project)
 
-            val report = ProjectTesting(access, workspace, workspace.resolve("test-system-cache"))
+            val report = workspace.projectTesting(access)
                 .run(listOf("84cf8fb2-5a00-4f48-8747-6b797fc155f2(json.sandbox)"), build = true, timeoutMillis = 0, cancellationPath = cancellation.toString())
 
             assertEquals("CANCELLED", report.outcome, report.toString())

@@ -1,15 +1,10 @@
 package com.specificlanguages.mops.cli
 
-import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.cli.find.FindUsagesCommand
 import com.specificlanguages.mops.daemoncomms.DaemonClient
-import com.specificlanguages.mops.protocol.FindUsagesResponse
-import com.specificlanguages.mops.protocol.MpsNodeParentJson
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
-import com.specificlanguages.mops.protocol.MpsNodeUsageJson
 import com.specificlanguages.mops.protocol.NodeTarget
-import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.SearchScopeJson
 import com.specificlanguages.mops.protocol.SearchScopeKind
 import kotlin.test.Test
@@ -17,189 +12,30 @@ import kotlin.test.assertEquals
 import org.junit.jupiter.api.parallel.ResourceLock
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
-import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import picocli.CommandLine
 
+/** Tests what `find usages` selects. [SearchCommandTest] tests the output, `--limit`, and the scope clause. */
 @ResourceLock("system-streams")
 class FindUsagesCommandTest {
     @Test
-    fun `find usages names the resolved target and the searched scope when nothing references it`() {
-        val client = mock<DaemonClient>()
-        whenever(client.findUsages(NodeTarget.NodeReference(TARGET_REFERENCE), limit = 100)).thenReturn(emptyUsages())
-        var exitCode = Int.MIN_VALUE
-        var stdout = ""
-
-        val stderr = tapSystemErr {
-            stdout = tapSystemOut {
-                exitCode = CommandLine(FindUsagesCommand(client))
-                    .setExecutionExceptionHandler(PrintErrorAndExit)
-                    .execute(TARGET_REFERENCE)
-            }
-        }
-
-        assertEquals(0, exitCode)
-        assertEquals(
-            "# no usages of IJsonValue (InterfaceConceptDeclaration) in editable project sources (searched 12 models)" +
-                System.lineSeparator(),
-            stdout,
-        )
-        assertEquals("", stderr)
-    }
-
-    @Test
-    fun `find usages reports an empty --refs-only result on stderr keeping stdout empty`() {
-        val client = mock<DaemonClient>()
-        whenever(client.findUsages(NodeTarget.NodeReference(TARGET_REFERENCE), limit = 100)).thenReturn(emptyUsages())
-        var exitCode = Int.MIN_VALUE
-        var stdout = ""
-
-        val stderr = tapSystemErr {
-            stdout = tapSystemOut {
-                exitCode = CommandLine(FindUsagesCommand(client))
-                    .setExecutionExceptionHandler(PrintErrorAndExit)
-                    .execute("--refs-only", TARGET_REFERENCE)
-            }
-        }
-
-        assertEquals(0, exitCode)
-        assertEquals("", stdout)
-        assertEquals(
-            "# no usages of IJsonValue (InterfaceConceptDeclaration) in editable project sources (searched 12 models)" +
-                System.lineSeparator(),
-            stderr,
-        )
-    }
-
-    @Test
-    fun `find usages prints only the response for an empty --json result`() {
-        val client = mock<DaemonClient>()
-        whenever(client.findUsages(NodeTarget.NodeReference(TARGET_REFERENCE), limit = 100)).thenReturn(emptyUsages())
-        var exitCode = Int.MIN_VALUE
-        var stdout = ""
-
-        val stderr = tapSystemErr {
-            stdout = tapSystemOut {
-                exitCode = CommandLine(FindUsagesCommand(client))
-                    .setExecutionExceptionHandler(PrintErrorAndExit)
-                    .execute("--json", TARGET_REFERENCE)
-            }
-        }
-
-        assertEquals(0, exitCode)
-        assertEquals(emptyUsages(), ProtocolJson.decodeResponse(stdout))
-        assertEquals("", stderr)
-    }
-
-    @Test
     fun `find usages names a subtree scope by its node without a model count`() {
         val client = mock<DaemonClient>()
-        val subtree = SearchScopeJson(kind = SearchScopeKind.SUBTREE, reference = SUBTREE_REFERENCE, name = "JsonObject")
-        whenever(client.findUsages(NodeTarget.NodeReference(TARGET_REFERENCE), listOf("JsonObject"), limit = 100))
-            .thenReturn(emptyUsages().copy(scope = subtree))
-        var stdout = ""
-
-        tapSystemErr {
-            stdout = tapSystemOut {
-                CommandLine(FindUsagesCommand(client))
-                    .setExecutionExceptionHandler(PrintErrorAndExit)
-                    .execute("--full-concept", TARGET_REFERENCE, "in", "JsonObject")
-            }
-        }
-
-        assertEquals(
-            "# no usages of IJsonValue (jetbrains.mps.lang.structure.structure.InterfaceConceptDeclaration) in " +
-                "the subtree of JsonObject $SUBTREE_REFERENCE" + System.lineSeparator(),
-            stdout,
-        )
-    }
-
-    private fun emptyUsages() = FindUsagesResponse(
-        target = MpsNodeSummaryJson(
+        val subtree = SearchScopeJson(kind = SearchScopeKind.SUBTREE, reference = testNode.reference, name = "JsonObject")
+        val target = MpsNodeSummaryJson(
             type = "root",
             name = "IJsonValue",
             concept = "jetbrains.mps.lang.structure.structure.InterfaceConceptDeclaration",
             reference = TARGET_REFERENCE,
-        ),
-        scope = SearchScopeJson(SearchScopeKind.EDITABLE_PROJECT_SOURCES, models = 12),
-        limit = 100,
-        truncated = false,
-        usages = emptyList(),
-    )
+        )
+        whenever(client.findUsages(NodeTarget.NodeReference(TARGET_REFERENCE), listOf("JsonObject"), limit = 100))
+            .thenReturn(usagesResponse(owners = emptyList(), scope = subtree, target = target))
 
-    private companion object {
-        const val TARGET_REFERENCE =
-            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566909"
-        const val SUBTREE_REFERENCE =
-            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905"
-    }
+        val stdout = execute(client, "--full-concept", TARGET_REFERENCE, "in", "JsonObject")
 
-    @Test
-    fun `find usages prints tab-separated rows for a node reference`() {
-        val client = mock<DaemonClient>()
-        val nodeReference =
-            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
-        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), limit = 100)).thenReturn(sampleUsagesResponse())
-        var exitCode = Int.MIN_VALUE
-
-        val stdout = tapSystemOut {
-            exitCode = CommandLine(FindUsagesCommand(client))
-                .setExecutionExceptionHandler(PrintErrorAndExit)
-                .execute(nodeReference)
-        }
-
-        assertEquals(0, exitCode)
-        verify(client).findUsages(NodeTarget.NodeReference(nodeReference), limit = 100)
         assertEquals(
-            "usage\tconcept\tJsonObject\tConceptDeclaration\t" +
-                "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
-                System.lineSeparator(),
-            stdout,
-        )
-    }
-
-    @Test
-    fun `find usages appends parent columns when the owner has a parent`() {
-        val client = mock<DaemonClient>()
-        val nodeReference =
-            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
-        val owner = MpsNodeSummaryJson(
-            type = "node",
-            name = "JsonObject",
-            concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
-            reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905",
-            parent = MpsNodeParentJson(
-                type = "root",
-                role = "members",
-                name = "JsonFile",
-                concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
-                reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566800",
-            ),
-        )
-        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), limit = 100)).thenReturn(
-            FindUsagesResponse(
-                target = testUsagesTarget,
-                scope = testScope,
-                limit = 100,
-                truncated = false,
-                usages = listOf(MpsNodeUsageJson(role = "concept", owner = owner)),
-            ),
-        )
-        var exitCode = Int.MIN_VALUE
-
-        val stdout = tapSystemOut {
-            exitCode = CommandLine(FindUsagesCommand(client))
-                .setExecutionExceptionHandler(PrintErrorAndExit)
-                .execute(nodeReference)
-        }
-
-        assertEquals(0, exitCode)
-        assertEquals(
-            "usage\tconcept\tJsonObject\tConceptDeclaration\t" +
-                "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905\t" +
-                "parent\tJsonFile\tConceptDeclaration\t" +
-                "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566800" +
-                System.lineSeparator(),
+            "# no usages of IJsonValue (jetbrains.mps.lang.structure.structure.InterfaceConceptDeclaration) in " +
+                "the subtree of JsonObject ${testNode.reference}" + System.lineSeparator(),
             stdout,
         )
     }
@@ -207,257 +43,41 @@ class FindUsagesCommandTest {
     @Test
     fun `find usages accepts a model target and node ID`() {
         val client = mock<DaemonClient>()
-        val target = NodeTarget.InModel(
-            modelTarget = "com.specificlanguages.json.structure",
-            nodeId = "2110045694544566904",
-        )
-        whenever(client.findUsages(target, limit = 100)).thenReturn(sampleUsagesResponse())
-        var exitCode = Int.MIN_VALUE
+        whenever(client.findUsages(IN_MODEL_TARGET, limit = 100)).thenReturn(usagesResponse())
 
-        tapSystemOut {
-            exitCode = CommandLine(FindUsagesCommand(client))
-                .setExecutionExceptionHandler(PrintErrorAndExit)
-                .execute("com.specificlanguages.json.structure", "2110045694544566904")
-        }
+        execute(client, "com.specificlanguages.json.structure", "2110045694544566904")
 
-        assertEquals(0, exitCode)
-        verify(client).findUsages(target, limit = 100)
-    }
-
-    @Test
-    fun `find usages passes the in-clause scope after a node reference`() {
-        val client = mock<DaemonClient>()
-        val nodeReference =
-            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
-        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), listOf("/"), limit = 100))
-            .thenReturn(sampleUsagesResponse())
-        var exitCode = Int.MIN_VALUE
-
-        tapSystemOut {
-            exitCode = CommandLine(FindUsagesCommand(client))
-                .setExecutionExceptionHandler(PrintErrorAndExit)
-                .execute(nodeReference, "in", "/")
-        }
-
-        assertEquals(0, exitCode)
-        verify(client).findUsages(NodeTarget.NodeReference(nodeReference), listOf("/"), limit = 100)
+        verify(client).findUsages(IN_MODEL_TARGET, limit = 100)
     }
 
     @Test
     fun `find usages passes the in-clause scope after a model target and node ID`() {
         val client = mock<DaemonClient>()
-        val target = NodeTarget.InModel(
+        val scope = listOf("com.specificlanguages.json")
+        whenever(client.findUsages(IN_MODEL_TARGET, scope, limit = 100)).thenReturn(usagesResponse())
+
+        execute(client, "com.specificlanguages.json.structure", "2110045694544566904", "in", "com.specificlanguages.json")
+
+        verify(client).findUsages(IN_MODEL_TARGET, scope, limit = 100)
+    }
+
+    /** Runs `find usages` with [args], checks that it succeeded, and returns its stdout. */
+    private fun execute(client: DaemonClient, vararg args: String): String {
+        var exitCode = Int.MIN_VALUE
+        val stdout = tapSystemOut {
+            exitCode = CommandLine(FindUsagesCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(*args)
+        }
+        assertEquals(0, exitCode, stdout)
+        return stdout
+    }
+
+    private companion object {
+        const val TARGET_REFERENCE = "$TEST_MODEL/2110045694544566909"
+        val IN_MODEL_TARGET = NodeTarget.InModel(
             modelTarget = "com.specificlanguages.json.structure",
             nodeId = "2110045694544566904",
         )
-        val scope = listOf("com.specificlanguages.json")
-        whenever(client.findUsages(target, scope, limit = 100)).thenReturn(sampleUsagesResponse())
-        var exitCode = Int.MIN_VALUE
-
-        tapSystemOut {
-            exitCode = CommandLine(FindUsagesCommand(client))
-                .setExecutionExceptionHandler(PrintErrorAndExit)
-                .execute("com.specificlanguages.json.structure", "2110045694544566904", "in", "com.specificlanguages.json")
-        }
-
-        assertEquals(0, exitCode)
-        verify(client).findUsages(target, scope, limit = 100)
     }
-
-    @Test
-    fun `find usages rejects an in clause with no scope segments`() {
-        val client = mock<DaemonClient>()
-        val nodeReference =
-            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
-        var exitCode = Int.MIN_VALUE
-
-        tapSystemOut {
-            exitCode = CommandLine(FindUsagesCommand(client))
-                .setExecutionExceptionHandler(PrintErrorAndExit)
-                .execute(nodeReference, "in")
-        }
-
-        assertEquals(1, exitCode)
-        verifyNoInteractions(client)
-    }
-
-    @Test
-    fun `find usages rejects the removed all option`() {
-        val client = mock<DaemonClient>()
-        val nodeReference =
-            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
-        var exitCode = Int.MIN_VALUE
-
-        tapSystemOut {
-            exitCode = CommandLine(FindUsagesCommand(client))
-                .setExecutionExceptionHandler(PrintErrorAndExit)
-                .execute("--all", nodeReference)
-        }
-
-        assertEquals(2, exitCode)
-        verifyNoInteractions(client)
-    }
-
-    @Test
-    fun `find usages prints response object as json when requested`() {
-        val client = mock<DaemonClient>()
-        val nodeReference =
-            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
-        val response = sampleUsagesResponse()
-        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), limit = 100)).thenReturn(response)
-        var exitCode = Int.MIN_VALUE
-
-        val stdout = tapSystemOut {
-            exitCode = CommandLine(FindUsagesCommand(client))
-                .setExecutionExceptionHandler(PrintErrorAndExit)
-                .execute("--json", nodeReference)
-        }
-
-        assertEquals(0, exitCode)
-        assertEquals(response, ProtocolJson.decodeResponse(stdout))
-    }
-
-    @Test
-    fun `find usages accepts zero as unlimited limit`() {
-        val client = mock<DaemonClient>()
-        val nodeReference =
-            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
-        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), limit = 0)).thenReturn(
-            sampleUsagesResponse(limit = 0),
-        )
-        var exitCode = Int.MIN_VALUE
-
-        tapSystemOut {
-            exitCode = CommandLine(FindUsagesCommand(client))
-                .setExecutionExceptionHandler(PrintErrorAndExit)
-                .execute("--limit", "0", nodeReference)
-        }
-
-        assertEquals(0, exitCode)
-        verify(client).findUsages(NodeTarget.NodeReference(nodeReference), limit = 0)
-    }
-
-    @Test
-    fun `find usages appends a metadata line naming --limit when more results exist`() {
-        val client = mock<DaemonClient>()
-        val nodeReference =
-            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
-        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), limit = 1)).thenReturn(
-            sampleUsagesResponse(limit = 1).copy(truncated = true),
-        )
-        var exitCode = Int.MIN_VALUE
-
-        val stdout = tapSystemOut {
-            exitCode = CommandLine(FindUsagesCommand(client))
-                .setExecutionExceptionHandler(PrintErrorAndExit)
-                .execute("--limit", "1", nodeReference)
-        }
-
-        assertEquals(0, exitCode)
-        assertEquals(
-            "usage\tconcept\tJsonObject\tConceptDeclaration\t" +
-                "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
-                System.lineSeparator() +
-                "# truncated: showing 1; pass --limit 0 for all" + System.lineSeparator(),
-            stdout,
-        )
-    }
-
-    @Test
-    fun `find usages rejects a negative limit before dispatching to the daemon`() {
-        val client = mock<DaemonClient>()
-        val nodeReference =
-            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
-        var exitCode = Int.MIN_VALUE
-
-        tapSystemOut {
-            exitCode = CommandLine(FindUsagesCommand(client))
-                .setExecutionExceptionHandler(PrintErrorAndExit)
-                .execute("--limit", "-1", nodeReference)
-        }
-
-        assertEquals(1, exitCode)
-        verifyNoInteractions(client)
-    }
-
-    @Test
-    fun `find usages shows fully qualified concept names with --full-concept`() {
-        val client = mock<DaemonClient>()
-        val nodeReference =
-            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
-        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), limit = 100)).thenReturn(sampleUsagesResponse())
-        var exitCode = Int.MIN_VALUE
-
-        val stdout = tapSystemOut {
-            exitCode = CommandLine(FindUsagesCommand(client))
-                .setExecutionExceptionHandler(PrintErrorAndExit)
-                .execute("--full-concept", nodeReference)
-        }
-
-        assertEquals(0, exitCode)
-        assertEquals(
-            "usage\tconcept\tJsonObject\tjetbrains.mps.lang.structure.structure.ConceptDeclaration\t" +
-                "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
-                System.lineSeparator(),
-            stdout,
-        )
-    }
-
-    @Test
-    fun `find usages prints the referencing node reference per line with --refs-only`() {
-        val client = mock<DaemonClient>()
-        val nodeReference =
-            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
-        whenever(client.findUsages(NodeTarget.NodeReference(nodeReference), limit = 100)).thenReturn(sampleUsagesResponse())
-        var exitCode = Int.MIN_VALUE
-
-        val stdout = tapSystemOut {
-            exitCode = CommandLine(FindUsagesCommand(client))
-                .setExecutionExceptionHandler(PrintErrorAndExit)
-                .execute("--refs-only", nodeReference)
-        }
-
-        assertEquals(0, exitCode)
-        assertEquals(
-            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905" +
-                System.lineSeparator(),
-            stdout,
-        )
-    }
-
-    @Test
-    fun `find usages rejects --refs-only combined with --json`() {
-        val client = mock<DaemonClient>()
-        val nodeReference =
-            "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
-        var exitCode = Int.MIN_VALUE
-
-        tapSystemOut {
-            exitCode = CommandLine(FindUsagesCommand(client))
-                .setExecutionExceptionHandler(PrintErrorAndExit)
-                .execute("--refs-only", "--json", nodeReference)
-        }
-
-        assertEquals(1, exitCode)
-        verifyNoInteractions(client)
-    }
-
-    private fun sampleUsagesResponse(limit: Int = 100) =
-        FindUsagesResponse(
-            target = testUsagesTarget,
-            scope = testScope,
-            limit = limit,
-            truncated = false,
-            usages = listOf(
-                MpsNodeUsageJson(
-                    role = "concept",
-                    owner = MpsNodeSummaryJson(
-                        type = "node",
-                        name = "JsonObject",
-                        concept = "jetbrains.mps.lang.structure.structure.ConceptDeclaration",
-                        reference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566905",
-                    ),
-                ),
-            ),
-        )
 }

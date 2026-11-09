@@ -26,8 +26,8 @@ import picocli.CommandLine
 
 /**
  * Tests the behavior that every `check` subcommand inherits from [CheckCommand]: rendering in both formats, the
- * `--limit` cap, and the exit code. Each test runs once per subcommand. What a subcommand selects is tested in its own
- * test class.
+ * `--limit` cap, the exit code, and the failure for a selection without roots. Each test runs once per subcommand.
+ * What a subcommand selects is tested in its own test class.
  */
 @ResourceLock("system-streams")
 class CheckCommandTest {
@@ -40,7 +40,10 @@ class CheckCommandTest {
 
         assertEquals(1, run.exitCode, "an error finding fails the check")
         subcommand.call(verify(client), 20)
-        assertEquals(listOf(ERROR_ROW, "warning\tmodel-level note", "# 1 error, 1 warning, 0 infos"), run.lines)
+        assertEquals(
+            listOf(ERROR_ROW, "warning\tmodel-level note", "# checked 3 roots: 1 error, 1 warning, 0 infos"),
+            run.lines,
+        )
         // The human list is the user-facing payload only: no daemon wrapper fields.
         assertFalse(run.stdout.contains("\"limit\""), "human output must not leak wrapper fields: ${run.stdout}")
     }
@@ -53,7 +56,10 @@ class CheckCommandTest {
         val run = subcommand.run(client)
 
         assertEquals(0, run.exitCode, "warnings and infos alone do not fail the check")
-        assertEquals(listOf("warning\tmodel-level note", "# 0 errors, 3 warnings, 12 infos"), run.lines)
+        assertEquals(
+            listOf("warning\tmodel-level note", "# checked 3 roots: 0 errors, 3 warnings, 12 infos"),
+            run.lines,
+        )
     }
 
     @ParameterizedTest
@@ -64,7 +70,31 @@ class CheckCommandTest {
         val run = subcommand.run(client)
 
         assertEquals(0, run.exitCode)
-        assertEquals(listOf("# no findings"), run.lines)
+        assertEquals(listOf("# checked 3 roots: no findings"), run.lines)
+    }
+
+    @ParameterizedTest
+    @MethodSource("subcommands")
+    fun `a single checked root reads in the singular`(subcommand: CheckSubcommand) {
+        val client = subcommand.returning(checkResponse(rootsChecked = 1))
+
+        val run = subcommand.run(client)
+
+        assertEquals(listOf("# checked 1 root: no findings"), run.lines)
+    }
+
+    @ParameterizedTest
+    @MethodSource("subcommands")
+    fun `a selection without roots fails and says nothing was checked, in both formats`(subcommand: CheckSubcommand) {
+        val client = subcommand.returning(checkResponse(rootsChecked = 0))
+
+        for (options in listOf(emptyArray(), arrayOf("--format", "jsonl"))) {
+            val run = subcommand.run(client, *options)
+
+            assertEquals(1, run.exitCode, "${options.toList()}")
+            assertEquals("", run.stdout, "${options.toList()}: no findings and no summary for an empty selection")
+            assertEquals("${subcommand.noRoots}; nothing was checked", run.stderr.trim())
+        }
     }
 
     @ParameterizedTest
@@ -135,7 +165,7 @@ class CheckCommandTest {
         assertEquals(
             listOf(
                 ERROR_ROW,
-                "# 3 errors, 2 warnings, 5 infos",
+                "# checked 3 roots: 3 errors, 2 warnings, 5 infos",
                 "# truncated: showing 1 of 10 findings; pass --limit 0 for all",
             ),
             run.lines,
@@ -155,7 +185,7 @@ class CheckCommandTest {
             listOf(
                 "warning\tWarning: getQualifiedName():String is deprecated (\\n)\\r\\n\\tsee C:\\\\docs\t<unnamed>\t" +
                     "jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation\t$MODEL/call",
-                "# 0 errors, 1 warning, 0 infos",
+                "# checked 3 roots: 0 errors, 1 warning, 0 infos",
             ),
             run.lines,
         )
@@ -183,10 +213,14 @@ class CheckCommandTest {
         assertContains(run.stderr, "unknown --format value 'xml'")
     }
 
-    /** One `check` subcommand: how to create it, the arguments that select what it checks, and the call it makes. */
+    /**
+     * One `check` subcommand: how to create it, the arguments that select what it checks, how its error names a
+     * selection without roots, and the call it makes.
+     */
     class CheckSubcommand(
         private val name: String,
         private val selection: List<String>,
+        val noRoots: String,
         private val create: (DaemonClient) -> CheckCommand,
         val call: (DaemonClient, Int) -> ModelCheckResponse,
     ) {
@@ -221,15 +255,24 @@ class CheckCommandTest {
 
         @JvmStatic
         fun subcommands(): List<CheckSubcommand> = listOf(
-            CheckSubcommand("model", listOf(MODEL), ::ModelCheckCommand) { client, limit ->
-                client.checkModel(MODEL, limit)
-            },
-            CheckSubcommand("module", listOf("FOO"), ::ModuleCheckCommand) { client, limit ->
-                client.checkModules(listOf("FOO"), limit)
-            },
-            CheckSubcommand("project", emptyList(), ::ProjectCheckCommand) { client, limit ->
-                client.checkProject(limit)
-            },
+            CheckSubcommand(
+                name = "model",
+                selection = listOf(MODEL),
+                noRoots = "model $MODEL has no roots",
+                create = ::ModelCheckCommand,
+            ) { client, limit -> client.checkModel(MODEL, limit) },
+            CheckSubcommand(
+                name = "module",
+                selection = listOf("FOO"),
+                noRoots = "module FOO has no roots",
+                create = ::ModuleCheckCommand,
+            ) { client, limit -> client.checkModules(listOf("FOO"), limit) },
+            CheckSubcommand(
+                name = "project",
+                selection = emptyList(),
+                noRoots = "the project has no roots",
+                create = ::ProjectCheckCommand,
+            ) { client, limit -> client.checkProject(limit) },
         )
 
         private val ERROR_FINDING = ModelCheckFindingJson(

@@ -36,26 +36,28 @@ class ModelChecker(private val persistence: PersistenceFacade = PersistenceFacad
     }
 
     private fun check(project: Project, models: List<SModel>, modules: List<SModule>, limit: Int): ModelCheckResponse {
-        val findings = collectFindings(project, models, modules)
-            .sortedBy { it.severity.ordinal }
-        val selected = if (limit > 0) findings.take(limit) else findings
-        return ModelCheckResponse(summary = ModelCheckSummary.of(findings, limit), findings = selected)
-    }
-
-    private fun collectFindings(
-        project: Project,
-        models: List<SModel>,
-        modules: List<SModule>,
-    ): List<ModelCheckFindingJson> {
-        val registry = project.getComponent(CheckerRegistry::class.java)
-            ?: error("CheckerRegistry component is not available")
-
         // Do not expand languages to their generators: generators are Project Modules in their own right and are
         // supplied explicitly when selected. Stub models stay out, mirroring MPS's own headless checking.
         val extractor = object : ModelCheckerBuilder.ModelsExtractorImpl() {
             override fun getSubModules(module: SModule): Iterable<SModule> = listOf(module)
         }
         extractor.includeStubs(false)
+
+        val findings = collectFindings(project, extractor, models, modules)
+            .sortedBy { it.severity.ordinal }
+        val selected = if (limit > 0) findings.take(limit) else findings
+        val rootsChecked = (models + modules.flatMap(extractor::getModels)).sumOf { it.rootNodes.count() }
+        return ModelCheckResponse(summary = ModelCheckSummary.of(findings, limit, rootsChecked), findings = selected)
+    }
+
+    private fun collectFindings(
+        project: Project,
+        extractor: ModelCheckerBuilder.ModelExtractor,
+        models: List<SModel>,
+        modules: List<SModule>,
+    ): List<ModelCheckFindingJson> {
+        val registry = project.getComponent(CheckerRegistry::class.java)
+            ?: error("CheckerRegistry component is not available")
 
         val checker = ModelCheckerBuilder(extractor).createChecker(registry.checkers)
         val collector = CollectConsumer<IssueKindReportItem>()

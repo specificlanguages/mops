@@ -5,6 +5,9 @@ import com.specificlanguages.mops.daemon.core.MpsExtra
 import com.specificlanguages.mops.daemon.core.MpsRead
 import com.specificlanguages.mops.daemon.core.MpsWrite
 import com.specificlanguages.mops.protocol.CodeRunRequest
+import com.specificlanguages.mops.protocol.ConstraintEnforcement
+import com.specificlanguages.mops.protocol.EditBatch
+import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.TestRunRequest
 
@@ -21,6 +24,9 @@ fun mpsAccessOver(operations: MpsWrite, extra: MpsExtra = UnstubbedExtra): MpsAc
 
     override fun <T> extra(block: MpsExtra.() -> T): T = extra.block()
 }
+
+/** Applies [batch] with [ConstraintEnforcement.ADVISORY]: violations are reported, and the batch is saved anyway. */
+fun MpsWrite.advisoryEdit(batch: EditBatch): ModelEditResponse = modelEdit(batch, ConstraintEnforcement.ADVISORY)
 
 private object UnstubbedExtra : MpsExtra {
     override fun refreshExternalChanges() = Unit

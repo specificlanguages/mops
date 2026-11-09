@@ -22,7 +22,7 @@ METADATA
   starts with `#`, never a result, so `grep -v '^#'` leaves only the rows:
 
     # truncated: showing <shown>; pass --limit 0 for all
-    # 1 error, 2 warnings, 0 infos
+    # checked 4 roots: 1 error, 2 warnings, 0 infos
     # no mops daemons
     # no usages of foo (InstanceMethodDeclaration) in editable project sources (searched 12 models)
 
