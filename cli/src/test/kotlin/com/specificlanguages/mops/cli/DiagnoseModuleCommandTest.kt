@@ -65,6 +65,32 @@ class DiagnoseModuleCommandTest {
     }
 
     @Test
+    fun `a problem detail with a newline stays on one row`() {
+        val client = mock<DaemonClient>()
+        whenever(client.diagnoseModule(MODULE)).thenReturn(
+            ModuleDiagnosticResponse(
+                module = ModuleLoadDiagnosticJson(
+                    module = MODULE,
+                    kind = "language",
+                    present = true,
+                    loaded = false,
+                    problem = ModuleLoadProblemJson(module = MODULE, reason = "NOT_BUILT", detail = "not built\n\tsee log"),
+                ),
+            ),
+        )
+
+        val stdout = tapSystemOut {
+            assertEquals(1, run(client, MODULE))
+        }
+
+        assertEquals(
+            "org.iets3.core.expr.base\tlanguage\tpresent=true\tloaded=false" + nl +
+                "\torg.iets3.core.expr.base\tNOT_BUILT\tnot built\\n\\tsee log" + nl,
+            stdout,
+        )
+    }
+
+    @Test
     fun `diagnose module reports an absent module`() {
         val client = mock<DaemonClient>()
         whenever(client.diagnoseModule("no.such.module")).thenReturn(

@@ -57,6 +57,17 @@ class SearchCommandTest {
 
     @ParameterizedTest
     @MethodSource("subcommands")
+    fun `keeps a node whose name has a newline on one row`(subcommand: SearchSubcommand) {
+        val node = testNode.copy(name = "first\nsecond")
+        val client = subcommand.returning(subcommand.response(listOf(node)))
+
+        val run = subcommand.run(client)
+
+        assertEquals(subcommand.row(node, "first\\nsecond\tConceptDeclaration\t${node.reference}") + NL, run.stdout)
+    }
+
+    @ParameterizedTest
+    @MethodSource("subcommands")
     fun `appends parent columns when the node has a parent`(subcommand: SearchSubcommand) {
         val client = subcommand.returning(subcommand.response(listOf(testChildNode)))
 
