@@ -1,7 +1,7 @@
 # JSON edits
 
 Use batches when you want explicit edit operations and constraint diagnostics. `mops explain edit` describes the
-operations and what a batch does. This one-liner renames a node:
+operations and how a batch applies them. This one-liner renames a node:
 
 ```sh
 printf '%s\n' '{"operations":[{"op":"setProperty","target":"NODE_REF","name":"name","value":"Renamed"}]}' | mops edit model
