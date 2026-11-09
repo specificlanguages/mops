@@ -23,9 +23,10 @@ To refresh existing module entries in an MPS build-language project from descrip
 starting with `#` are metadata, not findings: the summary (`# 1 error, 2 warnings, 0 infos` or `# no findings`) and,
 when the cap cut the list, `# truncated: showing <shown> of <total> findings; pass --limit 0 for all`. Filter them with
 `grep -v '^#'`. With `--format jsonl`, every line is a JSON object; the last one is a `{"type":"summary",...}` record
-with `shown`, `total`, `errors`, `warnings`, `infos`, `limit`, `truncated`, and a `hint` when truncated. Findings have
-no `type` field. The totals and the exit code cover every finding, not only the shown ones: `check` exits `1` when an
-error-severity finding exists and `0` for warnings and infos alone.
+with a field for every summary fact; the record itself is the full list. Read `total` and `errors` for the full result
+and `truncated` for whether the cap cut the list; a truncated record has a `hint`. Findings have no `type` field. The
+totals and the exit code cover every finding, not only the shown ones: `check` exits `1` when an error-severity finding
+exists and `0` for warnings and infos alone.
 
 ## Run tests
 

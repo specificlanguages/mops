@@ -8,9 +8,7 @@ import com.specificlanguages.mops.protocol.MakeMessageJson
 import com.specificlanguages.mops.protocol.MakeMessageKind
 import com.specificlanguages.mops.protocol.MakeOutcome
 import com.specificlanguages.mops.protocol.MakeResponse
-import com.specificlanguages.mops.protocol.ModelCheckFindingCounts
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
-import com.specificlanguages.mops.protocol.ModelCheckResponse
 import com.specificlanguages.mops.protocol.PongResponse
 import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
@@ -36,11 +34,9 @@ class OutputEncodingTest {
 
     @Test
     fun `stdout is UTF-8`() {
-        val response = ModelCheckResponse(
-            limit = 0,
-            truncated = false,
-            totals = ModelCheckFindingCounts(errors = 1, warnings = 0, infos = 0),
+        val response = checkResponse(
             findings = listOf(ModelCheckFindingJson(severity = FindingSeverity.ERROR, message = MESSAGE)),
+            limit = 0,
         )
 
         val output = runCli(response, "check", "model", "--format", "jsonl", MODEL)
