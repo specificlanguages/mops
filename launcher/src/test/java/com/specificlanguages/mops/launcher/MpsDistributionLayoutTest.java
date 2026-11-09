@@ -19,4 +19,23 @@ public class MpsDistributionLayoutTest {
         assertEquals(new MpsVersion(2021, 3), MpsDistributionLayout.readVersion(tempDir));
     }
 
+    @Test
+    public void findsJnaLibraryInArchitectureFolderOfGenericDistribution(@TempDir Path mpsHome) throws IOException {
+        Files.createDirectories(mpsHome.resolve("lib/jna/aarch64"));
+        Files.createDirectories(mpsHome.resolve("lib/jna/amd64"));
+
+        assertEquals(mpsHome.resolve("lib/jna/aarch64"), MpsDistributionLayout.findJnaLibrary(mpsHome, "aarch64"));
+        assertEquals(mpsHome.resolve("lib/jna/amd64"), MpsDistributionLayout.findJnaLibrary(mpsHome, "amd64"));
+        // Java on Intel macOS reports os.arch as x86_64.
+        assertEquals(mpsHome.resolve("lib/jna/amd64"), MpsDistributionLayout.findJnaLibrary(mpsHome, "x86_64"));
+    }
+
+    @Test
+    public void findsJnaLibraryDirectlyInLibJnaOfPlatformDistribution(@TempDir Path mpsHome) throws IOException {
+        Files.createDirectories(mpsHome.resolve("lib/jna"));
+        Files.createFile(mpsHome.resolve("lib/jna/libjnidispatch.jnilib"));
+
+        assertEquals(mpsHome.resolve("lib/jna"), MpsDistributionLayout.findJnaLibrary(mpsHome, "aarch64"));
+    }
+
 }
