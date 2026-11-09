@@ -3,6 +3,7 @@ package com.specificlanguages.mops.cli
 import com.specificlanguages.mops.protocol.DaemonPaths
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.ProtocolJson
+import com.specificlanguages.mops.protocol.recordOf
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.api.parallel.ResourceLock
@@ -150,7 +151,7 @@ class TestRunningIntegrationTest {
             """.trimIndent())
             // Kill the daemon once a test has passed, the way an expired `code run --timeout` does
             // (DefaultDaemonClientTest covers that the client kills it). The worker must record what completed.
-            val daemonPid = requireNotNull(DaemonRecordStore.forDaemonHome(home).read(project)).record.pid
+            val daemonPid = requireNotNull(DaemonRecordStore.forDaemonHome(home).recordOf(project)).record.pid
             val code = startCli(project, home, "code", "code", "run", script.pathString, "--timeout", "0")
             try {
                 awaitCondition { reports().any { it.reportPath !in beforeCode && it.results.any { result -> result.kind == "TEST" && result.status == "PASSED" } } }

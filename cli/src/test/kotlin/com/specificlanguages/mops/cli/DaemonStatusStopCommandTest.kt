@@ -9,6 +9,7 @@ import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.PongResponse
 import com.specificlanguages.mops.protocol.StoredDaemonRecord
+import com.specificlanguages.mops.protocol.recordOf
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.io.CleanupMode
@@ -87,7 +88,7 @@ class DaemonStatusStopCommandTest {
         }
         daemon.join(5_000)
         assertTrue(stdout.lineSequence().any { it.startsWith("unreachable ") }, stdout)
-        assertEquals(record, store.read(project)?.record)
+        assertEquals(record, store.recordOf(project)?.record)
     }
 
     @Test
@@ -105,7 +106,7 @@ class DaemonStatusStopCommandTest {
                     "--daemon-home", daemonHome.pathString, "daemon", "status"))
             }
             assertTrue(stdout.startsWith("unreachable "), stdout)
-            assertEquals(record, store.read(project)?.record)
+            assertEquals(record, store.recordOf(project)?.record)
         }
     }
 
@@ -136,7 +137,7 @@ class DaemonStatusStopCommandTest {
 
         assertEquals(0, exitCode)
         assertTrue(stdout.startsWith("unreachable "), stdout)
-        assertEquals(record, store.read(project)?.record)
+        assertEquals(record, store.recordOf(project)?.record)
         assertContains(stdout, project.pathString)
         assertContains(stdout, "4322")
     }

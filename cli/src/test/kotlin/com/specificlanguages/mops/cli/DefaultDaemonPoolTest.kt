@@ -9,6 +9,7 @@ import com.specificlanguages.mops.protocol.DaemonContext
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.PongResponse
 import com.specificlanguages.mops.protocol.StoppedResponse
+import com.specificlanguages.mops.protocol.recordOf
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -100,7 +101,7 @@ class DefaultDaemonPoolTest {
             )
         }
 
-        assertNull(store.read(project))
+        assertNull(store.recordOf(project))
     }
 
     @Test
@@ -202,7 +203,7 @@ class DefaultDaemonPoolTest {
             )
         }
 
-        assertNull(store.read(project))
+        assertNull(store.recordOf(project))
     }
 
     @Test
@@ -231,12 +232,12 @@ class DefaultDaemonPoolTest {
                 mock(),
                 stopGrace = Duration.ofMillis(200),
                 killGrace = Duration.ofSeconds(5),
-            ).stop(store.read(project)!!)
+            ).stop(store.recordOf(project)!!)
 
             fakeDaemon.join(5_000)
             assertEquals(DaemonPool.StopOutcome.STOPPED, outcome)
             assertFalse(stubborn.isAlive, "the stubborn daemon process should have been force-killed")
-            assertNull(store.read(project), "a stopped daemon's record must be removed")
+            assertNull(store.recordOf(project), "a stopped daemon's record must be removed")
         } finally {
             stubborn.destroyForcibly()
         }
@@ -253,10 +254,10 @@ class DefaultDaemonPoolTest {
             daemonRecord(port = 9, pid = 999_999L, project = project, mpsHome = mpsHome, workspace = Path.of("/x")),
         )
 
-        val outcome = DefaultDaemonPool(store, mock()).stop(store.read(project)!!)
+        val outcome = DefaultDaemonPool(store, mock()).stop(store.recordOf(project)!!)
 
         assertEquals(DaemonPool.StopOutcome.ALREADY_GONE, outcome)
-        assertNull(store.read(project))
+        assertNull(store.recordOf(project))
     }
 
     private fun launcherWithUnreachableExistingDaemon(): DaemonLauncher {

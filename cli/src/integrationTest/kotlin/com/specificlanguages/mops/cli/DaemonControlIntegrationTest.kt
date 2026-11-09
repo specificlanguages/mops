@@ -8,6 +8,7 @@ import com.specificlanguages.mops.protocol.DaemonResponse
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.ProtocolJson
 import com.specificlanguages.mops.protocol.PongResponse
+import com.specificlanguages.mops.protocol.recordOf
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.api.parallel.ResourceLock
@@ -48,7 +49,7 @@ class DaemonControlIntegrationTest {
             val started = runCommandLine(project, *javaAndMpsHomeArgs(),
                 "--daemon-home", daemonHome.pathString, "daemon", "ping")
             assertEquals(0, started.exitCode, started.output)
-            val record = requireNotNull(store.read(project)).record
+            val record = requireNotNull(store.recordOf(project)).record
             val client = DefaultDaemonClient.fromRecord(record)
             val request = FutureTask {
                 client.runCode("""
@@ -68,7 +69,7 @@ class DaemonControlIntegrationTest {
                 "--daemon-home", daemonHome.pathString, "daemon", "ping")
             assertEquals(0, ping.exitCode, ping.output)
             assertIs<PongResponse>(ProtocolJson.decodeResponse(ping.stdout.trim()))
-            assertEquals(record, store.read(project)?.record, "discovery must retain the busy daemon")
+            assertEquals(record, store.recordOf(project)?.record, "discovery must retain the busy daemon")
             assertFalse(request.isDone, "ping must finish while Code Mode is blocked")
         } finally {
             Files.writeString(release, "release")
@@ -90,7 +91,7 @@ class DaemonControlIntegrationTest {
             val ping = runCommandLine(project, *javaAndMpsHomeArgs(),
                 "--daemon-home", daemonHome.pathString, "daemon", "ping")
             assertEquals(0, ping.exitCode, ping.output)
-            val record = requireNotNull(store.read(project)).record
+            val record = requireNotNull(store.recordOf(project)).record
             // Calls an int-returning native function with int arguments, the same way DaemonProcess does: through the
             // Foreign Function API on Java 22 and newer, otherwise through JNA from the MPS boot classpath. Starting
             // with MPS 2026.3, JNA is no longer on the boot classpath.
@@ -148,7 +149,7 @@ class DaemonControlIntegrationTest {
             val stopped = runCommandLine(project, "--daemon-home", daemonHome.pathString, "daemon", "status")
             assertEquals(0, stopped.exitCode, stopped.output)
             assertContains(stopped.stdout, "unreachable ")
-            assertEquals(record, store.read(project)?.record)
+            assertEquals(record, store.recordOf(project)?.record)
         } finally {
             stopDaemons(project, daemonHome)
         }
@@ -169,7 +170,7 @@ class DaemonControlIntegrationTest {
         )
         assertEquals(0, ping.exitCode, ping.output)
 
-        val daemonPid = store.read(project)?.record?.pid
+        val daemonPid = store.recordOf(project)?.record?.pid
             ?: throw AssertionError("a running daemon should have published its record")
 
         val stop = runCommandLine(
@@ -181,7 +182,7 @@ class DaemonControlIntegrationTest {
 
         assertEquals(0, stop.exitCode, stop.output)
         assertContains(stop.stdout, "stopped")
-        assertNull(store.read(project))
+        assertNull(store.recordOf(project))
         // The daemon must actually terminate, not just drop its record: a surviving process would keep holding the
         // MPS workspace lock and block the next start.
         assertFalse(

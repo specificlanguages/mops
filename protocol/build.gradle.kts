@@ -1,6 +1,7 @@
 plugins {
     id("mops.kotlin-jvm-conventions")
     `java-library`
+    `java-test-fixtures`
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.shadow)
 }
