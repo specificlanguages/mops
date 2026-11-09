@@ -82,6 +82,7 @@ class ModelAccessBoundaryTest {
                 platform = mock(),
                 mpsListExporter = mock(),
                 jsonNodeExporter = mock(),
+                moduleLocationsExporter = mock(),
                 modelNodeResolver = mock(),
                 modelChecker = mock(),
                 editBatchExecutor = mock(),
