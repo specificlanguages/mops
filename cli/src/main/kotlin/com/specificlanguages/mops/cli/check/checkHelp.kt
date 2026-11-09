@@ -10,9 +10,10 @@ internal const val CHECK_OUTPUT_HELP =
 
 internal const val CHECK_JSONL_HELP =
     "--format jsonl prints one finding object per line and ends with a summary record, {\"type\":\"summary\",...}, " +
-        "with a field for every summary fact, such as total, errors, and truncated (whether --limit cut the list). " +
-        "A truncated record also has a hint naming --limit 0. Findings have no type field."
+        "with a field for every summary fact; the record itself is the full list. Read total and errors for the full " +
+        "result and truncated for whether --limit cut the list; a truncated record also has a hint naming " +
+        "--limit 0. Findings have no type field."
 
 internal const val CHECK_EXIT_HELP =
-    "The counts and the exit code cover every finding, not only the shown ones, in both formats. The command exits " +
+    "The totals and the exit code cover every finding, not only the shown ones, in both formats. The command exits " +
         "1 when any finding is an error and 0 for warnings and infos alone."

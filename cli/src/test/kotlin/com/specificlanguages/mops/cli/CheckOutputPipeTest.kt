@@ -6,9 +6,7 @@ import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.FindingSeverity
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
 import com.specificlanguages.mops.protocol.ModelCheckResponse
-import com.specificlanguages.mops.protocol.ModelCheckSummaryJson
 import com.specificlanguages.mops.protocol.PongResponse
-import com.specificlanguages.mops.protocol.ProtocolJson
 import java.nio.file.Path
 import kotlin.io.path.pathString
 import kotlin.test.Test
@@ -32,16 +30,16 @@ class CheckOutputPipeTest {
 
     @Test
     fun `jsonl output is one JSON object per line ending in the summary record`() {
-        val response = truncatedResponse()
-        val output = runCheck(response, "check", "model", "--format", "jsonl", "--limit", "2", MODEL)
+        val output = runCheck(truncatedResponse(), "check", "model", "--format", "jsonl", "--limit", "2", MODEL)
 
         assertEquals(1, output.exitCode, output.stderr)
         val records = output.stdout.lines().map { Json.parseToJsonElement(it).jsonObject }
         assertEquals(3, records.size, output.stdout)
         assertEquals(listOf(null, null, "summary"), records.map { it["type"]?.jsonPrimitive?.content })
         assertEquals(
-            ModelCheckSummaryJson(shown = 2, summary = response.summary, hint = "pass --limit 0 for all"),
-            ProtocolJson.checkSummary.decode(output.stdout.lines().last()),
+            """{"type":"summary","shown":2,"total":4,"errors":1,"warnings":2,"infos":1,"limit":2,"truncated":true,""" +
+                """"hint":"pass --limit 0 for all"}""",
+            output.stdout.lines().last(),
         )
     }
 

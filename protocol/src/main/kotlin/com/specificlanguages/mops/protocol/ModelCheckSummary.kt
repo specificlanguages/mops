@@ -3,9 +3,9 @@ package com.specificlanguages.mops.protocol
 import kotlinx.serialization.Serializable
 
 /**
- * What a **Model Check** found as a whole, as opposed to the findings themselves. Every `check` output format reports
- * these facts: the daemon sends them in [ModelCheckResponse], and the JSONL summary record ([ModelCheckSummaryJson])
- * prints each of them as a field.
+ * What a **Model Check** found as a whole, as opposed to the findings themselves. The daemon sends it in
+ * [ModelCheckResponse], and the JSONL summary record ([ModelCheckSummaryJson]) prints each of its fields. Text output
+ * prints the counts and, when the list was truncated, a truncation line.
  *
  * The counts per [severity][FindingSeverity] are taken over the full finding set before truncation, so "zero errors" is
  * distinguishable from "errors present" even when only the most severe slice was sent. [truncated] is true when
