@@ -43,6 +43,21 @@ class ModuleCheckCommandTest {
         }
 
         verify(client).checkModules(modules, 20)
-        assertEquals("# no findings", stdout.trim())
+        assertEquals("# checked 3 roots: no findings", stdout.trim())
+    }
+
+    @Test
+    fun `module check names several modules without roots in the plural`() {
+        val client = mock<DaemonClient>()
+        val modules = listOf("FOO", "BAR")
+        whenever(client.checkModules(modules, 20)).thenReturn(checkResponse(rootsChecked = 0))
+
+        val stderr = tapSystemErr {
+            CommandLine(ModuleCheckCommand(client))
+                .setExecutionExceptionHandler(PrintErrorAndExit)
+                .execute(*modules.toTypedArray())
+        }
+
+        assertEquals("modules FOO, BAR have no roots; nothing was checked", stderr.trim())
     }
 }

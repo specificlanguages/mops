@@ -26,4 +26,6 @@ class ModelCheckCommand(environment: CommandEnvironment) : CheckCommand(environm
     lateinit var target: String
 
     override fun check(client: DaemonClient): ModelCheckResponse = client.checkModel(target, limit)
+
+    override fun noRootsError(): String = "model $target has no roots"
 }
