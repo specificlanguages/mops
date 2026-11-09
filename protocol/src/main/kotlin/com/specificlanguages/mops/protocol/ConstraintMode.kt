@@ -4,10 +4,8 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * What `mops edit model` does with a **Constraint** violation. Violations are reported in every mode.
- *
- * - [ADVISORY]: apply and save the batch anyway.
- * - [STRICT]: block the batch; nothing is saved.
+ * What `mops edit model` does with a **Constraint** violation. `mops edit model --help` describes each mode under
+ * `--constraints`.
  *
  * What happens to a concept that cannot be checked because its language did not load is a separate setting,
  * [ConstraintPolicy.ignoreMissingLanguages].

@@ -835,9 +835,14 @@ class DaemonProtocolJsonTest {
     fun `model-check response JSON carries findings with severity, node reference, name, and concept`() {
         val model = "r:9363093b-3fa9-4e39-87cb-26240d0efa37(baselanguage.sandbox)"
         val response = ModelCheckResponse(
-            limit = 20,
-            truncated = true,
-            totals = ModelCheckFindingCounts(errors = 1, warnings = 1, infos = 0),
+            summary = ModelCheckSummary(
+                rootsChecked = 3,
+                errors = 1,
+                warnings = 1,
+                infos = 0,
+                limit = 20,
+                truncated = true,
+            ),
             findings = listOf(
                 ModelCheckFindingJson(
                     severity = FindingSeverity.ERROR,
@@ -862,8 +867,10 @@ class DaemonProtocolJsonTest {
         assertContains(serialized, """"severity":"warning"""")
         assertContains(serialized, """"concept":"jetbrains.mps.baseLanguage.structure.VariableReference"""")
         assertContains(serialized, """"reference":"$model/4LxqAFFLQFr"""")
-        assertContains(serialized, """"truncated":true""")
-        assertContains(serialized, """"totals":{"errors":1,"warnings":1,"infos":0}""")
+        assertContains(
+            serialized,
+            """"summary":{"rootsChecked":3,"errors":1,"warnings":1,"infos":0,"limit":20,"truncated":true}""",
+        )
         assertEquals(response, ProtocolJson.decodeResponse(serialized))
     }
 
@@ -881,28 +888,56 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
+    fun `a check summary counts every finding by severity and is truncated only when the limit drops findings`() {
+        val findings = listOf(
+            ModelCheckFindingJson(severity = FindingSeverity.ERROR, message = "e"),
+            ModelCheckFindingJson(severity = FindingSeverity.WARNING, message = "w1"),
+            ModelCheckFindingJson(severity = FindingSeverity.WARNING, message = "w2"),
+            ModelCheckFindingJson(severity = FindingSeverity.INFO, message = "i"),
+        )
+
+        assertEquals(
+            ModelCheckSummary(rootsChecked = 3, errors = 1, warnings = 2, infos = 1, limit = 2, truncated = true),
+            ModelCheckSummary.of(findings, limit = 2, rootsChecked = 3),
+        )
+        assertEquals(
+            ModelCheckSummary(rootsChecked = 3, errors = 1, warnings = 2, infos = 1, limit = 4, truncated = false),
+            ModelCheckSummary.of(findings, limit = 4, rootsChecked = 3),
+        )
+        assertEquals(
+            ModelCheckSummary(rootsChecked = 3, errors = 1, warnings = 2, infos = 1, limit = 0, truncated = false),
+            ModelCheckSummary.of(findings, limit = 0, rootsChecked = 3),
+        )
+    }
+
+    @Test
     fun `the check summary record is typed and names the lifting option only when truncated`() {
         val truncated = ModelCheckSummaryJson(
             shown = 1,
-            total = 10,
-            errors = 3,
-            warnings = 2,
-            infos = 5,
-            limit = 1,
-            truncated = true,
+            summary = ModelCheckSummary(
+                rootsChecked = 4,
+                errors = 3,
+                warnings = 2,
+                infos = 5,
+                limit = 1,
+                truncated = true,
+            ),
             hint = "pass --limit 0 for all",
         )
         val encoded = ProtocolJson.checkSummary.encode(truncated)
 
         assertEquals(
-            """{"type":"summary","shown":1,"total":10,"errors":3,"warnings":2,"infos":5,"limit":1,"truncated":true,"hint":"pass --limit 0 for all"}""",
+            """{"type":"summary","shown":1,"total":10,"rootsChecked":4,"errors":3,"warnings":2,"infos":5,"limit":1,"truncated":true,"hint":"pass --limit 0 for all"}""",
             encoded,
         )
         assertEquals(truncated, ProtocolJson.checkSummary.decode(encoded))
 
-        val complete = truncated.copy(shown = 10, limit = 0, truncated = false, hint = null)
+        val complete = ModelCheckSummaryJson(
+            shown = 10,
+            summary = truncated.summary.copy(limit = 0, truncated = false),
+        )
         assertEquals(
-            """{"type":"summary","shown":10,"total":10,"errors":3,"warnings":2,"infos":5,"limit":0,"truncated":false}""",
+            """{"type":"summary","shown":10,"total":10,"rootsChecked":4,"errors":3,"warnings":2,"infos":5,"limit":0,"truncated":false}""",
             ProtocolJson.checkSummary.encode(complete),
         )
     }

@@ -1,6 +1,7 @@
 # JSON edits
 
-Use batches when you want explicit edit operations and constraint diagnostics. This one-liner renames a node:
+Use batches when you want explicit edit operations and constraint diagnostics. `mops explain edit` describes the
+operations and how a batch applies them. This one-liner renames a node:
 
 ```sh
 {{rename-node}}
@@ -21,6 +22,6 @@ Copy a member subtree into a class, preserving its references and assigning fres
 
 {{table:commands|Command}}
 
-The default `strict` constraint mode blocks a batch with violations; `advisory` reports them and applies the batch. A
-concept whose language did not load cannot be checked and fails the batch unless you pass `--ignore-missing-languages`,
-which skips it with a warning. Constraint checks are distinct from a full model check.
+`--constraints` decides whether a constraint violation blocks the batch, and `--ignore-missing-languages` decides whether
+a concept whose language did not load fails it; `mops edit model --help` describes both. Constraint checks are distinct
+from a full model check.

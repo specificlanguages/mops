@@ -56,9 +56,10 @@ Pitfalls when navigating and searching:
 - `find node-by-id` turns a node ID from a `.mps` file into full references. Those files spell default numeric IDs in an
   encoded base64 form, while mops prints decimal IDs; the command accepts both.
 
-Read `mops examples editing` to choose JSON edit batches, Java insertion, or Code Mode. JSON batches report containment
-constraint violations; Code Mode supports custom traversal and logic. Check edited models with `check model`, build with
-`make module`, and run relevant tests with `test`. Constraint checks alone do not establish model or build correctness.
+Read `mops examples editing` to choose JSON edit batches, Java insertion, or Code Mode. JSON batches apply explicit edit
+operations and report constraint violations, as `mops explain edit` describes; Code Mode supports custom traversal and
+logic. Check edited models with `check model`, build with `make module`, and run relevant tests with `test`. Constraint
+checks alone do not establish model or build correctness.
 
 For test selection, build options, failure reports, and worker limitations, read `mops examples validation` or the
 [bundled validation recipes](references/validation.md).
@@ -81,8 +82,11 @@ mops code help Project.command --json
 ```
 
 `help(object)` inside a program describes its runtime type. `project` is the native MPS project; `mops` provides lookup,
-search, parsing, and editing helpers. Classes on the daemon/MPS classpath are available; Groovy `@Grab` dependencies are
-disabled. Each invocation gets a fresh binding, so return references or data needed by a later invocation.
+search, parsing, and editing helpers. Programs import `org.jetbrains.mps.openapi.model.*`,
+`org.jetbrains.mps.openapi.language.*`, and `org.jetbrains.mps.openapi.module.*` by default, so `SNode`, `SModel`,
+`SConcept`, and `SModule` need no import; classes the program declares or imports take precedence. Classes on the
+daemon/MPS classpath are available; Groovy `@Grab` dependencies are disabled. Each invocation gets a fresh binding, so
+return references or data needed by a later invocation.
 
 Run Code Mode programs and other exclusive operations sequentially for the same project. `code run` remains exclusive
 even when its program only reads. Independent CLI lookups, navigation, searches, diagnostics, and `code help` can run
@@ -91,9 +95,9 @@ concurrently. Use `mops skill path daemon` for coordination and recovery guidanc
 ## Model access and results
 
 Put lookup and model reads inside `project.read { ... }`, and mutations inside `project.command { ... }`. Do not nest
-these access blocks. A command saves after successful completion. When it throws, every changed model is reloaded from
-disk, dropping its model changes; modules and models it created and module changes remain. Resolve and validate targets
-before changing them.
+these access blocks. `mops code help Project.command` describes what a command saves and what it reverts when it throws;
+modules and models it created and module changes remain after a failure. Resolve and validate targets before changing
+them.
 
 The program runs on the daemon request thread, outside any model access. `project.read` and `project.command` open
 access for the calling thread only, so a worker thread started by the program may open its own `project.read`. Join

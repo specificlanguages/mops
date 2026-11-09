@@ -17,14 +17,11 @@ import com.specificlanguages.mops.protocol.ModuleCreationResponse
 @Facade
 interface MpsWrite : MpsRead {
     /**
-     * Applies one batch of Edit Operations as a unit. Atomicity is best-effort: a failure before saving reverts the
-     * in-memory changes by reloading the affected models from disk, but saving is not transactional, so a batch spanning
-     * several models can leave earlier models persisted if a later save fails.
-     *
-     * Violations are always reported. [ConstraintMode.STRICT] blocks the batch on any violation (nothing is saved);
-     * [ConstraintMode.ADVISORY] applies and saves the batch anyway. A concept that cannot be checked because its
-     * language did not load fails the batch, unless [ConstraintPolicy.ignoreMissingLanguages] is set: then it is
-     * skipped and reported as a warning.
+     * Applies one batch of Edit Operations as a unit under a [ConstraintPolicy]. Atomicity is best-effort: a failure
+     * before saving reverts the in-memory changes by reloading the affected models from disk, but saving is not
+     * transactional, so a batch spanning several models can leave earlier models persisted if a later save fails.
+     * Violations are always reported; [ConstraintPolicy] says whether they block the batch and whether a concept whose
+     * language did not load fails it.
      */
     fun modelEdit(batch: EditBatch, constraints: ConstraintPolicy = ConstraintPolicy()): ModelEditResponse
 

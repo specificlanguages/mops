@@ -11,9 +11,8 @@ import picocli.CommandLine.Parameters
     name = "model",
     header = ["Run MPS's full model check over one model."],
     description = [
-        "Run MPS's full model check over one model and report the findings. Exits 1 when any finding is an error.",
+        "Run MPS's full model check over one model and report the findings.",
     ],
-    footer = ["", CHECK_OUTPUT_HELP, "", CHECK_JSONL_HELP],
 )
 class ModelCheckCommand(environment: CommandEnvironment) : CheckCommand(environment) {
     constructor(daemonClient: DaemonClient) : this(DaemonClientCommandEnvironment(daemonClient))
@@ -27,4 +26,6 @@ class ModelCheckCommand(environment: CommandEnvironment) : CheckCommand(environm
     lateinit var target: String
 
     override fun check(client: DaemonClient): ModelCheckResponse = client.checkModel(target, limit)
+
+    override fun noRootsError(): String = "model $target has no roots"
 }

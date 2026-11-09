@@ -47,6 +47,8 @@ import com.specificlanguages.mops.cli.render.ModelRenderNodeCommand
 import com.specificlanguages.mops.cli.skill.SkillOperations
 import com.specificlanguages.mops.cli.skill.SkillPathCommand
 import com.specificlanguages.mops.cli.render.RenderOperations
+import java.io.PrintStream
+import java.io.PrintWriter
 import java.lang.Exception
 import java.nio.file.Path
 import kotlin.io.path.absolute
@@ -54,7 +56,16 @@ import kotlin.system.exitProcess
 import picocli.CommandLine
 
 fun main(args: Array<String>) {
-    exitProcess(newCommandLine().execute(*args))
+    // Output is UTF-8 on every platform, whether it goes to a console, a pipe or a file. The JVM would otherwise
+    // encode it with `stdout.encoding` and `stderr.encoding`, which are the platform code page on Windows. The JVM's
+    // streams still pass the UTF-8 bytes through unchanged.
+    System.setOut(PrintStream(System.out, true, Charsets.UTF_8))
+    System.setErr(PrintStream(System.err, true, Charsets.UTF_8))
+    val commandLine = newCommandLine()
+    // picocli does not encode its own writers with the charset of System.out and System.err.
+    commandLine.out = PrintWriter(System.out, true, Charsets.UTF_8)
+    commandLine.err = PrintWriter(System.err, true, Charsets.UTF_8)
+    exitProcess(commandLine.execute(*args))
 }
 
 fun newCommandLine(

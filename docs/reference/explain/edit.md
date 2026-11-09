@@ -63,11 +63,9 @@ NOTES
   target as "$root". The leading $ is the reference sigil — required when targeting an
   alias, and not part of the name.
   Constraints: edits are checked against MPS constraints, and every violation is
-  reported. --constraints MODE decides what a violation does: advisory reports it
-  but applies the batch anyway; strict (the default) blocks the batch. A concept
-  whose language did not load cannot be checked and fails the batch, in both
-  modes; --ignore-missing-languages skips it with a warning instead. See
-  `mops edit model --help`.
+  reported. --constraints MODE decides whether a violation blocks the batch, and
+  --ignore-missing-languages decides whether a concept whose language did not load
+  fails the batch; both are described in `mops edit model --help`.
 
 DRILL DOWN
   edit.setProperty, edit.setReference, edit.addChild, edit.copyAsChild,

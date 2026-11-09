@@ -3,7 +3,6 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.CodeRunRequest
-import com.specificlanguages.mops.protocol.ConstraintMode
 import com.specificlanguages.mops.protocol.ConstraintPolicy
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
@@ -117,10 +116,7 @@ class InvalidConceptSemanticsTest {
 
             val exception = assertFailsWith<MpsRequestException> {
                 access.write {
-                    modelEdit(
-                        EditBatch(listOf(EditOperation.Delete(EditTarget.NodeReference(reference)))),
-                        constraints = ConstraintPolicy(ConstraintMode.ADVISORY),
-                    )
+                    advisoryEdit(EditBatch(listOf(EditOperation.Delete(EditTarget.NodeReference(reference)))))
                 }
             }
 
