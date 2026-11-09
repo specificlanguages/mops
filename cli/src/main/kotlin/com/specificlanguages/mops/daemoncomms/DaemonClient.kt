@@ -8,6 +8,7 @@ import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindNodeByIdResponse
 import com.specificlanguages.mops.protocol.FindUsagesResponse
 import com.specificlanguages.mops.protocol.GetModuleResponse
+import com.specificlanguages.mops.protocol.MakeGenerationOptions
 import com.specificlanguages.mops.protocol.MakeResponse
 import com.specificlanguages.mops.protocol.ModelCheckResponse
 import com.specificlanguages.mops.protocol.ModuleDiagnosticResponse
@@ -80,15 +81,16 @@ interface DaemonClient {
     fun diagnoseModule(module: String): ModuleDiagnosticResponse
 
     /**
-     * Runs the MPS make on the named [modules] and their dependency closure. May block for a long time — generation and
-     * compilation are unbounded — so implementations must not impose a short read timeout.
+     * Runs the MPS make on the named [modules] and their dependency closure with the [generation] options. May block for
+     * a long time — generation and compilation are unbounded — so implementations must not impose a short read timeout.
      */
-    fun makeModules(modules: List<String>): MakeResponse
+    fun makeModules(modules: List<String>, generation: MakeGenerationOptions): MakeResponse
 
     /**
-     * Runs the MPS make on every generatable module in the project. May block for a long time.
+     * Runs the MPS make on every generatable module in the project with the [generation] options. May block for a long
+     * time.
      */
-    fun makeProject(): MakeResponse
+    fun makeProject(generation: MakeGenerationOptions): MakeResponse
     fun runCode(
         source: String,
         sourceName: String,

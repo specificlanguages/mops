@@ -118,9 +118,11 @@ class DomainRequestHandler(val workspacePath: Path, val mpsAccess: MpsAccess) {
 
             is ModelEditRequest -> exclusiveSaving { mpsAccess.write { modelEdit(request.batch, request.constraints) } }
 
-            is MakeModulesRequest -> exclusiveSaving { mpsAccess.extra { makeModules(request.modules) } }
+            is MakeModulesRequest -> exclusiveSaving {
+                mpsAccess.extra { makeModules(request.modules, request.generation) }
+            }
 
-            is MakeProjectRequest -> exclusiveSaving { mpsAccess.extra { makeProject() } }
+            is MakeProjectRequest -> exclusiveSaving { mpsAccess.extra { makeProject(request.generation) } }
 
             is TestRunRequest -> exclusiveSaving { TestRunResponse(mpsAccess.extra { runTests(request) }) }
 
