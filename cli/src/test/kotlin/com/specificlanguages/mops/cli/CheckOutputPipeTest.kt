@@ -4,7 +4,6 @@ import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.FindingSeverity
-import com.specificlanguages.mops.protocol.ModelCheckFindingCounts
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
 import com.specificlanguages.mops.protocol.ModelCheckResponse
 import com.specificlanguages.mops.protocol.ModelCheckSummaryJson
@@ -33,23 +32,15 @@ class CheckOutputPipeTest {
 
     @Test
     fun `jsonl output is one JSON object per line ending in the summary record`() {
-        val output = runCheck(truncatedResponse(), "check", "model", "--format", "jsonl", "--limit", "2", MODEL)
+        val response = truncatedResponse()
+        val output = runCheck(response, "check", "model", "--format", "jsonl", "--limit", "2", MODEL)
 
         assertEquals(1, output.exitCode, output.stderr)
         val records = output.stdout.lines().map { Json.parseToJsonElement(it).jsonObject }
         assertEquals(3, records.size, output.stdout)
         assertEquals(listOf(null, null, "summary"), records.map { it["type"]?.jsonPrimitive?.content })
         assertEquals(
-            ModelCheckSummaryJson(
-                shown = 2,
-                total = 4,
-                errors = 1,
-                warnings = 2,
-                infos = 1,
-                limit = 2,
-                truncated = true,
-                hint = "pass --limit 0 for all",
-            ),
+            ModelCheckSummaryJson(shown = 2, summary = response.summary, hint = "pass --limit 0 for all"),
             ProtocolJson.checkSummary.decode(output.stdout.lines().last()),
         )
     }
@@ -98,14 +89,16 @@ class CheckOutputPipeTest {
         return CliOutput(exitCode, stdout.trimEnd('\r', '\n'), stderr)
     }
 
-    private fun truncatedResponse() = ModelCheckResponse(
-        limit = 2,
-        truncated = true,
-        totals = ModelCheckFindingCounts(errors = 1, warnings = 2, infos = 1),
+    private fun truncatedResponse() = checkResponse(
         findings = listOf(
             ModelCheckFindingJson(severity = FindingSeverity.ERROR, message = "Unresolved reference"),
             ModelCheckFindingJson(severity = FindingSeverity.WARNING, message = "model-level note"),
         ),
+        errors = 1,
+        warnings = 2,
+        infos = 1,
+        limit = 2,
+        truncated = true,
     )
 
     private companion object {

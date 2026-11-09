@@ -43,8 +43,8 @@ class ModelCheckSemanticsTest {
         assertTrue(errors.isNotEmpty(), "the broken reference must be reported as an error; got ${response.findings}")
 
         // Totals count the full finding set; the unbounded run shows everything, so they match the findings.
-        assertEquals(errors.size, response.totals.errors)
-        assertEquals(response.findings.size, response.totals.total)
+        assertEquals(errors.size, response.summary.errors)
+        assertEquals(response.findings.size, response.summary.total)
 
         // The offending node is the VariableReference whose target no longer resolves.
         val finding = errors.single { it.message.contains("Unresolved reference") }
@@ -102,7 +102,7 @@ class ModelCheckSemanticsTest {
             .eachCount()
         val actualFindings = responses.third.findings.groupingBy { it }.eachCount()
         assertEquals(expectedFindings, actualFindings)
-        assertEquals(responses.first.totals.total + responses.second.totals.total, responses.third.totals.total)
+        assertEquals(responses.first.summary.total + responses.second.summary.total, responses.third.summary.total)
     }
 
     @Test
@@ -115,8 +115,8 @@ class ModelCheckSemanticsTest {
         }
 
         assertEquals(1, response.findings.size)
-        assertTrue(response.totals.errors >= 2)
-        assertTrue(response.truncated)
+        assertTrue(response.summary.errors >= 2)
+        assertTrue(response.summary.truncated)
     }
 
     @Test
