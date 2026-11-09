@@ -1,7 +1,6 @@
 package com.specificlanguages.mops.cli
 
 import com.specificlanguages.mops.protocol.DaemonRecordStore
-import com.specificlanguages.mops.protocol.recordOf
 
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.api.io.CleanupMode

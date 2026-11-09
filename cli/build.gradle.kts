@@ -6,6 +6,7 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 plugins {
     id("mops.kotlin-jvm-conventions")
     application
+    `java-test-fixtures`
 
     alias(libs.plugins.mps.platform.cache)
 }
@@ -35,11 +36,11 @@ val editSchemaGeneratorClasspath by configurations.registering {
 dependencies {
     implementation(project(":launcher"))
     implementation(project(":protocol"))
+    testFixturesImplementation(project(":protocol"))
     implementation(libs.picocli)
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(kotlin("test"))
-    testImplementation(testFixtures(project(":protocol")))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockito.kotlin)
     testImplementation(libs.system.lambda)

@@ -9,7 +9,6 @@ import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.PongResponse
 import com.specificlanguages.mops.protocol.StoredDaemonRecord
-import com.specificlanguages.mops.protocol.recordOf
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.io.CleanupMode

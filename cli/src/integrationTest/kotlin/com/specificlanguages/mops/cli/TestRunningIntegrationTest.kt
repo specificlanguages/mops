@@ -3,7 +3,6 @@ package com.specificlanguages.mops.cli
 import com.specificlanguages.mops.protocol.DaemonPaths
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.ProtocolJson
-import com.specificlanguages.mops.protocol.recordOf
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.api.parallel.ResourceLock

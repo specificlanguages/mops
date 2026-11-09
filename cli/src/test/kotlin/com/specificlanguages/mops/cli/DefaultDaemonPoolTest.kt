@@ -9,7 +9,6 @@ import com.specificlanguages.mops.protocol.DaemonContext
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.PongResponse
 import com.specificlanguages.mops.protocol.StoppedResponse
-import com.specificlanguages.mops.protocol.recordOf
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
