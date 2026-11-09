@@ -7,9 +7,9 @@ import com.specificlanguages.mops.cli.output.renderJson
 import com.specificlanguages.mops.cli.output.renderNodeReference
 import com.specificlanguages.mops.cli.output.textRow
 import com.specificlanguages.mops.cli.output.NodeReferenceFormat
-import com.specificlanguages.mops.protocol.ModelCheckFindingCounts
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
 import com.specificlanguages.mops.protocol.ModelCheckResponse
+import com.specificlanguages.mops.protocol.ModelCheckSummary
 import com.specificlanguages.mops.protocol.ModelCheckSummaryJson
 
 /**
@@ -24,9 +24,9 @@ internal fun renderCheckResponse(
     when (outputFormat) {
         CheckOutputFormat.HUMAN -> {
             response.findings.forEach { renderHuman(it, nodeReferenceFormat) }
-            println(metadataLine(countsText(response.totals)))
-            if (response.truncated) {
-                println(truncationLine(response.findings.size, response.totals.total, unit = "findings"))
+            println(metadataLine(countsText(response.summary)))
+            if (response.summary.truncated) {
+                println(truncationLine(response.findings.size, response.summary.total, unit = "findings"))
             }
         }
 
@@ -35,22 +35,15 @@ internal fun renderCheckResponse(
             println(renderJson(summaryRecord(response)))
         }
     }
-    return if (response.totals.errors > 0) 1 else 0
+    return if (response.summary.errors > 0) 1 else 0
 }
 
-private fun summaryRecord(response: ModelCheckResponse): ModelCheckSummaryJson {
-    val totals = response.totals
-    return ModelCheckSummaryJson(
+private fun summaryRecord(response: ModelCheckResponse): ModelCheckSummaryJson =
+    ModelCheckSummaryJson(
         shown = response.findings.size,
-        total = totals.total,
-        errors = totals.errors,
-        warnings = totals.warnings,
-        infos = totals.infos,
-        limit = response.limit,
-        truncated = response.truncated,
-        hint = if (response.truncated) LIMIT_LIFTING_HINT else null,
+        summary = response.summary,
+        hint = if (response.summary.truncated) LIMIT_LIFTING_HINT else null,
     )
-}
 
 private fun renderHuman(finding: ModelCheckFindingJson, nodeReferenceFormat: NodeReferenceFormat) {
     val columns = mutableListOf(finding.severity.name.lowercase(), finding.message)
@@ -60,12 +53,12 @@ private fun renderHuman(finding: ModelCheckFindingJson, nodeReferenceFormat: Nod
     println(textRow(columns))
 }
 
-private fun countsText(totals: ModelCheckFindingCounts): String {
-    if (totals.total == 0) return "no findings"
+private fun countsText(summary: ModelCheckSummary): String {
+    if (summary.total == 0) return "no findings"
     return listOf(
-        count(totals.errors, "error"),
-        count(totals.warnings, "warning"),
-        count(totals.infos, "info", "infos"),
+        count(summary.errors, "error"),
+        count(summary.warnings, "warning"),
+        count(summary.infos, "info", "infos"),
     ).joinToString(", ")
 }
 

@@ -5,11 +5,11 @@ those of its dependencies. Use it to reach language runtime singletons, generate
 and plugin solution code without touching MPS's classloading internals. Name the module as for `mops.lookup.module`:
 its name or serialized reference, resolved uniquely.
 
-| Task                                        | Groovy program                                                                                                                                                                                                                                                                                             |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Load a class from a module's class loader   | `project.read { mops.runtime.requireClass('jetbrains.mps.baseLanguage', 'jetbrains.mps.baseLanguage.behavior.ClassConcept__BehaviorDescriptor').name }`                                                                                                                                                    |
-| Detect a missing class without an exception | `project.read { mops.runtime.loadClass('jetbrains.mps.baseLanguage', 'jetbrains.mps.baseLanguage.behavior.NoSuchClass') == null }`                                                                                                                                                                         |
-| Call a static method that takes a node      | `project.read { def operations = mops.runtime.requireClass('jetbrains.mps.lang.smodel', 'jetbrains.mps.lang.smodel.generator.smodelAdapter.SNodeOperations'); operations.getMethod('getConcept', org.jetbrains.mps.openapi.model.SNode).invoke(null, mops.lookup.requireNode('NODE_REF')).qualifiedName }` |
+| Task                                        | Groovy program                                                                                                                                                                                                                                                             |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Load a class from a module's class loader   | `project.read { mops.runtime.requireClass('jetbrains.mps.baseLanguage', 'jetbrains.mps.baseLanguage.behavior.ClassConcept__BehaviorDescriptor').name }`                                                                                                                    |
+| Detect a missing class without an exception | `project.read { mops.runtime.loadClass('jetbrains.mps.baseLanguage', 'jetbrains.mps.baseLanguage.behavior.NoSuchClass') == null }`                                                                                                                                         |
+| Call a static method that takes a node      | `project.read { def operations = mops.runtime.requireClass('jetbrains.mps.lang.smodel', 'jetbrains.mps.lang.smodel.generator.smodelAdapter.SNodeOperations'); operations.getMethod('getConcept', SNode).invoke(null, mops.lookup.requireNode('NODE_REF')).qualifiedName }` |
 
 Both operations need `project.read` or `project.command`. `loadClass` returns null only when the module is fine and
 the class is missing; `requireClass` throws instead. Module problems are errors with a named case: unknown module,
@@ -46,7 +46,6 @@ MPS erases `node<Concept>` parameters to `org.jetbrains.mps.openapi.model.SNode`
 the parameter type and accept any node:
 
 ```groovy
-import org.jetbrains.mps.openapi.model.SNode
 project.read {
     def node = mops.lookup.requireNode('NODE_REF')
     def evaluator = mops.runtime.requireClass('sample.language', 'sample.language.runtime.Evaluator')
@@ -59,7 +58,6 @@ project.read {
 A plugin solution's classes load the same way once the solution is compiled:
 
 ```groovy
-import org.jetbrains.mps.openapi.model.SModel
 project.read {
     def model = mops.lookup.requireModel('sample.model')
     def statistics = mops.runtime.requireClass('sample.plugin', 'sample.plugin.util.ModelStatistics')

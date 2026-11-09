@@ -1,9 +1,9 @@
 package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.protocol.FindingSeverity
-import com.specificlanguages.mops.protocol.ModelCheckFindingCounts
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
 import com.specificlanguages.mops.protocol.ModelCheckResponse
+import com.specificlanguages.mops.protocol.ModelCheckSummary
 import jetbrains.mps.checkers.ModelCheckerBuilder
 import jetbrains.mps.errors.CheckerRegistry
 import jetbrains.mps.errors.MessageStatus
@@ -39,12 +39,7 @@ class ModelChecker(private val persistence: PersistenceFacade = PersistenceFacad
         val findings = collectFindings(project, models, modules)
             .sortedBy { it.severity.ordinal }
         val selected = if (limit > 0) findings.take(limit) else findings
-        return ModelCheckResponse(
-            limit = limit,
-            truncated = selected.size < findings.size,
-            totals = ModelCheckFindingCounts.of(findings),
-            findings = selected,
-        )
+        return ModelCheckResponse(summary = ModelCheckSummary.of(findings, limit), findings = selected)
     }
 
     private fun collectFindings(

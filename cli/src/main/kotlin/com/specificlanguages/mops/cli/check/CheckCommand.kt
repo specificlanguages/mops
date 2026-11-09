@@ -4,14 +4,16 @@ import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.ModelCheckResponse
+import picocli.CommandLine.Command
 import picocli.CommandLine.IExitCodeGenerator
 import picocli.CommandLine.Option
 
 /**
  * Base of the `check` subcommands. Owns the output format and finding limit options, prints the daemon's response, and
  * exits with `1` when the check found at least one error-severity finding (counted over all findings, not only the
- * ones shown). Subclasses only choose what to check.
+ * ones shown). Subclasses only choose what to check; their help inherits the footer that describes the output.
  */
+@Command(footer = ["", CHECK_OUTPUT_HELP, "", CHECK_JSONL_HELP, "", CHECK_EXIT_HELP])
 abstract class CheckCommand(private val environment: CommandEnvironment) : CliCommand(), IExitCodeGenerator {
     @Option(
         names = ["--format"],
