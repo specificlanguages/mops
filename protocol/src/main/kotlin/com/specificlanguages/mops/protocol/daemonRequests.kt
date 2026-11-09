@@ -184,7 +184,7 @@ data class FindNodeByIdRequest(
 data class ModelEditRequest(
     override val token: String,
     val batch: EditBatch,
-    val constraints: ConstraintEnforcement = ConstraintEnforcement.BEST_EFFORT,
+    val constraints: ConstraintPolicy = ConstraintPolicy(),
 ) : DomainRequest
 
 /**

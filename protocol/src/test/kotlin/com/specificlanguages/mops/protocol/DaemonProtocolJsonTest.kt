@@ -180,21 +180,33 @@ class DaemonProtocolJsonTest {
     }
 
     @Test
-    fun `model edit request JSON carries the constraints mode and defaults it to best-effort`() {
+    fun `model edit request JSON carries the constraint settings and defaults them to strict without ignoring`() {
         val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
         val batch = EditBatch(operations = listOf(EditOperation.Delete(EditTarget.NodeReference("$model/1"))))
 
         val advisory = ProtocolJson.encodeRequest(
-            ModelEditRequest(token = "secret", batch = batch, constraints = ConstraintEnforcement.ADVISORY),
+            ModelEditRequest(
+                token = "secret",
+                batch = batch,
+                constraints = ConstraintPolicy(ConstraintMode.ADVISORY, ignoreMissingLanguages = true),
+            ),
         )
-        assertContains(advisory, """"constraints":"advisory"""")
+        assertContains(advisory, """"constraints":{"mode":"advisory","ignoreMissingLanguages":true}""")
         assertEquals(
-            ModelEditRequest(token = "secret", batch = batch, constraints = ConstraintEnforcement.ADVISORY),
+            ModelEditRequest(
+                token = "secret",
+                batch = batch,
+                constraints = ConstraintPolicy(ConstraintMode.ADVISORY, ignoreMissingLanguages = true),
+            ),
             ProtocolJson.decodeRequest(advisory),
         )
 
         assertEquals(
-            ModelEditRequest(token = "secret", batch = batch, constraints = ConstraintEnforcement.BEST_EFFORT),
+            ModelEditRequest(
+                token = "secret",
+                batch = batch,
+                constraints = ConstraintPolicy(ConstraintMode.STRICT, ignoreMissingLanguages = false),
+            ),
             ProtocolJson.decodeRequest(
                 """{"type":"model-edit","token":"secret","batch":{"operations":[{"op":"delete","target":"$model/1"}]}}""",
             ),

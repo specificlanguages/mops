@@ -6,7 +6,8 @@ import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
 import com.specificlanguages.mops.cli.output.renderJson
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.BatchDecodeResult
-import com.specificlanguages.mops.protocol.ConstraintEnforcement
+import com.specificlanguages.mops.protocol.ConstraintMode
+import com.specificlanguages.mops.protocol.ConstraintPolicy
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.ProtocolJson
 import java.nio.file.Path
@@ -44,28 +45,36 @@ class ModelEditCommand(private val environment: CommandEnvironment) : CliCommand
         names = ["--constraints"],
         paramLabel = "MODE",
         description = [
-            "How to enforce constraints: advisory (evaluate, report, and apply anyway), best-effort (block on " +
-                "violations and save nothing; skip with a warning a concept that cannot be checked because its " +
-                "language did not load; default), or strict (fail on violations or on a concept that cannot be " +
-                "checked).",
+            "What a constraint violation does: advisory (report it and apply the batch anyway) or strict " +
+                "(report it and block the batch, saving nothing; default).",
         ],
     )
     var constraintsMode: String? = null
+
+    @Option(
+        names = ["--ignore-missing-languages"],
+        negatable = true,
+        description = [
+            "Skip with a warning a concept whose constraints cannot be checked because its language did not " +
+                "load. By default such a concept fails the batch.",
+        ],
+    )
+    var ignoreMissingLanguages: Boolean = false
 
     override fun run() {
         val batch = readBatch()
         require(batch.operations.isNotEmpty()) { "edit batch must contain at least one operation" }
 
         val client = environment.daemon()
-        val response = client.modelEdit(batch, resolveConstraints())
+        val response = client.modelEdit(batch, ConstraintPolicy(resolveConstraints(), ignoreMissingLanguages))
         println(renderJson(response))
     }
 
-    private fun resolveConstraints(): ConstraintEnforcement {
-        val mode = constraintsMode ?: return ConstraintEnforcement.BEST_EFFORT
-        return ConstraintEnforcement.fromWireName(mode)
+    private fun resolveConstraints(): ConstraintMode {
+        val mode = constraintsMode ?: return ConstraintMode.STRICT
+        return ConstraintMode.fromWireName(mode)
             ?: throw IllegalArgumentException(
-                "unknown --constraints value '$mode'; expected advisory, best-effort, or strict",
+                "unknown --constraints value '$mode'; expected advisory or strict",
             )
     }
 

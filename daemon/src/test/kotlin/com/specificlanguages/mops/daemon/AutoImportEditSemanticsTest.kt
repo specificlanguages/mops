@@ -212,7 +212,7 @@ class AutoImportEditSemanticsTest {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
             val before = structureModel(projectPath).readText()
 
-            // ClassConcept under propertyDeclaration is a containment violation; under best-effort the batch blocks and
+            // ClassConcept under propertyDeclaration is a containment violation; under strict the batch blocks and
             // reverts. The would-be baseLanguage import must revert with it — imports are added only on a saving path.
             mpsAccess.write {
                 modelEdit(

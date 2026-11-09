@@ -22,5 +22,6 @@ Copy a member subtree into a class, preserving its references and assigning fres
 
 {{table:commands|Command}}
 
-`--constraints` decides whether a constraint violation blocks the batch; `mops edit model --help` lists the modes.
-Constraint checks are distinct from a full model check.
+`--constraints` decides whether a constraint violation blocks the batch, and `--ignore-missing-languages` decides whether
+a concept whose language did not load fails it; `mops edit model --help` describes both. Constraint checks are distinct
+from a full model check.

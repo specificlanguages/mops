@@ -62,8 +62,9 @@ NOTES
   models of used languages count). It removes none. The response's "notes" field
   lists each language and import added.
   Constraints: edits are checked against MPS constraints, and every violation is
-  reported. --constraints MODE decides whether a violation blocks the batch; the
-  modes are listed in `mops edit model --help`.
+  reported. --constraints MODE decides whether a violation blocks the batch, and
+  --ignore-missing-languages decides whether a concept whose language did not load
+  fails the batch; both are described in `mops edit model --help`.
 
 DRILL DOWN
   edit.setProperty, edit.setReference, edit.addChild, edit.copyAsChild,

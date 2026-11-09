@@ -6,7 +6,8 @@ import com.github.stefanbirkner.systemlambda.SystemLambda.withTextFromSystemIn
 import com.specificlanguages.mops.cli.edit.ModelEditCommand
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.ChildPosition
-import com.specificlanguages.mops.protocol.ConstraintEnforcement
+import com.specificlanguages.mops.protocol.ConstraintMode
+import com.specificlanguages.mops.protocol.ConstraintPolicy
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
@@ -59,23 +60,64 @@ class ModelEditCommandTest {
     }
 
     @Test
-    fun `model edit passes the --constraints mode to the daemon`() {
+    fun `model edit defaults to strict constraints and does not ignore missing languages`() {
         val client = mock<DaemonClient>()
         val batch = sampleBatch()
         val response = ModelEditResponse(created = emptyMap(), violations = emptyList())
-        whenever(client.modelEdit(batch, ConstraintEnforcement.STRICT)).thenReturn(response)
+        whenever(client.modelEdit(batch, ConstraintPolicy(ConstraintMode.STRICT, ignoreMissingLanguages = false))).thenReturn(response)
         var exitCode = Int.MIN_VALUE
 
         withTextFromSystemIn(ProtocolJson.batch.encode(batch)).execute {
             tapSystemOut {
                 exitCode = CommandLine(ModelEditCommand(client))
                     .setExecutionExceptionHandler(PrintErrorAndExit)
-                    .execute("--constraints", "strict")
+                    .execute()
             }
         }
 
         assertEquals(0, exitCode)
-        verify(client).modelEdit(batch, ConstraintEnforcement.STRICT)
+        verify(client).modelEdit(batch, ConstraintPolicy(ConstraintMode.STRICT, ignoreMissingLanguages = false))
+    }
+
+    @Test
+    fun `model edit passes the --constraints mode and --ignore-missing-languages to the daemon`() {
+        val client = mock<DaemonClient>()
+        val batch = sampleBatch()
+        val response = ModelEditResponse(created = emptyMap(), violations = emptyList())
+        whenever(client.modelEdit(batch, ConstraintPolicy(ConstraintMode.ADVISORY, ignoreMissingLanguages = true))).thenReturn(response)
+        var exitCode = Int.MIN_VALUE
+
+        withTextFromSystemIn(ProtocolJson.batch.encode(batch)).execute {
+            tapSystemOut {
+                exitCode = CommandLine(ModelEditCommand(client))
+                    .setExecutionExceptionHandler(PrintErrorAndExit)
+                    .execute("--constraints", "advisory", "--ignore-missing-languages")
+            }
+        }
+
+        assertEquals(0, exitCode)
+        verify(client).modelEdit(batch, ConstraintPolicy(ConstraintMode.ADVISORY, ignoreMissingLanguages = true))
+    }
+
+    @Test
+    fun `model edit rejects best-effort and lists the valid --constraints values`() {
+        val client = mock<DaemonClient>()
+        var exitCode = Int.MIN_VALUE
+        var stderr = ""
+
+        withTextFromSystemIn(ProtocolJson.batch.encode(sampleBatch())).execute {
+            stderr = tapSystemErr {
+                tapSystemOut {
+                    exitCode = CommandLine(ModelEditCommand(client))
+                        .setExecutionExceptionHandler(PrintErrorAndExit)
+                        .execute("--constraints", "best-effort")
+                }
+            }
+        }
+
+        assertEquals(1, exitCode)
+        assertContains(stderr, "unknown --constraints value 'best-effort'; expected advisory or strict")
+        verifyNoInteractions(client)
     }
 
     @Test
