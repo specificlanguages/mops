@@ -21,7 +21,10 @@ class AntTestExecutionTest {
         val run = directory.resolve("run").createDirectories()
         val execution = AntTestExecution(mps, run, directory.resolve("system"), TestReportStore(run.resolve("report.json")),
             TestRunLimits(null, 0))
-        val selection = AntTestSelection(emptyList(), emptyList(), emptyList(), emptyList(), emptyMap(), null, null, "project", emptyList())
+        val selection = AntTestSelection(
+            testModules = emptyList(), testModuleIds = emptyList(), repositoryModules = emptyList(), repositoryFolders = emptyList(),
+            macros = emptyMap(), model = null, node = null, description = "project", diagnostics = emptyList(),
+        )
 
         val jvmArgs = execution.testJvmArgs(directory.resolve("project"), selection, run, run, run)
 
