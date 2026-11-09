@@ -1,9 +1,9 @@
 # Test-running integration tests
 
-`TestFamiliesIntegrationTest` checks native BaseLanguage, language, generator, Jupiter, parameterized, and legacy JUnit
-results. Its test methods share immutable reports from a completed full-project run and a parameterized-case selection
-run. The fixture daemon stops before any method inspects those reports. Slow and crashing models are removed from that
-fixture copy. Each request still executes in a separate worker process.
+`TestFamiliesIntegrationTest` checks native BaseLanguage, language, generator, editor, Jupiter, parameterized, and
+legacy JUnit results. Its test methods share immutable reports from a completed full-project run and a
+parameterized-case selection run. The fixture daemon stops before any method inspects those reports. Slow and crashing
+models are removed from that fixture copy. Each request still executes in a separate worker process.
 
 Integration JUnit output includes `MOPS_CLI_TIMING` for calls through the `runCommandLine` test helper. The
 `stopDaemons` helper emits `MOPS_DAEMON_STOP_TIMING` for daemon shutdown including its exit wait. CLI duration includes
