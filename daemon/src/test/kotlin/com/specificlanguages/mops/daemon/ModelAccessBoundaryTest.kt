@@ -72,23 +72,23 @@ class ModelAccessBoundaryTest {
     private fun boundaryAccess(
         project: MPSProject,
         writeTransaction: WriteTransaction = mock(),
-    ): JetBrainsMpsAccess {
-        val workspace = TestDaemonWorkspace()
-        return JetBrainsMpsAccess(
-            project = project,
-            logger = DaemonLogger(),
-            workspace = workspace.path,
-            testSystemCache = workspace.testSystemCache,
-            platform = mock(),
-            mpsListExporter = mock(),
-            jsonNodeExporter = mock(),
-            modelNodeResolver = mock(),
-            modelChecker = mock(),
-            editBatchExecutor = mock(),
-            persistence = mock(),
-            writeTransaction = writeTransaction,
-        )
-    }
+    ): JetBrainsMpsAccess =
+        TestDaemonWorkspace().mpsAccess { workspace, testSystemCache ->
+            JetBrainsMpsAccess(
+                project,
+                DaemonLogger(),
+                workspace,
+                testSystemCache,
+                platform = mock(),
+                mpsListExporter = mock(),
+                jsonNodeExporter = mock(),
+                modelNodeResolver = mock(),
+                modelChecker = mock(),
+                editBatchExecutor = mock(),
+                persistence = mock(),
+                writeTransaction = writeTransaction,
+            )
+        }
 
     // Runs the computation MPS would dispatch, recording any throwable that escapes it (which is exactly what the
     // dispatcher logs as SEVERE), then rethrows so the caller-facing behavior is unchanged.
