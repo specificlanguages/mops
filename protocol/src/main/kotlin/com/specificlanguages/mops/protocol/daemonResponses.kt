@@ -69,15 +69,13 @@ data class ModelRenderNodeResponse(val text: String) : DaemonResponse
 
 /**
  * Successful response carrying the findings from a **Model Check**, ordered most severe first and bounded by the
- * request's global limit. [truncated] is true when findings beyond [limit] were dropped. [totals] counts every finding
- * by severity before truncation, so a caller can report the full picture even when only [findings] was sent.
+ * request's global limit, and the [summary] of the full result, so a caller can report the full picture even when only
+ * [findings] was sent.
  */
 @Serializable
 @SerialName("model-check")
 data class ModelCheckResponse(
-    val limit: Int,
-    val truncated: Boolean,
-    val totals: ModelCheckFindingCounts,
+    val summary: ModelCheckSummary,
     val findings: List<ModelCheckFindingJson>,
 ) : DaemonResponse
 

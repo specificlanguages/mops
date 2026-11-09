@@ -61,10 +61,9 @@ object CodeModeExtensions {
     }
 
     /**
-     * Runs an MPS command on the EDT, saves successful repository changes, and returns the closure value. Before the
-     * save, each model gets the used languages and model imports that the nodes the closure added or re-referenced
-     * need; the result reports each one added. When the closure or the save throws, every changed model is reloaded
-     * from disk before the failure propagates. Access: none.
+     * Implements `Project.command`: runs the closure as an MPS command on the EDT and returns its value. The
+     * `Project.command` entry of [CodeCatalog] (`help('Project.command')`) describes what it saves and what it reverts on
+     * failure. Access: none.
      */
     @CodeModeExtension(MpsAccessLevel.NONE)
     @JvmStatic

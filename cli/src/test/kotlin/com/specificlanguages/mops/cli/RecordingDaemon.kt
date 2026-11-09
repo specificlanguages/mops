@@ -31,8 +31,8 @@ internal class RecordingDaemon(val responseIterator: Iterator<DaemonResponse>) :
             serverReady.countDown()
             while (responseIterator.hasNext()) {
                 it.accept().use { socket ->
-                    BufferedReader(InputStreamReader(socket.getInputStream())).use { reader ->
-                        PrintWriter(socket.getOutputStream(), true).use { writer ->
+                    BufferedReader(InputStreamReader(socket.getInputStream(), Charsets.UTF_8)).use { reader ->
+                        PrintWriter(socket.getOutputStream(), true, Charsets.UTF_8).use { writer ->
                             while (responseIterator.hasNext()) {
                                 val requestLine = reader.readLine() ?: break
 

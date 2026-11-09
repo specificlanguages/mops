@@ -1,53 +1,20 @@
 package com.specificlanguages.mops.cli.find
 
-import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
-import com.specificlanguages.mops.cli.output.renderJson
-import com.specificlanguages.mops.cli.output.renderNodeReference
-import com.specificlanguages.mops.cli.output.truncationLine
 import com.specificlanguages.mops.protocol.DaemonResponse
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
 import com.specificlanguages.mops.protocol.SearchScopeJson
-import picocli.CommandLine.Option
+import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 
 /**
- * Base class for `find` subcommands that return a bounded list of nodes. It declares the shared output options, the
- * `--limit` option and the trailing scope clause, and prints results in the chosen output mode. Subclasses declare
- * their query argument at index 0.
+ * Base class for `find` subcommands that take one query argument, then an optional scope clause, and return nodes.
+ * Subclasses declare their query argument at index 0. It parses the scope clause and prints each node as a
+ * [renderText] row. Its help footer describes that output; picocli replaces it for a subclass that declares its own
+ * footer.
  */
-abstract class NodeSearchCommand(protected val environment: CommandEnvironment) : CliCommand() {
-    @Option(
-        names = ["--json"],
-        description = ["Print results as JSON."],
-    )
-    var json: Boolean = false
-
-    @Option(
-        names = ["--full-concept"],
-        description = ["Show fully qualified concept names in text output instead of short names."],
-    )
-    var fullConcept: Boolean = false
-
-    @Option(
-        names = ["--refs-only"],
-        description = [
-            "Print one serialized node reference per line and nothing else, for piping. Cannot combine with --json; " +
-                "truncation and an empty result are reported on stderr.",
-        ],
-    )
-    var refsOnly: Boolean = false
-
-    @Option(
-        names = ["--limit"],
-        paramLabel = "N",
-        description = [
-            "Maximum nodes to return. Defaults to 100; 0 means unlimited; negative values are rejected. Only when " +
-                "more matches exist, text output ends with a `# truncated` line and JSON sets `truncated`.",
-        ],
-    )
-    var limit: Int = 100
-
+@Command(footer = ["", NODE_RESULTS_HELP])
+abstract class NodeSearchCommand(environment: CommandEnvironment) : SearchCommand(environment) {
     @Parameters(
         index = "1..*",
         paramLabel = "[in SCOPE_SEGMENT...]",
@@ -55,40 +22,23 @@ abstract class NodeSearchCommand(protected val environment: CommandEnvironment) 
     )
     var scopeClause: List<String> = emptyList()
 
-    /** Checks the shared options and returns the parsed scope segments, or `null` for the default scope. */
-    protected fun validatedScope(): List<String>? {
-        require(limit >= 0) { "limit must not be negative" }
-        require(!(refsOnly && json)) { "--refs-only cannot be combined with --json" }
-        return scopeClauseSegments(scopeClause)
-    }
+    final override fun search(): SearchResults = searchIn(scopeClauseSegments(scopeClause))
 
-    /**
-     * Prints [nodes] in the chosen output mode. When there are none, text and `--refs-only` output carry an
-     * [emptyResultLine] naming [subject] and the searched [scope]; JSON output is the response alone.
-     */
-    protected fun printResults(
+    /** Asks the daemon for the query in [scope], the parsed scope segments, or `null` for the default scope. */
+    protected abstract fun searchIn(scope: List<String>?): SearchResults
+
+    /** The [nodes] of [response] as search results, with [subject] naming what was searched for. */
+    protected fun nodeResults(
         response: DaemonResponse,
-        nodes: List<MpsNodeSummaryJson>,
-        truncated: Boolean,
         subject: String,
         scope: SearchScopeJson,
-    ) {
-        if (!json && nodes.isEmpty()) {
-            printMetadata(emptyResultLine(subject, scope, environment.nodeReferenceFormat), refsOnly)
-            return
-        }
-        when {
-            json -> println(renderJson(response))
-            refsOnly -> {
-                nodes.forEach {
-                    println(renderNodeReference(it.reference, environment.nodeReferenceFormat, hyperlinks = false))
-                }
-                if (truncated) reportTruncationOnStderr(nodes.size)
-            }
-            else -> {
-                nodes.forEach { println(renderText(it, fullConcept, environment.nodeReferenceFormat)) }
-                if (truncated) println(truncationLine(shown = nodes.size))
-            }
-        }
-    }
+        nodes: List<MpsNodeSummaryJson>,
+        truncated: Boolean,
+    ): SearchResults = SearchResults(
+        response = response,
+        subject = subject,
+        scope = scope,
+        matches = nodes.map { SearchMatch(it.reference, renderText(it, fullConcept, environment.nodeReferenceFormat)) },
+        truncated = truncated,
+    )
 }

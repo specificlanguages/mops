@@ -4,12 +4,8 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * How `mops edit model` treats **Constraints** and concepts it cannot check.
- *
- * - [ADVISORY]: evaluate constraints and report violations, but apply and save the batch anyway.
- * - [BEST_EFFORT]: evaluate constraints; a violation blocks the batch (nothing is saved). A concept whose language did
- *   not load cannot be checked, so it is skipped and reported as a warning rather than failing.
- * - [STRICT]: like [BEST_EFFORT] for violations, but a concept that cannot be checked aborts the batch.
+ * How `mops edit model` treats **Constraints** and concepts it cannot check. `mops edit model --help` describes each
+ * mode under `--constraints`.
  */
 @Serializable
 enum class ConstraintEnforcement {

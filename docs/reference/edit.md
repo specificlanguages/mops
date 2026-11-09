@@ -41,9 +41,8 @@ does not resolve fails the batch, changing nothing, with the same diagnosis
 language's concepts).
 
 Prints a JSON object: created (aliases to the references of the nodes they
-bound), violations, warnings, and notes. A saved edit adds to each changed
-model the used languages and model imports that its new nodes and references
-need; notes has one line per language or import added.
+bound), violations, warnings, and notes (one line per used language or model
+import that the saved edit added).
 
 Operation reference: mops explain edit
 ```

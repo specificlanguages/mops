@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.daemon
 
+import com.specificlanguages.mops.launcher.MpsDistributionLayout
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -52,8 +53,7 @@ class AntTestExecution(
     }
 
     /** The arguments of the test-mode JVM that Ant starts, with [config] as its configuration directory. */
-    private fun testJvmArgs(project: Path, selection: AntTestSelection, config: Path, adapters: Path, events: Path): List<String> {
-        val jnaArch = if (System.getProperty("os.arch") in listOf("aarch64", "arm64")) "aarch64" else "amd64"
+    internal fun testJvmArgs(project: Path, selection: AntTestSelection, config: Path, adapters: Path, events: Path): List<String> {
         val pluginPath = Files.list(mps.resolve("plugins")).use { paths ->
             paths.filter { it.isDirectory() || it.extension == "jar" }.sorted().toList().joinToString(File.pathSeparator)
         }
@@ -61,7 +61,7 @@ class AntTestExecution(
             "-ea", "-Xmx2048m", "-Dplugin.path=$pluginPath", "-Djava.awt.headless=true", "-Didea.config.path=$config",
             // MPS 2026.3 deletes the test-mode system directory at startup unless mps.test.keep.system.dir is set.
             "-Didea.system.path=$systemDirectory", "-Dmps.test.keep.system.dir=true", "-Didea.log.path=$testLog",
-            "-Djna.boot.library.path=${mps.resolve("lib/jna/$jnaArch")}",
+            "-Djna.boot.library.path=${MpsDistributionLayout.findJnaLibrary(mps)}",
             "-Dmops.test.modules=${selection.testModuleIds.joinToString(",")}",
             "-Dmops.test.sources=${selection.sourceFolders(project).joinToString(File.pathSeparator)}",
             "-Dmops.test.adapters=$adapters", "-Dmops.test.events=$events",

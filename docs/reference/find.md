@@ -80,7 +80,7 @@ Options:
                               instead of short names.
   -h, --help                Show this help message and exit.
       --json                Print results as JSON.
-      --limit=N             Maximum nodes to return. Defaults to 100; 0 means
+      --limit=N             Maximum results to return. Defaults to 100; 0 means
                               unlimited; negative values are rejected. Only
                               when more matches exist, text output ends with a
                               `# truncated` line and JSON sets `truncated`.
@@ -111,9 +111,9 @@ instead of rows, naming --exact, --named, and --role when given.
 Text output is one tab-separated row per node: `root` or `node`, the node name
 (or <unnamed>), the node's concept, and its serialized reference. A non-root
 node appends `parent` and the parent's name (or <unnamed>), concept, and
-reference. --json prints an object with `target` (the qualified `concept`),
-`scope`, `limit`, `truncated`, and a `nodes` array whose non-root entries carry
-a nested `parent` summary. See `mops explain output`.
+reference. --json prints an object with `target` (the query as mops resolved
+it), `scope`, `limit`, `truncated`, and a `nodes` array whose non-root entries
+carry a nested `parent` summary. See `mops explain output`.
 ```
 
 ## mops find usages
@@ -135,8 +135,8 @@ Options:
       --full-concept        Show fully qualified concept names in text output
                               instead of short names.
   -h, --help                Show this help message and exit.
-      --json                Print usage results as JSON.
-      --limit=N             Maximum usages to return. Defaults to 100; 0 means
+      --json                Print results as JSON.
+      --limit=N             Maximum results to return. Defaults to 100; 0 means
                               unlimited; negative values are rejected. Only
                               when more matches exist, text output ends with a
                               `# truncated` line and JSON sets `truncated`.
@@ -181,7 +181,7 @@ Options:
                               instead of short names.
   -h, --help                Show this help message and exit.
       --json                Print results as JSON.
-      --limit=N             Maximum nodes to return. Defaults to 100; 0 means
+      --limit=N             Maximum results to return. Defaults to 100; 0 means
                               unlimited; negative values are rejected. Only
                               when more matches exist, text output ends with a
                               `# truncated` line and JSON sets `truncated`.
@@ -190,8 +190,12 @@ Options:
                               --json; truncation and an empty result are
                               reported on stderr.
 
-Text output has the same rows as `mops find instances`; --json prints the
-structured response, with the `pattern` as `target`.
+Text output is one tab-separated row per node: `root` or `node`, the node name
+(or <unnamed>), the node's concept, and its serialized reference. A non-root
+node appends `parent` and the parent's name (or <unnamed>), concept, and
+reference. --json prints an object with `target` (the query as mops resolved
+it), `scope`, `limit`, `truncated`, and a `nodes` array whose non-root entries
+carry a nested `parent` summary. See `mops explain output`.
 ```
 
 ## mops find node-by-id
@@ -219,7 +223,7 @@ Options:
                               instead of short names.
   -h, --help                Show this help message and exit.
       --json                Print results as JSON.
-      --limit=N             Maximum nodes to return. Defaults to 100; 0 means
+      --limit=N             Maximum results to return. Defaults to 100; 0 means
                               unlimited; negative values are rejected. Only
                               when more matches exist, text output ends with a
                               `# truncated` line and JSON sets `truncated`.
@@ -228,6 +232,10 @@ Options:
                               --json; truncation and an empty result are
                               reported on stderr.
 
-Text output has the same rows as `mops find instances`; --json prints the
-structured response, with the decimal `nodeId` as `target`.
+Text output is one tab-separated row per node: `root` or `node`, the node name
+(or <unnamed>), the node's concept, and its serialized reference. A non-root
+node appends `parent` and the parent's name (or <unnamed>), concept, and
+reference. --json prints an object with `target` (the query as mops resolved
+it), `scope`, `limit`, `truncated`, and a `nodes` array whose non-root entries
+carry a nested `parent` summary. See `mops explain output`.
 ```
