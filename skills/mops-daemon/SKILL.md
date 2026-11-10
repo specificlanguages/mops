@@ -75,13 +75,21 @@ interrupt that work.
 
 Daemon records, logs, working files, and isolated IDEA config and system directories live outside the MPS project. The
 default daemon home is `$XDG_CACHE_HOME/mops/daemon`, or `~/.cache/mops/daemon` when that variable is unset; pass
-`--daemon-home PATH` to use another directory. Per-project workspaces are hashed directories under `projects/`; use the
-reported workspace rather than assuming a hash. A workspace holds:
+`--daemon-home PATH` to use another directory. Workspaces are hashed directories under `projects/`, one per project, MPS
+home, and MPS build number; use the reported workspace rather than assuming a hash. A project used with two MPS
+versions, for example on two branches, has two workspaces, and switching back reuses the first one's caches. A workspace
+holds:
 
-- `daemon.json`: the atomic daemon record with port, token, PID, daemon version, project path, MPS home, Java home,
-  workspace path, and startup time.
+- `workspace.json`: the project path, MPS home, and MPS build number of the workspace.
+- `daemon.json`: the atomic daemon record with port, token, PID, daemon version, project path, MPS home and build, Java
+  home, workspace path, and startup time.
 - `logs/daemon.log`: the daemon's startup and runtime log.
 - `daemon/config` and `daemon/system`: the isolated IDEA directories passed to the daemon JVM.
+- `test-worker-system`: the IntelliJ system directory of the test worker.
+
+Only one daemon runs per project. When a command needs a daemon for another MPS home or build than the running one, mops
+stops the running daemon, says so in one line on stderr, and starts one in the other workspace. `daemon status` and
+`daemon stop` for a project cover all of its workspaces.
 
 Deleting a live daemon's record or cache does not stop it. Stale records are removed when the recorded process or socket
 is no longer reachable. Commands reach the daemon over a loopback socket with a per-daemon token.
@@ -99,11 +107,9 @@ active request.
 `MOPS_DAEMON_JAVA_OPTIONS=-Xmx8g`. Test workers started by the daemon inherit them. Without it, the JVM picks its
 default maximum heap, a quarter of physical memory.
 
-Test runs keep the IntelliJ system directory (VFS and indexes) of the test worker between runs in the daemon home's
-`test-system-cache/<MPS build number>/` directory, shared by all projects, so a run does not index the MPS distribution
-again. A run that finds a directory in use by another run, for example of another project's daemon, uses a fresh
-directory under its `test-runs/<run-id>/` and says so in the report's diagnostics. Set `MOPS_TEST_SYSTEM_CACHE` to use
-another directory for a newly started daemon. The cache is safe to delete while no test runs; delete it if test results
-contradict the sources, and to free the disk space of MPS builds no longer in use.
+Test runs keep the IntelliJ system directory (VFS and indexes) of the test worker between runs in the workspace's
+`test-worker-system` directory, so a run does not index the MPS distribution again. A run that does not end cleanly
+(timed out, cancelled, or a crashed worker) deletes it, and the next run indexes again. The directory is safe to delete
+while no test runs; delete it if test results contradict the sources.
 
 Stop existing daemons after updating mops.

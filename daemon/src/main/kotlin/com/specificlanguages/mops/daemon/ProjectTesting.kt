@@ -1,6 +1,5 @@
 package com.specificlanguages.mops.daemon
 
-import com.specificlanguages.mops.launcher.MpsBuildProperties
 import com.specificlanguages.mops.protocol.*
 import jetbrains.mps.progress.EmptyProgressMonitor
 import java.lang.management.ManagementFactory
@@ -8,7 +7,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.UUID
 
-class ProjectTesting(private val access: JetBrainsMpsAccess, private val workspace: Path, private val testSystemCache: Path) {
+class ProjectTesting(
+    private val access: JetBrainsMpsAccess,
+    private val workspace: Path,
+    private val workerSystem: TestWorkerSystemDirectory,
+) {
     fun run(target: List<String>, build: Boolean, timeoutMillis: Long, cancellationPath: String?): TestRunReport {
         require(!access.project.modelAccess.canRead()) { "testing.run must be called outside a model-access block" }
         val directory = workspace.resolve("test-runs").resolve(UUID.randomUUID().toString())
@@ -28,15 +31,8 @@ class ProjectTesting(private val access: JetBrainsMpsAccess, private val workspa
             return report.snapshot()
         }
         if (build && !build(target, report, TestRunLimits(cancellationPath?.let(Path::of), executionTimeoutMillis = 0))) return report.snapshot()
-        val mpsHome = Path.of(jetbrains.mps.util.PathManager.getHomePath())
-        val mpsBuild = requireNotNull(MpsBuildProperties.fromMpsHome(mpsHome)?.buildNumber) {
-            "MPS build number not found in ${mpsHome.resolve("build.properties")}"
-        }
-        TestWorkerSystemDirectory(testSystemCache, mpsBuild).acquire(directory.resolve("test-system")).use { workerSystem ->
-            workerSystem.diagnostic?.let { diagnostic -> report.update { it.copy(diagnostics = it.diagnostics + diagnostic) } }
-            val request = TestRunRequest("", target, build, timeoutMillis, cancellationPath)
-            return runSupervisor(directory, request, workerSystem.path)
-        }
+        val request = TestRunRequest("", target, build, timeoutMillis, cancellationPath)
+        return runSupervisor(directory, request, workerSystem.path).also(workerSystem::afterRun)
     }
 
     /**

@@ -25,7 +25,7 @@ class JetBrainsMpsAccess(
     internal val project: MPSProject,
     logger: DaemonLogger,
     private val workspace: Path,
-    private val testSystemCache: Path,
+    private val testWorkerSystem: TestWorkerSystemDirectory,
     private val platform: Platform,
     private val mpsListExporter: MpsListExporter = MpsListExporter(),
     private val jsonNodeExporter: JsonNodeExporter = JsonNodeExporter(),
@@ -470,7 +470,7 @@ class JetBrainsMpsAccess(
         override fun runCode(request: CodeRunRequest): CodeResultResponse =
             CodeModeExecutor(this@JetBrainsMpsAccess, project, platform, projectTesting()).execute(request)
 
-        private fun projectTesting() = ProjectTesting(this@JetBrainsMpsAccess, workspace, testSystemCache)
+        private fun projectTesting() = ProjectTesting(this@JetBrainsMpsAccess, workspace, testWorkerSystem)
 
         override fun refreshExternalChanges() {
             externalProjectRefresh.refresh()
