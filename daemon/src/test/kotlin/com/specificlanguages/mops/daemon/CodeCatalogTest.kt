@@ -31,6 +31,11 @@ class CodeCatalogTest {
     }
 
     @Test
+    fun `command help describes the imports it adds before saving`() {
+        assertContains(CodeCatalog.json("Project.command"), "add the used languages and model imports")
+    }
+
+    @Test
     fun `Java parser is discoverable with its command requirement`() {
         val help = CodeCatalog.text("mops.parsing.java")
         assertContains(help, "mops.parsing.java")

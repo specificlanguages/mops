@@ -16,4 +16,7 @@ class Mops(
     val lookup = MopsLookup(this)
     val search = MopsSearch(this)
     val runtime = MopsRuntime(this)
+
+    /** Notes on what mops did on the program's behalf, returned with the program's result. */
+    internal val notes = mutableListOf<String>()
 }

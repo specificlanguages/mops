@@ -15,12 +15,6 @@ import com.specificlanguages.mops.protocol.TestRunResponse
 import com.specificlanguages.mops.protocol.CreateSolutionRequest
 import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.EditBatch
-import com.specificlanguages.mops.protocol.MakeMessageJson
-import com.specificlanguages.mops.protocol.MakeMessageKind
-import com.specificlanguages.mops.protocol.MakeModulesRequest
-import com.specificlanguages.mops.protocol.MakeOutcome
-import com.specificlanguages.mops.protocol.MakeProjectRequest
-import com.specificlanguages.mops.protocol.MakeResponse
 import com.specificlanguages.mops.protocol.FindByNameRequest
 import com.specificlanguages.mops.protocol.FindByNameResponse
 import com.specificlanguages.mops.protocol.FindInstancesRequest
@@ -271,44 +265,6 @@ class DomainRequestHandlerTest {
             verify(extra).saveProject()
         }
         verifyNoMoreInteractions(operations, extra)
-    }
-
-    @Test
-    fun `make-modules makes the requested modules and returns the result directly`() {
-        val expected = MakeResponse(MakeOutcome.SUCCESS, moduleCount = 2, messages = emptyList())
-        whenever(extra.makeModules(listOf("moduleA", "moduleB"))).thenReturn(expected)
-
-        val response = handler.handleDomainRequest(MakeModulesRequest(TOKEN, listOf("moduleA", "moduleB")))
-
-        assertEquals(expected, response)
-        verify(extra).makeModules(listOf("moduleA", "moduleB"))
-        verifyNoInteractions(operations)
-    }
-
-    @Test
-    fun `make-project makes the whole project and returns the result directly`() {
-        val expected = MakeResponse(
-            MakeOutcome.FAILED,
-            moduleCount = 5,
-            messages = listOf(MakeMessageJson(MakeMessageKind.ERROR, "boom")),
-        )
-        whenever(extra.makeProject()).thenReturn(expected)
-
-        val response = handler.handleDomainRequest(MakeProjectRequest(TOKEN))
-
-        assertEquals(expected, response)
-        verify(extra).makeProject()
-        verifyNoInteractions(operations)
-    }
-
-    @Test
-    fun `a request exception on the make path maps to its error code`() {
-        whenever(extra.makeModules(listOf("missing")))
-            .thenThrow(MpsRequestException(MpsErrorCode.TARGET_NOT_FOUND, "module not found: missing"))
-
-        val response = handler.handleDomainRequest(MakeModulesRequest(TOKEN, listOf("missing")))
-
-        assertEquals(errorResponse("TARGET_NOT_FOUND", "module not found: missing"), response)
     }
 
     @Test

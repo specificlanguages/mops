@@ -100,11 +100,11 @@ on project-library modules cannot load classes. A project library whose path kee
 with a report diagnostic. The Ant file passes the folders as `<modules dir>` and the path macros as `<macro name path>`,
 so tests that open a project through a `TestInfo.projectPath` that uses a path macro find it.
 
-The daemon performs the optional incremental build itself, with the same make that `mops make` uses, and saves the
-project. The daemon already has the project open, so a build does not start a second normal-mode MPS environment with
-its own startup, memory, and system directory. The make checks the run's cancellation between its steps, so cancelling
-during the build stops the run before the worker starts. A Code Mode deadline that terminates the daemon during the
-build leaves the report incomplete in the build phase.
+The daemon performs the optional build itself, with the same clean make that `mops make` uses, and saves the project.
+The daemon already has the project open, so a build does not start a second normal-mode MPS environment with its own
+startup, memory, and system directory. The make checks the run's cancellation between its steps, so cancelling during
+the build stops the run before the worker starts. A Code Mode deadline that terminates the daemon during the build
+leaves the report incomplete in the build phase.
 
 The daemon then starts a small supervisor JVM on the daemon's classpath, without an MPS environment. The supervisor
 starts the selected distribution's Ant `launchtests` task on an independent classpath. Ant constructs the test JVM
@@ -120,15 +120,15 @@ the parent termination in the report.
 
 In test mode, MPS waits for indexes before it opens a project, and it indexes the source roots of every repository
 module, including the whole distribution. So that a run does not scan and index all of it again, the test worker keeps
-its IntelliJ system directory (VFS, indexes, caches) between runs, in `test-system-cache/<MPS build number>/worker`
-under the daemon home, shared by all projects of that daemon home. The build number in the path keeps one build from
-reading another build's indexes. Configuration and logs stay per run. MPS 2026.3 deletes the test-mode system directory
-at startup unless `mps.test.keep.system.dir` is set, so the worker sets it.
+its IntelliJ system directory (VFS, indexes, caches) between runs, in the `test-worker-system` directory of the daemon
+workspace. A workspace belongs to one project, MPS home, and MPS build number, so no other project or build reads its
+indexes. One daemon serves a project and runs one test operation at a time, so no two runs use the directory at once and
+it needs no lock. Configuration and logs stay per run. MPS 2026.3 deletes the test-mode system directory at startup
+unless `mps.test.keep.system.dir` is set, so the worker sets it.
 
-The daemon takes an exclusive file lock on the directory until the run's processes have exited; killing a process tree
-waits for the descendants to exit. IntelliJ does not protect a system directory shared by processes: the test-mode
-application takes no directory lock. When another run, for example in another project's daemon, holds the lock, the run
-uses a fresh directory under its run directory and adds a report diagnostic naming both directories.
+A run that does not end cleanly (timed out, cancelled, or `WORKER_FAILED`: a worker that crashed, exited with an error,
+or exited without a final report) may leave storages a killed process did not close. The daemon deletes the directory
+after such a run, once the run's processes have exited, so the next run of the project starts fresh and indexes again.
 
 A reused VFS keeps file records and content from earlier runs, and the headless platform does not refresh them
 synchronously when it opens a project; the test-mode platform skips that refresh. So before use, the worker refreshes
@@ -137,8 +137,8 @@ another of these folders, and MPS reloads what changed. A recursive refresh chec
 file loaded later keeps its stored timestamp, length, and content (IJPL-219404), so the worker first loads every file
 the VFS has stored under these folders. The daemon refreshes its own persistent VFS the same way; when it refreshes is
 in [Daemon request concurrency](daemon-request-concurrency.md). IntelliJ's own version and corruption checks rebuild
-outdated or broken storage. mops adds no check of its own: deleting the cache is the documented way out and costs one
-cold run.
+outdated or broken storage. mops adds no check of its own: deleting the directory is the documented way out and costs
+one cold run.
 
 The load includes generated output folders: generation compares new output with the content the VFS holds and skips
 unchanged files, and it finds and deletes stale files through the VFS. Test-worker class loading reads `deps.cp` from

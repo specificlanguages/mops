@@ -1,13 +1,14 @@
 package com.specificlanguages.mops.daemoncomms
 
 import com.specificlanguages.mops.protocol.Facade
-import com.specificlanguages.mops.protocol.ConstraintEnforcement
+import com.specificlanguages.mops.protocol.ConstraintPolicy
 import com.specificlanguages.mops.protocol.FindByNameResponse
 import com.specificlanguages.mops.protocol.FindSubconceptsResponse
 import com.specificlanguages.mops.protocol.FindInstancesResponse
 import com.specificlanguages.mops.protocol.FindNodeByIdResponse
 import com.specificlanguages.mops.protocol.FindUsagesResponse
 import com.specificlanguages.mops.protocol.GetModuleResponse
+import com.specificlanguages.mops.protocol.MakeGenerationOptions
 import com.specificlanguages.mops.protocol.MakeResponse
 import com.specificlanguages.mops.protocol.ModelCheckResponse
 import com.specificlanguages.mops.protocol.ModuleDiagnosticResponse
@@ -68,7 +69,7 @@ interface DaemonClient {
     ): FindInstancesResponse
     fun findByName(pattern: String, scope: List<String>? = null, limit: Int): FindByNameResponse
     fun findNodeById(nodeId: String, scope: List<String>? = null, limit: Int): FindNodeByIdResponse
-    fun modelEdit(batch: EditBatch, constraints: ConstraintEnforcement = ConstraintEnforcement.BEST_EFFORT): ModelEditResponse
+    fun modelEdit(batch: EditBatch, constraints: ConstraintPolicy = ConstraintPolicy()): ModelEditResponse
     fun list(
         target: List<String>?,
         depth: Int,
@@ -80,15 +81,16 @@ interface DaemonClient {
     fun diagnoseModule(module: String): ModuleDiagnosticResponse
 
     /**
-     * Runs the MPS make on the named [modules] and their dependency closure. May block for a long time — generation and
-     * compilation are unbounded — so implementations must not impose a short read timeout.
+     * Runs the MPS make on the named [modules] and their dependency closure with the [generation] options. May block for
+     * a long time — generation and compilation are unbounded — so implementations must not impose a short read timeout.
      */
-    fun makeModules(modules: List<String>): MakeResponse
+    fun makeModules(modules: List<String>, generation: MakeGenerationOptions): MakeResponse
 
     /**
-     * Runs the MPS make on every generatable module in the project. May block for a long time.
+     * Runs the MPS make on every generatable module in the project with the [generation] options. May block for a long
+     * time.
      */
-    fun makeProject(): MakeResponse
+    fun makeProject(generation: MakeGenerationOptions): MakeResponse
     fun runCode(
         source: String,
         sourceName: String,

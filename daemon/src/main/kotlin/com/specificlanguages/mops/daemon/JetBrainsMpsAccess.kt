@@ -25,7 +25,7 @@ class JetBrainsMpsAccess(
     internal val project: MPSProject,
     logger: DaemonLogger,
     private val workspace: Path,
-    private val testSystemCache: Path,
+    private val testWorkerSystem: TestWorkerSystemDirectory,
     private val platform: Platform,
     private val mpsListExporter: MpsListExporter = MpsListExporter(),
     private val jsonNodeExporter: JsonNodeExporter = JsonNodeExporter(),
@@ -450,7 +450,7 @@ class JetBrainsMpsAccess(
     private inner class JetBrainsMpsWrite(
         private val writeScope: WriteTransaction.WriteScope,
     ) : JetBrainsMpsRead(), MpsWrite {
-        override fun modelEdit(batch: EditBatch, constraints: ConstraintEnforcement): ModelEditResponse =
+        override fun modelEdit(batch: EditBatch, constraints: ConstraintPolicy): ModelEditResponse =
             editBatchExecutor.apply(project, batch, writeScope, constraints)
 
         override fun createModule(request: CreateModuleRequest): ModuleCreationResponse =
@@ -470,7 +470,7 @@ class JetBrainsMpsAccess(
         override fun runCode(request: CodeRunRequest): CodeResultResponse =
             CodeModeExecutor(this@JetBrainsMpsAccess, project, platform, projectTesting()).execute(request)
 
-        private fun projectTesting() = ProjectTesting(this@JetBrainsMpsAccess, workspace, testSystemCache)
+        private fun projectTesting() = ProjectTesting(this@JetBrainsMpsAccess, workspace, testWorkerSystem)
 
         override fun refreshExternalChanges() {
             externalProjectRefresh.refresh()
@@ -478,9 +478,11 @@ class JetBrainsMpsAccess(
 
         override fun saveProject() = saveProjectSettings(project)
 
-        override fun makeModules(modules: List<String>): MakeResponse = projectMake.makeModules(modules)
+        override fun makeModules(modules: List<String>, generation: MakeGenerationOptions): MakeResponse =
+            projectMake.makeModules(modules, generation = generation)
 
-        override fun makeProject(): MakeResponse = projectMake.makeProject()
+        override fun makeProject(generation: MakeGenerationOptions): MakeResponse =
+            projectMake.makeProject(generation)
 
         // Resolution and rendering run together in one read action on the EDT, required because the editor's disposal
         // asserts the EDT.

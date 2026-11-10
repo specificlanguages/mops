@@ -214,7 +214,7 @@ class TestRunningIntegrationTest {
             stopDaemons(project, home)
 
             // A path macro the daemon knows from its IDEA configuration, the way an MPS installation keeps path variables.
-            DaemonPaths(home).workspace(project).ideaConfigDir().resolve("options").createDirectories()
+            DaemonPaths(home).workspacesOf(project).single().ideaConfigDir().resolve("options").createDirectories()
                 .resolve("path.macros.xml").writeText("""
                     <application>
                       <component name="PathMacrosImpl">
@@ -266,7 +266,7 @@ class TestRunningIntegrationTest {
     private fun startCli(project: Path, home: Path, name: String, vararg args: String): Process {
         val install = Path.of(System.getProperty("test.cliInstall"))
         return ProcessBuilder(
-            Path.of(System.getProperty("java.home"), "bin", "java").pathString,
+            Path.of(System.getProperty("java.home"), "bin", "java").pathString, *testWorkerSystemJvmArgs().toTypedArray(),
             "-cp", install.resolve("lib/*").pathString, "com.specificlanguages.mops.cli.MainKt",
             "--project-root", project.pathString, "--daemon-home", home.pathString, *javaAndMpsHomeArgs(), *args,
         ).redirectOutput(tempDir.resolve("$name-stdout.txt").toFile())

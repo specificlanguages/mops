@@ -3,6 +3,8 @@
 | Task                                               | Command                                                  |
 | -------------------------------------------------- | -------------------------------------------------------- |
 | Make selected modules and their dependencies       | `mops make module sample.language sample.solution`       |
+| Make modules, generating with 4 threads            | `mops make module --threads 4 sample.language`           |
+| Make modules and report info messages              | `mops make module --messages info sample.language`       |
 | Make all generatable project modules               | `mops make project`                                      |
 | Check a model, including typesystem/checking rules | `mops check model sample.model`                          |
 | Check selected modules                             | `mops check module sample.language sample.solution`      |
@@ -107,6 +109,6 @@ Run Code Mode, edits, make, tests, checks, and rendering sequentially for a proj
 `code help` can run concurrently. Stop existing daemons after upgrading mops. If a language is missing/unloaded, use
 `diagnose module` and `make module` before retrying concept lookup. For startup delays,
 `MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS=600 mops daemon ping` extends the startup wait.
-Test runs keep IntelliJ indexes between runs in a test system cache. If test results contradict the sources, for example
-find-usages results that miss existing nodes, read the skill printed by `mops skill path daemon`: it says where the cache
-lives and when to delete it.
+Test runs keep IntelliJ indexes between runs in the test worker's system directory. If test results contradict the
+sources, for example find-usages results that miss existing nodes, read the skill printed by `mops skill path daemon`:
+it says where the directory lives and when to delete it.

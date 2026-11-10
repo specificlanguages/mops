@@ -1,101 +1,46 @@
 package com.specificlanguages.mops.daemon
 
-import org.junit.jupiter.api.Test
+import com.specificlanguages.mops.protocol.TestRunReport
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
+import kotlin.io.path.exists
 import kotlin.io.path.writeText
+import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 
 class TestWorkerSystemDirectoryTest {
     @TempDir
-    lateinit var directory: Path
+    lateinit var tempDir: Path
 
-    @Test
-    fun `a released directory is acquired again, one per MPS build`() {
-        val cache = directory.resolve("cache")
-        val directories = TestWorkerSystemDirectory(cache, "MPS-241.19416.1452")
-        directories.acquire(directory.resolve("run-1")).use { worker ->
-            assertEquals(cache.resolve("MPS-241.19416.1452/worker"), worker.path)
-            assertNull(worker.diagnostic)
-        }
-        directories.acquire(directory.resolve("run-2")).use { worker ->
-            assertEquals(cache.resolve("MPS-241.19416.1452/worker"), worker.path)
-        }
-        TestWorkerSystemDirectory(cache, "MPS-251.28293.10283").acquire(directory.resolve("run-3")).use {
-            assertEquals(cache.resolve("MPS-251.28293.10283/worker"), it.path)
-        }
+    private fun keptAfter(report: TestRunReport, deleteAfterUncleanRun: Boolean = true): Boolean {
+        val path = tempDir.resolve("test-worker-system").createDirectories()
+        path.resolve("caches").createDirectories().resolve("records.dat").writeText("records")
+        TestWorkerSystemDirectory(path, deleteAfterUncleanRun).afterRun(report)
+        return path.exists()
     }
 
     @Test
-    fun `a directory locked by another process falls back to the run's own directory and says so`() {
-        val cache = directory.resolve("cache")
-        val directories = TestWorkerSystemDirectory(cache, "MPS-241.19416.1452")
-        val holder = holdLock(cache.resolve("MPS-241.19416.1452/worker.lock"))
-        try {
-            directories.acquire(directory.resolve("run/test-system")).use { worker ->
-                assertEquals(directory.resolve("run/test-system"), worker.path)
-                assertEquals("The test worker's system directory ${cache.resolve("MPS-241.19416.1452/worker")} is in use by " +
-                    "another test run; this run uses the fresh directory ${directory.resolve("run/test-system")} and indexes " +
-                    "the MPS distribution again.", worker.diagnostic)
-            }
-        } finally {
-            holder.destroyForcibly().waitFor()
-        }
-        directories.acquire(directory.resolve("run/test-system")).use {
-            assertEquals(cache.resolve("MPS-241.19416.1452/worker"), it.path)
-        }
+    fun `a run that does not end cleanly deletes the directory`() {
+        val outcomes = listOf("TIMED_OUT", "CANCELLED", "WORKER_FAILED", "PARENT_TERMINATED")
+        val kept = outcomes.map { keptAfter(TestRunReport("report.json", it, complete = false)) }
+        assertEquals(outcomes.map { false }, kept)
     }
 
     @Test
-    fun `a directory held in this process is busy for a second run that leaves the first run's lock in place`() {
-        val directories = TestWorkerSystemDirectory(directory, "MPS-241.19416.1452")
-        directories.acquire(directory.resolve("run-1")).use {
-            directories.acquire(directory.resolve("run-2")).use { second ->
-                assertEquals(directory.resolve("run-2"), second.path)
-            }
-            assertEquals("busy", probeLock(directory.resolve("MPS-241.19416.1452/worker.lock")))
-        }
-        assertEquals("free", probeLock(directory.resolve("MPS-241.19416.1452/worker.lock")))
+    fun `a worker that exits with an error after its last event deletes the directory`() {
+        assertEquals(false, keptAfter(TestRunReport("report.json", "WORKER_FAILED", complete = true)))
     }
 
-    /** Asks another JVM whether it can lock [file] now. */
-    private fun probeLock(file: Path): String {
-        val source = directory.resolve("LockProbe.java")
-        source.writeText("""
-            import java.nio.channels.FileChannel;
-            import java.nio.file.*;
-            public class LockProbe {
-                public static void main(String[] args) throws Exception {
-                    var channel = FileChannel.open(Path.of(args[0]), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
-                    System.out.println(channel.tryLock() == null ? "busy" : "free");
-                }
-            }
-        """.trimIndent())
-        val java = Path.of(System.getProperty("java.home"), "bin", "java").toString()
-        val process = ProcessBuilder(java, source.toString(), file.toString()).redirectErrorStream(true).start()
-        return process.inputReader().readText().trim().also { process.waitFor() }
+    @Test
+    fun `a run that ends cleanly keeps the directory, even when tests fail`() {
+        val outcomes = listOf("SUCCESS", "TEST_FAILED", "DISCOVERY_FAILED")
+        val kept = outcomes.map { keptAfter(TestRunReport("report.json", it, complete = true)) }
+        assertEquals(outcomes.map { true }, kept)
     }
 
-    /** Starts a JVM that holds an exclusive lock on [file] until it is killed, and waits until it holds it. */
-    private fun holdLock(file: Path): Process {
-        file.parent.createDirectories()
-        val source = directory.resolve("LockHolder.java")
-        source.writeText("""
-            import java.nio.channels.FileChannel;
-            import java.nio.file.*;
-            public class LockHolder {
-                public static void main(String[] args) throws Exception {
-                    var lock = FileChannel.open(Path.of(args[0]), StandardOpenOption.CREATE, StandardOpenOption.WRITE).lock();
-                    System.out.println("locked");
-                    Thread.sleep(Long.MAX_VALUE);
-                }
-            }
-        """.trimIndent())
-        val java = Path.of(System.getProperty("java.home"), "bin", "java").toString()
-        val process = ProcessBuilder(java, source.toString(), file.toString()).redirectErrorStream(true).start()
-        assertEquals("locked", process.inputReader().readLine())
-        return process
+    @Test
+    fun `a directory the daemon must not delete outlives an unclean run`() {
+        assertEquals(true, keptAfter(TestRunReport("report.json", "TIMED_OUT", complete = false), deleteAfterUncleanRun = false))
     }
 }

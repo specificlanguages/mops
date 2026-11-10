@@ -2,6 +2,7 @@ package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
+import com.specificlanguages.mops.protocol.MakeGenerationOptions
 import com.specificlanguages.mops.protocol.MakeMessageKind
 import com.specificlanguages.mops.protocol.MakeOutcome
 import java.nio.file.Path
@@ -47,6 +48,17 @@ class MakeSemanticsTest {
             errors.none { it.text.contains("Write for jar files") },
             "the make must not try to regenerate jar-packaged library modules; got ${errors.map { it.text }}",
         )
+    }
+
+    @Test
+    fun `a make with several generation threads succeeds`() {
+        val response = SharedMpsEnvironment.withProjectCopy { access, _ ->
+            access.extra { makeModules(listOf("json.sandbox"), MakeGenerationOptions(threads = 2)) }
+        }
+
+        val errors = response.messages.filter { it.kind == MakeMessageKind.ERROR }
+        assertEquals(MakeOutcome.SUCCESS, response.outcome, "unexpected errors: $errors")
+        assertTrue(response.moduleCount >= 2, "expected the language to be made too, got ${response.moduleCount}")
     }
 
     @Test

@@ -73,12 +73,12 @@ class ModelAccessBoundaryTest {
         project: MPSProject,
         writeTransaction: WriteTransaction = mock(),
     ): JetBrainsMpsAccess =
-        TestDaemonWorkspace().mpsAccess { workspace, testSystemCache ->
+        TestDaemonWorkspace().mpsAccess { workspace, testWorkerSystem ->
             JetBrainsMpsAccess(
                 project,
                 DaemonLogger(),
                 workspace,
-                testSystemCache,
+                testWorkerSystem,
                 platform = mock(),
                 mpsListExporter = mock(),
                 jsonNodeExporter = mock(),

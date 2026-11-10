@@ -70,18 +70,22 @@ object CodeModeExtensions {
     fun <T> command(project: Project, body: Closure<T>): T {
         requireOutside(project, "command")
         return CodeModeProjectProvider.access().write {
-            try {
-                body.call().also {
-                    project.repository.saveAll()
+            MissingImportsTracker(project.repository).use { missingImports ->
+                try {
+                    body.call().also {
+                        val notes = missingImports.addMissingImports()
+                        project.repository.saveAll()
+                        CodeModeProjectProvider.mops().notes += notes
+                    }
+                } catch (failure: Throwable) {
+                    discardUnsavedChanges(project.repository).forEach(failure::addSuppressed)
+                    throw failure
                 }
-            } catch (failure: Throwable) {
-                discardUnsavedChanges(project.repository).forEach(failure::addSuppressed)
-                throw failure
             }
         }
     }
 
-    /** Makes every generatable project module. Access: extra. */
+    /** Makes every generatable project module; the make is clean, like `mops make project`. Access: extra. */
     @CodeModeExtension(MpsAccessLevel.EXTRA)
     @JvmStatic
     fun make(project: Project): MakeResponse {

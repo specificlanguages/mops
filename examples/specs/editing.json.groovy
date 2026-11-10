@@ -7,9 +7,9 @@
                 code: '''mops edit model --file edits.json''',
             ],
             [
-                title: 'Require all concepts to be checkable',
+                title: 'Skip concepts whose languages did not load',
                 kind: 'cli',
-                code: '''mops edit model --file edits.json --constraints strict''',
+                code: '''mops edit model --file edits.json --ignore-missing-languages''',
             ],
             [
                 title: 'Apply while reporting constraint violations',

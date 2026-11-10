@@ -42,8 +42,12 @@ class MopsDaemonCommand : Runnable {
     @Option(names = ["--mps-plugin"], required = true)
     lateinit var mpsPlugin: String
 
-    @Option(names = ["--test-system-cache"], required = true)
-    lateinit var testSystemCache: String
+    /**
+     * A test worker system directory to use instead of the one in the workspace. The daemon does not delete it after
+     * an unclean test run. The mops integration tests share one between their test projects.
+     */
+    @Option(names = ["--test-worker-system"])
+    var testWorkerSystem: String? = null
 
     @Option(names = ["--token"], required = true)
     lateinit var token: String
@@ -72,7 +76,9 @@ class MopsDaemonCommand : Runnable {
             macros = macros,
             logger = logger,
         ).runWithProject { project, platform ->
-            val mpsAccess = JetBrainsMpsAccess(project, logger, workspacePath, Path.of(testSystemCache), platform)
+            val workerSystem = testWorkerSystem?.let { TestWorkerSystemDirectory(Path.of(it), deleteAfterUncleanRun = false) }
+                ?: TestWorkerSystemDirectory(DaemonWorkspace(workspacePath).testWorkerSystemDir(), deleteAfterUncleanRun = true)
+            val mpsAccess = JetBrainsMpsAccess(project, logger, workspacePath, workerSystem, platform)
             ProjectDaemon(
                 logger = logger,
                 context = DaemonContext.fromLivePaths(

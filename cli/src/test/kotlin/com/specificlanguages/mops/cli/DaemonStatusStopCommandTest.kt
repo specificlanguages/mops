@@ -350,18 +350,17 @@ class DaemonStatusStopCommandTest {
         val mpsHome = tempDir.mpsHome("deleted-mps-$port")
         val javaHome = Path.of(System.getProperty("java.home")).toRealPath()
         val store = DaemonRecordStore.forDaemonHome(daemonHome)
-        store.write(
-            daemonRecord(
-                port = port,
-                token = "stale-token",
-                pid = 999_999L,
-                project = projectPath,
-                mpsHome = mpsHome,
-                workspace = daemonHome.resolve("projects/stale"),
-                startupTime = "2026-05-12T12:02:00Z",
-            ),
+        val record = daemonRecord(
+            port = port,
+            token = "stale-token",
+            pid = 999_999L,
+            project = projectPath,
+            mpsHome = mpsHome,
+            workspace = daemonHome.resolve("projects/stale"),
+            startupTime = "2026-05-12T12:02:00Z",
         )
-        val recordPath = store.recordPath(projectPath)
+        store.write(record)
+        val recordPath = store.recordPath(record.context)
 
         deleteRecursively(projectPath)
         deleteRecursively(mpsHome)

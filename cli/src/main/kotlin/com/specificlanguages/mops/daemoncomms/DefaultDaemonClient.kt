@@ -3,7 +3,7 @@ package com.specificlanguages.mops.daemoncomms
 import com.specificlanguages.mops.protocol.DaemonErrorResponse
 import com.specificlanguages.mops.protocol.DaemonRequest
 import com.specificlanguages.mops.protocol.DaemonRecord
-import com.specificlanguages.mops.protocol.ConstraintEnforcement
+import com.specificlanguages.mops.protocol.ConstraintPolicy
 import com.specificlanguages.mops.protocol.DaemonResponse
 import com.specificlanguages.mops.protocol.ModelEditRequest
 import com.specificlanguages.mops.protocol.ModelEditResponse
@@ -23,6 +23,7 @@ import com.specificlanguages.mops.protocol.GetModuleRequest
 import com.specificlanguages.mops.protocol.GetModuleResponse
 import com.specificlanguages.mops.protocol.MakeModulesRequest
 import com.specificlanguages.mops.protocol.MakeProjectRequest
+import com.specificlanguages.mops.protocol.MakeGenerationOptions
 import com.specificlanguages.mops.protocol.MakeResponse
 import com.specificlanguages.mops.protocol.ModelCheckRequest
 import com.specificlanguages.mops.protocol.ModelCheckResponse
@@ -175,7 +176,7 @@ class DefaultDaemonClient(
             FindNodeByIdResponse::class.java
         )
 
-    override fun modelEdit(batch: EditBatch, constraints: ConstraintEnforcement): ModelEditResponse =
+    override fun modelEdit(batch: EditBatch, constraints: ConstraintPolicy): ModelEditResponse =
         exchange(
             ModelEditRequest(token = token, batch = batch, constraints = constraints),
             ModelEditResponse::class.java
@@ -199,16 +200,16 @@ class DefaultDaemonClient(
             ModuleDiagnosticResponse::class.java
         )
 
-    override fun makeModules(modules: List<String>): MakeResponse =
+    override fun makeModules(modules: List<String>, generation: MakeGenerationOptions): MakeResponse =
         exchange(
-            MakeModulesRequest(token = token, modules = modules),
+            MakeModulesRequest(token = token, modules = modules, generation = generation),
             MakeResponse::class.java,
             timeout = MAKE_TIMEOUT,
         )
 
-    override fun makeProject(): MakeResponse =
+    override fun makeProject(generation: MakeGenerationOptions): MakeResponse =
         exchange(
-            MakeProjectRequest(token = token),
+            MakeProjectRequest(token = token, generation = generation),
             MakeResponse::class.java,
             timeout = MAKE_TIMEOUT,
         )

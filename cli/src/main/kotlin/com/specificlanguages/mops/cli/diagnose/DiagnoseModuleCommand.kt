@@ -4,6 +4,7 @@ import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
 import com.specificlanguages.mops.cli.output.renderJson
+import com.specificlanguages.mops.cli.output.textRow
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.ModuleLoadProblemJson
 import picocli.CommandLine.Command
@@ -60,12 +61,14 @@ class DiagnoseModuleCommand(private val environment: CommandEnvironment) : CliCo
 
         val diagnostic = response.module
         println(
-            listOf(
-                diagnostic.module,
-                diagnostic.kind,
-                "present=${diagnostic.present}",
-                "loaded=${diagnostic.loaded}",
-            ).joinToString("\t"),
+            textRow(
+                listOf(
+                    diagnostic.module,
+                    diagnostic.kind,
+                    "present=${diagnostic.present}",
+                    "loaded=${diagnostic.loaded}",
+                ),
+            ),
         )
         diagnostic.problem?.let { renderTree(it, depth = 1) }
     }
@@ -73,7 +76,7 @@ class DiagnoseModuleCommand(private val environment: CommandEnvironment) : CliCo
     private fun renderTree(problem: ModuleLoadProblemJson, depth: Int) {
         val indent = "\t".repeat(depth)
         val columns = listOfNotNull(problem.module, problem.reason, problem.detail)
-        println(indent + columns.joinToString("\t"))
+        println(indent + textRow(columns))
         problem.causes.forEach { renderTree(it, depth + 1) }
     }
 }

@@ -5,6 +5,7 @@ import com.specificlanguages.mops.cli.output.metadataLine
 import com.specificlanguages.mops.cli.output.truncationLine
 import com.specificlanguages.mops.cli.output.renderJson
 import com.specificlanguages.mops.cli.output.renderNodeReference
+import com.specificlanguages.mops.cli.output.textRow
 import com.specificlanguages.mops.cli.output.NodeReferenceFormat
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
 import com.specificlanguages.mops.protocol.ModelCheckResponse
@@ -50,7 +51,7 @@ private fun renderHuman(finding: ModelCheckFindingJson, nodeReferenceFormat: Nod
     finding.node?.let {
         columns += listOf(it.name ?: "<unnamed>", it.concept, renderNodeReference(it.reference, nodeReferenceFormat))
     }
-    println(columns.joinToString("\t"))
+    println(textRow(columns))
 }
 
 private fun countsText(summary: ModelCheckSummary): String {

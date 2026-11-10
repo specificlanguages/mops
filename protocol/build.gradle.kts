@@ -15,6 +15,7 @@ configurations {
 }
 
 dependencies {
+    implementation(project(":launcher"))
     relocatedSerialization(libs.kotlinx.serialization.json)
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

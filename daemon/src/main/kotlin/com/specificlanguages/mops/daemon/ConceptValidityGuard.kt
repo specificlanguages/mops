@@ -10,8 +10,7 @@ import org.jetbrains.mps.openapi.persistence.PersistenceFacade
  * language was never compiled.
  *
  * Read commands annotate such a node (`conceptValid = false`) rather than failing. The write path uses these helpers to
- * check such a node under [com.specificlanguages.mops.protocol.ConstraintEnforcement] and to name its unloaded language.
- * Code Mode role and property lookups fail on such a node, because its concept has no roles or properties to look up.
+ * check such a node under [com.specificlanguages.mops.protocol.ConstraintPolicy] and to name its unloaded language.
  */
 object ConceptValidityGuard {
 

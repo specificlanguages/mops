@@ -5,8 +5,10 @@ import com.specificlanguages.mops.daemon.core.MpsExtra
 import com.specificlanguages.mops.daemon.core.MpsRead
 import com.specificlanguages.mops.daemon.core.MpsWrite
 import com.specificlanguages.mops.protocol.CodeRunRequest
-import com.specificlanguages.mops.protocol.ConstraintEnforcement
+import com.specificlanguages.mops.protocol.ConstraintMode
+import com.specificlanguages.mops.protocol.ConstraintPolicy
 import com.specificlanguages.mops.protocol.EditBatch
+import com.specificlanguages.mops.protocol.MakeGenerationOptions
 import com.specificlanguages.mops.protocol.ModelEditResponse
 import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.TestRunRequest
@@ -25,14 +27,15 @@ fun mpsAccessOver(operations: MpsWrite, extra: MpsExtra = UnstubbedExtra): MpsAc
     override fun <T> extra(block: MpsExtra.() -> T): T = extra.block()
 }
 
-/** Applies [batch] with [ConstraintEnforcement.ADVISORY]: violations are reported, and the batch is saved anyway. */
-fun MpsWrite.advisoryEdit(batch: EditBatch): ModelEditResponse = modelEdit(batch, ConstraintEnforcement.ADVISORY)
+/** Applies [batch] with [ConstraintMode.ADVISORY]: violations are reported, and the batch is saved anyway. */
+fun MpsWrite.advisoryEdit(batch: EditBatch): ModelEditResponse =
+    modelEdit(batch, ConstraintPolicy(ConstraintMode.ADVISORY))
 
 private object UnstubbedExtra : MpsExtra {
     override fun refreshExternalChanges() = Unit
     override fun saveProject() = Unit
-    override fun makeModules(modules: List<String>) = error("MpsExtra.makeModules not stubbed in this test")
-    override fun makeProject() = error("MpsExtra.makeProject not stubbed in this test")
+    override fun makeModules(modules: List<String>, generation: MakeGenerationOptions) = error("MpsExtra.makeModules not stubbed in this test")
+    override fun makeProject(generation: MakeGenerationOptions) = error("MpsExtra.makeProject not stubbed in this test")
     override fun renderNode(target: NodeTarget, allowReflective: Boolean) =
         error("MpsExtra.renderNode not stubbed in this test")
     override fun runTests(request: TestRunRequest) = error("MpsExtra.runTests not stubbed in this test")

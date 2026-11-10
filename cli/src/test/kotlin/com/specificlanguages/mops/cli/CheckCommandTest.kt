@@ -174,6 +174,36 @@ class CheckCommandTest {
 
     @ParameterizedTest
     @MethodSource("subcommands")
+    fun `a human finding stays on one row when its message has newlines, tabs and backslashes`(
+        subcommand: CheckSubcommand,
+    ) {
+        val client = subcommand.returning(checkResponse(listOf(CONTROL_CHARACTER_FINDING)))
+
+        val run = subcommand.run(client)
+
+        assertEquals(
+            listOf(
+                "warning\tWarning: getQualifiedName():String is deprecated (\\n)\\r\\n\\tsee C:\\\\docs\t<unnamed>\t" +
+                    "jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation\t$MODEL/call",
+                "# checked 3 roots: 0 errors, 1 warning, 0 infos",
+            ),
+            run.lines,
+        )
+    }
+
+    @ParameterizedTest
+    @MethodSource("subcommands")
+    fun `jsonl output keeps newlines and tabs in a finding message`(subcommand: CheckSubcommand) {
+        val client = subcommand.returning(checkResponse(listOf(CONTROL_CHARACTER_FINDING)))
+
+        val run = subcommand.run(client, "--format", "jsonl")
+
+        assertEquals(2, run.lines.size, run.stdout)
+        assertEquals(CONTROL_CHARACTER_FINDING, ProtocolJson.finding.decode(run.lines[0]))
+    }
+
+    @ParameterizedTest
+    @MethodSource("subcommands")
     fun `rejects an unknown format`(subcommand: CheckSubcommand) {
         val client = subcommand.returning(checkResponse())
 
@@ -262,6 +292,17 @@ class CheckCommandTest {
         private val WARNING_FINDING = ModelCheckFindingJson(
             severity = FindingSeverity.WARNING,
             message = "model-level note",
+        )
+
+        private val CONTROL_CHARACTER_FINDING = ModelCheckFindingJson(
+            severity = FindingSeverity.WARNING,
+            message = "Warning: getQualifiedName():String is deprecated (\n)\r\n\tsee C:\\docs",
+            node = MpsNodeSummaryJson(
+                type = "node",
+                name = null,
+                concept = "jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation",
+                reference = "$MODEL/call",
+            ),
         )
     }
 }

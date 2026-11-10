@@ -3,9 +3,9 @@
 An **Edit Operation** evaluates **Constraints** as part of applying, never a full **Model Check** (typesystem and
 checking rules), which is a separate operation because it may be costly. The `--constraints` mode chooses what a
 **Constraint Violation** does. `advisory` evaluates and reports violations but applies and saves the batch anyway.
-`best-effort` (the default) blocks the batch on any violation, and additionally warns about concepts whose language did
-not load and so could not be checked. `strict` also blocks on violations but treats a concept that could not be checked
-as a failure rather than a warning. Every mode reports the violations.
+`strict` (the default) blocks the batch on any violation. Every mode reports the violations. A concept whose language
+did not load cannot be checked; that is a separate setting: by default it fails the batch, and
+`--ignore-missing-languages` skips it with a warning instead.
 
 ## Considered Options
 
@@ -18,7 +18,6 @@ as a failure rather than a warning. Every mode reports the violations.
 ## Consequences
 
 Constraint evaluation must be cheap. The batch mutates the affected loaded models in memory and then evaluates
-Constraints over the resulting state; when a blocking mode (`best-effort` or `strict`) rejects the violations, the
-affected models are reloaded from source, discarding the in-memory changes. This best-effort rollback leaves the loaded
-model as it was before the batch. Reporting violations is independent of whether they block, so an `advisory` edit still
-tells the caller what it broke.
+Constraints over the resulting state; when `strict` mode rejects the violations, the affected models are reloaded from
+source, discarding the in-memory changes. This best-effort rollback leaves the loaded model as it was before the batch.
+Reporting violations is independent of whether they block, so an `advisory` edit still tells the caller what it broke.

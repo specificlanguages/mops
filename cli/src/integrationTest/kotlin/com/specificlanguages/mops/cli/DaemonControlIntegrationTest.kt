@@ -195,21 +195,19 @@ class DaemonControlIntegrationTest {
         val project = copyTestProject("mps-json", tempDir.resolve("mps-json"))
         val daemonHome = tempDir.resolve("daemon-home").createDirectories()
         val staleMpsHome = tempDir.resolve("stale-mps").createDirectories().toRealPath()
+        staleMpsHome.resolve("build.properties").writeText("mps.build.number=MPS-213.7172.1079\n")
         val javaHome = Path.of(System.getProperty("java.home")).toRealPath()
 
         val store = DaemonRecordStore.forDaemonHome(daemonHome)
+        val staleContext = DaemonContext.fromLivePaths(projectPath = project, mpsHome = staleMpsHome, javaHome = javaHome)
         store.write(
             DaemonRecord(
                 port = 9,
                 token = "stale-token",
                 pid = 999_999L,
                 daemonVersion = "0.3.0-SNAPSHOT",
-                context = DaemonContext.fromLivePaths(
-                    projectPath = project,
-                    mpsHome = staleMpsHome,
-                    javaHome = javaHome,
-                ),
-                workspace = store.workspacePath(project),
+                context = staleContext,
+                workspace = store.workspacePath(staleContext),
                 startupTime = "2026-05-12T12:02:00Z",
             ),
         )

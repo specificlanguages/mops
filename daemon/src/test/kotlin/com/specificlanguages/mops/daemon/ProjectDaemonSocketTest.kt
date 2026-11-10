@@ -25,6 +25,7 @@ import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.InetAddress
 import java.net.Socket
+import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
@@ -265,6 +266,7 @@ class ProjectDaemonSocketTest {
     private fun start(idleTimeout: Duration = Duration.ofSeconds(30)): RunningDaemon {
         val projectPath = tempDir.resolve("project").createDirectories().toRealPath()
         val mpsHome = tempDir.resolve("mps").createDirectories().toRealPath()
+        Files.writeString(mpsHome.resolve("build.properties"), "mps.build.number=MPS-241.1.1\n")
         val workspacePath = tempDir.resolve("workspace")
 
         val daemon = ProjectDaemon(

@@ -3,6 +3,7 @@ package com.specificlanguages.mops.daemon.core
 import com.specificlanguages.mops.protocol.Facade
 import com.specificlanguages.mops.protocol.CodeResultResponse
 import com.specificlanguages.mops.protocol.CodeRunRequest
+import com.specificlanguages.mops.protocol.MakeGenerationOptions
 import com.specificlanguages.mops.protocol.MakeResponse
 import com.specificlanguages.mops.protocol.NodeTarget
 import com.specificlanguages.mops.protocol.TestRunReport
@@ -23,13 +24,17 @@ interface MpsExtra {
      * Makes the modules named by [modules] (each a module name or serialized module reference) together with their
      * transitive dependency closure, so any un-made dependency — direct or indirect — is made too. Fails with
      * [MpsRequestException] if a name resolves to no project module or to more than one.
+     *
+     * The make is clean: files in the made modules' output folders that the make does not generate any more are
+     * deleted. [generation] applies to this make only. Fails with [MpsErrorCode.INVALID_REQUEST] when its thread count
+     * is below 1, or above 1 while strict mode is off (MPS generates in parallel only in strict mode).
      */
-    fun makeModules(modules: List<String>): MakeResponse
+    fun makeModules(modules: List<String>, generation: MakeGenerationOptions = MakeGenerationOptions()): MakeResponse
 
     /**
-     * Makes every generatable module in the project.
+     * Makes every generatable module in the project, clean and with [generation] as in [makeModules].
      */
-    fun makeProject(): MakeResponse
+    fun makeProject(generation: MakeGenerationOptions = MakeGenerationOptions()): MakeResponse
 
     /**
      * Renders one resolved node as the plain text of its default editor, the way it would appear in the MPS editor. The

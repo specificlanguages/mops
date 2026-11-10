@@ -9,6 +9,7 @@ import com.specificlanguages.mops.protocol.DaemonContext
 import com.specificlanguages.mops.protocol.DaemonRecordStore
 import com.specificlanguages.mops.protocol.PongResponse
 import com.specificlanguages.mops.protocol.StoppedResponse
+import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemErr
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -104,46 +105,55 @@ class DefaultDaemonPoolTest {
     }
 
     @Test
-    fun `fails when project is owned by different context`() {
+    fun `stops the daemon of the project that uses another MPS home before starting one`() {
         val project = tempDir.mpsProject()
-        val daemonHome = tempDir.resolve("daemon-home")
         val mpsHome = tempDir.mpsHome()
-        val otherMpsHome = tempDir.mpsHome("other")
+        val otherMpsHome = tempDir.mpsHome("other", buildNumber = "MPS-251.1.1")
+        val javaHome = Path.of(System.getProperty("java.home"))
 
-        val fakeDaemon = startPrerecordedDaemon(
-            PongResponse(
-                projectPath = project.pathString,
-                mpsHome = otherMpsHome.pathString,
-                workspacePath = "irrelevant"
-            ),
-        )
-        val store = DaemonRecordStore.forDaemonHome(daemonHome)
-        val record = daemonRecord(
-            port = fakeDaemon.port,
-            project = project,
-            mpsHome = otherMpsHome,
-            workspace = Path.of("irrelevant"),
-        )
-        store.write(record)
+        val fakeDaemon = startPrerecordedDaemon(StoppedResponse())
+        val store = DaemonRecordStore.forDaemonHome(tempDir.resolve("daemon-home"))
+        // No process has pid 999999, so the stopped daemon counts as exited at once.
+        val other = daemonRecord(port = fakeDaemon.port, pid = 999_999L, project = project, mpsHome = otherMpsHome, workspace = Path.of("other"))
+        store.write(other)
 
+        val context = DaemonContext.fromLivePaths(project, mpsHome, javaHome)
+        val started = daemonRecord(port = 9, project = project, mpsHome = mpsHome, workspace = Path.of("started"))
         val launcher = mock<DaemonLauncher>()
-        whenever(launcher.connectToExistingDaemon(record)).thenReturn(
-            DefaultDaemonClient(fakeDaemon.port, record.token),
-        )
-        val exception = assertFailsWith<IllegalStateException> {
-            DefaultDaemonPool(store, launcher).ensureDaemon(
-                DaemonContext.fromLivePaths(
-                    projectPath = project,
-                    mpsHome = mpsHome,
-                    javaHome = Path.of(System.getProperty("java.home"))
-                )
-            )
+        whenever(launcher.startDaemon(context)).thenAnswer {
+            store.write(started)
+            mock<DaemonClient>()
         }
+        val stderr = tapSystemErr { DefaultDaemonPool(store, launcher).ensureDaemon(context) }
 
         fakeDaemon.join(5_000)
-        assertContains(exception.message!!, "different context")
-        assertContains(exception.message!!, otherMpsHome.pathString)
-        verify(launcher, never()).startDaemon(any())
+        assertContains(fakeDaemon.requestsReceived.single(), "\"type\":\"stop\"")
+        // The fake daemon logs its requests on stderr too.
+        assertEquals(
+            listOf(
+                "mops: stopped the daemon for $project that used MPS MPS-251.1.1 at $otherMpsHome; " +
+                    "starting one for MPS MPS-213.7172.1079 at $mpsHome",
+            ),
+            stderr.lines().filter { it.startsWith("mops:") },
+        )
+        assertEquals(listOf(started), store.readForProject(project).map { it.record })
+    }
+
+    @Test
+    fun `finds the daemons of a project in all of its workspaces`() {
+        val project = tempDir.mpsProject()
+        val otherProject = tempDir.mpsProject("other-project")
+        val store = DaemonRecordStore.forDaemonHome(tempDir.resolve("daemon-home"))
+        val records = listOf(
+            daemonRecord(port = 9, project = project, mpsHome = tempDir.mpsHome(), workspace = Path.of("a")),
+            daemonRecord(port = 9, project = project, mpsHome = tempDir.mpsHome("other"), workspace = Path.of("b")),
+        )
+        records.forEach(store::write)
+        store.write(daemonRecord(port = 9, project = otherProject, mpsHome = tempDir.mpsHome(), workspace = Path.of("c")))
+
+        val found = DefaultDaemonPool(store, mock()).findRecords(DaemonPool.Spec.ForProject(project))
+
+        assertEquals(records.toSet(), found.map { it.record }.toSet())
     }
 
     @Test
@@ -175,7 +185,7 @@ class DefaultDaemonPoolTest {
     }
 
     @Test
-    fun `removes stale daemon record before rejecting a different mps home`() {
+    fun `removes a stale daemon record of another MPS home before autostart`() {
         val project = tempDir.mpsProject()
         val daemonHome = tempDir.resolve("daemon-home")
         val mpsHome = tempDir.mpsHome()
