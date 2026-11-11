@@ -67,9 +67,9 @@ and publishes both files in a GitHub Release with notes generated from the merge
   `config/detekt/detekt.yml` on the main source sets, with type resolution. The complexity rules check method length,
   cyclomatic and cognitive complexity, nesting depth, parameter count, and class and file size. The exceptions rules
   check how exceptions are thrown and caught. Name a caught exception that is deliberately ignored `_`. The `mops` rule
-  set holds the project's own rules from the `detekt-rules` module, such as `InnerClassChangesOuterState`. Test sources
-  are not checked. Reports are written to `<module>/build/reports/detekt/`. detekt runs in a separate worker process
-  (`detekt.use.worker.api` in `gradle.properties`).
+  set holds the project's own rules from the `detekt-rules` module. Test sources are not checked. Reports are written to
+  `<module>/build/reports/detekt/`. detekt runs in a separate worker process (`detekt.use.worker.api` in
+  `gradle.properties`).
 - **Architecture tests** in `architecture-tests/` (`./gradlew :architecture-tests:test`) use
   [Konsist](https://docs.konsist.lemonappdev.com/) to check dependencies that Gradle cannot see. They check that CLI
   command packages (`cli.find`, `cli.get`, ...) do not depend on each other. Gradle module dependencies already decide

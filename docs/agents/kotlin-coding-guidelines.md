@@ -17,9 +17,11 @@ formatting and naming.
   `X.serializer()`. detekt's type resolution does not run the serialization compiler plugin, so it cannot see the
   generated `X.serializer()` and reports a compiler error. The plugin compiles `serializer<X>()` to the same direct
   `X.Companion.serializer()` call.
-- Keep mutable state owned by one class. An inner class may read the state of its outer class but does not change it.
-  Return what changed and let the outer class apply it. The detekt rule `InnerClassChangesOuterState` enforces this for
-  `inner` classes.
+- Keep mutable state owned by one class. A nested or inner class may read the state of its outer class but does not
+  change it. Return what changed and let the outer class apply it.
+- Prefer a nested or top-level class to an inner class. An inner class can read and change the state of its outer class,
+  so that state can change from two places. When a class must be inner, put a comment above it that says why. The detekt
+  rule `UnexplainedInnerClass` reports an inner class without such a comment.
 - Keep each decision in one place. When a reader asks "when does X happen?", one function should answer it. If the
   answer needs two functions in different objects, move the rule into one of them.
 - Make the role of a class clear from its name. A class is a value (immutable data), a service (does work, named with a

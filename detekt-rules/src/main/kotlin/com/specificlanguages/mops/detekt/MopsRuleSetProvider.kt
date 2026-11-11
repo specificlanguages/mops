@@ -11,6 +11,6 @@ class MopsRuleSetProvider : RuleSetProvider {
 
     override fun instance() = RuleSet(
         ruleSetId,
-        mapOf(RuleName("InnerClassChangesOuterState") to ::InnerClassChangesOuterState),
+        mapOf(RuleName("UnexplainedInnerClass") to ::UnexplainedInnerClass),
     )
 }

@@ -44,5 +44,5 @@ style:
 # The project's own rules, from the detekt-rules module.
 mops:
   active: true
-  InnerClassChangesOuterState:
+  UnexplainedInnerClass:
     active: true
