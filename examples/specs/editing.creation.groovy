@@ -37,6 +37,11 @@
                 code: '''mops create model .main --module sample.solution''',
             ],
             [
+                title: 'Create a language aspect model with its aspect devkit',
+                kind: 'cli',
+                code: '''mops create model .structure --module sample.language''',
+            ],
+            [
                 title: 'Create a model with one file per root',
                 kind: 'cli',
                 code: '''mops create model .main --module sample.solution --file-per-root''',

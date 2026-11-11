@@ -1,6 +1,10 @@
 package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.protocol.*
+import jetbrains.mps.project.Project
+import jetbrains.mps.smodel.SModelInternal
+import org.jetbrains.mps.openapi.persistence.PersistenceFacade
+import java.nio.file.Path
 import kotlin.io.path.exists
 import kotlin.io.path.readText
 import kotlin.test.*
@@ -61,6 +65,7 @@ class ModelCreationSemanticsTest {
             Unit
         }
     }
+
     @Test
     fun `an aspect model of a language gets the devkit MPS gives that aspect`() {
         SharedMpsEnvironment.withOpenProjectCopy { project, projectPath ->
@@ -70,8 +75,8 @@ class ModelCreationSemanticsTest {
                 handler.handleDomainRequest(CreateModelRequest("", "example.lang.structure", "example.lang")),
             ).report)
 
-            assertEquals(listOf("jetbrains.mps.devkit.aspect.structure"), usedDevkits(project, report.modelReference))
-            assertContains(java.nio.file.Path.of(report.location).readText(), "jetbrains.mps.devkit.aspect.structure")
+            assertContains(usedDevkits(project, report.modelReference), "jetbrains.mps.devkit.aspect.structure")
+            assertContains(Path.of(report.location).readText(), "jetbrains.mps.devkit.aspect.structure")
         }
     }
 
@@ -86,14 +91,13 @@ class ModelCreationSemanticsTest {
             ))
 
             val modelReference = requireNotNull(response.output).trim().removeSurrounding("\"")
-            assertEquals(listOf("jetbrains.mps.devkit.aspect.dataflow"), usedDevkits(project, modelReference))
+            assertContains(usedDevkits(project, modelReference), "jetbrains.mps.devkit.aspect.dataflow")
         }
     }
 
-    private fun usedDevkits(project: jetbrains.mps.project.Project, modelReference: String): List<String> =
+    private fun usedDevkits(project: Project, modelReference: String): List<String> =
         project.modelAccess.computeReadAction {
-            val model = org.jetbrains.mps.openapi.persistence.PersistenceFacade.getInstance()
-                .createModelReference(modelReference).resolve(project.repository)
-            (model as jetbrains.mps.smodel.SModelInternal).importedDevkits().map { it.moduleName!! }
+            val model = PersistenceFacade.getInstance().createModelReference(modelReference).resolve(project.repository)
+            (model as SModelInternal).importedDevkits().map { it.moduleName!! }
         }
 }

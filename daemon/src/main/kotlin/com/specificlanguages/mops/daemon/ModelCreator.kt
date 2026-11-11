@@ -64,7 +64,7 @@ class ModelCreator(private val project: Project) {
             requireNotNull(project.platform.findComponent(ModelsAutoImportsManager::class.java))
                 .performImports(preparation.module, model)
             (model as EditableSModel).save()
-        } catch (saveFailure: Throwable) {
+        } catch (failure: Throwable) {
             val cleanupFailures = mutableListOf<String>()
             runCatching { (preparation.module as SModuleBase).unregisterModel(model as SModelBase) }
                 .exceptionOrNull()?.let { cleanupFailures += "could not detach model: ${it.message}" }
@@ -74,8 +74,8 @@ class ModelCreator(private val project: Project) {
             }
             val residue = if (target?.exists() == true) "; possible residue at $target" else ""
             val cleanup = cleanupFailures.takeIf { it.isNotEmpty() }?.joinToString("; ", prefix = "; ") ?: ""
-            throw IllegalStateException("initial save failed for ${preparation.actualName} at ${preparation.selected.location}: " +
-                "${saveFailure.message ?: saveFailure.javaClass.name}$residue$cleanup", saveFailure)
+            throw IllegalStateException("initial imports or save failed for ${preparation.actualName} at ${preparation.selected.location}: " +
+                "${failure.message ?: failure.javaClass.name}$residue$cleanup", failure)
         }
         return CreatedModel(model, preparation.selected.location!!)
     }
