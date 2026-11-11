@@ -122,6 +122,8 @@ Create an empty model in a project module.
 Usage: mops create model [-h] [--dry-run] [--file-per-root] [--json]
                          --module=MODULE MODEL_NAME
 Create an empty model in a project module.
+The model gets the devkits and used languages that MPS gives a new model in
+that module, such as the aspect devkit for a language's structure model.
 Parameters:
       MODEL_NAME
 Options:

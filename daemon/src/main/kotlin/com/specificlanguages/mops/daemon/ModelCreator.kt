@@ -11,6 +11,7 @@ import jetbrains.mps.extapi.persistence.SourceRootKinds
 import jetbrains.mps.extapi.persistence.datasource.DataSourceFactoryRuleService
 import jetbrains.mps.extapi.persistence.datasource.PreinstalledDataSourceTypes
 import jetbrains.mps.persistence.*
+import jetbrains.mps.project.ModelsAutoImportsManager
 import jetbrains.mps.project.Project
 import org.jetbrains.mps.openapi.model.EditableSModel
 import org.jetbrains.mps.openapi.model.SModel
@@ -60,6 +61,8 @@ class ModelCreator(private val project: Project) {
         val model = preparation.selected.root!!.createModel(SModelName(preparation.actualName), null,
             dataSourceType(preparation.format), factoryType(preparation.format))
         try {
+            requireNotNull(project.platform.findComponent(ModelsAutoImportsManager::class.java))
+                .performImports(preparation.module, model)
             (model as EditableSModel).save()
         } catch (saveFailure: Throwable) {
             val cleanupFailures = mutableListOf<String>()

@@ -6,6 +6,8 @@ import com.specificlanguages.mops.protocol.MakeResponse
 import com.specificlanguages.mops.protocol.ProtocolJson
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.api.parallel.ResourceLock
+import kotlin.io.path.pathString
+import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -27,6 +29,34 @@ class MakeIntegrationTest {
             response.messages.any { it.kind == MakeMessageKind.INFO && it.text.contains("using 2 threads") },
             "expected MPS to report generating with 2 threads, got ${response.messages}",
         )
+    }
+
+    @Test
+    fun `a new language with a structure model created by mops makes`() {
+        val project = daemons.project("mps-json", copy = "new-language")
+        val program = project.root.resolve("add-concept.groovy")
+        program.writeText("""
+            project.command {
+              def model = mops.lookup.requireModel('example.lang.structure')
+              def concept = model.createNode(mops.lookup.requireConceptByName('jetbrains.mps.lang.structure.ConceptDeclaration'))
+              concept.properties['name'] = 'Greeting'
+              model.addRootNode(concept)
+              concept.name
+            }
+        """.trimIndent())
+
+        for (args in listOf(
+            arrayOf("create", "language", "example.lang"),
+            arrayOf("create", "model", "example.lang.structure", "--module", "example.lang"),
+            arrayOf("code", "run", program.pathString),
+        )) {
+            val step = project.run(*args)
+            assertEquals(0, step.exitCode, step.output)
+        }
+        val result = project.run("make", "module", "--json", "example.lang")
+
+        assertEquals(0, result.exitCode, result.output)
+        assertEquals(MakeOutcome.SUCCESS, (ProtocolJson.decodeResponse(result.stdout) as MakeResponse).outcome, result.output)
     }
 
     companion object {
