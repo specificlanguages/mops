@@ -1,6 +1,6 @@
-# Only the complexity and exceptions rule sets are active. Every other rule set is turned off, so detekt reports method
-# length, complexity, nesting, parameter count, class and file size, and exception handling, and nothing about style or
-# naming.
+# Only the complexity, exceptions, and mops rule sets are active. Every other rule set is turned off, so detekt reports
+# method length, complexity, nesting, parameter count, class and file size, exception handling, and the project's own
+# rules, and nothing about style or naming.
 # See "Code structure checks" in docs/development.md for how the per-module baselines work.
 
 complexity:
@@ -40,3 +40,9 @@ potential-bugs:
   active: false
 style:
   active: false
+
+# The project's own rules, from the detekt-rules module.
+mops:
+  active: true
+  InnerClassChangesOuterState:
+    active: true
