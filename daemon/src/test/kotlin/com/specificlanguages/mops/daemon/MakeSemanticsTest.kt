@@ -7,7 +7,6 @@ import com.specificlanguages.mops.protocol.CreateSolutionRequest
 import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.MakeGenerationOptions
-import com.specificlanguages.mops.protocol.MakeMessageLevel
 import com.specificlanguages.mops.protocol.MakeModulesRequest
 import com.specificlanguages.mops.protocol.MakeMessageKind
 import com.specificlanguages.mops.protocol.MakeOutcome
@@ -124,7 +123,7 @@ class MakeSemanticsTest {
 
     // The tests below send each step as its own daemon request, as the CLI does.
     @Test
-    fun `a solution with no generation target facets makes without generating its models`() {
+    fun `a solution with no generation-target facets makes without generating its models`() {
         val (response, solutionDir) = SharedMpsEnvironment.withOpenProjectCopy { project, projectPath ->
             val daemon = DomainRequestHandler(projectPath, SharedMpsEnvironment.mpsAccess(project))
             createSolutionWithModel(daemon, "example.analyzed", SolutionUsagePreset.NOT_GENERATED)
@@ -134,20 +133,19 @@ class MakeSemanticsTest {
                 properties = listOf(MpsNodePropertyJson(name = "name", value = "Analyzed")),
             )
             daemon.handleDomainRequest(ModelEditRequest("", EditBatch(listOf(addClass))))
-            val generation = MakeGenerationOptions(messages = MakeMessageLevel.INFO)
-            daemon.make("example.analyzed", generation) to projectPath.resolve("solutions/example.analyzed")
+            daemon.make("example.analyzed") to projectPath.resolve("solutions/example.analyzed")
         }
 
         assertEquals(MakeOutcome.NOTHING_TO_GENERATE, response.outcome, "got ${response.messages}")
         assertTrue(
-            response.messages.any { it.kind == MakeMessageKind.INFO && it.text.contains("example.analyzed") },
-            "expected an info message naming the module left out; got ${response.messages}",
+            response.messages.any { it.kind == MakeMessageKind.WARNING && it.text.contains("example.analyzed") },
+            "expected a warning naming the module left out; got ${response.messages}",
         )
         assertFalse(solutionDir.resolve("source_gen").exists(), "the solution's models must not be generated")
     }
 
     @Test
-    fun `a solution with no generation target facets and an empty model has nothing to generate`() {
+    fun `a solution with no generation-target facets and an empty model has nothing to generate`() {
         val response = SharedMpsEnvironment.withOpenProjectCopy { project, projectPath ->
             val daemon = DomainRequestHandler(projectPath, SharedMpsEnvironment.mpsAccess(project))
             createSolutionWithModel(daemon, "example.analyzed", SolutionUsagePreset.NOT_GENERATED)

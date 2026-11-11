@@ -19,7 +19,6 @@ import jetbrains.mps.make.script.IScriptController
 import jetbrains.mps.make.service.CoreMakeTask
 import jetbrains.mps.messages.IMessage
 import jetbrains.mps.messages.IMessageHandler
-import jetbrains.mps.messages.Message
 import jetbrains.mps.messages.MessageKind
 import jetbrains.mps.progress.EmptyProgressMonitor
 import jetbrains.mps.project.AbstractModule
@@ -41,8 +40,8 @@ import org.jetbrains.mps.openapi.util.ProgressMonitor
  * The make framework builds exactly the modules whose models it is handed — it never pulls in a dependency that is not
  * in the set, it only orders what it is given. So to make un-made dependencies too, [makeModules] first expands the
  * requested modules to their transitive compile-dependency closure ([GlobalModuleDependenciesManager]); already-built
- * library dependencies drop out because [ModelsToResources] keeps only generatable models. Models of modules without a
- * generation target facet are left out too ([makeSet]). Every model handed to the make is generated; nothing skips
+ * library dependencies drop out because [ModelsToResources] keeps only generatable models. Models of modules without
+ * generation-target facets are left out too ([makeSet]). Every model handed to the make is generated; nothing skips
  * unmodified models.
  *
  * Model collection runs inside short read actions; the make call runs outside any model action, on the calling thread,
@@ -103,7 +102,9 @@ class ProjectMake(private val project: Project) {
         val options = makeGenerationOptions(generationSettings, generation)
         val makeSet = project.modelAccess.computeReadAction<MakeSet> { makeSet(models) }
         val handler = CollectingMessageHandler()
-        makeSet.leftOutModules.forEach { handler.handle(Message(MessageKind.INFORMATION, it.notGeneratedMessage())) }
+        makeSet.leftOutModules.mapTo(handler.messages) {
+            MakeMessageJson(MakeMessageKind.WARNING, it.notGeneratedMessage())
+        }
 
         // MakeSession's own clean flag only names the IDE's make script; the resources above carry the clean make.
         val session = MakeSession(project, handler, /* cleanMake = */ false)
@@ -111,11 +112,7 @@ class ProjectMake(private val project: Project) {
         // can have no step even when there are resources.
         val sequence = MakeSequence(makeSet.resources, null, session)
         if (sequence.steps() == 0) {
-            return MakeResponse(
-                MakeOutcome.NOTHING_TO_GENERATE,
-                moduleCount = 0,
-                messages = handler.messages.filter { generation.messages.reports(it.kind) },
-            )
+            return MakeResponse(MakeOutcome.NOTHING_TO_GENERATE, 0, handler.messages.reportedAt(generation.messages))
         }
 
         // Reimplements BuildMakeService.doMake using classes from mps-core: BuildMakeService itself ships only in
@@ -132,13 +129,13 @@ class ProjectMake(private val project: Project) {
     }
 
     /**
-     * The make resources for [models], grouped one per module, and the modules whose models are left out because they
-     * have nowhere to write generated files. Must run inside a read action.
+     * The make resources for [models], grouped one per module, and the modules whose generatable models are left out
+     * because they have nowhere to write generated files. Must run inside a read action.
      *
      * Models of read-only modules are left out: MPS ships its library languages and runtime solutions as *source*
      * models inside `-src.jar` files, and those models report themselves generatable, yet writing their generation
-     * output into the jar fails ("Write for jar files is not supported"). Models whose module has no generation target
-     * facet are left out too: text generation has no output location for them, which fails the make on MPS before
+     * output into the jar fails ("Write for jar files is not supported"). Models whose module has no generation-target
+     * facets are left out too: text generation has no output location for them, which fails the make on MPS before
      * 2025.3. See https://github.com/specificlanguages/mps-api-research/blob/main/make-generation.md.
      */
     private fun makeSet(models: List<SModel>): MakeSet {
@@ -153,7 +150,7 @@ class ProjectMake(private val project: Project) {
     private class MakeSet(val resources: List<IResource>, val leftOutModules: List<SModule>)
 
     private fun SModule.notGeneratedMessage(): String =
-        "not generating the models of $moduleName: the module has no generation target facet"
+        "not generating the models of $moduleName: the module has no generation-target facets"
 
     /**
      * The modules to make for a request over [requested]: the requested modules, their module-level compile-dependency
@@ -242,13 +239,16 @@ internal fun makeResponse(
 ): MakeResponse {
     val hasError = messages.any { it.kind == MakeMessageKind.ERROR }
     val succeeded = result != null && result.isSucessful && !hasError
-    val reported = messages.filter { level.reports(it.kind) }
+    val reported = messages.reportedAt(level)
     return MakeResponse(
         outcome = if (succeeded) MakeOutcome.SUCCESS else MakeOutcome.FAILED,
         moduleCount = moduleCount,
         messages = if (succeeded || hasError) reported else reported + unexplainedFailure(result),
     )
 }
+
+private fun List<MakeMessageJson>.reportedAt(level: MakeMessageLevel?): List<MakeMessageJson> =
+    filter { level.reports(it.kind) }
 
 private fun unexplainedFailure(result: IResult?): MakeMessageJson {
     val reason = result?.message().orEmpty().ifBlank { null }
@@ -259,4 +259,3 @@ private fun unexplainedFailure(result: IResult?): MakeMessageJson {
     }
     return MakeMessageJson(MakeMessageKind.ERROR, text)
 }
-

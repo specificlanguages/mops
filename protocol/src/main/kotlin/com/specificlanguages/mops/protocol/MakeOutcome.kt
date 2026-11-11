@@ -19,9 +19,6 @@ enum class MakeOutcome {
      */
     FAILED,
 
-    /**
-     * The make set held no model to generate, so nothing ran: no model is generatable, its module has no generation
-     * target facet, or it uses no language.
-     */
+    /** The make set held no model to generate, so nothing ran. */
     NOTHING_TO_GENERATE,
 }

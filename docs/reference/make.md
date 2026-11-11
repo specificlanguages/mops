@@ -55,8 +55,8 @@ to generate`. The command exits non-zero when the make reports errors.
 
 The make generates every model of the made modules and deletes files in their
 output folders that it no longer generates. It leaves out the models of modules
-without a generation target facet, such as solutions created with the
-`not-generated` usage preset; `--messages info` names these modules.
+without generation-target facets, such as solutions created with the
+`not-generated` usage preset, and names each such module in a warning.
 
 The generation options apply to this make only; without them the make uses the
 daemon's MPS generation settings. With `--threads`, MPS generates in parallel
@@ -103,8 +103,8 @@ to generate`. The command exits non-zero when the make reports errors.
 
 The make generates every model of the made modules and deletes files in their
 output folders that it no longer generates. It leaves out the models of modules
-without a generation target facet, such as solutions created with the
-`not-generated` usage preset; `--messages info` names these modules.
+without generation-target facets, such as solutions created with the
+`not-generated` usage preset, and names each such module in a warning.
 
 The generation options apply to this make only; without them the make uses the
 daemon's MPS generation settings. With `--threads`, MPS generates in parallel

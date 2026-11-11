@@ -38,11 +38,11 @@ class MakeIntegrationTest {
         val model = project.run("create", "model", "example.analyzed.main", "--module", "example.analyzed")
         assertEquals(0, model.exitCode, model.output)
 
-        val result = project.run("make", "module", "--messages", "info", "example.analyzed")
+        val result = project.run("make", "module", "example.analyzed")
 
         assertEquals(0, result.exitCode, result.output)
         assertEquals("nothing to generate", result.stdout.trim(), result.output)
-        assertContains(result.stderr, "info\tnot generating the models of example.analyzed")
+        assertContains(result.stderr, "warning\tnot generating the models of example.analyzed")
     }
 
     companion object {
