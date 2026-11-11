@@ -140,7 +140,7 @@ class ModuleCreator(private val project: Project) {
             moduleFacetDescriptors.add(JavaModuleFacetImpl.forJavaCodeModule(
                 JavaModuleFacet.Compile.MPS, JavaModuleFacet.LoadClasses.ManagedByMPS, JavaModuleFacet.LoadExtensions.Plugin,
             ))
-            outputRoot = SOURCE_GEN
+            outputRoot = DEFAULT_OUTPUT_ROOT
         }
         return (ModuleRepositoryFacade(mpsProject).instantiate(value, descriptorFile) as Language)
             .also { mpsProject.addModule(it); it.setChanged() }
@@ -156,7 +156,7 @@ class ModuleCreator(private val project: Project) {
                 SolutionUsagePreset.NOT_GENERATED -> Unit
                 SolutionUsagePreset.TEXT -> moduleFacetDescriptors.add(ModuleFacetDescriptor("plaintext", MementoImpl().apply {
                     put("folders", "true")
-                    put("root", SOURCE_GEN)
+                    put("root", "\${module}/source_gen")
                 }))
                 SolutionUsagePreset.JAVA -> moduleFacetDescriptors.add(JavaModuleFacetImpl.forNewJavaCodeModule())
                 SolutionUsagePreset.JAVA_TESTS -> {
@@ -167,7 +167,7 @@ class ModuleCreator(private val project: Project) {
                     JavaModuleFacet.Compile.MPS, JavaModuleFacet.LoadClasses.ManagedByMPS, JavaModuleFacet.LoadExtensions.Plugin,
                 ))
             }
-            if (preset != SolutionUsagePreset.NOT_GENERATED) outputRoot = SOURCE_GEN
+            if (preset != SolutionUsagePreset.NOT_GENERATED) outputRoot = DEFAULT_OUTPUT_ROOT
         }
         return (instantiate(value, file(descriptor)) as Solution).also { mpsProject.addModule(it); it.setChanged() }
     }
@@ -264,7 +264,7 @@ class ModuleCreator(private val project: Project) {
 
     private fun plannedFacets(preset: SolutionUsagePreset): List<FacetMementoJson> = when (preset) {
         SolutionUsagePreset.NOT_GENERATED -> emptyList()
-        SolutionUsagePreset.TEXT -> listOf(FacetMementoJson("plaintext", mapOf("folders" to "true", "root" to SOURCE_GEN)))
+        SolutionUsagePreset.TEXT -> listOf(FacetMementoJson("plaintext", mapOf("folders" to "true", "root" to "\${module}/source_gen")))
         SolutionUsagePreset.JAVA -> listOf(FacetMementoJson("java", mapOf("compile" to "mps", "classes" to "mps", "ext" to "no")))
         SolutionUsagePreset.JAVA_TESTS -> listOf(
             FacetMementoJson("java", mapOf("compile" to "mps", "classes" to "mps", "ext" to "no")),
@@ -283,6 +283,6 @@ class ModuleCreator(private val project: Project) {
 
     private companion object {
         /** The generator output root that MPS uses when a module descriptor does not name one. */
-        const val SOURCE_GEN = "\${module}/source_gen"
+        const val DEFAULT_OUTPUT_ROOT = "\${module}/source_gen"
     }
 }

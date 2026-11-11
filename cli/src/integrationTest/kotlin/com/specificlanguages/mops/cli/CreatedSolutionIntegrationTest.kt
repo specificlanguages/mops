@@ -44,7 +44,8 @@ class CreatedSolutionIntegrationTest {
             """.trimIndent())
             val content = cli("code", "run", script.pathString)
             assertEquals(0, content.exitCode, content.output)
-            assertEquals("[]", content.stdout.trim(), content.output)
+            val unresolvedReferences = content.stdout.trim()
+            assertEquals("[]", unresolvedReferences, content.output)
 
             val make = cli("make", "module", "created.tests", "--json")
             assertEquals(0, make.exitCode, make.output)
