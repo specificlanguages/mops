@@ -75,6 +75,15 @@ class ModelCheckSemanticsTest {
     }
 
     @Test
+    fun `a model reference with an out-of-date name checks the model it identifies`() {
+        val response = SharedMpsEnvironment.withProjectCopy(projectName = SANDBOX) { access, _ ->
+            access.read { checkModel(MODEL_REFERENCE.replace("(baselanguage.sandbox)", "(baselanguage.oldname)"), limit = 0) }
+        }
+
+        assertEquals(1, response.summary.rootsChecked)
+    }
+
+    @Test
     fun `project check checks models in every Project Module`() {
         val response = SharedMpsEnvironment.withProjectCopy(
             projectName = SANDBOX,

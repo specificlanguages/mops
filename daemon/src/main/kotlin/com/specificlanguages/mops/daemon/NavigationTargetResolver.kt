@@ -82,14 +82,8 @@ internal class NavigationTargetResolver(
             persistence.createNodeReference(normalizeNodeReferenceSpelling(persistence, target)).resolve(project.repository)
         }.getOrNull()
 
-    // A bare model name parses into a reference whose id is derived from the name. MPS 2024.1 resolves such an id
-    // inexactly, to any model of that name; later versions resolve it only to a model with that exact id. Requiring the
-    // ids to match gives the later behavior on every version, so a bare name is never taken as a model reference.
     fun resolveModelReference(target: String): SModel? =
-        runCatching {
-            val reference = persistence.createModelReference(target)
-            reference.resolve(project.repository)?.takeIf { it.reference.modelId == reference.modelId }
-        }.getOrNull()
+        parseModelReferenceOrNull(persistence, target)?.resolve(project.repository)
 
     fun resolveModuleReference(target: String): SModule? =
         runCatching {

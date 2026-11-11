@@ -91,6 +91,28 @@ class GetNodeSemanticsTest {
     }
 
     @Test
+    fun `resolves a model reference with an out-of-date name by its model ID`() {
+        val staleReference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.oldname)"
+
+        val node = getNodeInSharedProject(NodeTarget.InModel(staleReference, JSON_FILE_NODE_ID))
+
+        assertEquals(STRUCTURE_MODEL_REFERENCE, node.model)
+        assertEquals("JsonFile", propertyValue(node, "name"))
+    }
+
+    @Test
+    fun `fails on a model reference to a missing model without falling back to its name`() {
+        // The name part names an existing model; only the model ID is unknown.
+        val missingReference = "r:99999999-2222-4333-8444-555555555555(com.specificlanguages.json.structure)"
+
+        val exception = assertFailsWith<MpsRequestException> {
+            getNodeInSharedProject(NodeTarget.InModel(missingReference, JSON_FILE_NODE_ID))
+        }
+
+        assertEquals(MpsErrorCode.MODEL_NOT_FOUND, exception.code)
+    }
+
+    @Test
     fun `matches model target by model name value instead of long name`() {
         val stereotypedReference = "r:11111111-2222-4333-8444-555555555555(com.specificlanguages.json.structure@tests)"
 
@@ -305,7 +327,7 @@ class GetNodeSemanticsTest {
                 model.resolveSibling("duplicate.structure.mps").writeText(
                     model.readText().replace(
                         STRUCTURE_MODEL_REFERENCE,
-                        "r:11111111-2222-4333-8444-555555555555(com.specificlanguages.json.structure)",
+                        DUPLICATE_MODEL_REFERENCE,
                     ),
                 )
             },
@@ -318,6 +340,12 @@ class GetNodeSemanticsTest {
 
             assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, exception.code)
             assertContains(exception.message, "ambiguous model target")
+
+            // A model reference names one of the two same-named models by its ID.
+            val duplicate = mpsAccess.read {
+                getNode(NodeTarget.InModel(DUPLICATE_MODEL_REFERENCE, JSON_FILE_NODE_ID))
+            }
+            assertEquals(DUPLICATE_MODEL_REFERENCE, duplicate.model)
         }
     }
 
@@ -345,5 +373,6 @@ class GetNodeSemanticsTest {
         const val EDITOR_ROOT_NODE_ID = "1P8oQ4NaXEq"
         const val EDITOR_COLLECTION_NODE_ID = "1P8oQ4NaXEs"
         const val STRUCTURE_MODEL_PATH = "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps"
+        const val DUPLICATE_MODEL_REFERENCE = "r:11111111-2222-4333-8444-555555555555(com.specificlanguages.json.structure)"
     }
 }
