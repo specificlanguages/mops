@@ -9,7 +9,8 @@ internal const val MAKE_OUTPUT_HELP =
 /** What a make deletes, for the help footers of both make commands. */
 internal const val MAKE_CLEAN_HELP =
     "The make generates every model of the made modules and deletes files in their output folders that it no " +
-        "longer generates."
+        "longer generates. It leaves out the models of modules without a generation target facet, such as " +
+        "solutions created with the `not-generated` usage preset; `--messages info` names these modules."
 
 /** How the generation options behave, for the help footers of both make commands. */
 internal const val MAKE_GENERATION_HELP =

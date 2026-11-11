@@ -13,9 +13,15 @@ enum class MakeOutcome {
     /** The make finished and reported no errors. */
     SUCCESS,
 
-    /** The make result was a failure, or at least one error message was reported. */
+    /**
+     * The make result was a failure, or at least one error message was reported. A failed make always carries at least
+     * one error message.
+     */
     FAILED,
 
-    /** The make set held no generatable model, so nothing ran. */
+    /**
+     * The make set held no model to generate, so nothing ran: no model is generatable, its module has no generation
+     * target facet, or it uses no language.
+     */
     NOTHING_TO_GENERATE,
 }
