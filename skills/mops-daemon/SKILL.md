@@ -85,6 +85,7 @@ holds:
   home, workspace path, and startup time.
 - `logs/daemon.log`: the daemon's startup and runtime log.
 - `daemon/config` and `daemon/system`: the isolated IDEA directories passed to the daemon JVM.
+- `fsnotifier/`: the native file watcher executable copied from the MPS distribution.
 - `test-worker-system`: the IntelliJ system directory of the test worker.
 
 Only one daemon runs per project. When a command needs a daemon for another MPS home or build than the running one, mops
@@ -111,5 +112,10 @@ Test runs keep the IntelliJ system directory (VFS and indexes) of the test worke
 `test-worker-system` directory, so a run does not index the MPS distribution again. A run that does not end cleanly
 (timed out, cancelled, or a crashed worker) deletes it, and the next run indexes again. The directory is safe to delete
 while no test runs; delete it if test results contradict the sources.
+
+Before each request the daemon picks up external file changes. It relies on the native file watcher of the IntelliJ
+platform and walks the project and module folders when the watcher is unavailable or cannot be trusted; each refresh
+writes a line to the daemon log that names how it went. `MOPS_DAEMON_JAVA_OPTIONS=-Didea.filewatcher.disabled=true`
+turns the watcher off.
 
 Stop existing daemons after updating mops.

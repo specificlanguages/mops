@@ -18,6 +18,13 @@ dependencies {
             include("lib/mps-openapi.jar")
             include("lib/mps-persistence.jar")
             include("lib/util.jar")
+            // NativeFileWatcherImpl, PluggableFileWatcher, Notifications and their supertypes, for
+            // HeadlessNativeFileWatcher.
+            include("lib/util-8.jar")
+            include("lib/app.jar")
+            include("lib/intellij.platform.core.jar")
+            include("lib/intellij.platform.ide.core.jar")
+            include("lib/intellij.platform.ide.impl.jar")
             include("plugins/mps-java/lib/java-core.jar")
             include("plugins/java/lib/ecj/eclipse.jar")
         }

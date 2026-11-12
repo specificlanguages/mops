@@ -9,4 +9,8 @@
         <plugin id="jetbrains.mps.core" />
         <plugin id="jetbrains.mps.ide.java" />
     </dependencies>
+    <extensions defaultExtensionNs="com.intellij">
+        <vfs.local.pluggableFileWatcher
+            implementation="com.specificlanguages.mops.daemon.plugin.HeadlessNativeFileWatcher"/>
+    </extensions>
 </idea-plugin>

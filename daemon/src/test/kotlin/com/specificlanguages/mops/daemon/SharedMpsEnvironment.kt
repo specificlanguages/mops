@@ -141,6 +141,11 @@ object SharedMpsEnvironment {
 
     private fun boot(): IdeaEnvironment {
         applyMpsSystemProperties()
+        FileWatcherExecutable.install(
+            requiredPathProperty("test.mpsHome"),
+            Files.createTempDirectory("mops-fsnotifier"),
+            DaemonLogger(),
+        )
 
         val handoff = SynchronousQueue<Any>()
         val environmentThread = Thread({

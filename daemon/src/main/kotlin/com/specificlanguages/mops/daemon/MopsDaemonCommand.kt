@@ -67,6 +67,7 @@ class MopsDaemonCommand : Runnable {
 
         val workspacePath = Path.of(workspacePath)
         val mpsPlugin = Path.of(mpsPlugin)
+        FileWatcherExecutable.install(mpsHome, workspacePath.resolve("fsnotifier"), logger)
 
         DaemonRunner(
             projectPath = projectPath,
