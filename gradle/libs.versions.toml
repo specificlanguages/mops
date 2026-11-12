@@ -41,6 +41,8 @@ junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher
 json-schema-validator = { module = "com.networknt:json-schema-validator", version.ref = "json-schema-validator" }
 kotlin-gradle-plugin-marker = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin", version.ref = "kotlin" }
 detekt-gradle-plugin-marker = { module = "dev.detekt:dev.detekt.gradle.plugin", version.ref = "detekt" }
+detekt-api = { module = "dev.detekt:detekt-api", version.ref = "detekt" }
+detekt-test = { module = "dev.detekt:detekt-test", version.ref = "detekt" }
 konsist = { module = "com.lemonappdev:konsist", version.ref = "konsist" }
 
 [plugins]

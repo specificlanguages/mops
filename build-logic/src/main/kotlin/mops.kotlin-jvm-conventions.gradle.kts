@@ -21,5 +21,6 @@ tasks.named("check") {
 }
 
 dependencies {
+    detektPlugins(project(":detekt-rules"))
     testImplementation(kotlin("test"))
 }

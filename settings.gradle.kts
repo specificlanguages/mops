@@ -18,3 +18,4 @@ include("protocol")
 include("ant-test-adapters")
 
 include("architecture-tests")
+include("detekt-rules")
