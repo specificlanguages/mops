@@ -14,7 +14,8 @@ Run `mops wrapper` in the project checkout. It detects the project's MPS and Jav
 writes a `mopsw` wrapper script that passes both homes to mops. The command prints each wrapper's path on a `Wrapper:`
 line. The wrapper goes into the Gradle project's build directory, so its location depends on the project layout:
 MPS-extensions, for example, gets `code/extensions/build/mopsw` on current branches and `build/mopsw` on older ones.
-Call the wrapper in place of `mops`; the examples in this skill write `mops`.
+Call the wrapper in place of `mops`; the examples in this skill write `mops`. For a project without a Gradle build, run
+`mops --mps-home PATH --java-home PATH wrapper` instead; the wrapper then goes in the MPS project's `build/mopsw`.
 
 When `mops wrapper` warns that it guessed the value of a path macro, tell the user the guess. If it is wrong, rerun
 `mops wrapper --macro NAME=PATH` with the right directory, then `mops daemon stop`.

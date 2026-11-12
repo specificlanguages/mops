@@ -16,7 +16,7 @@ Generated from the mops command line by `./gradlew :cli:updateReference`. Do not
 - [mops code](code.md): Run trusted Groovy against an open MPS project.
 - [mops test](test.md): Build and run MPS tests in a separate process.
 - [mops list](list.md): List an MPS navigation target as a bounded tree.
-- [mops wrapper](wrapper.md): Write a project-local mops wrapper using Gradle-discovered paths.
+- [mops wrapper](wrapper.md): Write a project-local mops wrapper from Gradle or given paths.
 - [mops skill](skill.md): Locate bundled agent skills.
 - [mops explain](explain.md): Explain mops notations such as node references and edit batches.
 - [mops examples](examples.md): Read bundled task recipes without starting MPS.
@@ -41,7 +41,7 @@ Commands:
   code      Run trusted Groovy against an open MPS project.
   test      Build and run MPS tests in a separate process.
   list, ls  List an MPS navigation target as a bounded tree.
-  wrapper   Write a project-local mops wrapper using Gradle-discovered paths.
+  wrapper   Write a project-local mops wrapper from Gradle or given paths.
   skill     Locate bundled agent skills.
   explain   Explain mops notations such as node references and edit batches.
   examples  Read bundled task recipes without starting MPS.

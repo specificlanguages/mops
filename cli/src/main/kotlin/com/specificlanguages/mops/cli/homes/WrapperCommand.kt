@@ -12,10 +12,11 @@ import java.util.concurrent.Callable
 
 @Command(
     name = "wrapper",
-    header = ["Write a project-local mops wrapper using Gradle-discovered paths."],
+    header = ["Write a project-local mops wrapper from Gradle or given paths."],
     mixinStandardHelpOptions = true,
     description = [
-        "Write a project-local mops wrapper using runtime paths discovered from Gradle.",
+        "Write a project-local mops wrapper using runtime paths discovered from Gradle, or given with --mps-home " +
+            "and --java-home.",
         "",
         "Uses the nearest Gradle wrapper to inspect all projects in its build and writes mopsw or mopsw.cmd for " +
             "every discovered MPS project. Pass --project-root to write only that project's wrapper. Wrappers go " +
@@ -23,8 +24,13 @@ import java.util.concurrent.Callable
             "MPS projects, they go in mops/<MPS-project-name> beneath it. Reported paths are relative to the " +
             "working directory.",
         "",
-        "No CLI-configured MPS home or daemon is required; Java must be available to run Gradle. Querying " +
-            "configured providers may download and extract MPS or JBR distributions; it does not run preparation " +
+        "When the global options --mps-home and --java-home are both given, mops wrapper uses them and does not " +
+            "run Gradle, so the project needs no Gradle build. It writes the wrapper of one MPS project: " +
+            "--project-root, or else the project at or above PATH, found the way other commands find it. The " +
+            "wrapper goes in the build directory of the MPS project, such as build/mopsw.",
+        "",
+        "Gradle discovery needs no daemon; Java must be available to run Gradle. Querying configured providers " +
+            "may download and extract MPS or JBR distributions; it does not run preparation " +
             "or language build task actions. If discovery finds only some paths, it prints them, writes no " +
             "wrapper, and exits with status 1. When both paths are known, it writes the wrappers and exits with " +
             "status 0, with warnings when the paths are not usable yet, so wrappers can be written before the " +
@@ -68,7 +74,10 @@ class WrapperCommand(
 ) : Callable<Int> {
     @Parameters(
         index = "0", arity = "0..1", paramLabel = "PATH",
-        description = ["Starting point of discovery; default is --project-root when supplied, otherwise the working directory."]
+        description = [
+            "Starting point of discovery, or of the MPS project search with --mps-home and --java-home; default " +
+                "is --project-root when supplied, otherwise the working directory.",
+        ]
     )
     var path: String? = null
 
@@ -85,8 +94,58 @@ class WrapperCommand(
     override fun call(): Int {
         spec.commandLine().out.println("mops version: ${MopsBuild.fullVersion}")
         val start = root.workingDirectory.resolve(path ?: root.projectRoot ?: ".").toRealPath()
-        val discovery = GradleHomeDiscovery()
-        val guesses = discovery.discover(start, spec.commandLine().err)
+        val mpsHome = root.mpsHome
+        val javaHome = root.javaHome
+        val (runtime, targets) = if (mpsHome != null && javaHome != null) {
+            givenRuntime(start, mpsHome, javaHome)
+        } else {
+            discoveredRuntime(start)
+        }
+        val out = spec.commandLine().out
+        val err = spec.commandLine().err
+        out.println(
+            if (runtime.source == GIVEN_SOURCE) "Source: $GIVEN_SOURCE"
+            else "Source: ${runtime.source} in ${displayPath(runtime.projectDir, root.workingDirectory)}"
+        )
+        out.println("MPS home: ${runtime.mpsHome?.let { displayPath(it, root.workingDirectory) } ?: "unknown"}")
+        out.println("Java home: ${runtime.javaHome?.let { displayPath(it, root.workingDirectory) } ?: "unknown"}")
+        if (runtime.mpsHome != null && !runtime.usableMps) {
+            err.println("Warning: MPS home is missing: ${displayPath(runtime.mpsHome, root.workingDirectory)}")
+        }
+        if (runtime.javaHome != null && !runtime.usableJava) {
+            err.println("Warning: Java home is missing or has no usable bin/java: ${displayPath(runtime.javaHome, root.workingDirectory)}")
+        }
+        if (!runtime.hasKnownHomes) {
+            err.println("Discovery is partial; no wrapper was written. Configure both runtime paths and try again.")
+        } else if (targets.isEmpty()) {
+            err.println("No MPS projects were found; no wrapper was written.")
+        } else {
+            writeWrappers(runtime, targets)
+        }
+        out.flush()
+        err.flush()
+        return if (runtime.hasKnownHomes && targets.isNotEmpty()) 0 else 1
+    }
+
+    /**
+     * The given homes and the MPS project found the way other commands find it. The project directory stands in for
+     * the Gradle project, so the wrapper goes in its build directory.
+     */
+    private fun givenRuntime(start: Path, mpsHome: String, javaHome: String): Pair<HomeGuess, List<Pair<HomeGuess, Path>>> {
+        val projectRoot = root.resolveProjectPath(start)
+        val runtime = HomeGuess(
+            projectDir = projectRoot,
+            buildDir = projectRoot.resolve("build"),
+            source = GIVEN_SOURCE,
+            mpsHome = root.workingDirectory.resolve(mpsHome).normalize(),
+            javaHome = root.workingDirectory.resolve(javaHome).normalize(),
+            mpsProjectRoots = listOf(projectRoot),
+        )
+        return runtime to listOf(runtime to projectRoot)
+    }
+
+    private fun discoveredRuntime(start: Path): Pair<HomeGuess, List<Pair<HomeGuess, Path>>> {
+        val guesses = GradleHomeDiscovery().discover(start, spec.commandLine().err)
         val selectedProjectRoot = root.projectRoot?.let { root.resolveProjectPath(start) }
         val targets = if (selectedProjectRoot == null) {
             guesses.flatMap { guess -> guess.mpsProjectRoots.map { guess to it } }
@@ -106,29 +165,9 @@ class WrapperCommand(
             ?: guesses.firstOrNull { it.source != null }
             ?: error(
                 "No supported runtime configuration found in this Gradle build. " +
-                    "Pass --mps-home and --java-home directly to other mops commands."
+                    "Pass --mps-home and --java-home to write the wrapper without Gradle."
             )
-        val out = spec.commandLine().out
-        val err = spec.commandLine().err
-        out.println("Source: ${runtime.source} in ${displayPath(runtime.projectDir, root.workingDirectory)}")
-        out.println("MPS home: ${runtime.mpsHome?.let { displayPath(it, root.workingDirectory) } ?: "unknown"}")
-        out.println("Java home: ${runtime.javaHome?.let { displayPath(it, root.workingDirectory) } ?: "unknown"}")
-        if (runtime.mpsHome != null && !runtime.usableMps) {
-            err.println("Warning: MPS home is missing: ${displayPath(runtime.mpsHome, root.workingDirectory)}")
-        }
-        if (runtime.javaHome != null && !runtime.usableJava) {
-            err.println("Warning: Java home is missing or has no usable bin/java: ${displayPath(runtime.javaHome, root.workingDirectory)}")
-        }
-        if (!runtime.hasKnownHomes) {
-            err.println("Discovery is partial; no wrapper was written. Configure both runtime paths and try again.")
-        } else if (targets.isEmpty()) {
-            err.println("No MPS projects were found; no wrapper was written.")
-        } else {
-            writeWrappers(runtime, targets)
-        }
-        out.flush()
-        err.flush()
-        return if (runtime.hasKnownHomes && targets.isNotEmpty()) 0 else 1
+        return runtime to targets
     }
 
     /** Writes a wrapper for each target project; all path macros are settled before the first wrapper is written. */
@@ -162,5 +201,9 @@ class WrapperCommand(
             guess.buildDir.resolve("mops").resolve(projectName)
         }
         return directory.resolve(wrapperName)
+    }
+
+    private companion object {
+        const val GIVEN_SOURCE = "--mps-home and --java-home"
     }
 }
