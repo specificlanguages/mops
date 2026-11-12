@@ -2,7 +2,8 @@ package com.specificlanguages.mops.cli.find
 
 import com.specificlanguages.mops.cli.output.displayConcept
 import com.specificlanguages.mops.cli.output.NodeReferenceFormat
-import com.specificlanguages.mops.cli.output.renderNodeReference
+import com.specificlanguages.mops.cli.output.TextColumn
+import com.specificlanguages.mops.cli.output.nodeReferenceColumn
 import com.specificlanguages.mops.cli.output.textRow
 import com.specificlanguages.mops.protocol.MpsNodeParentJson
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
@@ -15,10 +16,10 @@ internal fun renderText(
 ): String =
     textRow(
         listOf(
-            node.type,
-            node.name ?: "<unnamed>",
-            displayConcept(node.concept, fullConcept),
-            renderNodeReference(node.reference, nodeReferenceFormat),
+            TextColumn(node.type),
+            TextColumn(node.name ?: "<unnamed>"),
+            TextColumn(displayConcept(node.concept, fullConcept)),
+            nodeReferenceColumn(node.reference, nodeReferenceFormat),
         ) + parentColumns(node.parent, fullConcept, nodeReferenceFormat),
     )
 
@@ -30,11 +31,11 @@ internal fun renderText(
     val owner = usage.owner
     return textRow(
         listOf(
-            "usage",
-            usage.role,
-            owner.name ?: "<unnamed>",
-            displayConcept(owner.concept, fullConcept),
-            renderNodeReference(owner.reference, nodeReferenceFormat),
+            TextColumn("usage"),
+            TextColumn(usage.role),
+            TextColumn(owner.name ?: "<unnamed>"),
+            TextColumn(displayConcept(owner.concept, fullConcept)),
+            nodeReferenceColumn(owner.reference, nodeReferenceFormat),
         ) + parentColumns(owner.parent, fullConcept, nodeReferenceFormat),
     )
 }
@@ -44,18 +45,18 @@ internal fun renderText(
  * reference. The concept is shown as a short name unless [fullConcept] is set. Empty when the node is a Root Node, so
  * root results keep their existing shorter rows.
  */
-internal fun parentColumns(
+private fun parentColumns(
     parent: MpsNodeParentJson?,
     fullConcept: Boolean,
-    nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED,
-): List<String> =
+    nodeReferenceFormat: NodeReferenceFormat,
+): List<TextColumn> =
     if (parent == null) {
         emptyList()
     } else {
         listOf(
-            "parent",
-            parent.name ?: "<unnamed>",
-            displayConcept(parent.concept, fullConcept),
-            renderNodeReference(parent.reference, nodeReferenceFormat),
+            TextColumn("parent"),
+            TextColumn(parent.name ?: "<unnamed>"),
+            TextColumn(displayConcept(parent.concept, fullConcept)),
+            nodeReferenceColumn(parent.reference, nodeReferenceFormat),
         )
     }

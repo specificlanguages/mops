@@ -4,7 +4,8 @@ import com.specificlanguages.mops.cli.output.LIMIT_LIFTING_HINT
 import com.specificlanguages.mops.cli.output.metadataLine
 import com.specificlanguages.mops.cli.output.truncationLine
 import com.specificlanguages.mops.cli.output.renderJson
-import com.specificlanguages.mops.cli.output.renderNodeReference
+import com.specificlanguages.mops.cli.output.TextColumn
+import com.specificlanguages.mops.cli.output.nodeReferenceColumn
 import com.specificlanguages.mops.cli.output.textRow
 import com.specificlanguages.mops.cli.output.NodeReferenceFormat
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
@@ -47,9 +48,13 @@ private fun summaryRecord(response: ModelCheckResponse): ModelCheckSummaryJson =
     )
 
 private fun renderHuman(finding: ModelCheckFindingJson, nodeReferenceFormat: NodeReferenceFormat) {
-    val columns = mutableListOf(finding.severity.name.lowercase(), finding.message)
+    val columns = mutableListOf(TextColumn(finding.severity.name.lowercase()), TextColumn(finding.message))
     finding.node?.let {
-        columns += listOf(it.name ?: "<unnamed>", it.concept, renderNodeReference(it.reference, nodeReferenceFormat))
+        columns += listOf(
+            TextColumn(it.name ?: "<unnamed>"),
+            TextColumn(it.concept),
+            nodeReferenceColumn(it.reference, nodeReferenceFormat),
+        )
     }
     println(textRow(columns))
 }

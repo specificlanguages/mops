@@ -114,7 +114,7 @@ class MopsCommand(
         }
     }
 
-    override var nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED
+    override var nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.default()
 
     @Option(
         names = ["--refs-as-urls"],
@@ -122,7 +122,7 @@ class MopsCommand(
         description = ["Render node references as MPS URLs in text output; JSON output is unchanged."],
     )
     fun setRefsAsUrls(enabled: Boolean) {
-        nodeReferenceFormat = if (enabled) NodeReferenceFormat.URL else NodeReferenceFormat.SERIALIZED
+        nodeReferenceFormat = if (enabled) NodeReferenceFormat.URL else NodeReferenceFormat.default()
     }
 
     @Spec
