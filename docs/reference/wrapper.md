@@ -3,11 +3,12 @@
 Generated from `mops wrapper --help` by `./gradlew :cli:updateReference`. Do not edit this page. Global options are
 listed in the [index](index.md).
 
-Write a project-local mops wrapper using Gradle-discovered paths.
+Write a project-local mops wrapper from Gradle or given paths.
 
 ```text
 Usage: mops wrapper [-hV] [--output=PATH] [PATH]
-Write a project-local mops wrapper using runtime paths discovered from Gradle.
+Write a project-local mops wrapper using runtime paths discovered from Gradle,
+or given with --mps-home and --java-home.
 
 Uses the nearest Gradle wrapper to inspect all projects in its build and writes
 mopsw or mopsw.cmd for every discovered MPS project. Pass --project-root to
@@ -16,8 +17,15 @@ project's build directory when it has one detected MPS project; with multiple
 MPS projects, they go in mops/<MPS-project-name> beneath it. Reported paths are
 relative to the working directory.
 
-No CLI-configured MPS home or daemon is required; Java must be available to run
-Gradle. Querying configured providers may download and extract MPS or JBR
+When the global option --mps-home is given, mops wrapper uses it and
+--java-home and does not run Gradle, so the project needs no Gradle build.
+Without --java-home, it uses the Java runtime bundled with MPS. It writes the
+wrapper of one MPS project: --project-root, or else the nearest directory at or
+above PATH that contains .mps. The wrapper goes in the build directory of the
+MPS project, such as build/mopsw.
+
+Gradle discovery needs no daemon; Java must be available to run Gradle.
+Querying configured providers may download and extract MPS or JBR
 distributions; it does not run preparation or language build task actions. If
 discovery finds only some paths, it prints them, writes no wrapper, and exits
 with status 1. When both paths are known, it writes the wrappers and exits with
@@ -25,9 +33,9 @@ status 0, with warnings when the paths are not usable yet, so wrappers can be
 written before the project's preparation steps. Warnings and the reason no
 wrapper was written go to stderr.
 Parameters:
-      [PATH]                Starting point of discovery; default is
-                              --project-root when supplied, otherwise the
-                              working directory.
+      [PATH]                Starting point of discovery, or of the MPS project
+                              search with --mps-home; default is --project-root
+                              when supplied, otherwise the working directory.
 Options:
   -h, --help                Show this help message and exit.
       --output=PATH         Exact wrapper file to write when one MPS project is

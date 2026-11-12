@@ -10,7 +10,7 @@ import kotlin.test.*
 
 /**
  * Runs the installed `mops wrapper` on a Gradle build whose MPS project loads its project library through a path macro,
- * then runs a command through the written `mopsw`.
+ * and on an MPS project without a Gradle build, then runs a command through the written `mopsw`.
  */
 @ResourceLock("system-streams")
 class WrapperIntegrationTest {
@@ -52,6 +52,32 @@ class WrapperIntegrationTest {
             assertFalse(given.stderr.contains("Warning:"), given.output)
             assertContains(wrapper.readText(), "--macro='mops.fixture.repo=$elsewhere'")
             findLibraryThroughWrapper()
+        } finally { stopDaemons(project, home) }
+    }
+
+    @Test
+    fun `given MPS and Java homes write a working wrapper without a Gradle build`() {
+        val project = copyTestProject("project-library", tempDir.resolve("plain/project")).toRealPath()
+        val home = tempDir.resolve("daemon-home").createDirectories()
+        val script = tempDir.resolve("library.groovy")
+        script.writeText("project.read { mops.lookup.requireModule('mops.library') }\nreturn 'ok'\n")
+        try {
+            val written = runProcess(
+                project,
+                installedMops(
+                    "--mps-home", System.getProperty("test.mpsHome"),
+                    "--java-home", System.getProperty("test.jbrHome"),
+                    "wrapper",
+                ),
+            )
+            assertEquals(0, written.exitCode, written.output)
+            assertContains(written.stdout, "Wrapper: build/mopsw")
+            val result = runProcess(
+                project,
+                listOf("sh", "build/mopsw", "--daemon-home", home.pathString, "code", "run", script.pathString),
+            )
+            assertEquals(0, result.exitCode, result.output)
+            assertEquals("ok", result.stdout.trim(), result.output)
         } finally { stopDaemons(project, home) }
     }
 
