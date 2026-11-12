@@ -10,15 +10,18 @@ import org.jetbrains.mps.openapi.model.SNode
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import java.nio.file.Path
 
+/** Describes the notations [ModelNodeResolver.findNode] accepts for a node target written as one string. */
+internal const val NODE_TARGET_NOTATIONS =
+    "<model>/<node ID> (model name or serialized model reference; decimal or encoded node ID) " +
+        "or a serialized node reference"
+
 class ModelNodeResolver(
     private val logger: DaemonLogger,
     private val persistence: PersistenceFacade = PersistenceFacade.getInstance(),
 ) {
     fun findNode(project: Project, target: NodeTarget): SNode? =
         when (target) {
-            is NodeTarget.NodeReference -> persistence
-                .createNodeReference(normalizeNodeReferenceSpelling(persistence, target.nodeReference))
-                .resolve(project.repository)
+            is NodeTarget.NodeReference -> findNode(project, target.nodeReference)
 
             is NodeTarget.InModel -> {
                 val model = findSingleModel(project, target.modelTarget)
@@ -34,6 +37,26 @@ class ModelNodeResolver(
                 model.getNode(nodeId)
             }
         }
+
+    /**
+     * Resolves a node target written as one string: `<model>/<node ID>`, where `<model>` is a model target and the node
+     * ID is in its decimal or encoded spelling, or a serialized node reference, whose node ID may also use either
+     * spelling. Returns null when the target is well formed but names no node. Throws [IllegalArgumentException] when
+     * the target is in neither notation, and [MpsRequestException] when the model target is ambiguous.
+     */
+    fun findNode(project: Project, target: String): SNode? {
+        val slash = target.lastIndexOf('/')
+        if (slash > 0) {
+            val model = findSingleModel(project, target.substring(0, slash))
+            val nodeId = parseNodeIdOrNull(persistence, target.substring(slash + 1))
+            if (model != null && nodeId != null) return model.getNode(nodeId)
+        }
+        val reference = persistence.createNodeReference(normalizeNodeReferenceSpelling(persistence, target))
+        // A bare model name parses into a reference whose model id is derived from the name. MPS 2024.1 resolves such an
+        // id inexactly, to any model of that name; requiring the ids to match gives the later versions' behavior.
+        return reference.resolve(project.repository)
+            ?.takeIf { it.model?.reference?.modelId == reference.modelReference?.modelId }
+    }
 
     /**
      * Resolves a model target to a single model, failing with [MpsErrorCode.AMBIGUOUS_TARGET] when more than one model
