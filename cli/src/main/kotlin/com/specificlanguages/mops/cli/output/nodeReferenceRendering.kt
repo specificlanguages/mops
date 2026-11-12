@@ -4,19 +4,31 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 private const val MPS_NODE_URL = "http://127.0.0.1:63320/node?ref="
-private const val ESC = '\u001B'
 
+/** Whether text output links node references to MPS: on when mops writes to a terminal. */
+internal fun terminalHyperlinks(): Boolean = System.console() != null
+
+/**
+ * A node [reference] as a text column in [format]: the serialized reference, linked to MPS when [hyperlinks] is on, or
+ * the MPS node URL.
+ */
+internal fun nodeReferenceColumn(
+    reference: String,
+    format: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED,
+    hyperlinks: Boolean = terminalHyperlinks(),
+): TextColumn =
+    when {
+        format == NodeReferenceFormat.URL -> TextColumn(nodeReferenceUrl(reference))
+        hyperlinks -> TextColumn(reference, link = nodeReferenceUrl(reference))
+        else -> TextColumn(reference)
+    }
+
+/** A node [reference] as text outside a [textRow]: [nodeReferenceColumn] rendered without escaping. */
 internal fun renderNodeReference(
     reference: String,
     format: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED,
-    hyperlinks: Boolean = System.console() != null,
-): String {
-    if (format == NodeReferenceFormat.SERIALIZED && !hyperlinks) return reference
-
-    val url = nodeReferenceUrl(reference)
-    if (format == NodeReferenceFormat.URL) return url
-    return "$ESC]8;;$url$ESC\\$reference$ESC]8;;$ESC\\"
-}
+    hyperlinks: Boolean = terminalHyperlinks(),
+): String = nodeReferenceColumn(reference, format, hyperlinks).render()
 
 private fun nodeReferenceUrl(reference: String): String {
     val encodedReference = URLEncoder.encode(reference, StandardCharsets.UTF_8).replace("+", "%20")

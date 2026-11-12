@@ -2,7 +2,9 @@ package com.specificlanguages.mops.cli.find
 
 import com.specificlanguages.mops.cli.output.displayConcept
 import com.specificlanguages.mops.cli.output.NodeReferenceFormat
-import com.specificlanguages.mops.cli.output.renderNodeReference
+import com.specificlanguages.mops.cli.output.TextColumn
+import com.specificlanguages.mops.cli.output.nodeReferenceColumn
+import com.specificlanguages.mops.cli.output.terminalHyperlinks
 import com.specificlanguages.mops.cli.output.textRow
 import com.specificlanguages.mops.protocol.MpsNodeParentJson
 import com.specificlanguages.mops.protocol.MpsNodeSummaryJson
@@ -12,30 +14,32 @@ internal fun renderText(
     node: MpsNodeSummaryJson,
     fullConcept: Boolean,
     nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED,
+    hyperlinks: Boolean = terminalHyperlinks(),
 ): String =
     textRow(
         listOf(
-            node.type,
-            node.name ?: "<unnamed>",
-            displayConcept(node.concept, fullConcept),
-            renderNodeReference(node.reference, nodeReferenceFormat),
-        ) + parentColumns(node.parent, fullConcept, nodeReferenceFormat),
+            TextColumn(node.type),
+            TextColumn(node.name ?: "<unnamed>"),
+            TextColumn(displayConcept(node.concept, fullConcept)),
+            nodeReferenceColumn(node.reference, nodeReferenceFormat, hyperlinks),
+        ) + parentColumns(node.parent, fullConcept, nodeReferenceFormat, hyperlinks),
     )
 
 internal fun renderText(
     usage: MpsNodeUsageJson,
     fullConcept: Boolean,
     nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED,
+    hyperlinks: Boolean = terminalHyperlinks(),
 ): String {
     val owner = usage.owner
     return textRow(
         listOf(
-            "usage",
-            usage.role,
-            owner.name ?: "<unnamed>",
-            displayConcept(owner.concept, fullConcept),
-            renderNodeReference(owner.reference, nodeReferenceFormat),
-        ) + parentColumns(owner.parent, fullConcept, nodeReferenceFormat),
+            TextColumn("usage"),
+            TextColumn(usage.role),
+            TextColumn(owner.name ?: "<unnamed>"),
+            TextColumn(displayConcept(owner.concept, fullConcept)),
+            nodeReferenceColumn(owner.reference, nodeReferenceFormat, hyperlinks),
+        ) + parentColumns(owner.parent, fullConcept, nodeReferenceFormat, hyperlinks),
     )
 }
 
@@ -48,14 +52,15 @@ internal fun parentColumns(
     parent: MpsNodeParentJson?,
     fullConcept: Boolean,
     nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED,
-): List<String> =
+    hyperlinks: Boolean = terminalHyperlinks(),
+): List<TextColumn> =
     if (parent == null) {
         emptyList()
     } else {
         listOf(
-            "parent",
-            parent.name ?: "<unnamed>",
-            displayConcept(parent.concept, fullConcept),
-            renderNodeReference(parent.reference, nodeReferenceFormat),
+            TextColumn("parent"),
+            TextColumn(parent.name ?: "<unnamed>"),
+            TextColumn(displayConcept(parent.concept, fullConcept)),
+            nodeReferenceColumn(parent.reference, nodeReferenceFormat, hyperlinks),
         )
     }
