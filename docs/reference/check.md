@@ -25,8 +25,7 @@ Run MPS's full model check over one model.
 Usage: mops check model [-h] [--format=FORMAT] [--limit=N] MODEL_TARGET
 Run MPS's full model check over one model and report the findings.
 Parameters:
-      MODEL_TARGET          Model name, or serialized model reference (resolved
-                              by model ID).
+      MODEL_TARGET          Model name or serialized model reference.
 Options:
       --format=FORMAT       How to print findings: human (a readable list
                               sorted by severity, then # metadata lines;

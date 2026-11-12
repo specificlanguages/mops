@@ -21,7 +21,7 @@ class ModelCheckCommand(environment: CommandEnvironment) : CheckCommand(environm
         index = "0",
         arity = "1",
         paramLabel = "MODEL_TARGET",
-        description = ["Model name, or serialized model reference (resolved by model ID)."],
+        description = ["Model name or serialized model reference."],
     )
     lateinit var target: String
 
