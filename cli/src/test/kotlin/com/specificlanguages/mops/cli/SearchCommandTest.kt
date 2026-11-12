@@ -181,6 +181,35 @@ class SearchCommandTest {
 
     @ParameterizedTest
     @MethodSource("subcommands")
+    fun `prints plain node references with --refs-only when references are linked`(subcommand: SearchSubcommand) {
+        val client = subcommand.returning(subcommand.response(listOf(testNode)))
+
+        val run = subcommand.run(client, "--refs-only", format = NodeReferenceFormat.LINKED)
+
+        assertEquals(0, run.exitCode, run.stderr)
+        assertEquals(testNode.reference + NL, run.stdout)
+    }
+
+    @ParameterizedTest
+    @MethodSource("subcommands")
+    fun `links node references in text rows when references are linked`(subcommand: SearchSubcommand) {
+        val client = subcommand.returning(subcommand.response(listOf(testNode)))
+
+        val run = subcommand.run(client, format = NodeReferenceFormat.LINKED)
+
+        assertEquals(
+            subcommand.row(
+                testNode,
+                "JsonObject\tConceptDeclaration\t\u001B]8;;http://127.0.0.1:63320/node?ref=" +
+                    "r%3Afd752404-89d3-4ffe-bc3a-7fb7a27c63b6%28com.specificlanguages.json.structure%29%2F" +
+                    "2110045694544566905\u001B\\${testNode.reference}\u001B]8;;\u001B\\",
+            ) + NL,
+            run.stdout,
+        )
+    }
+
+    @ParameterizedTest
+    @MethodSource("subcommands")
     fun `rejects --refs-only combined with --json`(subcommand: SearchSubcommand) {
         val client = mock<DaemonClient>()
 

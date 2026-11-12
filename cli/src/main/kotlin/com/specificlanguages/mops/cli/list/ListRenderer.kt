@@ -4,7 +4,6 @@ import com.specificlanguages.mops.cli.output.displayConcept
 import com.specificlanguages.mops.cli.output.NodeReferenceFormat
 import com.specificlanguages.mops.cli.output.TextColumn
 import com.specificlanguages.mops.cli.output.nodeReferenceColumn
-import com.specificlanguages.mops.cli.output.terminalHyperlinks
 import com.specificlanguages.mops.cli.output.truncationLine
 import com.specificlanguages.mops.cli.output.textRow
 import com.specificlanguages.mops.protocol.MpsListEntryJson
@@ -14,7 +13,6 @@ import com.specificlanguages.mops.protocol.MpsListSummaryJson
 internal class ListRenderer(
     val fullConcept: Boolean,
     val nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED,
-    val hyperlinks: Boolean = terminalHyperlinks(),
 ) {
     internal fun renderText(entry: MpsListEntryJson, indent: Int) {
         println("${"  ".repeat(indent)}${textRow(entry.columns())}")
@@ -59,7 +57,7 @@ internal class ListRenderer(
 
     private fun MpsListEntryJson.nodeColumnsWithoutType(): List<TextColumn> =
         plainColumns(name ?: "<unnamed>", concept?.let { displayConcept(it, fullConcept) }.orEmpty()) +
-            (reference?.let { nodeReferenceColumn(it, nodeReferenceFormat, hyperlinks) } ?: TextColumn("")) +
+            (reference?.let { nodeReferenceColumn(it, nodeReferenceFormat) } ?: TextColumn("")) +
             listOfNotNull(error).map { TextColumn(it) }
 
     private fun plainColumns(vararg texts: String): List<TextColumn> = texts.map { TextColumn(it) }

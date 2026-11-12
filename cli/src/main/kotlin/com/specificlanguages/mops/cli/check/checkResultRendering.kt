@@ -6,7 +6,6 @@ import com.specificlanguages.mops.cli.output.truncationLine
 import com.specificlanguages.mops.cli.output.renderJson
 import com.specificlanguages.mops.cli.output.TextColumn
 import com.specificlanguages.mops.cli.output.nodeReferenceColumn
-import com.specificlanguages.mops.cli.output.terminalHyperlinks
 import com.specificlanguages.mops.cli.output.textRow
 import com.specificlanguages.mops.cli.output.NodeReferenceFormat
 import com.specificlanguages.mops.protocol.ModelCheckFindingJson
@@ -22,11 +21,10 @@ internal fun renderCheckResponse(
     response: ModelCheckResponse,
     outputFormat: CheckOutputFormat,
     nodeReferenceFormat: NodeReferenceFormat,
-    hyperlinks: Boolean = terminalHyperlinks(),
 ): Int {
     when (outputFormat) {
         CheckOutputFormat.HUMAN -> {
-            response.findings.forEach { renderHuman(it, nodeReferenceFormat, hyperlinks) }
+            response.findings.forEach { renderHuman(it, nodeReferenceFormat) }
             val roots = count(response.summary.rootsChecked, "root")
             println(metadataLine("checked $roots: ${countsText(response.summary)}"))
             if (response.summary.truncated) {
@@ -49,13 +47,13 @@ private fun summaryRecord(response: ModelCheckResponse): ModelCheckSummaryJson =
         hint = if (response.summary.truncated) LIMIT_LIFTING_HINT else null,
     )
 
-private fun renderHuman(finding: ModelCheckFindingJson, nodeReferenceFormat: NodeReferenceFormat, hyperlinks: Boolean) {
+private fun renderHuman(finding: ModelCheckFindingJson, nodeReferenceFormat: NodeReferenceFormat) {
     val columns = mutableListOf(TextColumn(finding.severity.name.lowercase()), TextColumn(finding.message))
     finding.node?.let {
         columns += listOf(
             TextColumn(it.name ?: "<unnamed>"),
             TextColumn(it.concept),
-            nodeReferenceColumn(it.reference, nodeReferenceFormat, hyperlinks),
+            nodeReferenceColumn(it.reference, nodeReferenceFormat),
         )
     }
     println(textRow(columns))

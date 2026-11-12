@@ -21,7 +21,7 @@ class HyperlinkedTextRowsTest {
     @Test
     fun `list rows keep the hyperlink markup unescaped`() {
         val output = captureStdout {
-            ListRenderer(fullConcept = false, hyperlinks = true).renderText(
+            ListRenderer(fullConcept = false, NodeReferenceFormat.LINKED).renderText(
                 MpsListEntryJson(type = "root", name = "TestClass", concept = "a.ClassConcept", reference = REFERENCE),
                 indent = 1,
             )
@@ -42,7 +42,7 @@ class HyperlinkedTextRowsTest {
 
         assertEquals(
             "node\tfield\tFieldDeclaration\t$LINKED_REFERENCE\tparent\tTestClass\tClassConcept\t$LINKED_REFERENCE",
-            renderText(node, fullConcept = false, hyperlinks = true),
+            renderText(node, fullConcept = false, NodeReferenceFormat.LINKED),
         )
     }
 
@@ -60,7 +60,7 @@ class HyperlinkedTextRowsTest {
         )
 
         val output = captureStdout {
-            renderCheckResponse(response, CheckOutputFormat.HUMAN, NodeReferenceFormat.SERIALIZED, hyperlinks = true)
+            renderCheckResponse(response, CheckOutputFormat.HUMAN, NodeReferenceFormat.LINKED)
         }
 
         assertEquals("error\tbroken\tTestClass\tClassConcept\t$LINKED_REFERENCE", output.lines().first())
@@ -74,7 +74,7 @@ class HyperlinkedTextRowsTest {
             "root\tX\tC\t\u001B]8;;http://127.0.0.1:63320/node?ref=r%3A1%28a%09b%29%2F2\u001B\\" +
                 "r:1(a\\tb)/2\u001B]8;;\u001B\\\n",
             captureStdout {
-                ListRenderer(fullConcept = false, hyperlinks = true).renderText(
+                ListRenderer(fullConcept = false, NodeReferenceFormat.LINKED).renderText(
                     MpsListEntryJson(type = "root", name = "X", concept = "C", reference = reference),
                     indent = 0,
                 )
