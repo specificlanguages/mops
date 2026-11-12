@@ -17,11 +17,12 @@ project's build directory when it has one detected MPS project; with multiple
 MPS projects, they go in mops/<MPS-project-name> beneath it. Reported paths are
 relative to the working directory.
 
-When the global options --mps-home and --java-home are both given, mops wrapper
-uses them and does not run Gradle, so the project needs no Gradle build. It
-writes the wrapper of one MPS project: --project-root, or else the project at
-or above PATH, found the way other commands find it. The wrapper goes in the
-build directory of the MPS project, such as build/mopsw.
+When the global option --mps-home is given, mops wrapper uses it and
+--java-home and does not run Gradle, so the project needs no Gradle build.
+Without --java-home, it uses the Java runtime bundled with MPS. It writes the
+wrapper of one MPS project: --project-root, or else the nearest directory at or
+above PATH that contains .mps. The wrapper goes in the build directory of the
+MPS project, such as build/mopsw.
 
 Gradle discovery needs no daemon; Java must be available to run Gradle.
 Querying configured providers may download and extract MPS or JBR
@@ -33,9 +34,8 @@ written before the project's preparation steps. Warnings and the reason no
 wrapper was written go to stderr.
 Parameters:
       [PATH]                Starting point of discovery, or of the MPS project
-                              search with --mps-home and --java-home; default
-                              is --project-root when supplied, otherwise the
-                              working directory.
+                              search with --mps-home; default is --project-root
+                              when supplied, otherwise the working directory.
 Options:
   -h, --help                Show this help message and exit.
       --output=PATH         Exact wrapper file to write when one MPS project is

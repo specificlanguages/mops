@@ -150,13 +150,7 @@ class MopsCommand(
     fun createDaemonContext(projectPathHint: Path): DaemonContext {
         val resolvedMpsHome = resolveMpsHome()?.also { requireHome("MPS home", it) }
             ?: throw MpsHomeRequiredException()
-        val resolvedJavaHome =
-            javaHome?.let(workingDirectory::resolve)?.also { requireHome("Java home", it) }
-                ?: MpsDistributionLayout.findBundledJavaHome(resolvedMpsHome)
-                ?: throw IllegalStateException(
-                    "MPS distribution at $resolvedMpsHome does not bundle Java; pass --java-home <path>, " +
-                        "or run mops wrapper in a supported Gradle project and then run the wrapper path it prints"
-                )
+        val resolvedJavaHome = resolveJavaHome(resolvedMpsHome).also { requireHome("Java home", it) }
 
         val projectPath = resolveProjectPath(projectPathHint)
 
@@ -168,7 +162,16 @@ class MopsCommand(
         )
     }
 
-    fun resolveMpsHome(): Path? = mpsHome?.let(workingDirectory::resolve)
+    fun resolveMpsHome(): Path? = mpsHome?.let { workingDirectory.resolve(it).normalize() }
+
+    /** `--java-home`, or else the Java home bundled with [mpsHome]. */
+    fun resolveJavaHome(mpsHome: Path): Path =
+        javaHome?.let { workingDirectory.resolve(it).normalize() }
+            ?: MpsDistributionLayout.findBundledJavaHome(mpsHome)
+            ?: throw IllegalStateException(
+                "MPS distribution at $mpsHome does not bundle Java; pass --java-home <path>, " +
+                    "or run mops wrapper in a supported Gradle project and then run the wrapper path it prints"
+            )
 
     private fun requireHome(homeName: String, home: Path) {
         if (!home.exists()) {

@@ -9,6 +9,7 @@ import java.io.StringWriter
 import java.nio.file.Path
 import kotlin.io.path.*
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
@@ -102,6 +103,26 @@ class WrapperCommandTest {
             ),
             err.toString().lines().filter { it.isNotEmpty() },
         )
-        assertTrue(output.readText().contains("--project-root='$project'"))
+        assertEquals(
+            "#!/bin/sh\nexec '/mops' --mps-home='$temporary/missing-mps' --java-home='$temporary/missing-jbr' " +
+                "--project-root='$project' \"\$@\"\n",
+            output.readText(),
+        )
+    }
+
+    @Test
+    fun `an MPS home alone uses the Java home bundled with it, as other commands do`() {
+        val temporary = temporary.toRealPath()
+        val project = temporary.resolve("project").also { it.resolve(".mps").createDirectories() }
+        val mpsHome = temporary.resolve("mps")
+        mpsHome.resolve("jbr/Contents/Home/bin").createDirectories()
+        val err = StringWriter()
+        val command = newCommandLine(workingDirectory = project) { Path.of("/mops") }
+        command.out = PrintWriter(StringWriter())
+        command.err = PrintWriter(err)
+
+        assertEquals(0, command.execute("--mps-home", mpsHome.toString(), "wrapper"), err.toString())
+
+        assertContains(project.resolve("build/mopsw").readText(), "--java-home='$mpsHome/jbr")
     }
 }

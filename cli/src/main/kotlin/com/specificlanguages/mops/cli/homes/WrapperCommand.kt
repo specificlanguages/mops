@@ -24,10 +24,11 @@ import java.util.concurrent.Callable
             "MPS projects, they go in mops/<MPS-project-name> beneath it. Reported paths are relative to the " +
             "working directory.",
         "",
-        "When the global options --mps-home and --java-home are both given, mops wrapper uses them and does not " +
-            "run Gradle, so the project needs no Gradle build. It writes the wrapper of one MPS project: " +
-            "--project-root, or else the project at or above PATH, found the way other commands find it. The " +
-            "wrapper goes in the build directory of the MPS project, such as build/mopsw.",
+        "When the global option --mps-home is given, mops wrapper uses it and --java-home and does not run " +
+            "Gradle, so the project needs no Gradle build. Without --java-home, it uses the Java runtime bundled " +
+            "with MPS. It writes the wrapper of one MPS project: --project-root, or else the nearest directory at " +
+            "or above PATH that contains .mps. The wrapper goes in the build directory of the MPS project, such as " +
+            "build/mopsw.",
         "",
         "Gradle discovery needs no daemon; Java must be available to run Gradle. Querying configured providers " +
             "may download and extract MPS or JBR distributions; it does not run preparation " +
@@ -75,7 +76,7 @@ class WrapperCommand(
     @Parameters(
         index = "0", arity = "0..1", paramLabel = "PATH",
         description = [
-            "Starting point of discovery, or of the MPS project search with --mps-home and --java-home; default " +
+            "Starting point of discovery, or of the MPS project search with --mps-home; default " +
                 "is --project-root when supplied, otherwise the working directory.",
         ]
     )
@@ -94,19 +95,10 @@ class WrapperCommand(
     override fun call(): Int {
         spec.commandLine().out.println("mops version: ${MopsBuild.fullVersion}")
         val start = root.workingDirectory.resolve(path ?: root.projectRoot ?: ".").toRealPath()
-        val mpsHome = root.mpsHome
-        val javaHome = root.javaHome
-        val (runtime, targets) = if (mpsHome != null && javaHome != null) {
-            givenRuntime(start, mpsHome, javaHome)
-        } else {
-            discoveredRuntime(start)
-        }
+        val mpsHome = root.resolveMpsHome()
+        val (runtime, targets) = if (mpsHome != null) givenRuntime(start, mpsHome) else discoveredRuntime(start)
         val out = spec.commandLine().out
         val err = spec.commandLine().err
-        out.println(
-            if (runtime.source == GIVEN_SOURCE) "Source: $GIVEN_SOURCE"
-            else "Source: ${runtime.source} in ${displayPath(runtime.projectDir, root.workingDirectory)}"
-        )
         out.println("MPS home: ${runtime.mpsHome?.let { displayPath(it, root.workingDirectory) } ?: "unknown"}")
         out.println("Java home: ${runtime.javaHome?.let { displayPath(it, root.workingDirectory) } ?: "unknown"}")
         if (runtime.mpsHome != null && !runtime.usableMps) {
@@ -131,20 +123,21 @@ class WrapperCommand(
      * The given homes and the MPS project found the way other commands find it. The project directory stands in for
      * the Gradle project, so the wrapper goes in its build directory.
      */
-    private fun givenRuntime(start: Path, mpsHome: String, javaHome: String): Pair<HomeGuess, List<Pair<HomeGuess, Path>>> {
+    private fun givenRuntime(start: Path, mpsHome: Path): WrapperPlan {
         val projectRoot = root.resolveProjectPath(start)
         val runtime = HomeGuess(
             projectDir = projectRoot,
             buildDir = projectRoot.resolve("build"),
-            source = GIVEN_SOURCE,
-            mpsHome = root.workingDirectory.resolve(mpsHome).normalize(),
-            javaHome = root.workingDirectory.resolve(javaHome).normalize(),
+            source = null,
+            mpsHome = mpsHome,
+            javaHome = root.resolveJavaHome(mpsHome),
             mpsProjectRoots = listOf(projectRoot),
         )
-        return runtime to listOf(runtime to projectRoot)
+        spec.commandLine().out.println("Source: --mps-home${if (root.javaHome != null) " and --java-home" else ""}")
+        return WrapperPlan(runtime, listOf(runtime to projectRoot))
     }
 
-    private fun discoveredRuntime(start: Path): Pair<HomeGuess, List<Pair<HomeGuess, Path>>> {
+    private fun discoveredRuntime(start: Path): WrapperPlan {
         val guesses = GradleHomeDiscovery().discover(start, spec.commandLine().err)
         val selectedProjectRoot = root.projectRoot?.let { root.resolveProjectPath(start) }
         val targets = if (selectedProjectRoot == null) {
@@ -165,9 +158,10 @@ class WrapperCommand(
             ?: guesses.firstOrNull { it.source != null }
             ?: error(
                 "No supported runtime configuration found in this Gradle build. " +
-                    "Pass --mps-home and --java-home to write the wrapper without Gradle."
+                    "Pass --mps-home, and --java-home unless MPS bundles Java, to write the wrapper without Gradle."
             )
-        return runtime to targets
+        spec.commandLine().out.println("Source: ${runtime.source} in ${displayPath(runtime.projectDir, root.workingDirectory)}")
+        return WrapperPlan(runtime, targets)
     }
 
     /** Writes a wrapper for each target project; all path macros are settled before the first wrapper is written. */
@@ -203,7 +197,6 @@ class WrapperCommand(
         return directory.resolve(wrapperName)
     }
 
-    private companion object {
-        const val GIVEN_SOURCE = "--mps-home and --java-home"
-    }
+    /** The runtime whose homes the wrappers pass, and each MPS project to write a wrapper for with its owner. */
+    private data class WrapperPlan(val runtime: HomeGuess, val targets: List<Pair<HomeGuess, Path>>)
 }

@@ -24,7 +24,8 @@ example, gets
 `code/extensions/build/mopsw` on current branches and `build/mopsw` on older ones. Call the wrapper in place of `mops`;
 it passes the discovered MPS and Java homes.
 
-For an MPS project without a Gradle build, give both homes: `mops --mps-home PATH --java-home PATH wrapper`. It writes
+For an MPS project without a Gradle build, give the homes: `mops --mps-home PATH --java-home PATH wrapper`, without
+`--java-home` when MPS bundles Java. It writes
 the wrapper of the project at or above the working directory, or of `--project-root`, into the project's `build/mopsw`.
 
 When `.mps/libraries.xml` or `.mps/modules.xml` uses a path macro (`${NAME}`), the daemon needs its value. Pass

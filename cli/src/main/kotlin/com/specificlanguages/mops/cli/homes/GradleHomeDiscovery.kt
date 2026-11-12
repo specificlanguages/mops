@@ -28,7 +28,7 @@ internal class GradleHomeDiscovery {
             ?: discoverer.findDirectoryContaining("build.gradle", "build.gradle.kts")
             ?: error(
                 "No Gradle build found at or above $directory. " +
-                    "Pass --mps-home and --java-home to write the wrapper without Gradle."
+                    "Pass --mps-home, and --java-home unless MPS bundles Java, to write the wrapper without Gradle."
             )
         val isWindows = System.getProperty("os.name").lowercase().contains("win")
 
