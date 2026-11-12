@@ -48,11 +48,11 @@ internal fun renderText(
  * reference. The concept is shown as a short name unless [fullConcept] is set. Empty when the node is a Root Node, so
  * root results keep their existing shorter rows.
  */
-internal fun parentColumns(
+private fun parentColumns(
     parent: MpsNodeParentJson?,
     fullConcept: Boolean,
-    nodeReferenceFormat: NodeReferenceFormat = NodeReferenceFormat.SERIALIZED,
-    hyperlinks: Boolean = terminalHyperlinks(),
+    nodeReferenceFormat: NodeReferenceFormat,
+    hyperlinks: Boolean,
 ): List<TextColumn> =
     if (parent == null) {
         emptyList()

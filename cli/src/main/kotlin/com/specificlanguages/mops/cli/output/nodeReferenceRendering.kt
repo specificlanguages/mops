@@ -9,8 +9,8 @@ private const val MPS_NODE_URL = "http://127.0.0.1:63320/node?ref="
 internal fun terminalHyperlinks(): Boolean = System.console() != null
 
 /**
- * A node [reference] as a text column in [format]: the serialized reference, linked to MPS when [hyperlinks] is on, or
- * the MPS node URL.
+ * A node [reference] as a text column: under [NodeReferenceFormat.URL], the MPS node URL; otherwise the serialized
+ * reference, linked to that URL when [hyperlinks] is on.
  */
 internal fun nodeReferenceColumn(
     reference: String,
