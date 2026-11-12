@@ -8,6 +8,8 @@ import com.specificlanguages.mops.protocol.GeneratorPersistence
 import com.specificlanguages.mops.protocol.ModuleCreationResponse
 import com.specificlanguages.mops.protocol.ModuleKind
 import com.specificlanguages.mops.protocol.SolutionUsagePreset
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import kotlin.io.path.exists
 import kotlin.io.path.readText
 import kotlin.test.assertIs
@@ -32,6 +34,18 @@ class ModuleCreationSemanticsTest {
                 projectPath.resolve(".mps/modules.xml").readText(),
                 "\$PROJECT_DIR\$/solutions/example.created/example.created.msd",
             )
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(SolutionUsagePreset::class, names = ["TEXT", "JAVA", "JAVA_TESTS", "JAVA_MPS_PLUGIN"])
+    fun `solution of a generated preset keeps the default generator output path`(preset: SolutionUsagePreset) {
+        SharedMpsEnvironment.withOpenProjectCopy { project, projectPath ->
+            DomainRequestHandler(projectPath, SharedMpsEnvironment.mpsAccess(project))
+                .handleDomainRequest(CreateSolutionRequest("", "example.generated", usagePreset = preset))
+
+            val descriptor = projectPath.resolve("solutions/example.generated/example.generated.msd").readText()
+            assertFalse("generatorOutputPath" in descriptor, descriptor)
         }
     }
 
