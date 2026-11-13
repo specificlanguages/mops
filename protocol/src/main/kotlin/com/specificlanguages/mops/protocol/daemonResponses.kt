@@ -182,9 +182,9 @@ data class ModuleDiagnosticResponse(
 
 /**
  * Successful response carrying the result of a make run: its [outcome], how many generatable modules were in the make
- * set (the requested modules plus their generatable dependency closure), and the error and warning [messages] MPS
- * reported. On [MakeOutcome.FAILED] the [messages] carry the errors; on [MakeOutcome.NOTHING_TO_GENERATE] the make set
- * held no generatable model.
+ * set (the requested modules plus their generatable dependency closure), and the make [messages] at the requested level.
+ * On [MakeOutcome.FAILED] the [messages] carry at least one error; on [MakeOutcome.NOTHING_TO_GENERATE] the make set
+ * held no model to generate.
  */
 @Serializable
 @SerialName("make-result")

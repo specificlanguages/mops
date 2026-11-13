@@ -2,22 +2,35 @@ package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
+import com.specificlanguages.mops.protocol.CreateModelRequest
+import com.specificlanguages.mops.protocol.CreateSolutionRequest
+import com.specificlanguages.mops.protocol.EditBatch
+import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.MakeGenerationOptions
+import com.specificlanguages.mops.protocol.MakeModulesRequest
 import com.specificlanguages.mops.protocol.MakeMessageKind
 import com.specificlanguages.mops.protocol.MakeOutcome
+import com.specificlanguages.mops.protocol.MakeResponse
+import com.specificlanguages.mops.protocol.ModelEditRequest
+import com.specificlanguages.mops.protocol.ModelDestination
+import com.specificlanguages.mops.protocol.MpsNodePropertyJson
+import com.specificlanguages.mops.protocol.SolutionUsagePreset
 import java.nio.file.Path
+import kotlin.io.path.exists
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
  * Drives the real make against fixture-project copies (make writes generated files, so the shared read-only project
  * cannot be used). Asserts that making a solution automatically makes the language it depends on, that a whole-project
- * make succeeds, that a module whose closure reaches jar-packaged library sources still makes, and that a broken model
- * fails with reported errors.
+ * make succeeds, that a module whose closure reaches jar-packaged library sources still makes, that a broken model
+ * fails with reported errors, and that modules and models with nothing to generate are left out of the make.
  */
 class MakeSemanticsTest {
     @Test
@@ -108,6 +121,61 @@ class MakeSemanticsTest {
         model.writeText(broken)
     }
 
+    // The tests below send each step as its own daemon request, as the CLI does.
+    @Test
+    fun `a solution with no generation-target facets makes without generating its models`() {
+        val (response, solutionDir) = SharedMpsEnvironment.withOpenProjectCopy { project, projectPath ->
+            val daemon = DomainRequestHandler(projectPath, SharedMpsEnvironment.mpsAccess(project))
+            createSolutionWithModel(daemon, "example.analyzed", SolutionUsagePreset.NOT_GENERATED)
+            val addClass = EditOperation.AddRoot(
+                model = ModelDestination("example.analyzed.main"),
+                concept = CLASS_CONCEPT,
+                properties = listOf(MpsNodePropertyJson(name = "name", value = "Analyzed")),
+            )
+            daemon.handleDomainRequest(ModelEditRequest("", EditBatch(listOf(addClass))))
+            daemon.make("example.analyzed") to projectPath.resolve("solutions/example.analyzed")
+        }
+
+        assertEquals(MakeOutcome.NOTHING_TO_GENERATE, response.outcome, "got ${response.messages}")
+        assertTrue(
+            response.messages.any { it.kind == MakeMessageKind.WARNING && it.text.contains("example.analyzed") },
+            "expected a warning naming the module left out; got ${response.messages}",
+        )
+        assertFalse(solutionDir.resolve("source_gen").exists(), "the solution's models must not be generated")
+    }
+
+    @Test
+    fun `a solution with no generation-target facets and an empty model has nothing to generate`() {
+        val response = SharedMpsEnvironment.withOpenProjectCopy { project, projectPath ->
+            val daemon = DomainRequestHandler(projectPath, SharedMpsEnvironment.mpsAccess(project))
+            createSolutionWithModel(daemon, "example.analyzed", SolutionUsagePreset.NOT_GENERATED)
+            daemon.make("example.analyzed")
+        }
+
+        assertEquals(MakeOutcome.NOTHING_TO_GENERATE, response.outcome, "got ${response.messages}")
+    }
+
+    @Test
+    fun `a generated solution whose only model is empty has nothing to generate`() {
+        val response = SharedMpsEnvironment.withOpenProjectCopy { project, projectPath ->
+            val daemon = DomainRequestHandler(projectPath, SharedMpsEnvironment.mpsAccess(project))
+            createSolutionWithModel(daemon, "example.empty", SolutionUsagePreset.JAVA)
+            daemon.make("example.empty")
+        }
+
+        assertEquals(MakeOutcome.NOTHING_TO_GENERATE, response.outcome, "got ${response.messages}")
+    }
+
+    private fun createSolutionWithModel(daemon: DomainRequestHandler, name: String, preset: SolutionUsagePreset) {
+        daemon.handleDomainRequest(CreateSolutionRequest("", name, usagePreset = preset))
+        daemon.handleDomainRequest(CreateModelRequest("", "$name.main", name))
+    }
+
+    private fun DomainRequestHandler.make(
+        module: String,
+        generation: MakeGenerationOptions = MakeGenerationOptions(),
+    ): MakeResponse = assertIs<MakeResponse>(handleDomainRequest(MakeModulesRequest("", listOf(module), generation)))
+
     @Test
     fun `an unknown module name fails with a target-not-found error`() {
         val failure = assertFailsWith<MpsRequestException> {
@@ -122,5 +190,6 @@ class MakeSemanticsTest {
     private companion object {
         const val SANDBOX = "base-language-sandbox"
         const val EXPRESSION_LANGUAGE = "expression-language"
+        const val CLASS_CONCEPT = "jetbrains.mps.baseLanguage.structure.ClassConcept"
     }
 }

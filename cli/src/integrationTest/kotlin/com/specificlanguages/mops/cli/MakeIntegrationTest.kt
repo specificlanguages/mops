@@ -9,6 +9,7 @@ import org.junit.jupiter.api.parallel.ResourceLock
 import kotlin.io.path.pathString
 import kotlin.io.path.writeText
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -29,6 +30,21 @@ class MakeIntegrationTest {
             response.messages.any { it.kind == MakeMessageKind.INFO && it.text.contains("using 2 threads") },
             "expected MPS to report generating with 2 threads, got ${response.messages}",
         )
+    }
+
+    @Test
+    fun `make module leaves out a solution created with the not-generated preset`() {
+        val project = daemons.project("mps-json", copy = "not-generated")
+        val created = project.run("create", "solution", "example.analyzed")
+        assertEquals(0, created.exitCode, created.output)
+        val model = project.run("create", "model", "example.analyzed.main", "--module", "example.analyzed")
+        assertEquals(0, model.exitCode, model.output)
+
+        val result = project.run("make", "module", "example.analyzed")
+
+        assertEquals(0, result.exitCode, result.output)
+        assertEquals("nothing to generate", result.stdout.trim(), result.output)
+        assertContains(result.stderr, "warning\tnot generating the models of example.analyzed")
     }
 
     @Test
