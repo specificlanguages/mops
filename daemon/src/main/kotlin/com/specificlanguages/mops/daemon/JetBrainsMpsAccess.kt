@@ -65,6 +65,8 @@ class JetBrainsMpsAccess(
         return captureRequestErrors { JetBrainsMpsExtra().block() }.getOrThrow()
     }
 
+    // Inner: the read operations use the project, the exporters, the resolvers, and the private helpers of this
+    // JetBrainsMpsAccess.
     private open inner class JetBrainsMpsRead : MpsRead {
         override fun list(target: List<String>?, depth: Int, limit: Int, summary: Boolean, role: String?): MpsListEntryJson =
             when (target) {
@@ -447,6 +449,8 @@ class JetBrainsMpsAccess(
                 ?: throw MpsRequestException(code = MpsErrorCode.NODE_NOT_FOUND, message = "node not found")
     }
 
+    // Inner: extends JetBrainsMpsRead, which is inner, and uses the project and the edit batch executor of this
+    // JetBrainsMpsAccess.
     private inner class JetBrainsMpsWrite(
         private val writeScope: WriteTransaction.WriteScope,
     ) : JetBrainsMpsRead(), MpsWrite {
@@ -461,6 +465,8 @@ class JetBrainsMpsAccess(
         override fun createModel(request: CreateModelRequest): ModelCreationResponse = ModelCreator(project).create(request)
     }
 
+    // Inner: the extra operations use the project, the workspace, the platform, and the private helpers of this
+    // JetBrainsMpsAccess, and pass this JetBrainsMpsAccess on to Code Mode and test runs.
     private inner class JetBrainsMpsExtra : MpsExtra {
         private val projectMake = ProjectMake(project)
 

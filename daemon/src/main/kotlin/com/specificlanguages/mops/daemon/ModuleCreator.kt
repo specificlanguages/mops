@@ -140,7 +140,7 @@ class ModuleCreator(private val project: Project) {
             moduleFacetDescriptors.add(JavaModuleFacetImpl.forJavaCodeModule(
                 JavaModuleFacet.Compile.MPS, JavaModuleFacet.LoadClasses.ManagedByMPS, JavaModuleFacet.LoadExtensions.Plugin,
             ))
-            outputRoot = "\${module}/source_gen"
+            outputRoot = DEFAULT_OUTPUT_ROOT
         }
         return (ModuleRepositoryFacade(mpsProject).instantiate(value, descriptorFile) as Language)
             .also { mpsProject.addModule(it); it.setChanged() }
@@ -167,6 +167,7 @@ class ModuleCreator(private val project: Project) {
                     JavaModuleFacet.Compile.MPS, JavaModuleFacet.LoadClasses.ManagedByMPS, JavaModuleFacet.LoadExtensions.Plugin,
                 ))
             }
+            if (preset != SolutionUsagePreset.NOT_GENERATED) outputRoot = DEFAULT_OUTPUT_ROOT
         }
         return (instantiate(value, file(descriptor)) as Solution).also { mpsProject.addModule(it); it.setChanged() }
     }
@@ -279,4 +280,9 @@ class ModuleCreator(private val project: Project) {
 
     private fun file(path: Path) = mpsProject.fileSystem.getFile(path.toString())
     private fun fail(code: MpsErrorCode, message: String): Nothing = throw MpsRequestException(code, message)
+
+    private companion object {
+        /** The generator output root that MPS uses when a module descriptor does not name one. */
+        const val DEFAULT_OUTPUT_ROOT = "\${module}/source_gen"
+    }
 }

@@ -7,7 +7,9 @@ import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
 
-@Command(name = "model", description = ["Create an empty model in a project module."])
+@Command(name = "model", description = ["Create an empty model in a project module.",
+    "The model gets the devkits and used languages that MPS gives a new model in that module, such as the aspect " +
+        "devkit for a language's structure model."])
 class CreateModelCommand(private val environment: CommandEnvironment) : CliCommand() {
     @Parameters(index = "0", paramLabel = "MODEL_NAME") lateinit var modelName: String
     @Option(names = ["--module"], required = true, paramLabel = "MODULE") lateinit var module: String

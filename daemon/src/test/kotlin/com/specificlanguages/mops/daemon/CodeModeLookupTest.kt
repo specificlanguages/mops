@@ -37,6 +37,8 @@ class CodeModeLookupTest {
                         assert mops.lookup.module(module.moduleName).is(module)
                         def model = mops.lookup.requireModel('com.specificlanguages.json.structure')
                         assert mops.lookup.model(model.reference.toString()).is(model)
+                        assert mops.lookup.model('r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.oldname)').is(model)
+                        assert mops.lookup.model('r:99999999-2222-4333-8444-555555555555(com.specificlanguages.json.structure)') == null
                         def concept = mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.ClassConcept')
                         assert mops.lookup.conceptByName('jetbrains.mps.baseLanguage.ClassConcept') == concept
                     }

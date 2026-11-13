@@ -19,7 +19,13 @@ mops wrapper
 ```
 
 It prints the path of each `mopsw` (or `mopsw.cmd` on Windows) it writes. Run the wrapper in place of `mops`. Without a
-wrapper, pass `--mps-home PATH` and, when the distribution bundles no Java, `--java-home PATH`.
+Gradle build, pass the paths yourself and mops writes the wrapper into the MPS project's `build` directory:
+
+```sh
+mops --mps-home PATH --java-home PATH wrapper
+```
+
+Here and without a wrapper, `--java-home` is needed only when the MPS distribution bundles no Java.
 
 ## A short tour
 

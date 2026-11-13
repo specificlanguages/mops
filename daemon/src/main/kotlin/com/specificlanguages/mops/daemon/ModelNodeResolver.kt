@@ -59,13 +59,16 @@ class ModelNodeResolver(
         return model
     }
 
-    private fun matchingModels(project: Project, modelTarget: String): List<SModel> =
-        modelCandidates(project)
-            .filter { model ->
-                model.name.value == modelTarget ||
-                    persistence.asString(model.reference) == modelTarget
-            }
-            .toList()
+    // A target that parses as a serialized model reference is that reference and resolves by model ID alone, so a
+    // reference whose name part is out of date still finds its model. It never falls back to a name lookup. Any other
+    // target is a model name.
+    private fun matchingModels(project: Project, modelTarget: String): List<SModel> {
+        val reference = parseModelReferenceOrNull(persistence, modelTarget)
+        if (reference != null) {
+            return listOfNotNull(reference.resolve(project.repository))
+        }
+        return modelCandidates(project).filter { it.name.value == modelTarget }.toList()
+    }
 
     private fun logMissingModelTarget(project: Project, modelTarget: String) {
         val candidates = modelCandidates(project).toList()

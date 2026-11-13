@@ -73,7 +73,7 @@ abstract class SearchCommand(protected val environment: CommandEnvironment) : Cl
             json -> println(renderJson(results.response))
             refsOnly -> {
                 matches.forEach {
-                    println(renderNodeReference(it.reference, environment.nodeReferenceFormat, hyperlinks = false))
+                    println(renderNodeReference(it.reference, environment.nodeReferenceFormat.withoutLink()))
                 }
                 if (results.truncated) reportTruncationOnStderr(matches.size)
             }

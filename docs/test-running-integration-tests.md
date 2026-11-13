@@ -27,7 +27,8 @@ instead of waiting out deadlines, apart from one 15-second test execution limit.
 tests also retain their independent process boundaries.
 
 `WrapperIntegrationTest` puts a copy of the project-library fixture into a Gradle build, makes its project library path
-use a path macro, runs the installed `mops wrapper`, and runs a command through the written `mopsw`.
+use a path macro, runs the installed `mops wrapper`, and runs a command through the written `mopsw`. It also runs
+`mops wrapper` with `--mps-home` and `--java-home` on a copy without a Gradle build.
 
 ```sh
 ./gradlew :cli:integrationTestMps2024.1.6 --tests '*TestRunningIntegrationTest' --tests '*TestFamiliesIntegrationTest' \
