@@ -138,7 +138,9 @@ class GetModuleCommandTest {
         val client = mock<DaemonClient>()
         whenever(client.getModule("json.sandbox")).thenThrow(
             IllegalStateException(
-                "ambiguous module: json.sandbox; candidates: $SANDBOX_REFERENCE, 11111111-2222-4333-8444-555555555555(json.sandbox)",
+                "ambiguous module target json.sandbox:\n" +
+                    "module\tjson.sandbox\t11111111-2222-4333-8444-555555555555(json.sandbox)\n" +
+                    "module\tjson.sandbox\t$SANDBOX_REFERENCE",
             ),
         )
 
@@ -146,7 +148,7 @@ class GetModuleCommandTest {
         val stderr = tapSystemErr { exitCode = run(client, "json.sandbox") }
 
         assertEquals(1, exitCode)
-        assertContains(stderr, "ambiguous module: json.sandbox")
+        assertContains(stderr, "ambiguous module target json.sandbox:")
         assertContains(stderr, SANDBOX_REFERENCE)
         assertContains(stderr, "11111111-2222-4333-8444-555555555555(json.sandbox)")
     }

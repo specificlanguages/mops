@@ -100,9 +100,7 @@ class ModelCreator(private val project: Project) {
     }
 
     private fun resolveProjectModule(target: String): SModule {
-        val matches = project.repository.modules.matchingTarget(target)
-        if (matches.size != 1) fail(if (matches.isEmpty()) "module not found: $target" else "ambiguous module: $target")
-        return matches.single().also { if (!project.isProjectModule(it)) fail("module is not a project module: $target") }
+        return ModuleTargetResolver(project).require(target, ModuleTargetScope.REPOSITORY).also { if (!project.isProjectModule(it)) fail("module is not a project module: $target") }
     }
 
     private fun expandName(requested: String, moduleName: String): String = when {

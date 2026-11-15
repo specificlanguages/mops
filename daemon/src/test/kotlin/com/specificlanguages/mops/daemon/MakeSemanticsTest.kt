@@ -109,14 +109,14 @@ class MakeSemanticsTest {
     }
 
     @Test
-    fun `an unknown module name fails with a target-not-found error`() {
+    fun `an unknown module name fails with a module-not-found error`() {
         val failure = assertFailsWith<MpsRequestException> {
             SharedMpsEnvironment.withProjectCopy { access, _ ->
                 access.extra {makeModules(listOf("no.such.module.at.all")) }
             }
         }
 
-        assertEquals(MpsErrorCode.TARGET_NOT_FOUND, failure.code)
+        assertEquals(MpsErrorCode.MODULE_NOT_FOUND, failure.code)
     }
 
     private companion object {

@@ -125,15 +125,7 @@ class JetBrainsMpsAccess(
             jsonNodeExporter.exportSummary(resolveNode(target), ancestry)
 
         override fun getModule(target: String): ModuleLocationsJson {
-            val matches = project.repository.modules.matchingTarget(target)
-            val module = when (matches.size) {
-                0 -> throw MpsRequestException(MpsErrorCode.MODULE_NOT_FOUND, "module not found: $target")
-                1 -> matches.single()
-                else -> throw MpsRequestException(
-                    MpsErrorCode.AMBIGUOUS_TARGET,
-                    "ambiguous module: $target; candidates: ${matches.joinToString { persistence.asString(it.moduleReference) }}",
-                )
-            }
+            val module = ModuleTargetResolver(project).require(target, ModuleTargetScope.REPOSITORY)
             return moduleLocationsExporter.export(module)
         }
 
@@ -150,19 +142,9 @@ class JetBrainsMpsAccess(
             modelChecker.check(project, project.projectModulesWithGenerators.toList(), limit)
 
         override fun checkModules(modules: List<String>, limit: Int): ModelCheckResponse =
-            modelChecker.check(project, modules.map(::resolveCheckModule).distinct(), limit)
-
-        private fun resolveCheckModule(target: String): SModule {
-            val matches = navigationTargets.projectModulesMatching(target)
-            return when (matches.size) {
-                0 -> throw MpsRequestException(MpsErrorCode.TARGET_NOT_FOUND, "module not found in project: $target")
-                1 -> matches.single()
-                else -> throw MpsRequestException(
-                    MpsErrorCode.AMBIGUOUS_TARGET,
-                    "ambiguous module: $target matches ${matches.size} project modules",
-                )
+            ModuleTargetResolver(project).let { resolver ->
+                modelChecker.check(project, modules.map { resolver.require(it, ModuleTargetScope.PROJECT) }.distinct(), limit)
             }
-        }
 
         // Resolves the node to render and, unless [allowReflective], refuses a subtree whose concepts did not resolve.
         // The editor render itself is deliberately not done here: it must run on the EDT and would deadlock if driven

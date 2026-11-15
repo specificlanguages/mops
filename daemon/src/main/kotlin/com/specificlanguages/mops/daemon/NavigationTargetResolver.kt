@@ -40,6 +40,8 @@ internal class NavigationTargetResolver(
     private val project: MPSProject,
     private val persistence: PersistenceFacade = PersistenceFacade.getInstance(),
 ) {
+    private val modules = ModuleTargetResolver(project, persistence)
+
     /** Resolves a non-empty list of path segments. An empty list resolves to [NavigationTargetResolution.Missing]. */
     fun resolve(segments: List<String>): NavigationTargetResolution {
         if (segments.isEmpty()) {
@@ -70,9 +72,6 @@ internal class NavigationTargetResolver(
 
         return resolveModelPath(model, segments.drop(2))
     }
-
-    /** Project modules (generators included) whose name or serialized reference equals [target]. */
-    fun projectModulesMatching(target: String): List<SModule> = project.projectModulesWithGenerators.matchingTarget(target)
 
     fun resolveNodeReference(target: String): SNode? =
         runCatching {
@@ -137,7 +136,7 @@ internal class NavigationTargetResolver(
         matchingProjectModels(segment).forEach {
             candidates["model:${persistence.asString(it.reference)}"] = NavigationTarget.Model(it)
         }
-        projectModulesMatching(segment).forEach {
+        modules.matching(segment, ModuleTargetScope.PROJECT).forEach {
             candidates["module:${persistence.asString(it.moduleReference)}"] = NavigationTarget.Module(it)
         }
 
@@ -157,14 +156,14 @@ internal class NavigationTargetResolver(
             .distinctBy { persistence.asString(it.reference) }
             .toList()
 
-    private fun resolveProjectModule(target: String): NavigationTargetResolution {
-        val modules = projectModulesMatching(target)
-        return when (modules.size) {
-            0 -> NavigationTargetResolution.Missing()
-            1 -> NavigationTargetResolution.Found(NavigationTarget.Module(modules.single()))
-            else -> ambiguousModuleTarget(target, modules)
+    private fun resolveProjectModule(target: String): NavigationTargetResolution =
+        try {
+            modules.find(target, ModuleTargetScope.PROJECT)
+                ?.let { NavigationTargetResolution.Found(NavigationTarget.Module(it)) }
+                ?: NavigationTargetResolution.Missing()
+        } catch (ambiguous: ModuleTargetException) {
+            NavigationTargetResolution.Ambiguous(ambiguous.message)
         }
-    }
 
     // The model segment after a module: a bare `.` names the model whose name equals the module name, a `.suffix`
     // segment appends to the module name, and any other segment is a full model name.
@@ -203,14 +202,11 @@ internal class NavigationTargetResolver(
     // ambiguity below emits, so the "ambiguous …" listing reads the same however the candidates were counted.
     private fun candidateRow(target: NavigationTarget): String =
         when (target) {
-            is NavigationTarget.Module -> moduleRow(target.module)
+            is NavigationTarget.Module -> modules.candidateRow(target.module)
             is NavigationTarget.Model -> modelRow(target.model)
             is NavigationTarget.RootNode -> rootNodeRow(target.node)
             is NavigationTarget.Node -> childNodeRow(target.node)
         }
-
-    private fun moduleRow(module: SModule): String =
-        "module\t${module.moduleName}\t${persistence.asString(module.moduleReference)}"
 
     private fun modelRow(model: SModel): String =
         "model\t${model.name.value}\t${persistence.asString(model.reference)}"
@@ -221,9 +217,6 @@ internal class NavigationTargetResolver(
     private fun childNodeRow(node: SNode): String =
         "node\t${node.containmentLink?.role.orEmpty()}\t${nodeName(node) ?: "<unnamed>"}\t" +
             "${persistence.asString(node.nodeId)}\t${persistence.asString(node.reference)}"
-
-    private fun ambiguousModuleTarget(target: String, modules: List<SModule>): NavigationTargetResolution.Ambiguous =
-        ambiguousTarget("module", target, modules, ::moduleRow)
 
     private fun ambiguousModelTarget(modelName: String, models: List<SModel>): NavigationTargetResolution.Ambiguous =
         ambiguousTarget("model", modelName, models, ::modelRow)

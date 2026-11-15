@@ -24,8 +24,8 @@ class CodeModeRuntimeTest {
                 project.read {
                     assert help(mops.runtime).contains('mops.runtime.loadClass')
                     assert help(mops.runtime).contains('mops.runtime.requireClass')
-                    fails(IllegalArgumentException, 'module not found: no.such.module') { mops.runtime.loadClass('no.such.module', 'Any') }
-                    fails(IllegalArgumentException, 'module not found: no.such.module') { mops.runtime.requireClass('no.such.module', 'Any') }
+                    fails(com.specificlanguages.mops.daemon.core.MpsRequestException, 'module not found in repository: no.such.module') { mops.runtime.loadClass('no.such.module', 'Any') }
+                    fails(com.specificlanguages.mops.daemon.core.MpsRequestException, 'module not found in repository: no.such.module') { mops.runtime.requireClass('no.such.module', 'Any') }
                     fails(IllegalArgumentException, 'has no class loader') { mops.runtime.loadClass('jetbrains.mps.devkit.general-purpose', 'Any') }
                     def behavior = mops.runtime.requireClass('jetbrains.mps.baseLanguage', 'jetbrains.mps.baseLanguage.behavior.ClassConcept__BehaviorDescriptor')
                     assert behavior.name == 'jetbrains.mps.baseLanguage.behavior.ClassConcept__BehaviorDescriptor'

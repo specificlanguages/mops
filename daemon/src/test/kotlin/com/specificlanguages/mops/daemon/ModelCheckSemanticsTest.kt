@@ -152,7 +152,8 @@ class ModelCheckSemanticsTest {
             }
         }
 
-        assertEquals(MpsErrorCode.TARGET_NOT_FOUND, failure.code)
+        assertEquals(MpsErrorCode.MODULE_NOT_FOUND, failure.code)
+        assertEquals("module not found in project: JDK", failure.message)
     }
 
     // Repoints the `add` body's reference to parameter `a` at a node ID that no longer exists, leaving the
