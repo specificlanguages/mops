@@ -58,15 +58,18 @@ NOTES
   from disk, so nothing is committed. Saving itself is not transactional: a batch
   that spans several models writes them one at a time, so a failure partway through
   saving can leave earlier models already persisted.
+
   Aliases: a creating operation (addChild, copyAsChild, addRoot, copyAsRoot, replace, wrap) may bind
   its new node to a batch-local "as" alias (e.g. "as": "root") that later operations
   target as "$root". The leading $ is the reference sigil — required when targeting an
   alias, and not part of the name.
+
   Imports: a saved batch adds to each changed model the used languages of the
   nodes it created and the imports of the models its new references point to,
   unless the model already has them (a used devkit's languages and the accessory
   models of used languages count). It removes none. The response's "notes" field
   lists each language and import added.
+
   Constraints: edits are checked against MPS constraints, and every violation is
   reported. --constraints MODE decides whether a violation blocks the batch, and
   --ignore-missing-languages decides whether a concept whose language did not load

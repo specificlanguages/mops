@@ -25,6 +25,9 @@ Each fact lives in one authoritative place. Changing a behavior then needs one p
   become sediment that readers must dig through.
 - Delete a sentence that does not change what the reader does. Delete the whole sentence, not some of its words.
 - Keep a concept's definition, rules, and caveats under one heading, so that reading one part brings the rest.
+- Keep each paragraph at or under 150 words, in Markdown and in `mops explain` topics alike. A paragraph holds one idea.
+  When a paragraph lists several items, use a list. The checks are described in
+  [Code structure checks](../development.md#code-structure-checks).
 
 ## Wording
 
