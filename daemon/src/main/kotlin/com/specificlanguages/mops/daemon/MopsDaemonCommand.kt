@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.daemon
 
+import com.specificlanguages.mops.launcher.MpsBuildProperties
 import com.specificlanguages.mops.protocol.*
 import de.itemis.mps.gradle.project.loader.EnvironmentKind
 import de.itemis.mps.gradle.project.loader.Macro
@@ -138,7 +139,11 @@ class DaemonRunner(
     }
 
     private fun checkEnvironment(): EnvironmentProblem? =
-        checkCurrentJvm(mpsHome)
+        jvmCompatibilityProblem(
+            MpsBuildProperties.fromMpsHome(mpsHome),
+            Runtime.version().feature(),
+            System.getProperty("java.vendor", ""),
+        )
             ?: environmentCheck(projectPath.isDirectory(), "INVALID_PROJECT_PATH") {
                 "project path should be a directory: $projectPath"
             }

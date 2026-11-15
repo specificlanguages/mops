@@ -1,16 +1,23 @@
 package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.launcher.MpsBuildProperties
-import java.nio.file.Path
 
 data class EnvironmentProblem(val code: String, val message: String)
 
-fun checkCurrentJvm(mpsHome: Path): EnvironmentProblem? {
-    val mpsBuildProperties = MpsBuildProperties.fromMpsHome(mpsHome)
-        ?: return EnvironmentProblem(
+/**
+ * Logic. The reason the daemon JVM cannot run the MPS distribution described by [mpsBuildProperties], or null when it
+ * can. [mpsBuildProperties] is null when the distribution has no readable `build.properties`. [javaMajor] and
+ * [javaVendor] describe the running JVM.
+ *
+ * Hides: which JVMs a given MPS version accepts.
+ */
+fun jvmCompatibilityProblem(mpsBuildProperties: MpsBuildProperties?, javaMajor: Int, javaVendor: String): EnvironmentProblem? {
+    if (mpsBuildProperties == null) {
+        return EnvironmentProblem(
             "MPS_HOME_INVALID",
             "MPS home directory does not contain build.properties file"
         )
+    }
 
     val mpsBuildNumber = mpsBuildProperties.buildNumber
     val mpsVersion = mpsBuildProperties.version()
@@ -20,19 +27,17 @@ fun checkCurrentJvm(mpsHome: Path): EnvironmentProblem? {
         )
     val requiredJavaMajor = mpsVersion.requiredJavaMajor()
 
-    val currentJavaMajor = Runtime.version().feature()
-    if (currentJavaMajor != requiredJavaMajor) {
+    if (javaMajor != requiredJavaMajor) {
         return EnvironmentProblem(
             code = "JVM_VERSION_MISMATCH",
-            message = "daemon JVM $currentJavaMajor is not compatible with MPS $mpsBuildNumber; required Java $requiredJavaMajor",
+            message = "daemon JVM $javaMajor is not compatible with MPS $mpsBuildNumber; required Java $requiredJavaMajor",
         )
     }
 
-    val currentVendor = System.getProperty("java.vendor", "")
-    if (!currentVendor.contains("JetBrains", ignoreCase = true)) {
+    if (!javaVendor.contains("JetBrains", ignoreCase = true)) {
         return EnvironmentProblem(
             code = "JVM_VENDOR_UNSUPPORTED",
-            message = "daemon JVM is not a JetBrains Runtime; current vendor is '$currentVendor'",
+            message = "daemon JVM is not a JetBrains Runtime; current vendor is '$javaVendor'",
         )
     }
     return null

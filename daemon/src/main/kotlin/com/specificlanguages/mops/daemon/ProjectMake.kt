@@ -27,7 +27,6 @@ import jetbrains.mps.smodel.resources.ModelsToResources
 import org.jetbrains.mps.openapi.language.SLanguage
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.module.SModule
-import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import org.jetbrains.mps.openapi.util.ProgressMonitor
 
 /**
@@ -51,8 +50,6 @@ import org.jetbrains.mps.openapi.util.ProgressMonitor
  * See https://github.com/specificlanguages/mps-api-research/blob/main/make-generation.md for the verified API contract.
  */
 class ProjectMake(private val project: Project) {
-    private val persistence: PersistenceFacade = PersistenceFacade.getInstance()
-
     /**
      * Makes [moduleNames] and their dependencies with the [generation] options (see [runMake]). The make checks [monitor]
      * for cancellation between its steps.
@@ -174,9 +171,7 @@ class ProjectMake(private val project: Project) {
         (module as? AbstractModule)?.isReadOnly != true
 
     private fun resolveProjectModule(name: String): SModule {
-        val matches = project.projectModulesWithGenerators.filter {
-            it.moduleName == name || persistence.asString(it.moduleReference) == name
-        }
+        val matches = project.projectModulesWithGenerators.matchingTarget(name)
         return when (matches.size) {
             0 -> throw MpsRequestException(MpsErrorCode.TARGET_NOT_FOUND, "module not found: $name")
             1 -> matches.single()

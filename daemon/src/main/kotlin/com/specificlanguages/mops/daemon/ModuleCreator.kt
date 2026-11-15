@@ -241,9 +241,7 @@ class ModuleCreator(private val project: Project) {
     }
 
     private fun resolveLanguage(target: String): Language {
-        val matches = project.repository.modules.filter {
-            it.moduleName == target || persistence.asString(it.moduleReference) == target
-        }
+        val matches = project.repository.modules.matchingTarget(target)
         if (matches.size != 1) fail(if (matches.isEmpty()) MpsErrorCode.TARGET_NOT_FOUND else MpsErrorCode.AMBIGUOUS_TARGET,
             if (matches.isEmpty()) "language not found: $target" else "ambiguous language: $target")
         return matches.single() as? Language ?: fail(MpsErrorCode.INVALID_REQUEST, "source module is not a language: $target")

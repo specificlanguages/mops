@@ -4,10 +4,8 @@ import com.specificlanguages.mops.protocol.MpsListEntryJson
 import com.specificlanguages.mops.protocol.MpsListSummaryGroupJson
 import com.specificlanguages.mops.protocol.MpsListSummaryJson
 import jetbrains.mps.project.Project
-import jetbrains.mps.smodel.SNodeUtil
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SNode
-import org.jetbrains.mps.openapi.model.SNodeAccessUtil
 import org.jetbrains.mps.openapi.module.SModule
 import org.jetbrains.mps.openapi.module.SRepository
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
@@ -220,7 +218,4 @@ class MpsListExporter(
             .eachCount()
             .map { (key, count) -> MpsListSummaryGroupJson(key = key, count = count) }
             .sortedWith(compareByDescending<MpsListSummaryGroupJson> { it.count }.thenBy { it.key })
-
-    private fun nodeName(node: SNode): String? =
-        SNodeAccessUtil.getPropertyValue(node, SNodeUtil.property_INamedConcept_name) as String?
 }

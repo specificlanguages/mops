@@ -21,7 +21,7 @@ class ModelNodeResolver(
                 .resolve(project.repository)
 
             is NodeTarget.InModel -> {
-                val model = findSingleModel(project, target.modelTarget)
+                val model = findModelUnique(project, target.modelTarget)
                     ?: throw MpsRequestException(
                         code = MpsErrorCode.MODEL_NOT_FOUND,
                         message = "model not found: ${target.modelTarget}",
@@ -40,9 +40,7 @@ class ModelNodeResolver(
      * matches. Used where addressing a wrong model would be a mutation, so an ambiguous target must never silently pick
      * one.
      */
-    fun findModelUnique(project: Project, modelTarget: String): SModel? = findSingleModel(project, modelTarget)
-
-    private fun findSingleModel(project: Project, modelTarget: String): SModel? {
+    fun findModelUnique(project: Project, modelTarget: String): SModel? {
         val candidates = matchingModels(project, modelTarget)
         if (candidates.size > 1) {
             throw MpsRequestException(

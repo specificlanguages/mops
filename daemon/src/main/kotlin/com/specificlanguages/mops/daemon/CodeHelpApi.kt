@@ -14,22 +14,13 @@ internal object CodeHelpApi {
     }
 
     fun access(receiver: String, name: String, fallback: String): String {
-        val method = methods.firstOrNull { receiverName(it.parameterTypes.first().simpleName) == receiver && memberName(it.name) == name }
+        val method = methods.firstOrNull { receiverName(it.parameterTypes.first()) == receiver && memberName(it.name) == name }
         return method?.getAnnotation(CodeModeExtension::class.java)?.access?.name?.lowercase() ?: fallback
     }
 
-    fun path(method: Method): String = "${receiverName(method.parameterTypes.first().simpleName)}.${memberName(method.name)}"
+    fun path(method: Method): String = "${receiverName(method.parameterTypes.first())}.${memberName(method.name)}"
 
-    private fun receiverName(name: String) = when (name) {
-        "MopsEditing" -> "mops.editing"
-        "MopsEditingBuild" -> "mops.editing.build"
-        "MopsParsing" -> "mops.parsing"
-        "MopsSearch" -> "mops.search"
-        "MopsLookup" -> "mops.lookup"
-        "MopsRuntime" -> "mops.runtime"
-        "MopsTesting" -> "mops.testing"
-        else -> name
-    }
+    private fun receiverName(type: Class<*>) = codeModeNamespacePaths[type] ?: type.simpleName
 
     private fun memberName(name: String): String = if (name.startsWith("get")) name.removePrefix("get").replaceFirstChar { it.lowercase() } else name
 }
