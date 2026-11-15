@@ -19,7 +19,7 @@ class CodeModeLinksTest {
                     }
                     def unknown = { String kind, String known, Closure action ->
                         try { action(); assert false: 'Expected unknown ' + kind }
-                        catch (IllegalArgumentException failure) {
+                        catch (com.specificlanguages.mops.daemon.core.MpsRequestException failure) {
                             assert failure.message.contains('jetbrains.mps.lang.structure.structure.ConceptDeclaration'): failure.message
                             assert failure.message.contains('no ' + kind + " 'missing'"): failure.message
                             assert failure.message.contains(known): failure.message

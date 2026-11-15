@@ -152,7 +152,8 @@ class InvalidConceptSemanticsTest {
                 CodeRunRequest("", """
                     def notLoaded = { String kind, Closure action ->
                         try { action(); assert false: 'Expected a failure for ' + kind }
-                        catch (IllegalStateException failure) {
+                        catch (com.specificlanguages.mops.daemon.core.MpsRequestException failure) {
+                            assert failure.code.name() == 'LANGUAGE_NOT_LOADED': failure.code
                             assert failure.message.contains("cannot look up ${'$'}{kind} 'name'"): failure.message
                             assert failure.message.contains('com.example.uncompiled.structure.Widget'): failure.message
                             assert failure.message.contains('not loaded'): failure.message

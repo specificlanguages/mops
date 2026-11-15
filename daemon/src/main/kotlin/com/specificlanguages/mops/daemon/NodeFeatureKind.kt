@@ -2,7 +2,10 @@ package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 
-/** The kinds of named concept features, with the words and error codes that their lookup errors use. */
+/**
+ * The kinds of node features (properties and roles of a concept), with the words that describe them and the error codes
+ * of their lookup errors.
+ */
 internal enum class NodeFeatureKind(
     val singular: String,
     val plural: String,

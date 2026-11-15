@@ -78,10 +78,8 @@ class EditBatchExecutor(
             val prefix = "operation $index" + context?.let { " $it" }.orEmpty()
             return try {
                 lookup()
-            } catch (exception: NodeFeatureLookupException) {
+            } catch (exception: MpsRequestException) {
                 fail(exception.code, "$prefix: ${exception.message}")
-            } catch (exception: ConceptNotLoadedException) {
-                fail(MpsErrorCode.LANGUAGE_NOT_LOADED, "$prefix: ${exception.message}")
             }
         }
 
@@ -121,8 +119,8 @@ class EditBatchExecutor(
                 for (step in target.path) {
                     // Validate the role resolves uniquely on the current node before descending, so a bad or ambiguous
                     // role reports as such rather than as a missing child.
-                    lookUpFeatureOrFail(index, "relative path") { current.requireContainmentLink(step.role) }
-                    current = locateChild(current, step.role, step.position)
+                    val link = lookUpFeatureOrFail(index, "relative path") { current.requireContainmentLink(step.role) }
+                    current = locateChild(current, link, step.position)
                         ?: fail(
                             MpsErrorCode.NODE_NOT_FOUND,
                             "operation $index relative path child not found: role ${step.role}, position ${step.position} " +
@@ -427,8 +425,8 @@ class EditBatchExecutor(
 
                 is EditOperation.DeleteChild -> {
                     val node = requireEditableNode(index, operation.target)
-                    resolveContainmentOrFail(index, node, operation.role)
-                    val child = locateChild(node, operation.role, operation.position)
+                    val link = resolveContainmentOrFail(index, node, operation.role)
+                    val child = locateChild(node, link, operation.position)
                         ?: fail(
                             MpsErrorCode.NODE_NOT_FOUND,
                             "operation $index child not found: role ${operation.role}, position ${operation.position}",
@@ -626,10 +624,10 @@ class EditBatchExecutor(
 
     private fun locateChild(
         node: SNode,
-        role: String,
+        link: SContainmentLink,
         position: ChildPosition,
     ): SNode? {
-        val childrenInRole = node.children.filter { it.containmentLink?.name == role }
+        val childrenInRole = node.getChildren(link).toList()
 
         return when (position) {
             is ChildPosition.First -> childrenInRole.firstOrNull()

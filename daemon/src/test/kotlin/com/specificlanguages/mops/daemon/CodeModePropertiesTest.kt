@@ -46,7 +46,8 @@ class CodeModePropertiesTest {
                             try {
                                 node.properties['missingProperty']
                                 assert false: 'Unknown properties must reject reads'
-                            } catch (IllegalArgumentException expected) {
+                            } catch (com.specificlanguages.mops.daemon.core.MpsRequestException expected) {
+                                assert expected.code.name() == 'PROPERTY_NOT_FOUND': expected.code
                                 assert expected.message.contains("ConceptDeclaration has no property 'missingProperty'"): expected.message
                                 assert expected.message.contains('conceptAlias'): expected.message
                             }
@@ -103,7 +104,8 @@ class CodeModePropertiesTest {
                         try {
                             properties['missingProperty'] = 'value'
                             assert false: 'Unknown properties must reject writes'
-                        } catch (IllegalArgumentException expected) {
+                        } catch (com.specificlanguages.mops.daemon.core.MpsRequestException expected) {
+                            assert expected.code.name() == 'PROPERTY_NOT_FOUND': expected.code
                             assert expected.message.contains("ConceptDeclaration has no property 'missingProperty'"): expected.message
                             assert expected.message.contains('conceptAlias'): expected.message
                         }
@@ -197,14 +199,14 @@ class CodeModePropertiesTest {
                         try {
                             node.properties['isDeprecated']
                             assert false: 'An ambiguous property name must fail'
-                        } catch (IllegalArgumentException expected) {
-                            return expected.message
+                        } catch (com.specificlanguages.mops.daemon.core.MpsRequestException expected) {
+                            return expected.code.name() + ': ' + expected.message
                         }
                     }
                 """.trimIndent(), "ambiguous-property.groovy"),
             )
             assertEquals(
-                "concept jetbrains.mps.baseLanguage.structure.ClassConcept has 2 properties named 'isDeprecated', " +
+                "AMBIGUOUS_PROPERTY: concept jetbrains.mps.baseLanguage.structure.ClassConcept has 2 properties named 'isDeprecated', " +
                     "declared by jetbrains.mps.baseLanguage.structure.Classifier, " +
                     "jetbrains.mps.baseLanguage.structure.IBLDeprecatable",
                 response.output,
