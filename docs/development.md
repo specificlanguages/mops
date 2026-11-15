@@ -89,7 +89,11 @@ from that list after splitting it.
 
 The custom markdownlint rule `paragraph-length` in `tools/markdownlint/` rejects Markdown paragraphs with more words
 than `max_words` in `.markdownlint-cli2.yaml`. When the rule, `.markdownlint-cli2.yaml`, or `.pre-commit-config.yaml`
-changes, the `markdownlint-cli2-all` hook lints every Markdown file that Git does not ignore.
+changes, the `markdownlint-cli2-all` hook lints every Markdown file that Git does not ignore. The generated pages in
+`docs/reference/explain/` wrap each topic in a code block, which the rule does not check. The `explain-paragraph-length`
+pre-commit hook (`tools/pre-commit/check-paragraph-length.py`) applies the same limit to the topic sources in
+`cli/src/main/resources/explain/`. In these plain-text files a paragraph is a run of non-blank lines with the same
+indentation.
 
 ## Daemon tests on each MPS version
 
