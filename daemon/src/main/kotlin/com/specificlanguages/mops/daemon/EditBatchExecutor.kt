@@ -73,6 +73,18 @@ class EditBatchExecutor(
         fun fail(code: MpsErrorCode, message: String): Nothing =
             throw MpsRequestException(code = code, message = message)
 
+        // Prefixes a feature lookup error with the operation index and an optional [context].
+        fun <T> lookUpFeatureOrFail(index: Int, context: String? = null, lookup: () -> T): T {
+            val prefix = "operation $index" + context?.let { " $it" }.orEmpty()
+            return try {
+                lookup()
+            } catch (exception: NodeFeatureLookupException) {
+                fail(exception.code, "$prefix: ${exception.message}")
+            } catch (exception: ConceptNotLoadedException) {
+                fail(MpsErrorCode.LANGUAGE_NOT_LOADED, "$prefix: ${exception.message}")
+            }
+        }
+
         // Refuses to edit a model that imports a project language whose runtime is unbuilt or stale (built from older
         // sources than the files on disk): editing through such a runtime can resolve a concept or role to an identity
         // that contradicts the sources and write it into the model. Runs once, when a model first becomes affected —
@@ -109,17 +121,7 @@ class EditBatchExecutor(
                 for (step in target.path) {
                     // Validate the role resolves uniquely on the current node before descending, so a bad or ambiguous
                     // role reports as such rather than as a missing child.
-                    when (resolveContainment(current, step.role)) {
-                        is ContainmentResolution.Found -> {}
-                        ContainmentResolution.Missing -> fail(
-                            MpsErrorCode.ROLE_NOT_FOUND,
-                            "operation $index relative path role not found: ${step.role} on ${current.concept.qualifiedName}",
-                        )
-                        is ContainmentResolution.Ambiguous -> fail(
-                            MpsErrorCode.AMBIGUOUS_ROLE,
-                            "operation $index ambiguous relative path role ${step.role} on ${current.concept.qualifiedName}",
-                        )
-                    }
+                    lookUpFeatureOrFail(index, "relative path") { current.requireContainmentLink(step.role) }
                     current = locateChild(current, step.role, step.position)
                         ?: fail(
                             MpsErrorCode.NODE_NOT_FOUND,
@@ -235,46 +237,13 @@ class EditBatchExecutor(
         }
 
         fun resolveContainmentOrFail(index: Int, parent: SNode, role: String): SContainmentLink =
-            when (val resolution = resolveContainment(parent, role)) {
-                is ContainmentResolution.Found -> resolution.link
-                ContainmentResolution.Missing -> fail(
-                    MpsErrorCode.ROLE_NOT_FOUND,
-                    "operation $index containment role not found: $role on ${parent.concept.qualifiedName}",
-                )
-                is ContainmentResolution.Ambiguous -> fail(
-                    MpsErrorCode.AMBIGUOUS_ROLE,
-                    "operation $index ambiguous containment role $role on ${parent.concept.qualifiedName}",
-                )
-            }
+            lookUpFeatureOrFail(index) { parent.requireContainmentLink(role) }
 
-        fun resolveReferenceLinkOrFail(index: Int, node: SNode, role: String): SReferenceLink {
-            val links = node.concept.referenceLinks.filter { it.name == role }
-            return when (links.size) {
-                1 -> links.single()
-                0 -> fail(
-                    MpsErrorCode.ROLE_NOT_FOUND,
-                    "operation $index reference role not found: $role on ${node.concept.qualifiedName}",
-                )
-                else -> fail(
-                    MpsErrorCode.AMBIGUOUS_ROLE,
-                    "operation $index ambiguous reference role $role on ${node.concept.qualifiedName}",
-                )
-            }
-        }
+        fun resolveReferenceLinkOrFail(index: Int, node: SNode, role: String): SReferenceLink =
+            lookUpFeatureOrFail(index) { node.requireReferenceLink(role) }
 
         fun resolvePropertyOrFail(index: Int, node: SNode, name: String): SProperty =
-            when (val resolution = resolveProperty(node, name)) {
-                is PropertyResolution.Found -> resolution.property
-                PropertyResolution.Missing -> fail(
-                    MpsErrorCode.PROPERTY_NOT_FOUND,
-                    "operation $index property not found: $name on ${node.concept.qualifiedName}",
-                )
-                is PropertyResolution.Ambiguous -> fail(
-                    MpsErrorCode.AMBIGUOUS_PROPERTY,
-                    "operation $index ambiguous property $name on ${node.concept.qualifiedName}: " +
-                        resolution.properties.joinToString { it.name },
-                )
-            }
+            lookUpFeatureOrFail(index) { node.requireProperty(name) }
 
         fun resolveReferenceTargetOrFail(index: Int, ownerModel: SModel, reference: InlineReference): SNode {
             // The canonical `to` form (the full EditTarget grammar, aliases included) resolves like every other target.
@@ -458,6 +427,7 @@ class EditBatchExecutor(
 
                 is EditOperation.DeleteChild -> {
                     val node = requireEditableNode(index, operation.target)
+                    resolveContainmentOrFail(index, node, operation.role)
                     val child = locateChild(node, operation.role, operation.position)
                         ?: fail(
                             MpsErrorCode.NODE_NOT_FOUND,
@@ -690,34 +660,4 @@ class EditBatchExecutor(
      * so "$root" and "root" denote the same alias whether written in "as" or in a reference.
      */
     private fun aliasName(alias: String): String = alias.removePrefix("$")
-
-    private fun resolveContainment(node: SNode, role: String): ContainmentResolution {
-        val links = node.concept.containmentLinks.filter { it.name == role }
-        return when (links.size) {
-            0 -> ContainmentResolution.Missing
-            1 -> ContainmentResolution.Found(links.single())
-            else -> ContainmentResolution.Ambiguous(links)
-        }
-    }
-
-    private fun resolveProperty(node: SNode, name: String): PropertyResolution {
-        val properties = node.concept.properties.filter { it.name == name }.toList()
-        return when (properties.size) {
-            0 -> PropertyResolution.Missing
-            1 -> PropertyResolution.Found(properties.single())
-            else -> PropertyResolution.Ambiguous(properties)
-        }
-    }
-}
-
-private sealed interface PropertyResolution {
-    data class Found(val property: SProperty) : PropertyResolution
-    data class Ambiguous(val properties: List<SProperty>) : PropertyResolution
-    data object Missing : PropertyResolution
-}
-
-private sealed interface ContainmentResolution {
-    data class Found(val link: SContainmentLink) : ContainmentResolution
-    data class Ambiguous(val links: List<SContainmentLink>) : ContainmentResolution
-    data object Missing : ContainmentResolution
 }

@@ -236,7 +236,10 @@ class ModelEditSemanticsTest {
             }
 
             assertEquals(MpsErrorCode.PROPERTY_NOT_FOUND, exception.code)
-            assertContains(exception.message, "property not found: doesNotExist")
+            assertContains(
+                exception.message,
+                "operation 1: concept jetbrains.mps.lang.structure.structure.ConceptDeclaration has no property 'doesNotExist'; its properties: ",
+            )
             val node = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_NODE_REFERENCE)) }
             assertEquals("JsonFile", propertyValue(node, "name"))
             assertFalse(projectPath.resolve(STRUCTURE_MODEL_PATH).readText().contains("ShouldRollback"))

@@ -186,6 +186,32 @@ class CodeModePropertiesTest {
         }
     }
 
+    @Test
+    fun `a property name that several inherited properties share fails and names the declaring concepts`() {
+        SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
+            val response = CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform).execute(
+                CodeRunRequest("", """
+                    project.command {
+                        def model = mops.lookup.requireModel('com.specificlanguages.json.structure')
+                        def node = model.createNode(mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.ClassConcept'))
+                        try {
+                            node.properties['isDeprecated']
+                            assert false: 'An ambiguous property name must fail'
+                        } catch (IllegalArgumentException expected) {
+                            return expected.message
+                        }
+                    }
+                """.trimIndent(), "ambiguous-property.groovy"),
+            )
+            assertEquals(
+                "concept jetbrains.mps.baseLanguage.structure.ClassConcept has 2 properties named 'isDeprecated', " +
+                    "declared by jetbrains.mps.baseLanguage.structure.Classifier, " +
+                    "jetbrains.mps.baseLanguage.structure.IBLDeprecatable",
+                response.output,
+            )
+        }
+    }
+
     private companion object {
         const val CONTENT_LINK_NODE_REFERENCE =
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566910"

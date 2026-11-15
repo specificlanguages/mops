@@ -30,7 +30,9 @@ internal object CodeCatalogNodeEntries {
         )
 
         private fun lookup(): String =
-            "Names include inherited ${kind.plural}. Unknown ${kind.plural} fail on read and write, listing the known ones."
+            "Names include inherited ${kind.plural}. Unknown ${kind.plural} fail on read and write, listing the " +
+                "known ones; a name that several inherited ${kind.plural} share fails, naming the concepts that declare " +
+                "them."
 
         private fun shadowing(): String? = shadowed?.let {
             val getter = "get${name.replaceFirstChar(Char::uppercase)}()"
