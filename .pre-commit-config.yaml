@@ -65,7 +65,7 @@ repos:
         language: python
         # The paragraph-length markdownlint rule covers Markdown. The generated pages in docs/reference/explain/ wrap
         # these topics in code blocks, which that rule does not check.
-        files: ^cli/src/main/resources/explain/[^/]+\.txt$|^\.markdownlint-cli2\.yaml$
+        files: ^(cli/src/main/resources/explain/[^/]+\.txt|tools/pre-commit/check-paragraph-length\.py|\.markdownlint-cli2\.yaml|\.pre-commit-config\.yaml)$
         pass_filenames: false
         args:
           - cli/src/main/resources/explain/
