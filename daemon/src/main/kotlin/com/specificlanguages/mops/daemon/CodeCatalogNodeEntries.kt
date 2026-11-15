@@ -58,8 +58,10 @@ internal object CodeCatalogNodeEntries {
                 "containment constraints are not checked."
         NodeFeatureKind.REFERENCE_ROLE ->
             "Assignments resolve the target and use SNodeAccessUtil.setReferenceTarget with MPS reference setter " +
-                "hooks. Unresolved targets fail without changing the reference; SReference assignments use the " +
-                "resolved target, not dynamic resolution information."
+                "hooks, as edit batches do: the referent set handler may change other parts of the node, and a " +
+                "refused change leaves the reference as it was, without an error. Unresolved targets fail without " +
+                "changing the reference; SReference assignments use the resolved target, not dynamic resolution " +
+                "information."
     }
 
     private val accessors = listOf(

@@ -16,6 +16,11 @@ SEMANTICS
   Sets the reference under role on the target node to point at the "to" node,
   which may live in another model. Omitting "to" (or null) clears the reference.
 
+  Like the MPS editor, the write runs the MPS reference setter hooks
+  (SNodeAccessUtil.setReferenceTarget): the concept's referent set handler may
+  change other parts of the node, such as its children or name. A handler that
+  refuses the change leaves the reference as it was, without an error.
+
 EXAMPLE
 {
   "operations": [

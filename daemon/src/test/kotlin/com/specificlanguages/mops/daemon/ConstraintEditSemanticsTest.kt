@@ -204,11 +204,40 @@ class ConstraintEditSemanticsTest {
 
     private fun structureModel(projectPath: Path): Path = projectPath.resolve(STRUCTURE_MODEL_PATH)
 
+    @Test
+    fun `a created node that a later operation removes is not checked`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
+            val response = mpsAccess.write {
+                modelEdit(
+                    batchOf(
+                        EditOperation.AddRoot(
+                            model = ModelDestination(BEHAVIOR_MODEL),
+                            concept = "jetbrains.mps.lang.behavior.structure.ConceptBehavior",
+                            alias = "\$behavior",
+                        ),
+                        // A method without its obligatory returnType and body would violate cardinality.
+                        EditOperation.AddChild(
+                            target = EditTarget.Alias("\$behavior"),
+                            role = "method",
+                            concept = "jetbrains.mps.lang.behavior.structure.ConceptMethodDeclaration",
+                            alias = "\$method",
+                        ),
+                        EditOperation.Delete(target = EditTarget.Alias("\$method")),
+                    ),
+                )
+            }
+
+            assertEquals(emptyList(), response.violations)
+            assertTrue("behavior" in response.created, response.toString())
+        }
+    }
+
     private companion object {
         const val STRUCTURE_MODEL = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
         const val STRUCTURE_MODEL_PATH =
             "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps"
 
+        const val BEHAVIOR_MODEL = "r:0e3ed68a-e841-4ab1-bafa-60852d5e8891(com.specificlanguages.json.behavior)"
         const val PROPERTY_DECLARATION = "jetbrains.mps.lang.structure.structure.PropertyDeclaration"
         const val LINK_DECLARATION = "jetbrains.mps.lang.structure.structure.LinkDeclaration"
         const val CONCEPT_DECLARATION = "jetbrains.mps.lang.structure.structure.ConceptDeclaration"

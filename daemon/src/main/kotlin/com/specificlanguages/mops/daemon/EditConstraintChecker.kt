@@ -61,6 +61,11 @@ internal class EditConstraintChecker(
         }
 
         for (placement in placements) {
+            // A node that a later step removed or moved away (a later operation, or a reference set handler) is no
+            // longer in this place. A move records its own placement.
+            if (placement.child.parent != placement.parent || placement.child.containmentLink != placement.link) {
+                continue
+            }
             val childConcept = placement.child.concept
             // A created node whose concept did not load (e.g. a copy of a node from an uncompiled language) cannot be
             // checked against the containment rules, so record its language and skip this placement's checks.

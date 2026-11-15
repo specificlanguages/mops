@@ -343,12 +343,6 @@ class EditBatchExecutor(
             properties?.forEach { property ->
                 setPropertyOrFail(index, node, resolvePropertyOrFail(index, node, property.name), property.value)
             }
-            references?.forEach { reference ->
-                val link = resolveReferenceLinkOrFail(index, node, reference.role)
-                val target = resolveReferenceTargetOrFail(index, model, reference)
-                node.setReferenceTarget(link, target)
-                referencePlacements.add(ReferencePlacement(index, node, link, target))
-            }
             children?.forEach { child ->
                 val role = child.role
                     ?: fail(MpsErrorCode.INVALID_REQUEST, "operation $index inline child is missing a role")
@@ -371,6 +365,14 @@ class EditBatchExecutor(
                         placements.add(Placement(index, node, link, copy))
                     }
                 }
+            }
+            // References come last, so a reference set handler sees the node as the batch built it, the same as a
+            // setReference operation that follows. A handler may change the node's properties and children.
+            references?.forEach { reference ->
+                val link = resolveReferenceLinkOrFail(index, node, reference.role)
+                val target = resolveReferenceTargetOrFail(index, model, reference)
+                writeReferenceTarget(node, link, target)
+                referencePlacements.add(ReferencePlacement(index, node, link, target))
             }
         }
 
@@ -460,7 +462,7 @@ class EditBatchExecutor(
                     val node = requireEditableNode(index, operation.target)
                     val link = resolveReferenceLinkOrFail(index, node, operation.role)
                     val to = operation.to?.let { resolveNode(index, it) }
-                    node.setReferenceTarget(link, to)
+                    writeReferenceTarget(node, link, to)
                     // Clearing a reference (to == null) cannot violate a scope; only a concrete target is checked.
                     if (to != null) {
                         referencePlacements.add(ReferencePlacement(index, node, link, to))

@@ -56,6 +56,10 @@ REFERENCES
 
   Setting both "to" and "target" on one reference is rejected.
 
+  A node's inline references are set after its properties and children, through
+  the same MPS reference setter hooks as setReference. A referent set handler sees
+  the node as built and may change its properties and children.
+
 EXAMPLE
   Create a JsonArray concept whose "items" link adopts an existing LinkDeclaration
   (kept by identity) and copies another:
