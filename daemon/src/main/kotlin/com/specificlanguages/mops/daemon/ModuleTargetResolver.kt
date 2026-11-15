@@ -16,33 +16,13 @@ internal enum class ModuleTargetScope(val label: String) {
 }
 
 /**
- * Value. A module target that matched no module in its scope, or more than one. [candidates] lists one row per matching
- * module (`module`, name, and serialized reference, tab-separated), sorted; it is empty for a miss.
- */
-class ModuleTargetException private constructor(
-    val target: String,
-    val candidates: List<String>,
-    code: MpsErrorCode,
-    message: String,
-) : MpsRequestException(code, message) {
-    internal companion object {
-        fun notFound(target: String, scope: ModuleTargetScope) = ModuleTargetException(
-            target, emptyList(), MpsErrorCode.MODULE_NOT_FOUND, "module not found in ${scope.label}: $target",
-        )
-
-        fun ambiguous(target: String, candidates: List<String>) = ModuleTargetException(
-            target, candidates, MpsErrorCode.AMBIGUOUS_TARGET,
-            "ambiguous module target $target:\n" + candidates.joinToString("\n"),
-        )
-    }
-}
-
-/**
- * Logic. Resolves a module target, a module name or serialized module reference, to the one module it names.
+ * Logic. Resolves a module target to the one module it names. A module target is a module name or a serialized module
+ * reference; a reference matches the module with its id, whatever name the reference spells.
  *
  * Hides: what text addresses a module, and what zero or several matches mean. Every command, Code Mode lookup, and
  * Navigation Target that resolves a module target goes through here, so a miss and an ambiguity read the same
- * everywhere. Must be called inside a model read action.
+ * everywhere: [MpsErrorCode.MODULE_NOT_FOUND] naming the scope, or [MpsErrorCode.AMBIGUOUS_TARGET] listing one row
+ * per candidate. Must be called inside a model read action.
  */
 internal class ModuleTargetResolver(
     private val project: Project,
@@ -51,20 +31,27 @@ internal class ModuleTargetResolver(
     /** The module [target] names in [scope], or null when none does. Fails when several do. */
     fun find(target: String, scope: ModuleTargetScope): SModule? {
         val matches = matching(target, scope)
-        if (matches.size > 1) throw ModuleTargetException.ambiguous(target, matches.map(::candidateRow).sorted())
+        if (matches.size > 1) throw MpsRequestException(MpsErrorCode.AMBIGUOUS_TARGET, ambiguousMessage(target, matches))
         return matches.singleOrNull()
     }
 
     /** The module [target] names in [scope]. Fails when none or several do. */
     fun require(target: String, scope: ModuleTargetScope): SModule =
-        find(target, scope) ?: throw ModuleTargetException.notFound(target, scope)
+        find(target, scope)
+            ?: throw MpsRequestException(MpsErrorCode.MODULE_NOT_FOUND, "module not found in ${scope.label}: $target")
 
     /**
-     * Every module in [scope] that [target] names, for a caller that counts modules among other kinds of match (a
-     * single-segment Navigation Target) and reports ambiguity across all of them itself.
+     * Every module in [scope] that [target] names, for a caller that reports a miss or an ambiguity in its own result
+     * type (a Navigation Target), or counts modules among other kinds of match.
      */
-    fun matching(target: String, scope: ModuleTargetScope): List<SModule> =
-        candidates(scope).filter { it.moduleName == target || persistence.asString(it.moduleReference) == target }
+    fun matching(target: String, scope: ModuleTargetScope): List<SModule> {
+        val id = runCatching { persistence.createModuleReference(target).moduleId }.getOrNull()
+        return candidates(scope).filter { it.moduleName == target || (id != null && it.moduleId == id) }
+    }
+
+    /** The message that reports [target] matching each of [matches]. */
+    fun ambiguousMessage(target: String, matches: List<SModule>): String =
+        ambiguousTargetMessage("module", target, matches.map(::candidateRow).sorted())
 
     /** The row that names [module] in an ambiguity listing. */
     fun candidateRow(module: SModule): String =

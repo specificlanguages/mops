@@ -40,8 +40,8 @@ facet and those absent from the repository. Text output is a header row
 load-problem tree, indented by depth so a dependency chain reads from the
 module down to its root causes. --json prints the structured diagnosis. The
 exit code and the diagnosis are the same in text and --json modes. A name
-shared by several modules fails with AMBIGUOUS_TARGET and lists them, so a
-serialized reference disambiguates it.
+shared by several modules fails with AMBIGUOUS_TARGET and lists their Module
+References; pass one of them instead of the name.
 
 Reason codes for an unloaded module: ABSENT (not in the repository),
 NOT_A_MODULE (resolves to something that does not load classes), NO_JAVA_FACET

@@ -99,9 +99,8 @@ class ModelCreator(private val project: Project) {
         }
     }
 
-    private fun resolveProjectModule(target: String): SModule {
-        return ModuleTargetResolver(project).require(target, ModuleTargetScope.REPOSITORY).also { if (!project.isProjectModule(it)) fail("module is not a project module: $target") }
-    }
+    private fun resolveProjectModule(target: String): SModule =
+        ModuleTargetResolver(project).require(target, ModuleTargetScope.PROJECT)
 
     private fun expandName(requested: String, moduleName: String): String = when {
         requested == "." || requested.startsWith("..") -> fail("invalid relative model name: $requested")

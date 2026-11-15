@@ -415,8 +415,7 @@ class JetBrainsMpsAccess(
             }
 
         private fun resolveModule(reference: String): SModule =
-            navigationTargets.resolveModuleReference(reference)
-                ?: throw MpsRequestException(MpsErrorCode.TARGET_NOT_FOUND, "module not found: $reference")
+            ModuleTargetResolver(project).require(reference, ModuleTargetScope.REPOSITORY)
 
         private fun resolveModel(reference: String): SModel =
             navigationTargets.resolveModelReference(reference)

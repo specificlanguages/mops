@@ -81,11 +81,6 @@ internal class NavigationTargetResolver(
     fun resolveModelReference(target: String): SModel? =
         parseModelReferenceOrNull(persistence, target)?.resolve(project.repository)
 
-    fun resolveModuleReference(target: String): SModule? =
-        runCatching {
-            persistence.createModuleReference(target).resolve(project.repository)
-        }.getOrNull()
-
     private fun resolveModelPath(model: SModel, segments: List<String>): NavigationTargetResolution {
         if (segments.isEmpty()) {
             return NavigationTargetResolution.Found(NavigationTarget.Model(model))
@@ -156,14 +151,14 @@ internal class NavigationTargetResolver(
             .distinctBy { persistence.asString(it.reference) }
             .toList()
 
-    private fun resolveProjectModule(target: String): NavigationTargetResolution =
-        try {
-            modules.find(target, ModuleTargetScope.PROJECT)
-                ?.let { NavigationTargetResolution.Found(NavigationTarget.Module(it)) }
-                ?: NavigationTargetResolution.Missing()
-        } catch (ambiguous: ModuleTargetException) {
-            NavigationTargetResolution.Ambiguous(ambiguous.message)
+    private fun resolveProjectModule(target: String): NavigationTargetResolution {
+        val matches = modules.matching(target, ModuleTargetScope.PROJECT)
+        return when (matches.size) {
+            0 -> NavigationTargetResolution.Missing()
+            1 -> NavigationTargetResolution.Found(NavigationTarget.Module(matches.single()))
+            else -> NavigationTargetResolution.Ambiguous(modules.ambiguousMessage(target, matches))
         }
+    }
 
     // The model segment after a module: a bare `.` names the model whose name equals the module name, a `.suffix`
     // segment appends to the module name, and any other segment is a full model name.
@@ -194,9 +189,7 @@ internal class NavigationTargetResolver(
     }
 
     private fun ambiguousSingleSegment(segment: String, targets: List<NavigationTarget>): NavigationTargetResolution.Ambiguous =
-        NavigationTargetResolution.Ambiguous(
-            "ambiguous target $segment:\n" + targets.joinToString("\n", transform = ::candidateRow),
-        )
+        NavigationTargetResolution.Ambiguous(ambiguousTargetMessage(null, segment, targets.map(::candidateRow)))
 
     // One candidate line of a mixed-kind single-segment ambiguity, using the same per-kind row format each single-kind
     // ambiguity below emits, so the "ambiguous …" listing reads the same however the candidates were counted.
@@ -233,9 +226,7 @@ internal class NavigationTargetResolver(
         items: List<T>,
         row: (T) -> String,
     ): NavigationTargetResolution.Ambiguous =
-        NavigationTargetResolution.Ambiguous(
-            "ambiguous $kind target $target:\n" + items.joinToString("\n", transform = row),
-        )
+        NavigationTargetResolution.Ambiguous(ambiguousTargetMessage(kind, target, items.map(row)))
 
     private fun nodeMatches(node: SNode, name: String, nodeId: SNodeId?): Boolean =
         nodeName(node) == name || node.nodeId == nodeId

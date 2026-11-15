@@ -3,14 +3,15 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.CodeRunRequest
+import com.specificlanguages.mops.protocol.CreateGeneratorRequest
 import com.specificlanguages.mops.protocol.CreateModelRequest
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 import kotlin.test.Test
-import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /** Every path that resolves a module target reports a miss and an ambiguity with the same error. */
 class ModuleTargetResolutionTest {
@@ -26,6 +27,7 @@ class ModuleTargetResolutionTest {
                 "make module" to { access.extra { makeModules(listOf(SANDBOX)) } },
                 "list a model of the module" to { access.read { list(listOf(SANDBOX, SANDBOX), depth = 1) } },
                 "create model" to { access.write { createModel(CreateModelRequest("", "$SANDBOX.extra", SANDBOX, dryRun = true)) } },
+                "create generator" to { access.write { createModule(CreateGeneratorRequest("", SANDBOX, "main", dryRun = true)) } },
             ).mapValues { (_, call) -> assertFailsWith<MpsRequestException> { call() } }
 
             failures.forEach { (path, failure) ->
@@ -34,7 +36,11 @@ class ModuleTargetResolutionTest {
             }
 
             val executor = CodeModeExecutor(access, project, SharedMpsEnvironment.platform)
-            listOf("mops.lookup.module('$SANDBOX')", "mops.lookup.requireModule('$SANDBOX')").forEach { call ->
+            listOf(
+                "mops.lookup.module('$SANDBOX')",
+                "mops.lookup.requireModule('$SANDBOX')",
+                "mops.runtime.loadClass('$SANDBOX', 'Any')",
+            ).forEach { call ->
                 val failure = assertFailsWith<IllegalStateException> {
                     executor.execute(CodeRunRequest("", "project.read { $call }", "lookup.groovy"))
                 }
@@ -51,7 +57,8 @@ class ModuleTargetResolutionTest {
             val inProject = "module not found in project: $MISSING"
             val failures = listOf(
                 inRepository to { access.read { getModule(MISSING) } },
-                inRepository to { access.write { createModel(CreateModelRequest("", "a.model", MISSING, dryRun = true)) } },
+                inRepository to { access.write { createModule(CreateGeneratorRequest("", MISSING, "main", dryRun = true)) } },
+                inProject to { access.write { createModel(CreateModelRequest("", "a.model", MISSING, dryRun = true)) } },
                 inProject to { access.read { checkModules(listOf(MISSING), 0) } },
                 inProject to { access.extra { makeModules(listOf(MISSING)) } },
             )
@@ -63,11 +70,37 @@ class ModuleTargetResolutionTest {
 
             assertFalse(access.read { diagnoseModule(MISSING) }.module.present)
 
-            val failure = assertFailsWith<IllegalStateException> {
-                CodeModeExecutor(access, project, SharedMpsEnvironment.platform)
-                    .execute(CodeRunRequest("", "project.read { mops.lookup.requireModule('$MISSING') }", "lookup.groovy"))
+            val executor = CodeModeExecutor(access, project, SharedMpsEnvironment.platform)
+            listOf("mops.lookup.requireModule('$MISSING')", "mops.runtime.loadClass('$MISSING', 'Any')").forEach { call ->
+                val failure = assertFailsWith<IllegalStateException> {
+                    executor.execute(CodeRunRequest("", "project.read { $call }", "lookup.groovy"))
+                }
+                assertEquals("lookup.groovy:1: $inRepository", failure.message, call)
             }
-            assertContains(failure.message.orEmpty(), inRepository)
+
+            // A Navigation Target reports a miss in any segment, the module segment included, as a missing path.
+            val pathMiss = assertFailsWith<MpsRequestException> { access.read { list(listOf(MISSING, "a.model"), depth = 1) } }
+            assertEquals(MpsErrorCode.TARGET_NOT_FOUND, pathMiss.code)
+            assertEquals("target not found: $MISSING a.model", pathMiss.message)
+        }
+    }
+
+    @Test
+    fun `a module reference names the module with its id, whatever name it spells`() {
+        SharedMpsEnvironment.withOpenProjectCopy(prepare = ::addSecondSandbox) { project, _ ->
+            val access = SharedMpsEnvironment.mpsAccess(project)
+            val stale = "$SANDBOX_ID(json.sandbox.oldname)"
+            val duplicate = "$DUPLICATE_ID($SANDBOX)"
+
+            assertEquals("$SANDBOX_ID($SANDBOX)", access.read { getModule(stale) }.reference)
+            assertEquals(duplicate, access.read { getModule(duplicate) }.reference)
+            assertTrue(access.read { diagnoseModule(stale) }.module.present)
+            assertTrue(access.read { diagnoseModule(duplicate) }.module.present)
+
+            val output = CodeModeExecutor(access, project, SharedMpsEnvironment.platform).execute(
+                CodeRunRequest("", "project.read { mops.lookup.requireModule('$stale') }", "lookup.groovy"),
+            ).output
+            assertEquals("$SANDBOX_ID($SANDBOX)", output)
         }
     }
 
