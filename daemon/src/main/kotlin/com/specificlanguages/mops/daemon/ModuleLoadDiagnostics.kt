@@ -24,20 +24,6 @@ import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import java.util.stream.Stream
 
 /**
- * Explains why the project's languages and Java-bearing modules did or did not load, by reading MPS's live module
- * runtimes and module repository. See
- * https://github.com/specificlanguages/mps-api-research/blob/main/language-runtime-loading.md for the API contracts.
- *
- * A module is "loaded" when it has a registered runtime ([LanguageRegistry.withModuleRuntime]); only loaded languages
- * contribute concepts to name-based lookup, which is why an unloaded language is what makes `find instances` report a
- * concept as not found. When a module is not loaded, its cause is classified from stable openapi (module presence, a
- * Java facet and its settings, whether classes are built, and dependency resolution) rather than MPS's internal
- * classloading graph, which is version-volatile. Dependency analysis recurses, so a module blocked by a dependency
- * that is present-but-not-loaded is explained down to the root modules to fix.
- *
- * All methods must run inside an MPS read action.
- */
-/**
  * Flattens a module load [problem] tree to the root modules that must be fixed — its leaves — one per line,
  * de-duplicated: `  - <module>: <reason> — <detail>`. Shared by every caller that turns a diagnosis into a message.
  */
@@ -101,6 +87,20 @@ fun unusableLanguagesMessage(subject: String, languages: List<UnusableLanguage>)
         unusableLanguageList(languages) +
         "\nResolve the reported conditions; if generation is required, rebuild with '${makeModulesExample(languages)}'."
 
+/**
+ * Explains why the project's languages and Java-bearing modules did or did not load, by reading MPS's live module
+ * runtimes and module repository. See
+ * https://github.com/specificlanguages/mps-api-research/blob/main/language-runtime-loading.md for the API contracts.
+ *
+ * A module is "loaded" when it has a registered runtime ([LanguageRegistry.withModuleRuntime]); only loaded languages
+ * contribute concepts to name-based lookup, which is why an unloaded language is what makes `find instances` report a
+ * concept as not found. When a module is not loaded, its cause is classified from stable openapi (module presence, a
+ * Java facet and its settings, whether classes are built, and dependency resolution) rather than MPS's internal
+ * classloading graph, which is version-volatile. Dependency analysis recurses, so a module blocked by a dependency
+ * that is present-but-not-loaded is explained down to the root modules to fix.
+ *
+ * All methods must run inside an MPS read action.
+ */
 class ModuleLoadDiagnostics(private val project: Project) {
 
     private val repository = project.repository

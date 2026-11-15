@@ -84,17 +84,8 @@ object CodeCatalog {
         if (subject == null) return CodeHelpDocument(index = (entries.map { it.receiver } + resultMembers.keys).distinct().sorted())
         val names = when (subject) {
             is String -> CodeMemberInspector.resolveType(if (subject == "project") "Project" else subject)?.let(::typeNames) ?: listOf(if (subject == "project" || subject.startsWith("project.")) "Project" + subject.removePrefix("project") else subject)
-            is Mops -> listOf("mops")
-            is MopsEditing -> listOf("mops.editing")
-            is MopsEditingBuild -> listOf("mops.editing.build")
-            is MopsParsing -> listOf("mops.parsing")
-            is MopsTesting -> listOf("mops.testing")
-            is MopsSearch -> listOf("mops.search")
-            is MopsLookup -> listOf("mops.lookup")
-            is MopsRuntime -> listOf("mops.runtime")
-            is JavaSnippetParser -> listOf("mops.parsing.java")
             is Class<*> -> typeNames(subject)
-            else -> typeNames(subject.javaClass)
+            else -> codeModeNamespacePaths[subject.javaClass]?.let(::listOf) ?: typeNames(subject.javaClass)
         }
         var selected = entries.filter { entry -> names.any { name -> entry.path.equals(name, true) || entry.path.startsWith("$name.", true) || entry.receiver.equals(name, true) } }
         if (selected.isEmpty() && subject is String) {
@@ -109,7 +100,7 @@ object CodeCatalog {
         val type = when (subject) {
             is Class<*> -> subject
             is String -> CodeMemberInspector.resolveType(if (subject == "project") "Project" else subject)
-            else -> if (subject is Mops || subject is MopsEditing || subject is MopsEditingBuild || subject is MopsParsing || subject is MopsTesting || subject is MopsSearch || subject is MopsLookup || subject is MopsRuntime || subject is JavaSnippetParser) null else subject.javaClass
+            else -> if (subject.javaClass in codeModeNamespacePaths) null else subject.javaClass
         }
         val native = type?.let { nativeDocument(CodeMemberInspector.inspect(it), selected) }
         require(selected.isNotEmpty() || results.isNotEmpty() || native != null) {
@@ -121,11 +112,7 @@ object CodeCatalog {
     }
 
     private fun typeNames(type: Class<*>): List<String> = CodeMemberInspector.typeHierarchy(type).flatMap {
-        listOf(it.name, it.simpleName) + when (it.simpleName) {
-            "JavaSnippetParser" -> listOf("mops.parsing.java")
-            "MopsEditingBuild" -> listOf("mops.editing.build")
-            else -> emptyList()
-        }
+        listOf(it.name, it.simpleName) + listOfNotNull(codeModeNamespacePaths[it])
     }
 
     private fun nativeDocument(type: CodeTypeMembers, extensions: List<Entry>) = CodeHelpNativeType(

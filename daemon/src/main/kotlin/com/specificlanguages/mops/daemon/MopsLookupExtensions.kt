@@ -16,7 +16,7 @@ object MopsLookupExtensions {
     @JvmStatic
     fun module(lookup: MopsLookup, target: String): SModule? {
         requireRead(lookup.mops, "mops.lookup.module")
-        val matches = lookup.mops.project.repository.modulesMatching(target)
+        val matches = lookup.mops.project.repository.modules.matchingTarget(target)
         require(matches.size <= 1) {
             "ambiguous module: $target; candidates: ${matches.joinToString { persistence.asString(it.moduleReference) }}"
         }

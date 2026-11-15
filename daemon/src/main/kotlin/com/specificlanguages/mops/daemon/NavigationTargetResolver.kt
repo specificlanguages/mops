@@ -72,10 +72,7 @@ internal class NavigationTargetResolver(
     }
 
     /** Project modules (generators included) whose name or serialized reference equals [target]. */
-    fun projectModulesMatching(target: String): List<SModule> =
-        project.projectModulesWithGenerators.filter {
-            it.moduleName == target || persistence.asString(it.moduleReference) == target
-        }
+    fun projectModulesMatching(target: String): List<SModule> = project.projectModulesWithGenerators.matchingTarget(target)
 
     fun resolveNodeReference(target: String): SNode? =
         runCatching {
