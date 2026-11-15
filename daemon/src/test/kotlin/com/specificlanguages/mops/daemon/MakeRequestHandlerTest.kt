@@ -82,11 +82,11 @@ class MakeRequestHandlerTest {
     @Test
     fun `a request exception on the make path maps to its error code`() {
         whenever(extra.makeModules(listOf("missing"), MakeGenerationOptions()))
-            .thenThrow(MpsRequestException(MpsErrorCode.TARGET_NOT_FOUND, "module not found: missing"))
+            .thenThrow(MpsRequestException(MpsErrorCode.MODULE_NOT_FOUND, "module not found in project: missing"))
 
         val response = handler.handleDomainRequest(MakeModulesRequest(TOKEN, listOf("missing")))
 
-        assertEquals(errorResponse("TARGET_NOT_FOUND", "module not found: missing"), response)
+        assertEquals(errorResponse("MODULE_NOT_FOUND", "module not found in project: missing"), response)
     }
 
 

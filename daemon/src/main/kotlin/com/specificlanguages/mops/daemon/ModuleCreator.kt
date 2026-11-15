@@ -240,12 +240,9 @@ class ModuleCreator(private val project: Project) {
             fail(MpsErrorCode.MODULE_NAME_COLLISION, "module name already exists in the MPS repository: $name")
     }
 
-    private fun resolveLanguage(target: String): Language {
-        val matches = project.repository.modules.matchingTarget(target)
-        if (matches.size != 1) fail(if (matches.isEmpty()) MpsErrorCode.TARGET_NOT_FOUND else MpsErrorCode.AMBIGUOUS_TARGET,
-            if (matches.isEmpty()) "language not found: $target" else "ambiguous language: $target")
-        return matches.single() as? Language ?: fail(MpsErrorCode.INVALID_REQUEST, "source module is not a language: $target")
-    }
+    private fun resolveLanguage(target: String): Language =
+        ModuleTargetResolver(project).require(target, ModuleTargetScope.REPOSITORY) as? Language
+            ?: fail(MpsErrorCode.INVALID_REQUEST, "source module is not a language: $target")
 
     private fun nextGeneratorName(languageName: String): String = generateSequence(0) { it + 1 }.map {
         languageName + ".generator" + if (it == 0) "" else it

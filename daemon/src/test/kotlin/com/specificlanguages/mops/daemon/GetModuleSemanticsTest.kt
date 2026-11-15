@@ -72,7 +72,7 @@ class GetModuleSemanticsTest {
         val exception = assertFailsWith<MpsRequestException> { getModuleInSharedProject("no.such.module.at.all") }
 
         assertEquals(MpsErrorCode.MODULE_NOT_FOUND, exception.code)
-        assertEquals("module not found: no.such.module.at.all", exception.message)
+        assertEquals("module not found in repository: no.such.module.at.all", exception.message)
     }
 
     @Test
@@ -100,7 +100,7 @@ class GetModuleSemanticsTest {
             val exception = assertFailsWith<MpsRequestException> { mpsAccess.read { getModule("json.sandbox") } }
 
             assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, exception.code)
-            assertContains(exception.message, "ambiguous module: json.sandbox")
+            assertContains(exception.message, "ambiguous module target json.sandbox:")
             assertContains(exception.message, SANDBOX_REFERENCE)
             assertContains(exception.message, duplicateReference)
 

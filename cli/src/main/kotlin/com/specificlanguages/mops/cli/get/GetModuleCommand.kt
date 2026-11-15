@@ -28,8 +28,8 @@ import picocli.CommandLine.Parameters
         "",
         "A location MPS does not record for the module is left out rather than guessed from a naming convention. " +
             "--json prints the daemon response, with the same fields under `module`. An unknown module fails with " +
-            "MODULE_NOT_FOUND; a name shared by several modules fails and lists their serialized references, so a " +
-            "reference disambiguates it.",
+            "MODULE_NOT_FOUND; a name shared by several modules fails with AMBIGUOUS_TARGET and lists their Module " +
+            "References; pass one of them instead of the name.",
     ],
 )
 class GetModuleCommand(private val environment: CommandEnvironment) : CliCommand() {

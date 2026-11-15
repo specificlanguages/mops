@@ -20,7 +20,7 @@ class CodeModeLookupTest {
                         assert mops.lookup.module('missing') == null
                         assert mops.lookup.model('missing') == null
                         assert mops.lookup.conceptByName('jetbrains.mps.baseLanguage.NoSuchMopsConcept') == null
-                        fails(IllegalArgumentException) { mops.lookup.requireModule('missing') }
+                        fails(com.specificlanguages.mops.daemon.core.MpsRequestException) { mops.lookup.requireModule('missing') }
                         fails(IllegalArgumentException) { mops.lookup.requireModel('missing') }
                         fails(com.specificlanguages.mops.daemon.core.MpsRequestException) {
                             mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.NoSuchMopsConcept')

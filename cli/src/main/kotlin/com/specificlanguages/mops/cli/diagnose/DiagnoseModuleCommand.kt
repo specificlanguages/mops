@@ -26,7 +26,8 @@ import picocli.CommandLine.Parameters
             "from the repository. Text output is a header row (`module`, kind, `present=<bool>`, `loaded=<bool>`) " +
             "followed by the module's load-problem tree, indented by depth so a dependency chain reads from the " +
             "module down to its root causes. --json prints the structured diagnosis. The exit code and the " +
-            "diagnosis are the same in text and --json modes.",
+            "diagnosis are the same in text and --json modes. A name shared by several modules fails with " +
+            "AMBIGUOUS_TARGET and lists their Module References; pass one of them instead of the name.",
         "",
         REASON_CODES_HELP,
     ],

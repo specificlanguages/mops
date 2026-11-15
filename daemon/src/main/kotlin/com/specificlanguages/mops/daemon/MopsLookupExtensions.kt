@@ -16,11 +16,7 @@ object MopsLookupExtensions {
     @JvmStatic
     fun module(lookup: MopsLookup, target: String): SModule? {
         requireRead(lookup.mops, "mops.lookup.module")
-        val matches = lookup.mops.project.repository.modules.matchingTarget(target)
-        require(matches.size <= 1) {
-            "ambiguous module: $target; candidates: ${matches.joinToString { persistence.asString(it.moduleReference) }}"
-        }
-        return matches.singleOrNull()
+        return ModuleTargetResolver(lookup.mops.project).find(target, ModuleTargetScope.REPOSITORY)
     }
 
     /** Resolves an established model target, returning null on a miss and rejecting ambiguity. Access: read. */
@@ -60,8 +56,10 @@ object MopsLookupExtensions {
     /** Resolves exactly one module, throwing on a miss or ambiguity. Access: read. */
     @CodeModeExtension(MpsAccessLevel.READ)
     @JvmStatic
-    fun requireModule(lookup: MopsLookup, target: String): SModule =
-        module(lookup, target) ?: throw IllegalArgumentException("module not found: $target")
+    fun requireModule(lookup: MopsLookup, target: String): SModule {
+        requireRead(lookup.mops, "mops.lookup.requireModule")
+        return ModuleTargetResolver(lookup.mops.project).require(target, ModuleTargetScope.REPOSITORY)
+    }
 
     /** Resolves exactly one model, throwing on a miss or ambiguity. Access: read. */
     @CodeModeExtension(MpsAccessLevel.READ)

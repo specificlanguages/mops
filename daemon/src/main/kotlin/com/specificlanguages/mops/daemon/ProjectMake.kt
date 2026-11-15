@@ -170,17 +170,8 @@ class ProjectMake(private val project: Project) {
     private fun SModel.isInWritableModule(): Boolean =
         (module as? AbstractModule)?.isReadOnly != true
 
-    private fun resolveProjectModule(name: String): SModule {
-        val matches = project.projectModulesWithGenerators.matchingTarget(name)
-        return when (matches.size) {
-            0 -> throw MpsRequestException(MpsErrorCode.TARGET_NOT_FOUND, "module not found: $name")
-            1 -> matches.single()
-            else -> throw MpsRequestException(
-                MpsErrorCode.AMBIGUOUS_TARGET,
-                "ambiguous module: $name matches ${matches.size} project modules",
-            )
-        }
-    }
+    private fun resolveProjectModule(name: String): SModule =
+        ModuleTargetResolver(project).require(name, ModuleTargetScope.PROJECT)
 
     /**
      * Collects the messages MPS reports during the make and records whether any error was seen. A message with no kind

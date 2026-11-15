@@ -20,7 +20,6 @@ import jetbrains.mps.smodel.language.LanguageRegistry
 import org.jetbrains.mps.openapi.language.SLanguage
 import org.jetbrains.mps.openapi.module.SModule
 import org.jetbrains.mps.openapi.module.SModuleReference
-import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import java.util.stream.Stream
 
 /**
@@ -105,7 +104,6 @@ class ModuleLoadDiagnostics(private val project: Project) {
 
     private val repository = project.repository
     private val languageRegistry: LanguageRegistry = project.getComponent(LanguageRegistry::class.java)
-    private val persistence: PersistenceFacade = PersistenceFacade.getInstance()
     // Absent only if the generator platform component were unregistered (it is not, headless — the command-line make
     // worker obtains it the same way); when absent, staleness cannot be judged and only the unbuilt case is reported.
     private val generationStatus: ModelGenerationStatusManager? =
@@ -232,9 +230,9 @@ class ModuleLoadDiagnostics(private val project: Project) {
         project.getProjectModules(Language::class.java)
             .associateBy { MetaAdapterFactory.getLanguage(it.moduleReference) }
 
-    fun diagnoseModule(reference: String): ModuleDiagnosticResponse {
-        val module = resolveModule(reference)
-            ?: return ModuleDiagnosticResponse(absentDiagnostic(reference, "unknown"))
+    fun diagnoseModule(target: String): ModuleDiagnosticResponse {
+        val module = ModuleTargetResolver(project).find(target, ModuleTargetScope.REPOSITORY)
+            ?: return ModuleDiagnosticResponse(absentDiagnostic(target, "unknown"))
         return ModuleDiagnosticResponse(describe(module))
     }
 
@@ -367,11 +365,6 @@ class ModuleLoadDiagnostics(private val project: Project) {
     }
 
     private fun sortedSetLanguages(): MutableSet<SLanguage> = sortedSetOf(compareBy { it.qualifiedName })
-
-    private fun resolveModule(reference: String): SModule? {
-        runCatching { persistence.createModuleReference(reference).resolve(repository) }.getOrNull()?.let { return it }
-        return repository.modules.firstOrNull { it.moduleName == reference }
-    }
 
     private fun absentDiagnostic(name: String, kind: String): ModuleLoadDiagnosticJson =
         ModuleLoadDiagnosticJson(
