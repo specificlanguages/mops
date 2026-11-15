@@ -35,6 +35,8 @@ Verified MPS API documentation lives in
 ### Coding conventions and guidelines
 
 - [Kotlin](docs/agents/kotlin-coding-guidelines.md)
+- [Design standards](docs/agents/design-standards.md): how to divide Kotlin code into classes and packages. Read when
+  you add, split or move a class or package, add I/O or policy to a class, or review such a change
 - [Gradle](docs/agents/gradle-conventions.md)
 - [Prose](docs/agents/prose-guidelines.md): Markdown docs, help text, explain topics, examples, and skills
 - [Commits and pull requests](docs/development.md#commits-and-pull-requests): Conventional Commits for pull request
