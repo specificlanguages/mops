@@ -166,14 +166,13 @@ class ConceptResolver(private val project: Project) {
     companion object {
         private const val MAX_SUGGESTIONS = 5
 
-        fun unusableShortNameMessage(shortName: String, languages: List<UnusableLanguage>): String =
+        fun unusableShortNameMessage(shortName: String, languages: List<UnusableLanguage>): String = withRemedies(
             "the short concept name \"$shortName\" cannot be resolved while these project language runtimes cannot be " +
                 "trusted, since any of them may also define it:\n" +
-                unusableLanguageList(languages) + "\n" +
-                listOfNotNull(
-                    retryAfterFixLine(ModuleLoadFix.combine(languages.map { it.fix })),
-                    "use a qualified concept name",
-                ).joinToString(", or ")
+                unusableLanguageList(languages),
+            ModuleLoadFix.combine(languages.map { it.fix }),
+            "or use a qualified concept name",
+        )
 
         fun ambiguousShortNameMessage(shortName: String, qualifiedCandidates: List<String>): String =
             "concept name \"$shortName\" is ambiguous; it names ${qualifiedCandidates.size} concepts across loaded " +
@@ -196,18 +195,12 @@ class ConceptResolver(private val project: Project) {
             "concept \"${parsed.qualifiedName}\" was not found: its language \"${parsed.language}\" is not a module " +
                 "known to this project — check the language part of the name"
 
-        fun unloadedLanguageMessage(parsed: ConceptName, problem: ModuleLoadProblemJson?): String = buildString {
-            append(
-                "concept \"${parsed.qualifiedName}\" was not found because its language \"${parsed.language}\" is " +
-                    "not loaded",
-            )
-            if (problem != null) {
-                append(":\n")
-                append(moduleLoadRootCauseLines(problem))
-                retryAfterFixLine(problem.completeFix)?.let { append("\n$it") }
-            }
-            append("\nrun 'mops diagnose module ${parsed.language}' for the full dependency tree")
-        }
+        fun unloadedLanguageMessage(parsed: ConceptName, problem: ModuleLoadProblemJson?): String = withRemedies(
+            "concept \"${parsed.qualifiedName}\" was not found because its language \"${parsed.language}\" is " +
+                "not loaded" + (problem?.let { ":\n" + moduleLoadRootCauseLines(it) } ?: ""),
+            problem?.fix,
+            "run 'mops diagnose module ${parsed.language}' for the full dependency tree",
+        )
 
         fun loadedButMissingMessage(parsed: ConceptName, suggestions: List<String>): String =
             if (suggestions.isEmpty()) {

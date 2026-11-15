@@ -95,7 +95,7 @@ class OutdatedLanguageSemanticsTest {
             assertContains(message, "Generation record: $record")
             assertContains(message, "Recorded hash: unavailable")
             assertFalse(message.contains("older sources"), message)
-            assertContains(message, "fix: 'mops make module $JSON_LANGUAGE'")
+            assertContains(message, "fix: mops make module $JSON_LANGUAGE")
         }
     }
 

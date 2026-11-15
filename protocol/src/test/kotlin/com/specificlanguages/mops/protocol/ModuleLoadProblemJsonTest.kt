@@ -27,18 +27,17 @@ class ModuleLoadProblemJsonTest {
     }
 
     @Test
-    fun `the complete fix combines the fixes of every root cause`() {
-        val other = ModuleLoadProblemJson(
-            "dep.other", ModuleLoadProblemReason.NOT_BUILT, fix = ModuleLoadFix(listOf("dep.other")),
+    fun `combining fixes makes every module once`() {
+        assertEquals(
+            ModuleLoadFix(listOf("a", "b")),
+            ModuleLoadFix.combine(listOf(ModuleLoadFix(listOf("a")), ModuleLoadFix(listOf("b", "a")))),
         )
-
-        assertEquals(ModuleLoadFix(listOf("dep.unbuilt", "dep.other")), broken(unbuilt, other).completeFix)
-        assertEquals("mops make module dep.unbuilt dep.other", broken(unbuilt, other).completeFix?.command)
+        assertEquals("mops make module a b", ModuleLoadFix(listOf("a", "b")).command)
     }
 
     @Test
-    fun `there is no complete fix when a root cause has no fix`() {
-        assertNull(broken(unbuilt, absent).completeFix)
+    fun `combining with a missing fix gives no fix`() {
+        assertNull(ModuleLoadFix.combine(listOf(ModuleLoadFix(listOf("a")), null)))
     }
 
     @Test

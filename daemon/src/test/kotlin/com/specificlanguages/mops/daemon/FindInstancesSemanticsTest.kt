@@ -337,7 +337,7 @@ class FindInstancesSemanticsTest {
         val message = assertNotNull(exception.message)
         assertContains(message, "its language \"com.specificlanguages.json\" is not loaded")
         assertContains(message, "NOT_BUILT")
-        assertContains(message, "fix: 'mops make module com.specificlanguages.json'")
+        assertContains(message, "fix: mops make module com.specificlanguages.json")
         assertContains(message, "run 'mops make module com.specificlanguages.json', then retry")
         assertContains(message, "run 'mops diagnose module com.specificlanguages.json'")
     }

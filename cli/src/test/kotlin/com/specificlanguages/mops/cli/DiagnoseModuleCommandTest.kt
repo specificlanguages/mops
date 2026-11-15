@@ -92,7 +92,7 @@ class DiagnoseModuleCommandTest {
 
         assertEquals(
             "org.iets3.core.expr.base\tlanguage\tpresent=true\tloaded=false" + nl +
-                "\torg.iets3.core.expr.base\tNOT_BUILT\tnot built\\n\\tsee log\tfix=mops make module $MODULE" + nl,
+                "\torg.iets3.core.expr.base\tNOT_BUILT\tnot built\\n\\tsee log\tfix: mops make module $MODULE" + nl,
             stdout,
         )
     }

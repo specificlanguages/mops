@@ -77,7 +77,7 @@ class DiagnoseModuleCommand(private val environment: CommandEnvironment) : CliCo
 
     private fun renderTree(problem: ModuleLoadProblemJson, depth: Int) {
         val indent = "\t".repeat(depth)
-        val columns = listOfNotNull(problem.module, problem.reason.name, problem.detail, fixColumn(problem.fix))
+        val columns = listOfNotNull(problem.module, problem.reason.name, problem.detail, problem.fix?.label)
         println(indent + textRow(columns))
         problem.causes.forEach { renderTree(it, depth + 1) }
     }

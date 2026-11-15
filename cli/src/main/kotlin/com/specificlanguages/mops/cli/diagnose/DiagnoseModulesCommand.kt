@@ -65,11 +65,11 @@ class DiagnoseModulesCommand(private val environment: CommandEnvironment) : CliC
             println(textRow(listOf(module.module, module.kind, "loaded")))
             return
         }
-        println(textRow(listOfNotNull(module.module, module.kind, problem.reason.name, fixColumn(problem.fix))))
+        println(textRow(listOfNotNull(module.module, module.kind, problem.reason.name, problem.fix?.label)))
         // Root causes are the leaves of the problem tree: the actual modules to fix.
         if (problem.causes.isNotEmpty()) {
             problem.rootCauses.forEach {
-                println("\t" + textRow(listOfNotNull(it.module, it.reason.name, fixColumn(it.fix))))
+                println("\t" + textRow(listOfNotNull(it.module, it.reason.name, it.fix?.label)))
             }
         }
     }

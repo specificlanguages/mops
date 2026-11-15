@@ -102,6 +102,28 @@ class ModuleLoadDiagnosticsSemanticsTest {
         }
     }
 
+    @Test
+    fun `an unbuilt language with an absent dependency has no fix, since making it would not load it`() {
+        SharedMpsEnvironment.withProjectCopy(prepare = ::addAbsentLanguageDependency) { access, _ ->
+            val problem = assertNotNull(access.read { diagnoseModule(JSON_LANGUAGE) }.module.problem)
+
+            assertEquals(ModuleLoadProblemReason.NOT_BUILT, problem.reason, "problem: $problem")
+            assertNull(problem.fix, "problem: $problem")
+            assertTrue(problem.detail!!.endsWith("modules it depends on also do not load: $ABSENT_MODULE (ABSENT)"), problem.detail)
+        }
+    }
+
+    private fun addAbsentLanguageDependency(project: Path) {
+        val descriptor = project.resolve("languages/$JSON_LANGUAGE/$JSON_LANGUAGE.mpl")
+        descriptor.writeText(
+            descriptor.readText().replace(
+                "  <accessoryModels />",
+                "  <dependencies>\n    <dependency reexport=\"false\">0b4fbd0c-3a0b-4fa4-b5b6-6a43b0d7f7a1($ABSENT_MODULE)</dependency>\n" +
+                    "  </dependencies>\n  <accessoryModels />",
+            ),
+        )
+    }
+
     private fun removeSandboxJavaFacet(project: Path) {
         val descriptor = project.resolve("solutions/json.sandbox/json.sandbox.msd")
         descriptor.writeText(descriptor.readText().replace(Regex("(?s)\\s*<facets>.*?</facets>"), ""))
@@ -111,5 +133,6 @@ class ModuleLoadDiagnosticsSemanticsTest {
         const val SANDBOX_MODULE = "json.sandbox"
         const val STRUCTURE_LANGUAGE = "jetbrains.mps.lang.structure"
         const val JSON_LANGUAGE = "com.specificlanguages.json"
+        const val ABSENT_MODULE = "example.absent"
     }
 }

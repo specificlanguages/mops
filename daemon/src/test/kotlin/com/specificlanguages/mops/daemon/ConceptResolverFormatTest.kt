@@ -84,7 +84,7 @@ class ConceptResolverFormatTest {
 
         assertContains(message, "\"Expression\" cannot be resolved")
         assertContains(message, "  - exprs: runtime is not loaded\n  - exprs: RUNTIME_LOAD_FAILED — see the log\n")
-        assertContains(message, "  - other.lang: generated output may not match current sources; fix: 'mops make module other.lang'")
+        assertContains(message, "  - other.lang: generated output may not match current sources; fix: mops make module other.lang")
         assertFalse(message.contains("mops make module exprs"), message)
         // A make cannot fix exprs, so no single command makes every language usable.
         assertFalse(message.contains("then retry"), message)
@@ -108,7 +108,7 @@ class ConceptResolverFormatTest {
             ),
         )
 
-        assertContains(message, "  - a: NOT_BUILT — not built; fix: 'mops make module a'")
+        assertContains(message, "  - a: NOT_BUILT — not built; fix: mops make module a")
         assertTrue(message.endsWith("\nrun 'mops make module a b', then retry"), message)
     }
 
@@ -156,9 +156,9 @@ class ConceptResolverFormatTest {
 
         assertContains(message, "its language \"a.b\" is not loaded")
         assertContains(message, "  - dep.one: ABSENT — not present in the repository\n")
-        assertContains(message, "  - dep.two: NOT_BUILT — classes not built yet; fix: 'mops make module dep.two'")
+        assertContains(message, "  - dep.two: NOT_BUILT — classes not built yet; fix: mops make module dep.two")
         assertContains(message, "run 'mops diagnose module a.b' for the full dependency tree")
-        // The absent dependency has no fix, so making dep.two alone would not load a.b.
+        // A problem with causes has no fix of its own, so no single command is promised to load a.b.
         assertFalse(message.contains("then retry"), message)
     }
 

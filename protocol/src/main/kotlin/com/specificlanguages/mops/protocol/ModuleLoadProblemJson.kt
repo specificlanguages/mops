@@ -4,8 +4,9 @@ import kotlinx.serialization.Serializable
 
 /**
  * Why one module could not be loaded, as a node in a dependency tree. [causes] is populated only for
- * [ModuleLoadProblemReason.BROKEN_DEPENDENCIES]. [fix] is the fix for this problem itself, or null when mops knows
- * none; a problem with [causes] has no fix of its own, since its [rootCauses] carry them.
+ * [ModuleLoadProblemReason.BROKEN_DEPENDENCIES]. [fix] makes [module] load, or is null when mops knows no such fix. A
+ * problem with [causes] has no fix: a fix of a root cause makes that root module load, but mops does not know that
+ * this makes [module] load too.
  */
 @Serializable
 data class ModuleLoadProblemJson(
@@ -21,11 +22,6 @@ data class ModuleLoadProblemJson(
      */
     val rootCauses: List<ModuleLoadProblemJson>
         get() = leaves().distinctBy { it.module to it.reason }
-
-    /** The fix that resolves every root cause, or null when some root cause has no known fix. */
-    val completeFix: ModuleLoadFix?
-        get() = ModuleLoadFix.combine(rootCauses.map { it.fix })
-
     private fun leaves(): List<ModuleLoadProblemJson> =
         if (causes.isEmpty()) listOf(this) else causes.flatMap { it.leaves() }
 }

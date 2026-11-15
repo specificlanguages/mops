@@ -27,66 +27,7 @@ import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import java.util.stream.Stream
 
 /**
- * Lists the root causes of a module load [problem] — the modules that must be fixed — one per line:
- * `  - <module>: <reason> — <detail>; fix: '<command>'`. The detail and fix appear only when known. Shared by every
- * caller that turns a diagnosis into a message.
- */
-internal fun moduleLoadRootCauseLines(problem: ModuleLoadProblemJson): String =
-    problem.rootCauses.joinToString("\n") { leaf ->
-        "  - ${leaf.module}: ${leaf.reason}${leaf.detail?.let { " — $it" } ?: ""}${fixSuffix(leaf.fix)}"
-    }
-
-private fun fixSuffix(fix: ModuleLoadFix?): String = fix?.let { "; fix: '${it.command}'" } ?: ""
-
-/**
- * The closing line of a message whose problems [fix] resolves together: `run '<command>', then retry`. Null when
- * [fix] is null, because then no single command makes the operation succeed.
- */
-internal fun retryAfterFixLine(fix: ModuleLoadFix?): String? = fix?.let { "run '${it.command}', then retry" }
-
-/**
- * [languages] as a bulleted `  - name: reason` list, one per line, each followed by the root causes of its load
- * problem — the shared body of every unusable-language message. A language without a load problem shows its own fix.
- */
-fun unusableLanguageList(languages: List<UnusableLanguage>): String = buildString {
-    var remaining = 5
-    for (language in languages) {
-        appendLine(unusableLanguageLines(language))
-        for (model in language.models.take(remaining)) {
-            appendLine("    Model: ${model.model}")
-            appendLine("      Source: ${model.source}")
-            appendLine("      Reason: ${model.reason}")
-            if (model.currentHashChecked) appendLine("      Current hash: ${model.currentHash ?: "unavailable"}")
-            if (model.recordedHashChecked) appendLine("      Recorded hash: ${model.recordedHash ?: "unavailable"}")
-            appendLine("      Generation record: ${model.generationRecord ?: "location unavailable"}")
-            remaining--
-        }
-    }
-    val omitted = languages.sumOf { it.models.size } - (5 - remaining)
-    if (omitted > 0) appendLine("  $omitted additional models require generation (details omitted).")
-}.trimEnd()
-
-// The language's own line, then the root causes of its load problem, which carry the fixes; a language without a load
-// problem carries its fix on its own line.
-private fun unusableLanguageLines(language: UnusableLanguage): String {
-    val header = "  - ${language.name}: ${language.reason.explanation}"
-    val problem = language.loadProblem ?: return header + fixSuffix(language.fix)
-    return header + "\n" + moduleLoadRootCauseLines(problem)
-}
-
-/**
- * Refusal message for an operation blocked because [subject] (a model, a concept name, …) would resolve through
- * [languages] whose runtimes are unavailable or may not match their sources. Lists the observed conditions with their
- * fixes, and closes with one command when it fixes every language.
- */
-fun unusableLanguagesMessage(subject: String, languages: List<UnusableLanguage>): String =
-    "$subject cannot be used while these project language runtimes are unavailable or may not match their sources, since name-based resolution through " +
-        "them may return a concept whose identity contradicts the sources:\n" +
-        unusableLanguageList(languages) +
-        (retryAfterFixLine(ModuleLoadFix.combine(languages.map { it.fix }))?.let { "\n$it" } ?: "")
-
-/**
- * Explains why the project's languages and Java-bearing modules did or did not load, by reading MPS's live module
+ * Adapter. Explains why the project's languages and Java-bearing modules did or did not load, by reading MPS's live module
  * runtimes and module repository. See
  * https://github.com/specificlanguages/mps-api-research/blob/main/language-runtime-loading.md for the API contracts.
  *
@@ -97,9 +38,15 @@ fun unusableLanguagesMessage(subject: String, languages: List<UnusableLanguage>)
  * classloading graph, which is version-volatile. Dependency analysis recurses, so a module blocked by a dependency
  * that is present-but-not-loaded is explained down to the root modules to fix.
  *
- * Each problem carries its fix, decided by [fixFor]; an unusable language carries the fix that makes it usable.
+ * Each problem carries its fix, decided by [ModuleLoadFixPolicy]; an unusable language carries the fix that makes it
+ * usable.
  *
  * All methods must run inside an MPS read action.
+ *
+ * Hides: how mops tells from MPS whether a module loaded and classifies why not.
+ *
+ * Breaks `adapter-translates-only`: the classification of load problems lives here next to the MPS reads it needs,
+ * because each signal is read only when the checks before it passed, so the reads and the decisions interleave.
  */
 class ModuleLoadDiagnostics(private val project: Project) {
 
@@ -196,36 +143,14 @@ class ModuleLoadDiagnostics(private val project: Project) {
     private fun classifyUsability(module: SModule): UnusableLanguage? = when {
         !runtimeLoaded(module) -> describe(module).problem.let { problem ->
             UnusableLanguage(nameOf(module), LanguageUnusableReason.RUNTIME_UNAVAILABLE,
-                loadProblem = problem, fix = problem?.completeFix)
+                loadProblem = problem, fix = problem?.fix)
         }
         (module as? AbstractModule)?.isReadOnly == true -> null
         else -> module.models.mapNotNull(::generationEvidence).takeIf { it.isNotEmpty() }?.let { evidence ->
             UnusableLanguage(nameOf(module), LanguageUnusableReason.GENERATION_REQUIRED, models = evidence,
-                fix = generationFix(module, evidence))
+                fix = ModuleLoadFixPolicy.forGeneration(nameOf(module), module in projectModules, evidence))
         }
     }
-
-    /**
-     * Decides the fix for a module load problem with [reason] on [module] (null when the module is absent). A make
-     * builds a project module whose classes are missing; mops knows no fix for the other reasons, so their problems
-     * report only the reason and detail.
-     */
-    private fun fixFor(module: SModule?, reason: ModuleLoadProblemReason): ModuleLoadFix? = when (reason) {
-        NOT_BUILT -> module?.let(::makeFix)
-        ABSENT, NOT_A_MODULE, NO_JAVA_FACET, CLASSES_DISABLED, BROKEN_DEPENDENCIES, RUNTIME_LOAD_FAILED -> null
-    }
-
-    /**
-     * A make regenerates the models and rewrites their generation records, which clears the evidence only when it
-     * compared a computed source hash against a known record location. Unsaved changes, an unavailable source hash or
-     * an unknown record location stay after a make, so then there is no fix.
-     */
-    private fun generationFix(module: SModule, evidence: List<ModelGenerationEvidence>): ModuleLoadFix? =
-        makeFix(module).takeIf { evidence.all { it.currentHash != null && it.generationRecord != null } }
-
-    /** `mops make module` takes project modules only, so only those get a make fix. */
-    private fun makeFix(module: SModule): ModuleLoadFix? =
-        if (module in projectModules) ModuleLoadFix(listOf(nameOf(module))) else null
 
     /**
      * Mirrors MPS's generation-required predicate, retaining its decisive observations. The generation record is read
@@ -295,27 +220,17 @@ class ModuleLoadDiagnostics(private val project: Project) {
         }
 
         ownProblem(module)?.let { return it.also { p -> memo[ref] = p } }
+        val unbuiltOutput = unbuiltOutput(module)
 
-        // The module itself is fine but is not loaded: attribute it to its dependencies. A dependency edge back to a
+        // An unbuilt module also has its dependencies analysed, because a make of it loads it only when they load too.
+        // Any other module that is not loaded is attributed to its dependencies. A dependency edge back to a
         // module already on the current path is a legal cycle (e.g. a language and its runtime solution depend on each
         // other) and is not itself a failure, so it contributes no cause.
         if (!inProgress.add(ref)) return null
-        val causes = mutableListOf<Problem>()
-        var sawCycle = false
-        val seenDeps = hashSetOf<SModuleReference>()
-        for (dep in dependencies(module)) {
-            if (!seenDeps.add(dep.reference)) continue
-            val target = dep.target
-            when {
-                target == null -> causes.add(
-                    Problem(dep.name, ABSENT, "not present in the repository", blocking = true, fix = fixFor(null, ABSENT)),
-                )
-                inProgress.contains(target.moduleReference) -> sawCycle = true
-                else -> analyze(target, memo, inProgress)?.let { if (it.blocking) causes.add(it) }
-            }
-        }
+        val (causes, sawCycle) = dependencyCauses(module, memo, inProgress)
         inProgress.remove(ref)
 
+        if (unbuiltOutput != null) return notBuilt(module, unbuiltOutput, causes).also { memo[ref] = it }
         if (causes.isNotEmpty()) {
             return problem(module, BROKEN_DEPENDENCIES, "modules it depends on are not loaded", blocking = true, causes = causes)
                 .also { memo[ref] = it }
@@ -334,6 +249,35 @@ class ModuleLoadDiagnostics(private val project: Project) {
         ).also { memo[ref] = it }
     }
 
+    /**
+     * The blocking problems of the dependencies of [module], which is on the current path [inProgress], and whether a
+     * dependency closed a cycle back to that path.
+     */
+    private fun dependencyCauses(
+        module: SModule,
+        memo: MutableMap<SModuleReference, Problem?>,
+        inProgress: MutableSet<SModuleReference>,
+    ): Pair<List<Problem>, Boolean> {
+        val causes = mutableListOf<Problem>()
+        var sawCycle = false
+        val seenDeps = hashSetOf<SModuleReference>()
+        for (dep in dependencies(module)) {
+            if (!seenDeps.add(dep.reference)) continue
+            val target = dep.target
+            when {
+                target == null -> causes.add(
+                    Problem(
+                        dep.name, ABSENT, "not present in the repository", blocking = true,
+                        fix = ModuleLoadFixPolicy.forProblem(ABSENT, dep.name, inProject = false),
+                    ),
+                )
+                inProgress.contains(target.moduleReference) -> sawCycle = true
+                else -> analyze(target, memo, inProgress)?.let { if (it.blocking) causes.add(it) }
+            }
+        }
+        return causes to sawCycle
+    }
+
     /** A module's own (non-dependency) load problem, or null when the module itself is fit to load. */
     private fun ownProblem(module: AbstractModule): Problem? {
         val facet = module.getFacet(JavaModuleFacet::class.java)
@@ -349,17 +293,33 @@ class ModuleLoadDiagnostics(private val project: Project) {
         if (!facet.loadClasses.classesAvailable()) {
             return problem(module, CLASSES_DISABLED, "the Java module facet is configured not to load classes into MPS", blocking = true)
         }
-        if (!isBuilt(facet)) {
-            return problem(module, NOT_BUILT, "compiled output directory is absent or empty: ${facet.classesGen?.path}", blocking = true)
-        }
         return null
     }
 
-    private fun isBuilt(facet: JavaModuleFacet): Boolean {
-        // A deployed/packaged module has no design-time classes output; its classes come from the classpath, so it is
-        // built by construction. A source module's classes live under classesGen, absent or empty when never built.
-        val classesGen = facet.classesGen ?: return true
-        return classesGen.exists() && !classesGen.children.isNullOrEmpty()
+    /**
+     * The path of the compiled output directory of [module] when it is absent or empty, or null when the module is
+     * built. A deployed/packaged module has no design-time classes output; its classes come from the classpath, so it
+     * is built by construction. A source module's classes live under classesGen, absent or empty when never built.
+     */
+    private fun unbuiltOutput(module: AbstractModule): String? {
+        val classesGen = module.getFacet(JavaModuleFacet::class.java)?.classesGen ?: return null
+        return classesGen.path.takeUnless { classesGen.exists() && !classesGen.children.isNullOrEmpty() }
+    }
+
+    /**
+     * The [NOT_BUILT] problem of [module], whose compiled [output] directory is absent or empty. [dependencyCauses]
+     * are the blocking problems of its dependencies; the detail names those root causes that have no fix, since a make
+     * of the module does not make it load while they stay.
+     */
+    private fun notBuilt(module: SModule, output: String, dependencyCauses: List<Problem>): Problem {
+        val causes = dependencyCauses.map { it.toJson() }
+        val unfixable = causes.flatMap { it.rootCauses }.filter { it.fix == null }.distinctBy { it.module }
+        val detail = "compiled output directory is absent or empty: $output" +
+            if (unfixable.isEmpty()) "" else "; modules it depends on also do not load: " +
+                unfixable.joinToString { "${it.module} (${it.reason})" }
+        val name = nameOf(module)
+        val fix = ModuleLoadFixPolicy.forProblem(NOT_BUILT, name, module in projectModules, causes)
+        return Problem(name, NOT_BUILT, detail, blocking = true, fix = fix)
     }
 
     private fun runtimeLoaded(module: SModule): Boolean {
@@ -406,7 +366,9 @@ class ModuleLoadDiagnostics(private val project: Project) {
             kind = kind,
             present = false,
             loaded = false,
-            problem = ModuleLoadProblemJson(name, ABSENT, "not present in the repository", fixFor(null, ABSENT)),
+            problem = ModuleLoadProblemJson(
+                name, ABSENT, "not present in the repository", ModuleLoadFixPolicy.forProblem(ABSENT, name, inProject = false),
+            ),
         )
 
     private fun nameOf(module: SModule): String = module.moduleName ?: module.moduleReference.toString()
@@ -421,7 +383,10 @@ class ModuleLoadDiagnostics(private val project: Project) {
         detail: String,
         blocking: Boolean,
         causes: List<Problem> = emptyList(),
-    ): Problem = Problem(nameOf(module), reason, detail, blocking, fixFor(module, reason), causes)
+    ): Problem = Problem(
+        nameOf(module), reason, detail, blocking,
+        ModuleLoadFixPolicy.forProblem(reason, nameOf(module), module in projectModules), causes,
+    )
 
     private class Problem(
         val module: String,

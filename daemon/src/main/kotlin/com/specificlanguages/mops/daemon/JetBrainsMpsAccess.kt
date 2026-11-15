@@ -197,14 +197,14 @@ class JetBrainsMpsAccess(
                 }
             }
             // A language without a load problem has no fix, so then no single command makes the render succeed.
-            val fix = ModuleLoadFix.combine(diagnosed.map { (_, diagnostic) -> diagnostic.problem?.completeFix })
-            return "cannot render: this subtree uses languages that are not loaded, so their concepts did not resolve:\n" +
-                "$causes\n" +
-                listOfNotNull(
-                    retryAfterFixLine(fix),
-                    "run 'mops diagnose module <language>' for the full cause",
-                    "pass --allow-reflective to render anyway",
-                ).joinToString("; ", postfix = ".")
+            val fix = ModuleLoadFix.combine(diagnosed.map { (_, diagnostic) -> diagnostic.problem?.fix })
+            return withRemedies(
+                "cannot render: this subtree uses languages that are not loaded, so their concepts did not resolve:\n" +
+                    causes,
+                fix,
+                "run 'mops diagnose module <language>' for the full cause",
+                "or pass --allow-reflective to render anyway",
+            )
         }
 
         override fun findUsages(target: NodeTarget, scope: ResolvedScope, limit: Int): FindUsagesResponse {

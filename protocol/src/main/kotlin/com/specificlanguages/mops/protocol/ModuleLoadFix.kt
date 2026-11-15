@@ -16,6 +16,10 @@ data class ModuleLoadFix(val makeModules: List<String>) {
     val command: String
         get() = "mops make module ${makeModules.joinToString(" ")}"
 
+    /** How every message and text output names this fix: `fix: <command>`. */
+    val label: String
+        get() = "fix: $command"
+
     companion object {
         /**
          * One fix that applies all of [fixes], or null when [fixes] is empty or any of them is null, that is, when
