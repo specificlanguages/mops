@@ -56,9 +56,9 @@ REFERENCES
 
   Setting both "to" and "target" on one reference is rejected.
 
-  A node's inline references are set after its properties and children, through
-  the same MPS reference setter hooks as setReference. A referent set handler sees
-  the node as built and may change its properties and children.
+  A node's inline references are set after the operation has put the node and its
+  children in place, through MPS reference setter hooks that may change the node —
+  see edit.setReference.
 
 EXAMPLE
   Create a JsonArray concept whose "items" link adopts an existing LinkDeclaration

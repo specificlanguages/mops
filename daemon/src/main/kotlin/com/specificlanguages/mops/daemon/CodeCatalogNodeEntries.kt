@@ -57,11 +57,10 @@ internal object CodeCatalogNodeEntries {
             "Child access uses native SNode operations; SNodeAccessUtil has no child APIs. Declared cardinality and " +
                 "containment constraints are not checked."
         NodeFeatureKind.REFERENCE_ROLE ->
-            "Assignments resolve the target and use SNodeAccessUtil.setReferenceTarget with MPS reference setter " +
-                "hooks, as edit batches do: the referent set handler may change other parts of the node, and a " +
-                "refused change leaves the reference as it was, without an error. Unresolved targets fail without " +
-                "changing the reference; SReference assignments use the resolved target, not dynamic resolution " +
-                "information."
+            "Assignments resolve the target and use SNodeAccessUtil.setReferenceTarget, which runs MPS reference " +
+                "setter hooks as edit batches do; see mops explain edit.setReference. Unresolved targets fail " +
+                "without changing the reference; SReference assignments use the resolved target, not dynamic " +
+                "resolution information."
     }
 
     private val accessors = listOf(

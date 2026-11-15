@@ -4,6 +4,7 @@ import com.specificlanguages.mops.protocol.EditBatch
 import com.specificlanguages.mops.protocol.EditOperation
 import com.specificlanguages.mops.protocol.EditTarget
 import com.specificlanguages.mops.protocol.ModelDestination
+import com.specificlanguages.mops.protocol.InlineChild
 import com.specificlanguages.mops.protocol.InlineReference
 import com.specificlanguages.mops.protocol.MpsNodeJson
 import com.specificlanguages.mops.protocol.MpsNodePropertyJson
@@ -197,6 +198,82 @@ class ConstraintEditSemanticsTest {
         }
     }
 
+    @Test
+    fun `a created node whose ancestor a later operation removes is not checked`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
+            val response = mpsAccess.write {
+                modelEdit(
+                    batchOf(
+                        EditOperation.AddRoot(
+                            model = ModelDestination(JSON_BEHAVIOR_MODEL),
+                            concept = "jetbrains.mps.lang.behavior.structure.ConceptBehavior",
+                            alias = "\$behavior",
+                        ),
+                        // The parameter lacks its obligatory type, and the method its returnType and body.
+                        EditOperation.AddChild(
+                            target = EditTarget.Alias("\$behavior"),
+                            role = "method",
+                            concept = "jetbrains.mps.lang.behavior.structure.ConceptMethodDeclaration",
+                            children = listOf(
+                                InlineChild.Fresh(
+                                    role = "parameter",
+                                    concept = "jetbrains.mps.baseLanguage.structure.ParameterDeclaration",
+                                ),
+                            ),
+                            alias = "\$method",
+                        ),
+                        EditOperation.Delete(target = EditTarget.Alias("\$method")),
+                    ),
+                )
+            }
+
+            assertEquals(emptyList(), response.violations)
+        }
+    }
+
+    @Test
+    fun `a created root that a later operation removes is not checked`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
+            // A concept declaration cannot be a root of an editor model.
+            val response = mpsAccess.write {
+                modelEdit(
+                    batchOf(
+                        EditOperation.AddRoot(
+                            model = ModelDestination(EDITOR_MODEL),
+                            concept = CONCEPT_DECLARATION,
+                            properties = listOf(MpsNodePropertyJson(name = "name", value = "DisallowedRoot")),
+                            alias = "\$root",
+                        ),
+                        EditOperation.Delete(target = EditTarget.Alias("\$root")),
+                    ),
+                )
+            }
+
+            assertEquals(emptyList(), response.violations)
+        }
+    }
+
+    @Test
+    fun `a reference that a later operation changes is not checked`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
+            val response = mpsAccess.write {
+                modelEdit(
+                    batchOf(
+                        // Out of scope: a concept cannot extend itself.
+                        EditOperation.SetReference(
+                            target = EditTarget.NodeReference(JSON_FILE_REF),
+                            role = "extends",
+                            to = EditTarget.NodeReference(JSON_FILE_REF),
+                        ),
+                        EditOperation.SetReference(target = EditTarget.NodeReference(JSON_FILE_REF), role = "extends"),
+                    ),
+                )
+            }
+
+            assertEquals(emptyList(), response.violations)
+        }
+    }
+
     private fun batchOf(vararg operations: EditOperation): EditBatch = EditBatch(operations.toList())
 
     private fun childrenInRole(node: MpsNodeJson, role: String): List<MpsNodeJson> =
@@ -211,7 +288,7 @@ class ConstraintEditSemanticsTest {
                 modelEdit(
                     batchOf(
                         EditOperation.AddRoot(
-                            model = ModelDestination(BEHAVIOR_MODEL),
+                            model = ModelDestination(JSON_BEHAVIOR_MODEL),
                             concept = "jetbrains.mps.lang.behavior.structure.ConceptBehavior",
                             alias = "\$behavior",
                         ),
@@ -237,7 +314,7 @@ class ConstraintEditSemanticsTest {
         const val STRUCTURE_MODEL_PATH =
             "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps"
 
-        const val BEHAVIOR_MODEL = "r:0e3ed68a-e841-4ab1-bafa-60852d5e8891(com.specificlanguages.json.behavior)"
+        const val EDITOR_MODEL = "r:4984d1ec-a1c9-4ad1-8af7-b206011783d5(com.specificlanguages.json.editor)"
         const val PROPERTY_DECLARATION = "jetbrains.mps.lang.structure.structure.PropertyDeclaration"
         const val LINK_DECLARATION = "jetbrains.mps.lang.structure.structure.LinkDeclaration"
         const val CONCEPT_DECLARATION = "jetbrains.mps.lang.structure.structure.ConceptDeclaration"

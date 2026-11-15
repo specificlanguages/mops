@@ -16,10 +16,24 @@ SEMANTICS
   Sets the reference under role on the target node to point at the "to" node,
   which may live in another model. Omitting "to" (or null) clears the reference.
 
-  Like the MPS editor, the write runs the MPS reference setter hooks
-  (SNodeAccessUtil.setReferenceTarget): the concept's referent set handler may
-  change other parts of the node, such as its children or name. A handler that
-  refuses the change leaves the reference as it was, without an error.
+REFERENCE SETTER HOOKS
+  Edit batches and Code Mode set references the way the MPS editor does, through
+  SNodeAccessUtil.setReferenceTarget. A concept may define a referent set handler,
+  which MPS runs with the old and the new target:
+
+  - It may refuse the change. The reference then stays as it was, and the batch
+    still succeeds, as in MPS.
+  - It may change other parts of the node, even ones the batch gave explicitly.
+    Setting overriddenMethod on a jetbrains.mps.lang.behavior method replaces the
+    method's parameters, return type, and name.
+  - An exception from the handler fails the batch, and nothing is changed. In Code
+    Mode the exception reaches the script.
+
+  Inline references ("references" in addChild, addRoot, replace, and wrap) go
+  through the same hooks. They are set after the operation has put the new node
+  and its children in place, so the handler sees the node as the batch built it,
+  the same as a setReference operation that follows. The constraint check skips a
+  reference that a handler refused or changed, and nodes that a handler removed.
 
 EXAMPLE
 {

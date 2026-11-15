@@ -61,11 +61,6 @@ internal class EditConstraintChecker(
         }
 
         for (placement in placements) {
-            // A node that a later step removed or moved away (a later operation, or a reference set handler) is no
-            // longer in this place. A move records its own placement.
-            if (placement.child.parent != placement.parent || placement.child.containmentLink != placement.link) {
-                continue
-            }
             val childConcept = placement.child.concept
             // A created node whose concept did not load (e.g. a copy of a node from an uncompiled language) cannot be
             // checked against the containment rules, so record its language and skip this placement's checks.
@@ -228,7 +223,14 @@ internal class Placement(
     val parent: SNode,
     val link: SContainmentLink,
     val child: SNode,
-)
+) {
+    /**
+     * False when a later step (a later operation, or a reference set handler) removed [child] or one of its ancestors,
+     * or moved [child] away. A move records its own placement.
+     */
+    val isCurrent: Boolean
+        get() = child.model != null && child.parent == parent && child.containmentLink == link
+}
 
 /**
  * A node placed into Root Node position of [model] by a root Edit Operation, checked against the can-be-root Constraint.
@@ -237,7 +239,11 @@ internal class RootPlacement(
     val opIndex: Int,
     val model: SModel,
     val node: SNode,
-)
+) {
+    /** False when a later step removed [node] or moved it away from Root Node position of [model]. */
+    val isCurrent: Boolean
+        get() = node.parent == null && node.model?.reference == model.reference
+}
 
 /**
  * A concrete reference target set on [node] via [link] by an Edit Operation, checked against the language-defined
@@ -248,7 +254,14 @@ internal class ReferencePlacement(
     val node: SNode,
     val link: SReferenceLink,
     val target: SNode,
-)
+) {
+    /**
+     * False when [node] left its model, or its reference no longer points at [target]: a reference set handler refused
+     * or changed the write, or a later operation set the reference again.
+     */
+    val isCurrent: Boolean
+        get() = node.model != null && node.getReferenceTarget(link) == target
+}
 
 /**
  * Collects the constraints an edit batch could not check: concepts whose languages are not loaded, grouped by language

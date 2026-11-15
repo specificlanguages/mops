@@ -1,11 +1,9 @@
 /**
- * Adapter. Points a node's reference at a target node, or clears it, the way the MPS editor and smodel code do. Code
- * Mode reference assignments and edit batches both write references here.
+ * Adapter. The one reference write that Code Mode reference assignments and edit batches share, so that every path
+ * that sets a reference runs the same MPS reference setter hooks as the MPS editor.
  *
- * Hides: that a reference write goes through [SNodeAccessUtil.setReferenceTarget], which runs the concept's referent
- * set handler: `validate`, then `onReferenceSet`. The handler may change other parts of the node, and a `validate` that
- * returns false leaves the reference unchanged without an error. See
- * https://github.com/specificlanguages/mps-api-research/blob/8421ecf/docs/node-feature-setter-hooks.md.
+ * Hides: which MPS API sets a reference ([SNodeAccessUtil.setReferenceTarget], not the raw `SNode.setReferenceTarget`).
+ * What the hooks do: https://github.com/specificlanguages/mps-api-research/blob/8421ecf/docs/node-feature-setter-hooks.md.
  */
 package com.specificlanguages.mops.daemon
 
