@@ -15,8 +15,10 @@ pr_daemon_shards=2
 pr_integration_shards=7
 
 # Prints "true" when every changed path is documentation that no build task, test, or generated-page check reads, or
-# configuration that only the prek hooks read: files under docs/, Markdown files in the repository root, and the lint
-# configuration files and hook scripts in lint_config. docs/reference/ is left out for the generated command reference
+# configuration that only the prek hooks read: files under docs/, Markdown files in the repository root, the coding
+# agent files under .agents/ and .claude/, and the lint configuration files and hook scripts in lint_config. The bundled
+# mops skill under skills/ is not one of them: a Gradle check compares its references with the generated pages.
+# docs/reference/ is left out for the generated command reference
 # pages proposed in PR #175, which a Gradle check compares with the CLI. Renames count as changes to both paths. Prints
 # "false" when the base is missing or not in the history, or when nothing changed.
 docs_only() {
@@ -28,7 +30,7 @@ docs_only() {
   local changed
   changed="$(git diff --no-renames --name-only "$base" HEAD)"
   local lint_config='\.markdownlint-cli2\.yaml|\.pre-commit-config\.yaml|\.prettierrc\.yaml|\.prettierignore|\.editorconfig|tools/(markdownlint|pre-commit)/.+'
-  if [ -n "$changed" ] && ! grep -qvE "^(docs/.+|[^/]+\.md|$lint_config)$" <<< "$changed" && ! grep -qE '^docs/reference/' <<< "$changed"; then
+  if [ -n "$changed" ] && ! grep -qvE "^(docs/.+|[^/]+\.md|\.agents/.+|\.claude/.+|$lint_config)$" <<< "$changed" && ! grep -qE '^docs/reference/' <<< "$changed"; then
     echo true
   else
     echo false

@@ -38,6 +38,10 @@ docs-only when every changed file is under `docs/` or is a Markdown file in the 
 check compares with the CLI. A renamed file counts as changed at both paths. No build task or test reads the other
 files.
 
+Coding agent files under `.agents/` and `.claude/`, such as project skills, also count as docs-only. No build task or
+test reads them. The bundled mops skill under `skills/` does not count: `checkExamples` compares its references with the
+generated example pages.
+
 Changes to the configuration that only the `prek` hooks read also count as docs-only: `.markdownlint-cli2.yaml`,
 `.pre-commit-config.yaml`, `.prettierrc.yaml`, `.prettierignore`, `.editorconfig`, and the hook scripts under
 `tools/markdownlint/` and `tools/pre-commit/`. The verification job runs the hooks on all files, so it checks the whole
