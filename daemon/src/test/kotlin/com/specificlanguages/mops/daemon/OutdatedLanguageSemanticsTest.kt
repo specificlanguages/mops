@@ -41,6 +41,8 @@ class OutdatedLanguageSemanticsTest {
                 assertFalse(message.contains("hash differs"), message)
                 assertFalse(message.contains("Current hash:"), message)
                 assertFalse(message.contains("Recorded hash:"), message)
+                // A make does not save the model, so it cannot clear this condition.
+                assertFalse(message.contains("mops make module"), message)
             } finally {
                 project.modelAccess.runWriteAction { model.isChanged = false }
             }
@@ -71,6 +73,7 @@ class OutdatedLanguageSemanticsTest {
                 assertFalse(message.contains("Recorded hash:"), message)
                 assertContains(message, missing.toString())
                 assertFalse(message.contains("hash differs"), message)
+                assertFalse(message.contains("mops make module"), message)
             } finally {
                 project.modelAccess.runWriteAction { source.file = original }
             }
@@ -92,6 +95,7 @@ class OutdatedLanguageSemanticsTest {
             assertContains(message, "Generation record: $record")
             assertContains(message, "Recorded hash: unavailable")
             assertFalse(message.contains("older sources"), message)
+            assertContains(message, "fix: 'mops make module $JSON_LANGUAGE'")
         }
     }
 
@@ -139,6 +143,7 @@ class OutdatedLanguageSemanticsTest {
             assertContains(message, "RUNTIME_LOAD_FAILED")
             assertContains(message, path.resolve("languages/$JSON_LANGUAGE/classes_gen").toString())
             assertFalse(message.contains("not built"), message)
+            assertFalse(message.contains("mops make module"), message)
         }
     }
 
@@ -224,6 +229,7 @@ class OutdatedLanguageSemanticsTest {
             assertContains(findMessage, "Current hash:")
             assertContains(findMessage, "Recorded hash:")
             assertContains(findMessage, "Generation record:")
+            assertContains(findMessage, "run 'mops make module $JSON_LANGUAGE', then retry")
 
             // Editing the sandbox, which uses the now-stale json language, is refused before any node is written — so no
             // stale concept id can reach the model header.
@@ -243,6 +249,7 @@ class OutdatedLanguageSemanticsTest {
             }
             assertEquals(MpsErrorCode.LANGUAGE_NOT_LOADED, editFailure.code)
             assertContains(assertNotNull(editFailure.message), JSON_LANGUAGE)
+            assertContains(assertNotNull(editFailure.message), "run 'mops make module $JSON_LANGUAGE', then retry")
 
             // Rebuild: regeneration drops StaleWidget from the runtime, so the stale registration is gone.
             assertEquals(MakeOutcome.SUCCESS, make().outcome, "rebuilding after the deletion must succeed")

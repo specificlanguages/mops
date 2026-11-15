@@ -96,10 +96,10 @@ Options:
 
 A CONCEPT that does not resolve fails with CONCEPT_NOT_FOUND and names the
 cause: the name is not well formed; the owning language is unknown to the
-project; the language is present but not loaded (with its load diagnosis and a
-pointer at `mops diagnose module`, since only loaded languages contribute
-concepts to name lookup); or the loaded language has no such concept (with
-similarly named concepts from it).
+project; the language is present but not loaded (with its load diagnosis, the
+fix for each root cause that mops knows, and a pointer at `mops diagnose
+module`, since only loaded languages contribute concepts to name lookup); or
+the loaded language has no such concept (with similarly named concepts from it).
 
 A bare short name that names concepts in several languages fails with
 AMBIGUOUS_TARGET and lists the qualified candidates. While a project language

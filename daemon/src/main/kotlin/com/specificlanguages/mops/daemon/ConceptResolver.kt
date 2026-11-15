@@ -3,6 +3,7 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.ModuleLoadDiagnosticJson
+import com.specificlanguages.mops.protocol.ModuleLoadFix
 import com.specificlanguages.mops.protocol.ModuleLoadProblemJson
 import jetbrains.mps.project.Project
 import jetbrains.mps.smodel.language.ConceptRegistry
@@ -168,9 +169,11 @@ class ConceptResolver(private val project: Project) {
         fun unusableShortNameMessage(shortName: String, languages: List<UnusableLanguage>): String =
             "the short concept name \"$shortName\" cannot be resolved while these project language runtimes cannot be " +
                 "trusted, since any of them may also define it:\n" +
-                unusableLanguageList(languages) +
-                "\nResolve the reported conditions; if generation is required, rebuild with '${makeModulesExample(languages)}', " +
-                "or use a qualified concept name."
+                unusableLanguageList(languages) + "\n" +
+                listOfNotNull(
+                    retryAfterFixLine(ModuleLoadFix.combine(languages.map { it.fix })),
+                    "use a qualified concept name",
+                ).joinToString(", or ")
 
         fun ambiguousShortNameMessage(shortName: String, qualifiedCandidates: List<String>): String =
             "concept name \"$shortName\" is ambiguous; it names ${qualifiedCandidates.size} concepts across loaded " +
@@ -201,12 +204,7 @@ class ConceptResolver(private val project: Project) {
             if (problem != null) {
                 append(":\n")
                 append(moduleLoadRootCauseLines(problem))
-            }
-            // When the language is only unbuilt (it, or its dependency closure), a make fixes it — name the exact
-            // command so the caller can build and retry without deducing the remedy. When something a make cannot fix
-            // is in the way (an absent module, a runtime that failed to register), the diagnosis line below stands alone.
-            if (problem != null && loadFixableByMake(problem)) {
-                append("\nrun 'mops make module ${parsed.language}' to build it, then retry")
+                retryAfterFixLine(problem.completeFix)?.let { append("\n$it") }
             }
             append("\nrun 'mops diagnose module ${parsed.language}' for the full dependency tree")
         }

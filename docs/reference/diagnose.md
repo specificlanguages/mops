@@ -49,6 +49,11 @@ CLASSES_DISABLED (the Java facet is configured not to load classes), NOT_BUILT
 depended-on modules, reported recursively), and RUNTIME_LOAD_FAILED (everything
 present but the runtime still did not register; usually a class-link or version
 error in the daemon log).
+
+A problem with a known fix ends its row with a `fix=<command>` column. Only
+NOT_BUILT on a project module has one: `mops make module <module>`. mops knows
+no fix for the other reasons, so their rows name the reason only. In --json, a
+problem's `fix.makeModules` lists the modules to make.
 ```
 
 ## mops diagnose project
@@ -84,4 +89,9 @@ CLASSES_DISABLED (the Java facet is configured not to load classes), NOT_BUILT
 depended-on modules, reported recursively), and RUNTIME_LOAD_FAILED (everything
 present but the runtime still did not register; usually a class-link or version
 error in the daemon log).
+
+A problem with a known fix ends its row with a `fix=<command>` column. Only
+NOT_BUILT on a project module has one: `mops make module <module>`. mops knows
+no fix for the other reasons, so their rows name the reason only. In --json, a
+problem's `fix.makeModules` lists the modules to make.
 ```

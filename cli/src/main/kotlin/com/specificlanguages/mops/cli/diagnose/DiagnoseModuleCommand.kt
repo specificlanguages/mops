@@ -29,6 +29,8 @@ import picocli.CommandLine.Parameters
             "diagnosis are the same in text and --json modes.",
         "",
         REASON_CODES_HELP,
+        "",
+        FIX_HELP,
     ],
 )
 class DiagnoseModuleCommand(private val environment: CommandEnvironment) : CliCommand(), IExitCodeGenerator {
@@ -75,7 +77,7 @@ class DiagnoseModuleCommand(private val environment: CommandEnvironment) : CliCo
 
     private fun renderTree(problem: ModuleLoadProblemJson, depth: Int) {
         val indent = "\t".repeat(depth)
-        val columns = listOfNotNull(problem.module, problem.reason, problem.detail)
+        val columns = listOfNotNull(problem.module, problem.reason.name, problem.detail, fixColumn(problem.fix))
         println(indent + textRow(columns))
         problem.causes.forEach { renderTree(it, depth + 1) }
     }

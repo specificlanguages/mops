@@ -41,10 +41,10 @@ way as in `mops get node`; an unresolved target fails with NODE_NOT_FOUND.
 
 If a concept in the node's subtree does not resolve because its language is not
 loaded, the command fails with LANGUAGE_NOT_LOADED. It diagnoses each unloaded
-language the same way `find instances` does, naming the root cause (not built,
-absent, or a broken dependency), and points at `mops make module <language>`
-and `mops diagnose module <language>`. A concept whose language is loaded but
-defines no editor is not an error: MPS renders it with its generic reflective
-editor (concept aliases and roles rather than the language's own notation), and
-the command prints that.
+language the same way `find instances` does, naming each root cause (not built,
+absent, or a broken dependency) with the fix that mops knows for it, such as
+`mops make module <language>`, and points at `mops diagnose module <language>`.
+A concept whose language is loaded but defines no editor is not an error: MPS
+renders it with its generic reflective editor (concept aliases and roles rather
+than the language's own notation), and the command prints that.
 ```

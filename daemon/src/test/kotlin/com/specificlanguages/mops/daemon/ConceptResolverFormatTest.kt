@@ -1,11 +1,14 @@
 package com.specificlanguages.mops.daemon
 
+import com.specificlanguages.mops.protocol.ModuleLoadFix
 import com.specificlanguages.mops.protocol.ModuleLoadProblemJson
+import com.specificlanguages.mops.protocol.ModuleLoadProblemReason
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ConceptResolverFormatTest {
 
@@ -62,20 +65,51 @@ class ConceptResolverFormatTest {
     }
 
     @Test
-    fun `unusable short name message names the languages with reasons and offers both remedies`() {
+    fun `unusable short name message names the languages with reasons and their fixes`() {
         val message = ConceptResolver.unusableShortNameMessage(
             "Expression",
             listOf(
-                UnusableLanguage("exprs", LanguageUnusableReason.RUNTIME_UNAVAILABLE),
-                UnusableLanguage("other.lang", LanguageUnusableReason.GENERATION_REQUIRED),
+                UnusableLanguage(
+                    "exprs",
+                    LanguageUnusableReason.RUNTIME_UNAVAILABLE,
+                    loadProblem = ModuleLoadProblemJson("exprs", ModuleLoadProblemReason.RUNTIME_LOAD_FAILED, "see the log"),
+                ),
+                UnusableLanguage(
+                    "other.lang",
+                    LanguageUnusableReason.GENERATION_REQUIRED,
+                    fix = ModuleLoadFix(listOf("other.lang")),
+                ),
             ),
         )
 
         assertContains(message, "\"Expression\" cannot be resolved")
-        assertContains(message, "  - exprs: runtime is not loaded")
-        assertContains(message, "  - other.lang: generated output may not match current sources")
-        assertContains(message, "mops make module exprs")
+        assertContains(message, "  - exprs: runtime is not loaded\n  - exprs: RUNTIME_LOAD_FAILED — see the log\n")
+        assertContains(message, "  - other.lang: generated output may not match current sources; fix: 'mops make module other.lang'")
+        assertFalse(message.contains("mops make module exprs"), message)
+        // A make cannot fix exprs, so no single command makes every language usable.
+        assertFalse(message.contains("then retry"), message)
         assertContains(message, "qualified concept name")
+    }
+
+    @Test
+    fun `unusable languages message closes with one command when every language has a fix`() {
+        val message = unusableLanguagesMessage(
+            "this model",
+            listOf(
+                UnusableLanguage(
+                    "a",
+                    LanguageUnusableReason.RUNTIME_UNAVAILABLE,
+                    loadProblem = ModuleLoadProblemJson(
+                        "a", ModuleLoadProblemReason.NOT_BUILT, "not built", fix = ModuleLoadFix(listOf("a")),
+                    ),
+                    fix = ModuleLoadFix(listOf("a")),
+                ),
+                UnusableLanguage("b", LanguageUnusableReason.GENERATION_REQUIRED, fix = ModuleLoadFix(listOf("b"))),
+            ),
+        )
+
+        assertContains(message, "  - a: NOT_BUILT — not built; fix: 'mops make module a'")
+        assertTrue(message.endsWith("\nrun 'mops make module a b', then retry"), message)
     }
 
     @Test
@@ -104,38 +138,42 @@ class ConceptResolverFormatTest {
     }
 
     @Test
-    fun `unloaded language message flattens the problem to its root causes`() {
+    fun `unloaded language message flattens the problem to its root causes with their fixes`() {
         val problem = ModuleLoadProblemJson(
             module = "a.b",
-            reason = "BROKEN_DEPENDENCIES",
+            reason = ModuleLoadProblemReason.BROKEN_DEPENDENCIES,
             detail = "modules it depends on are not loaded",
             causes = listOf(
-                ModuleLoadProblemJson("dep.one", "ABSENT", "not present in the repository"),
-                ModuleLoadProblemJson("dep.two", "NOT_BUILT", "classes not built yet"),
+                ModuleLoadProblemJson("dep.one", ModuleLoadProblemReason.ABSENT, "not present in the repository"),
+                ModuleLoadProblemJson(
+                    "dep.two", ModuleLoadProblemReason.NOT_BUILT, "classes not built yet",
+                    fix = ModuleLoadFix(listOf("dep.two")),
+                ),
             ),
         )
 
         val message = ConceptResolver.unloadedLanguageMessage(ConceptName("a.b", "Foo"), problem)
 
         assertContains(message, "its language \"a.b\" is not loaded")
-        assertContains(message, "  - dep.one: ABSENT — not present in the repository")
-        assertContains(message, "  - dep.two: NOT_BUILT — classes not built yet")
+        assertContains(message, "  - dep.one: ABSENT — not present in the repository\n")
+        assertContains(message, "  - dep.two: NOT_BUILT — classes not built yet; fix: 'mops make module dep.two'")
         assertContains(message, "run 'mops diagnose module a.b' for the full dependency tree")
-        // An absent dependency is not something a make fixes, so the make remedy is withheld here.
-        assertFalse(message.contains("mops make module"), "unexpected make remedy in: $message")
+        // The absent dependency has no fix, so making dep.two alone would not load a.b.
+        assertFalse(message.contains("then retry"), message)
     }
 
     @Test
-    fun `unloaded language message names the make command when the cause is only an unbuilt module`() {
+    fun `unloaded language message closes with the fix when every root cause has one`() {
         val problem = ModuleLoadProblemJson(
             module = "a.b",
-            reason = "NOT_BUILT",
+            reason = ModuleLoadProblemReason.NOT_BUILT,
             detail = "the module should have classes but they have not been built yet",
+            fix = ModuleLoadFix(listOf("a.b")),
         )
 
         val message = ConceptResolver.unloadedLanguageMessage(ConceptName("a.b", "Foo"), problem)
 
-        assertContains(message, "run 'mops make module a.b' to build it, then retry")
+        assertContains(message, "run 'mops make module a.b', then retry")
         assertContains(message, "run 'mops diagnose module a.b' for the full dependency tree")
     }
 }

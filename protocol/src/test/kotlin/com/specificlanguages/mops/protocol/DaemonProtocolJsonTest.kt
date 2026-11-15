@@ -1270,10 +1270,10 @@ class DaemonProtocolJsonTest {
                     loaded = false,
                     problem = ModuleLoadProblemJson(
                         module = "org.example.expr",
-                        reason = "BROKEN_DEPENDENCIES",
+                        reason = ModuleLoadProblemReason.BROKEN_DEPENDENCIES,
                         detail = "modules it depends on are not loaded",
                         causes = listOf(
-                            ModuleLoadProblemJson(module = "jetbrains.mps.lang.editor.tooltips", reason = "ABSENT"),
+                            ModuleLoadProblemJson(module = "jetbrains.mps.lang.editor.tooltips", reason = ModuleLoadProblemReason.ABSENT),
                         ),
                     ),
                 ),
@@ -1300,12 +1300,19 @@ class DaemonProtocolJsonTest {
                 kind = "solution",
                 present = true,
                 loaded = false,
-                problem = ModuleLoadProblemJson(module = "org.example.solution", reason = "NOT_BUILT", detail = "not built yet"),
+                problem = ModuleLoadProblemJson(
+                    module = "org.example.solution",
+                    reason = ModuleLoadProblemReason.NOT_BUILT,
+                    detail = "not built yet",
+                    fix = ModuleLoadFix(listOf("org.example.solution")),
+                ),
             ),
         )
         val serializedResponse = ProtocolJson.encodeResponse(response)
 
         assertContains(serializedResponse, """"type":"module-diagnostic"""")
+        assertContains(serializedResponse, """"reason":"NOT_BUILT"""")
+        assertContains(serializedResponse, """"fix":{"makeModules":["org.example.solution"]}""")
         assertEquals(response, ProtocolJson.decodeResponse(serializedResponse))
     }
 

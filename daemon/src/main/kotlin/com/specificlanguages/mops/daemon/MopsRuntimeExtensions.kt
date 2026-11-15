@@ -44,12 +44,9 @@ object MopsRuntimeExtensions {
         val name = module.moduleName ?: target
         throw IllegalStateException(
             buildString {
-                if (loadFixableByMake(problem)) {
-                    append("module $name is not compiled; run 'mops make module $name', then retry:\n")
-                } else {
-                    append("module $name has no loaded runtime, so its classes cannot be loaded:\n")
-                }
+                append("module $name has no loaded runtime, so its classes cannot be loaded:\n")
                 append(moduleLoadRootCauseLines(problem))
+                retryAfterFixLine(problem.completeFix)?.let { append("\n$it") }
                 append("\nrun 'mops diagnose module $name' for the full dependency tree")
             },
         )

@@ -31,7 +31,7 @@ class CodeModeRuntimeTest {
                     assert behavior.name == 'jetbrains.mps.baseLanguage.behavior.ClassConcept__BehaviorDescriptor'
                     assert mops.runtime.loadClass('jetbrains.mps.baseLanguage', 'jetbrains.mps.baseLanguage.behavior.NoSuchClass') == null
                     fails(IllegalStateException, 'mops make module exprs') { mops.runtime.loadClass('exprs', 'exprs.structure.StructureAspectDescriptor') }
-                    fails(IllegalStateException, 'not compiled') { mops.runtime.requireClass('exprs', 'exprs.structure.StructureAspectDescriptor') }
+                    fails(IllegalStateException, 'NOT_BUILT') { mops.runtime.requireClass('exprs', 'exprs.structure.StructureAspectDescriptor') }
                 }
                 return 'ok'
             """.trimIndent()))

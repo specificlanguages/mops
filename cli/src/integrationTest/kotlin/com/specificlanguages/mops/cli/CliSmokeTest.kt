@@ -175,6 +175,7 @@ class CliSmokeTest {
         // than reporting a bare "not found".
         assertContains(result.output, "its language \"com.specificlanguages.json\" is not loaded")
         assertContains(result.output, "diagnose module com.specificlanguages.json")
+        assertContains(result.output, "run 'mops make module com.specificlanguages.json', then retry")
     }
 
     companion object {

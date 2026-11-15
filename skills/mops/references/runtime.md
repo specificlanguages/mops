@@ -13,8 +13,9 @@ its name or serialized reference, resolved uniquely.
 
 Both operations need `project.read` or `project.command`. `loadClass` returns null only when the module is fine and
 the class is missing; `requireClass` throws instead. Module problems are errors with a named case: unknown module,
-ambiguous module, module without a class loader (a devkit), and module whose runtime is not loaded. A source module
-whose compiled output is absent reports "not compiled" and names the `mops make module <module>` command to run first.
+ambiguous module, module without a class loader (a devkit), and module whose runtime is not loaded. The last one lists
+the root causes from `mops diagnose module` with their fixes: a project module whose compiled output is absent
+(`NOT_BUILT`) names the `mops make module <module>` command to run first.
 Making a module inside the daemon reloads its classes, and programs run afterwards load from the new class loader.
 
 | Task                                                | Command                                |
