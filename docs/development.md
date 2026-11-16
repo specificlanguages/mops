@@ -46,6 +46,20 @@ Before you open a pull request:
   `skills/mops/references/` pages.
 - Keep `.kt` and `.md` files under the `file-size` hook's limit. Split a file instead of growing it.
 
+Shape a pull request so that its review needs little attention:
+
+- Keep refactoring commits apart from behavior commits. A refactoring commit moves, renames, or merges code, and the
+  tests pass without changes. The reviewer then reads the behavior commits closely and checks the others only for this
+  rule.
+- Where you can, commit the tests of a behavior change before the code that makes them pass.
+- In the body, add a **Where to look** list: at most three places where you made a choice or are unsure.
+- For each part of the work that you leave for later, open a GitHub issue labelled `needs-triage` (see
+  [Issue tracker](agents/issue-tracker.md)) and link it in the body. An item with no issue is lost when the pull request
+  is merged.
+
+Open the pull request as a draft. Review it with the `code-review` skill, fix the findings, and review the fix commits
+again, until the review finds nothing. Then mark the pull request ready for review.
+
 ## Release
 
 Releases are published from explicit release commits on `main`:
