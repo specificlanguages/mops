@@ -5,7 +5,9 @@ import com.specificlanguages.mops.cli.diagnose.DiagnoseModuleCommand
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.ModuleDiagnosticResponse
 import com.specificlanguages.mops.protocol.ModuleLoadDiagnosticJson
+import com.specificlanguages.mops.protocol.ModuleLoadFix
 import com.specificlanguages.mops.protocol.ModuleLoadProblemJson
+import com.specificlanguages.mops.protocol.ModuleLoadProblemReason
 import com.specificlanguages.mops.protocol.ProtocolJson
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -30,17 +32,17 @@ class DiagnoseModuleCommandTest {
                     loaded = false,
                     problem = ModuleLoadProblemJson(
                         module = MODULE,
-                        reason = "BROKEN_DEPENDENCIES",
+                        reason = ModuleLoadProblemReason.BROKEN_DEPENDENCIES,
                         detail = "modules it depends on are not loaded",
                         causes = listOf(
                             ModuleLoadProblemJson(
                                 module = "com.mbeddr.core.base",
-                                reason = "BROKEN_DEPENDENCIES",
+                                reason = ModuleLoadProblemReason.BROKEN_DEPENDENCIES,
                                 detail = "modules it depends on are not loaded",
                                 causes = listOf(
                                     ModuleLoadProblemJson(
                                         module = "jetbrains.mps.lang.editor.tooltips",
-                                        reason = "ABSENT",
+                                        reason = ModuleLoadProblemReason.ABSENT,
                                         detail = "not present in the repository",
                                     ),
                                 ),
@@ -65,7 +67,7 @@ class DiagnoseModuleCommandTest {
     }
 
     @Test
-    fun `a problem detail with a newline stays on one row`() {
+    fun `a problem detail with a newline stays on one row and the fix ends it`() {
         val client = mock<DaemonClient>()
         whenever(client.diagnoseModule(MODULE)).thenReturn(
             ModuleDiagnosticResponse(
@@ -74,7 +76,12 @@ class DiagnoseModuleCommandTest {
                     kind = "language",
                     present = true,
                     loaded = false,
-                    problem = ModuleLoadProblemJson(module = MODULE, reason = "NOT_BUILT", detail = "not built\n\tsee log"),
+                    problem = ModuleLoadProblemJson(
+                        module = MODULE,
+                        reason = ModuleLoadProblemReason.NOT_BUILT,
+                        detail = "not built\n\tsee log",
+                        fix = ModuleLoadFix(listOf(MODULE)),
+                    ),
                 ),
             ),
         )
@@ -85,7 +92,7 @@ class DiagnoseModuleCommandTest {
 
         assertEquals(
             "org.iets3.core.expr.base\tlanguage\tpresent=true\tloaded=false" + nl +
-                "\torg.iets3.core.expr.base\tNOT_BUILT\tnot built\\n\\tsee log" + nl,
+                "\torg.iets3.core.expr.base\tNOT_BUILT\tnot built\\n\\tsee log\tfix: mops make module $MODULE" + nl,
             stdout,
         )
     }
@@ -100,7 +107,7 @@ class DiagnoseModuleCommandTest {
                     kind = "unknown",
                     present = false,
                     loaded = false,
-                    problem = ModuleLoadProblemJson(module = "no.such.module", reason = "ABSENT", detail = "not present in the repository"),
+                    problem = ModuleLoadProblemJson(module = "no.such.module", reason = ModuleLoadProblemReason.ABSENT, detail = "not present in the repository"),
                 ),
             ),
         )
@@ -140,7 +147,7 @@ class DiagnoseModuleCommandTest {
                     loaded = true,
                     problem = ModuleLoadProblemJson(
                         module = "my.solution",
-                        reason = "NO_JAVA_FACET",
+                        reason = ModuleLoadProblemReason.NO_JAVA_FACET,
                         detail = "the module has no Java module facet, so it loads no Java classes",
                     ),
                 ),
@@ -162,7 +169,7 @@ class DiagnoseModuleCommandTest {
                 kind = "language",
                 present = true,
                 loaded = false,
-                problem = ModuleLoadProblemJson(module = MODULE, reason = "NOT_BUILT", detail = "not built"),
+                problem = ModuleLoadProblemJson(module = MODULE, reason = ModuleLoadProblemReason.NOT_BUILT, detail = "not built"),
             ),
         )
         whenever(client.diagnoseModule(MODULE)).thenReturn(response)

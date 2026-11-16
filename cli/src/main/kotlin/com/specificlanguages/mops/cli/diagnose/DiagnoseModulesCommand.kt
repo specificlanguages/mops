@@ -8,7 +8,6 @@ import com.specificlanguages.mops.cli.output.renderJson
 import com.specificlanguages.mops.cli.output.textRow
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.ModuleLoadDiagnosticJson
-import com.specificlanguages.mops.protocol.ModuleLoadProblemJson
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 
@@ -29,6 +28,8 @@ import picocli.CommandLine.Option
             "exits 0 regardless of failed modules.",
         "",
         REASON_CODES_HELP,
+        "",
+        FIX_HELP,
     ],
 )
 class DiagnoseModulesCommand(private val environment: CommandEnvironment) : CliCommand() {
@@ -64,15 +65,12 @@ class DiagnoseModulesCommand(private val environment: CommandEnvironment) : CliC
             println(textRow(listOf(module.module, module.kind, "loaded")))
             return
         }
-        println(textRow(listOf(module.module, module.kind, problem.reason)))
+        println(textRow(listOfNotNull(module.module, module.kind, problem.reason.name, problem.fix?.label)))
         // Root causes are the leaves of the problem tree: the actual modules to fix.
-        rootCauses(problem).forEach { println("\t" + textRow(listOf(it.module, it.reason))) }
+        if (problem.causes.isNotEmpty()) {
+            problem.rootCauses.forEach {
+                println("\t" + textRow(listOfNotNull(it.module, it.reason.name, it.fix?.label)))
+            }
+        }
     }
-
-    // The same root-cause module is often reachable through several dependency paths; collapse those to one row each.
-    private fun rootCauses(problem: ModuleLoadProblemJson): List<ModuleLoadProblemJson> =
-        if (problem.causes.isEmpty()) emptyList() else problem.causes.flatMap(::leaves).distinctBy { it.module to it.reason }
-
-    private fun leaves(problem: ModuleLoadProblemJson): List<ModuleLoadProblemJson> =
-        if (problem.causes.isEmpty()) listOf(problem) else problem.causes.flatMap(::leaves)
 }

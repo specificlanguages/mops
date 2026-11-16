@@ -3,6 +3,7 @@ package com.specificlanguages.mops.daemon
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
 import com.specificlanguages.mops.protocol.ModuleLoadDiagnosticJson
+import com.specificlanguages.mops.protocol.ModuleLoadFix
 import com.specificlanguages.mops.protocol.ModuleLoadProblemJson
 import jetbrains.mps.project.Project
 import jetbrains.mps.smodel.language.ConceptRegistry
@@ -165,12 +166,13 @@ class ConceptResolver(private val project: Project) {
     companion object {
         private const val MAX_SUGGESTIONS = 5
 
-        fun unusableShortNameMessage(shortName: String, languages: List<UnusableLanguage>): String =
+        fun unusableShortNameMessage(shortName: String, languages: List<UnusableLanguage>): String = withRemedies(
             "the short concept name \"$shortName\" cannot be resolved while these project language runtimes cannot be " +
                 "trusted, since any of them may also define it:\n" +
-                unusableLanguageList(languages) +
-                "\nResolve the reported conditions; if generation is required, rebuild with '${makeModulesExample(languages)}', " +
-                "or use a qualified concept name."
+                unusableLanguageList(languages),
+            ModuleLoadFix.combine(languages.map { it.fix }),
+            "or use a qualified concept name",
+        )
 
         fun ambiguousShortNameMessage(shortName: String, qualifiedCandidates: List<String>): String =
             "concept name \"$shortName\" is ambiguous; it names ${qualifiedCandidates.size} concepts across loaded " +
@@ -193,23 +195,12 @@ class ConceptResolver(private val project: Project) {
             "concept \"${parsed.qualifiedName}\" was not found: its language \"${parsed.language}\" is not a module " +
                 "known to this project — check the language part of the name"
 
-        fun unloadedLanguageMessage(parsed: ConceptName, problem: ModuleLoadProblemJson?): String = buildString {
-            append(
-                "concept \"${parsed.qualifiedName}\" was not found because its language \"${parsed.language}\" is " +
-                    "not loaded",
-            )
-            if (problem != null) {
-                append(":\n")
-                append(moduleLoadRootCauseLines(problem))
-            }
-            // When the language is only unbuilt (it, or its dependency closure), a make fixes it — name the exact
-            // command so the caller can build and retry without deducing the remedy. When something a make cannot fix
-            // is in the way (an absent module, a runtime that failed to register), the diagnosis line below stands alone.
-            if (problem != null && loadFixableByMake(problem)) {
-                append("\nrun 'mops make module ${parsed.language}' to build it, then retry")
-            }
-            append("\nrun 'mops diagnose module ${parsed.language}' for the full dependency tree")
-        }
+        fun unloadedLanguageMessage(parsed: ConceptName, problem: ModuleLoadProblemJson?): String = withRemedies(
+            "concept \"${parsed.qualifiedName}\" was not found because its language \"${parsed.language}\" is " +
+                "not loaded" + (problem?.let { ":\n" + moduleLoadRootCauseLines(it) } ?: ""),
+            problem?.fix,
+            "run 'mops diagnose module ${parsed.language}' for the full dependency tree",
+        )
 
         fun loadedButMissingMessage(parsed: ConceptName, suggestions: List<String>): String =
             if (suggestions.isEmpty()) {

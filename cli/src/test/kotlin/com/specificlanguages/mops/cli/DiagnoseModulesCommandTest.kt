@@ -4,7 +4,9 @@ import com.github.stefanbirkner.systemlambda.SystemLambda.tapSystemOut
 import com.specificlanguages.mops.cli.diagnose.DiagnoseModulesCommand
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.ModuleLoadDiagnosticJson
+import com.specificlanguages.mops.protocol.ModuleLoadFix
 import com.specificlanguages.mops.protocol.ModuleLoadProblemJson
+import com.specificlanguages.mops.protocol.ModuleLoadProblemReason
 import com.specificlanguages.mops.protocol.ModuleLoadSummary
 import com.specificlanguages.mops.protocol.ModulesDiagnosticsResponse
 import com.specificlanguages.mops.protocol.ProtocolJson
@@ -34,7 +36,7 @@ class DiagnoseModulesCommandTest {
     }
 
     @Test
-    fun `a reason with a newline stays on one row`() {
+    fun `root cause rows end with their fix`() {
         val client = mock<DaemonClient>()
         whenever(client.diagnoseModules()).thenReturn(
             ModulesDiagnosticsResponse(
@@ -47,8 +49,15 @@ class DiagnoseModulesCommandTest {
                         loaded = false,
                         problem = ModuleLoadProblemJson(
                             module = "org.example.base",
-                            reason = "BROKEN\nDEPENDENCIES",
-                            causes = listOf(ModuleLoadProblemJson(module = "org.example.dep", reason = "NOT\nBUILT")),
+                            reason = ModuleLoadProblemReason.BROKEN_DEPENDENCIES,
+                            causes = listOf(
+                                ModuleLoadProblemJson(
+                                    module = "org.example.dep",
+                                    reason = ModuleLoadProblemReason.NOT_BUILT,
+                                    fix = ModuleLoadFix(listOf("org.example.dep")),
+                                ),
+                                ModuleLoadProblemJson(module = "org.example.gone", reason = ModuleLoadProblemReason.ABSENT),
+                            ),
                         ),
                     ),
                 ),
@@ -59,8 +68,44 @@ class DiagnoseModulesCommandTest {
 
         assertEquals(
             "modules\t0/1 loaded\t1 failed" + nl +
-                "org.example.base\tlanguage\tBROKEN\\nDEPENDENCIES" + nl +
-                "\torg.example.dep\tNOT\\nBUILT" + nl +
+                "org.example.base\tlanguage\tBROKEN_DEPENDENCIES" + nl +
+                "\torg.example.dep\tNOT_BUILT\tfix: mops make module org.example.dep" + nl +
+                "\torg.example.gone\tABSENT" + nl +
+                "# modules without a Java facet are not listed; diagnose one with: mops diagnose module <module>" + nl,
+            stdout,
+        )
+    }
+
+    @Test
+    fun `a module name with a newline stays on one row`() {
+        val client = mock<DaemonClient>()
+        whenever(client.diagnoseModules()).thenReturn(
+            ModulesDiagnosticsResponse(
+                summary = ModuleLoadSummary(total = 1, loaded = 0, failed = 1),
+                modules = listOf(
+                    ModuleLoadDiagnosticJson(
+                        module = "org.example\nbase",
+                        kind = "language",
+                        present = true,
+                        loaded = false,
+                        problem = ModuleLoadProblemJson(
+                            module = "org.example\nbase",
+                            reason = ModuleLoadProblemReason.BROKEN_DEPENDENCIES,
+                            causes = listOf(
+                                ModuleLoadProblemJson(module = "org.example\ndep", reason = ModuleLoadProblemReason.ABSENT),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        val stdout = tapSystemOut { assertEquals(0, run(client)) }
+
+        assertEquals(
+            "modules\t0/1 loaded\t1 failed" + nl +
+                "org.example\\nbase\tlanguage\tBROKEN_DEPENDENCIES" + nl +
+                "\torg.example\\ndep\tABSENT" + nl +
                 "# modules without a Java facet are not listed; diagnose one with: mops diagnose module <module>" + nl,
             stdout,
         )
@@ -95,7 +140,12 @@ class DiagnoseModulesCommandTest {
                         kind = "language",
                         present = true,
                         loaded = false,
-                        problem = ModuleLoadProblemJson(module = "org.example.base", reason = "NOT_BUILT", detail = "not built"),
+                        problem = ModuleLoadProblemJson(
+                            module = "org.example.base",
+                            reason = ModuleLoadProblemReason.NOT_BUILT,
+                            detail = "not built",
+                            fix = ModuleLoadFix(listOf("org.example.base")),
+                        ),
                     ),
                 ),
             ),
@@ -105,7 +155,7 @@ class DiagnoseModulesCommandTest {
 
         assertEquals(
             "modules\t0/1 loaded\t1 failed" + nl +
-                "org.example.base\tlanguage\tNOT_BUILT" + nl +
+                "org.example.base\tlanguage\tNOT_BUILT\tfix: mops make module org.example.base" + nl +
                 "# modules without a Java facet are not listed; diagnose one with: mops diagnose module <module>" + nl,
             stdout,
         )
@@ -139,10 +189,10 @@ class DiagnoseModulesCommandTest {
                     loaded = false,
                     problem = ModuleLoadProblemJson(
                         module = "org.example.expr",
-                        reason = "BROKEN_DEPENDENCIES",
+                        reason = ModuleLoadProblemReason.BROKEN_DEPENDENCIES,
                         detail = "modules it depends on are not loaded",
                         causes = listOf(
-                            ModuleLoadProblemJson(module = "jetbrains.mps.lang.editor.tooltips", reason = "ABSENT"),
+                            ModuleLoadProblemJson(module = "jetbrains.mps.lang.editor.tooltips", reason = ModuleLoadProblemReason.ABSENT),
                         ),
                     ),
                 ),

@@ -1,5 +1,8 @@
 package com.specificlanguages.mops.daemon
 
+import com.specificlanguages.mops.protocol.ModuleLoadFix
+import com.specificlanguages.mops.protocol.ModuleLoadProblemJson
+import com.specificlanguages.mops.protocol.ModuleLoadProblemReason
 import java.nio.file.Path
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
@@ -63,7 +66,15 @@ class ModuleLoadDiagnosticsSemanticsTest {
         assertEquals("language", diagnostic.kind)
         assertTrue(diagnostic.present, "the fixture defines this language: $diagnostic")
         assertTrue(!diagnostic.loaded, "the fixture language is not compiled, so it does not load: $diagnostic")
-        assertEquals("NOT_BUILT", diagnostic.problem?.reason, "diagnosis: $diagnostic")
+        assertEquals(
+            ModuleLoadProblemJson(
+                module = JSON_LANGUAGE,
+                reason = ModuleLoadProblemReason.NOT_BUILT,
+                detail = diagnostic.problem?.detail,
+                fix = ModuleLoadFix(listOf(JSON_LANGUAGE)),
+            ),
+            diagnostic.problem,
+        )
     }
 
     @Test
@@ -73,7 +84,10 @@ class ModuleLoadDiagnosticsSemanticsTest {
         val diagnostic = response.module
         assertTrue(!diagnostic.present)
         assertTrue(!diagnostic.loaded)
-        assertEquals("ABSENT", diagnostic.problem?.reason)
+        assertEquals(
+            ModuleLoadProblemJson("no.such.module.at.all", ModuleLoadProblemReason.ABSENT, "not present in the repository"),
+            diagnostic.problem,
+        )
     }
 
     @Test
@@ -83,9 +97,31 @@ class ModuleLoadDiagnosticsSemanticsTest {
 
             assertTrue(diagnostic.present, "diagnosis: $diagnostic")
             assertEquals("solution", diagnostic.kind, "diagnosis: $diagnostic")
-            assertEquals("NO_JAVA_FACET", diagnostic.problem?.reason, "diagnosis: $diagnostic")
+            assertEquals(ModuleLoadProblemReason.NO_JAVA_FACET, diagnostic.problem?.reason, "diagnosis: $diagnostic")
             assertTrue(diagnostic.loaded, "a missing Java facet on a non-language module is not a load failure: $diagnostic")
         }
+    }
+
+    @Test
+    fun `an unbuilt language with an absent dependency has no fix, since making it would not load it`() {
+        SharedMpsEnvironment.withProjectCopy(prepare = ::addAbsentLanguageDependency) { access, _ ->
+            val problem = assertNotNull(access.read { diagnoseModule(JSON_LANGUAGE) }.module.problem)
+
+            assertEquals(ModuleLoadProblemReason.NOT_BUILT, problem.reason, "problem: $problem")
+            assertNull(problem.fix, "problem: $problem")
+            assertTrue(problem.detail!!.endsWith("modules it depends on also do not load: $ABSENT_MODULE (ABSENT)"), problem.detail)
+        }
+    }
+
+    private fun addAbsentLanguageDependency(project: Path) {
+        val descriptor = project.resolve("languages/$JSON_LANGUAGE/$JSON_LANGUAGE.mpl")
+        descriptor.writeText(
+            descriptor.readText().replace(
+                "  <accessoryModels />",
+                "  <dependencies>\n    <dependency reexport=\"false\">0b4fbd0c-3a0b-4fa4-b5b6-6a43b0d7f7a1($ABSENT_MODULE)</dependency>\n" +
+                    "  </dependencies>\n  <accessoryModels />",
+            ),
+        )
     }
 
     private fun removeSandboxJavaFacet(project: Path) {
@@ -97,5 +133,6 @@ class ModuleLoadDiagnosticsSemanticsTest {
         const val SANDBOX_MODULE = "json.sandbox"
         const val STRUCTURE_LANGUAGE = "jetbrains.mps.lang.structure"
         const val JSON_LANGUAGE = "com.specificlanguages.json"
+        const val ABSENT_MODULE = "example.absent"
     }
 }

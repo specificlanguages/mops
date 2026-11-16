@@ -30,6 +30,8 @@ import picocli.CommandLine.Parameters
             "AMBIGUOUS_TARGET and lists their Module References; pass one of them instead of the name.",
         "",
         REASON_CODES_HELP,
+        "",
+        FIX_HELP,
     ],
 )
 class DiagnoseModuleCommand(private val environment: CommandEnvironment) : CliCommand(), IExitCodeGenerator {
@@ -76,7 +78,7 @@ class DiagnoseModuleCommand(private val environment: CommandEnvironment) : CliCo
 
     private fun renderTree(problem: ModuleLoadProblemJson, depth: Int) {
         val indent = "\t".repeat(depth)
-        val columns = listOfNotNull(problem.module, problem.reason, problem.detail)
+        val columns = listOfNotNull(problem.module, problem.reason.name, problem.detail, problem.fix?.label)
         println(indent + textRow(columns))
         problem.causes.forEach { renderTree(it, depth + 1) }
     }

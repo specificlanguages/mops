@@ -81,7 +81,8 @@ getChildren(containmentLink), getReference(referenceLink), and SNodeOperations.g
 Compiled classes of a module — language runtime singletons, generated descriptors, plugin code — load through its class
 loader with mops.runtime.loadClass(module, className) (null for a missing class) or requireClass (throws), inside
 project.read or project.command. Module failures are named: unknown or ambiguous module, module without a class loader,
-or runtime not loaded (run `mops make module <module>` for an uncompiled source module). See `mops examples runtime`.
+or runtime not loaded. The last one lists the root causes with the fixes that mops knows, such as
+`mops make module <module>` for an uncompiled project module. See `mops examples runtime`.
 
 The code is not sandboxed and runs with full access to the filesystem, network, process, reflection, and MPS.
 
