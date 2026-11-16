@@ -28,10 +28,10 @@ jobs:
           PR_TITLE: ${{ github.event.pull_request.title }}
         if: github.event_name == 'pull_request'
         run: printf '%s\n' "$PR_TITLE" > "$RUNNER_TEMP/pull-request-title.txt"
-      - uses: j178/prek-action@44924fe9ef4a6f88253c4b6b1bf11c689d3ce53d # v3.1.0
+      - uses: j178/prek-action@7b101f8338a08d2bd6fdb3625e4e7692428763a3 # v3.1.1
         if: github.event_name == 'pull_request'
         with:
-          prek-version: v0.5.9
+          prek-version: v0.5.11
           extra-args: >-
             conventional-pre-commit --stage manual
             --files ${{ runner.temp }}/pull-request-title.txt
