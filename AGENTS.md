@@ -13,7 +13,11 @@ This is a prototype:
 **Sibling paths.** When you change how mops reads, resolves, reports, or prints something, the commands, Code Mode
 paths, and edit batches that do the same thing are its sibling paths (`docs/VISION.md`, principle 7). Change every
 sibling path in the same pull request, through one shared implementation. You are done when each sibling path is changed
-or named in the pull request body as left for later.
+or left for later with an issue, as [Commits and pull requests](docs/development.md#commits-and-pull-requests) says.
+
+**Review load.** The maintainer reviews every pull request, so review time sets the pace. Start a pull request only when
+fewer than three ready pull requests wait for review (`gh pr list --draft=false`), not counting dependency updates.
+Refactorings that touch the same files run one after another: merge one before you start the next.
 
 ## Agent skills
 
@@ -40,4 +44,4 @@ Verified MPS API documentation lives in
 - [Gradle](docs/agents/gradle-conventions.md)
 - [Prose](docs/agents/prose-guidelines.md): Markdown docs, help text, explain topics, examples, and skills
 - [Commits and pull requests](docs/development.md#commits-and-pull-requests): Conventional Commits for pull request
-  titles
+  titles, commit structure, issues for work left for later, and the review before a pull request is ready
