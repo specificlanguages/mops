@@ -41,7 +41,7 @@ class OutdatedLanguageSemanticsTest {
                 assertFalse(message.contains("hash differs"), message)
                 assertFalse(message.contains("Current hash:"), message)
                 assertFalse(message.contains("Recorded hash:"), message)
-                // A make does not save the model, so it cannot clear this condition.
+                // mops make does not save models, so a make leaves this condition in place.
                 assertFalse(message.contains("mops make module"), message)
             } finally {
                 project.modelAccess.runWriteAction { model.isChanged = false }
