@@ -3,13 +3,13 @@ package com.specificlanguages.mops.daemon
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.configurationStore.StoreReloadManager
 import com.intellij.openapi.vfs.LocalFileSystem
-import com.intellij.openapi.vfs.VfsUtil
+import com.specificlanguages.mops.daemon.filewatcher.FolderRefreshReport
+import com.specificlanguages.mops.daemon.filewatcher.FolderRefresher
 import jetbrains.mps.classloading.ClassLoaderManager
 import jetbrains.mps.ide.platform.watching.ReloadManager
 import jetbrains.mps.project.MPSProject
 import jetbrains.mps.project.Project
 import jetbrains.mps.util.PathManager
-import jetbrains.mps.vfs.refresh.DefaultCachingContext
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.mps.openapi.module.SModuleReference
 import java.nio.file.Files
@@ -17,7 +17,7 @@ import java.nio.file.Path
 
 /**
  * Adapter. Refreshes project files, the folders of source modules, and the archives of packaged modules, and replaces
- * runtimes whose Java classpath contents changed between requests.
+ * runtimes whose Java classpath contents changed between requests. [FolderRefresher] refreshes the folders.
  *
  * Hides: how to make MPS see the changes that other programs made on disk to a project and the modules it loads.
  *
@@ -25,44 +25,51 @@ import java.nio.file.Path
  * it, and `externalChangePolicy.kt` decides what changed; without it, a refresh would refresh every archive, load the
  * stored files of every folder, and replace every runtime. Not thread-safe: the request gate runs one refresh at a time.
  */
-internal class ExternalProjectRefresh(private val project: Project) {
+internal class ExternalProjectRefresh(private val project: Project, private val logger: DaemonLogger) {
     private val classPathFingerprints = ClassPathFingerprints()
+    private val folderRefresher = FolderRefresher()
     private var baseline = RefreshBaseline(classPaths())
     private val mpsHome = Path.of(PathManager.getHomePath())
 
-    fun refresh() {
+    /** Refreshes external changes, logs how the folders were refreshed, and returns that report. */
+    fun refresh(): FolderRefreshReport {
         val mpsProject = project as MPSProject
         val previous = baseline
+        val folders = folderRefresher.start()
         ApplicationManager.getApplication().invokeAndWait {
             val settings = Path.of(requireNotNull(mpsProject.project.basePath)).resolve(".mps")
-            mpsProject.fileSystem.getFile(settings.toString()).refresh(DefaultCachingContext(true, true))
+            val settingsFolder = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(settings)
+            folders.refresh(listOfNotNull(settingsFolder?.toNioPath()))
         }
         // The component store reloads project membership separately from MPS's model/module reload sessions.
         runBlocking { StoreReloadManager.getInstance(mpsProject.project).reloadChangedStorageFiles() }
         lateinit var next: RefreshBaseline
         ApplicationManager.getApplication().invokeAndWait {
-            val loaded = refreshModuleFolders(previous.foldersWithStoredFilesLoaded)
+            val loaded = refreshModuleFolders(previous.foldersWithStoredFilesLoaded, folders::refresh)
             val archiveStamps = refreshModuleArchives(previous.archiveStamps)
             ReloadManager.getInstance().flush()
             val classPaths = replaceChangedRuntimes(previous.classPaths)
             next = RefreshBaseline(classPaths, archiveStamps, loaded)
         }
         baseline = next
+        val report = folders.finish()
+        logger.log(report.logLine())
+        return report
     }
 
     /**
-     * Refreshes the local folders that modules are loaded from: project modules and the modules of libraries that point
-     * at source folders. The persistent VFS keeps records of these files across daemon restarts, so the first time a
-     * folder is seen, the files the VFS has stored under it are loaded into memory before the refresh;
+     * Refreshes the local folders that modules are loaded from with [refreshFolders]: project modules and the modules of
+     * libraries that point at source folders. The persistent VFS keeps records of these files across daemon restarts, so
+     * the first time a folder is seen, the files the VFS has stored under it are loaded into memory before the refresh;
      * docs/test-running-design.md explains why. Returns the folders whose stored files are loaded, [loaded] included.
      */
-    private fun refreshModuleFolders(loaded: Set<Path>): Set<Path> {
+    private fun refreshModuleFolders(loaded: Set<Path>, refreshFolders: (List<Path>) -> Unit): Set<Path> {
         val folders = project.modelAccess.computeReadAction { moduleFolders(project, mpsHome) }
             .mapNotNull { LocalFileSystem.getInstance().findFileByNioFile(it) }
             .associateBy { it.toNioPath() }
         val toLoad = foldersToLoad(loaded, folders.keys.toList())
         toLoad.forEach { loadStoredFiles(folders.getValue(it)) }
-        VfsUtil.markDirtyAndRefresh(false, true, true, *folders.values.toTypedArray())
+        refreshFolders(folders.keys.toList())
         return loaded + toLoad
     }
 

@@ -9,6 +9,10 @@ started share the refreshed state and run concurrently. The batch ends at the fi
 request that arrived during the refresh, so every request sees the external changes made before it arrived. Later
 requests wait for another refresh after the active batch finishes. There is no batching delay.
 
+A refresh relies on the events of the native file watcher where it can, and walks the folders otherwise.
+`FullWalkReason` lists when it walks every folder. Each refresh writes a line to the daemon log that names its mode and
+its cost.
+
 ```text
 refresh → [list, get-node, find] → refresh → edit → refresh → [list, find]
                          ping → pong (independent of project admission)

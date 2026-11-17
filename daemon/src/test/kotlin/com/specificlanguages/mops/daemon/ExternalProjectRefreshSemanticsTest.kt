@@ -10,8 +10,14 @@ import kotlin.io.path.readText
 import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
-/** A refresh sees an external edit of a model file made immediately before it. */
+/**
+ * A refresh sees an external edit of a model file made immediately before it, also when it relies on the native file
+ * watcher instead of walking the folders. On macOS and on Linux x86-64 the watcher must be in use, so these tests
+ * exercise the fence.
+ */
 class ExternalProjectRefreshSemanticsTest {
 
     @Test
@@ -44,22 +50,28 @@ class ExternalProjectRefreshSemanticsTest {
         node: MpsRead.() -> MpsNodeJson,
     ) {
         val access = SharedMpsEnvironment.mpsAccess(project)
-        val refresh = ExternalProjectRefresh(project)
-        refresh.refresh()
+        val refresh = ExternalProjectRefresh(project, DaemonLogger())
+        assertNotNull(refresh.refresh().fullWalkReason, "the first refresh walks every folder")
         var previousName = originalName
         repeat(EDITS) { index ->
             val name = "$originalName$index"
             model.writeText(model.readText().replace("value=\"$previousName\"", "value=\"$name\""))
             previousName = name
 
-            refresh.refresh()
+            val report = refresh.refresh()
 
+            if (watcherExpected) assertNull(report.fullWalkReason, "edit $index: the refresh relies on the file watcher")
             assertEquals(name, propertyValue(access.read(node), "name"), "edit $index is visible after the refresh")
         }
     }
 
     private companion object {
         const val EDITS = 20
+
+        // Every supported MPS version ships fsnotifier for macOS and for Linux on x86-64.
+        val watcherExpected = System.getProperty("os.name").let { os ->
+            os.startsWith("Mac") || os.startsWith("Linux") && System.getProperty("os.arch") in setOf("amd64", "x86_64")
+        }
 
         const val STRUCTURE_MODEL_NAME = "com.specificlanguages.json.structure"
         const val STRUCTURE_MODEL_PATH =

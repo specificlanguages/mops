@@ -108,6 +108,11 @@ active request.
 `MOPS_DAEMON_JAVA_OPTIONS=-Xmx8g`. Test workers started by the daemon inherit them. Without it, the JVM picks its
 default maximum heap, a quarter of physical memory.
 
+Before each request, the daemon reads external file changes from the native file watcher, and walks the project and
+module folders when it cannot rely on the watcher. Each refresh writes a line to the daemon log that names how it went
+and what it cost. If a request misses an external edit, start the daemon with
+`MOPS_DAEMON_JAVA_OPTIONS=-Didea.filewatcher.disabled=true`: then every refresh walks the folders.
+
 Test runs keep the IntelliJ system directory (VFS and indexes) of the test worker between runs in the workspace's
 `test-worker-system` directory, so a run does not index the MPS distribution again. A run that does not end cleanly
 (timed out, cancelled, or a crashed worker) deletes it, and the next run indexes again. The directory is safe to delete

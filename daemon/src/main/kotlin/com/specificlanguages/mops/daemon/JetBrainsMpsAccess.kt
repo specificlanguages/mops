@@ -37,7 +37,7 @@ class JetBrainsMpsAccess(
     private val persistence: PersistenceFacade = PersistenceFacade.getInstance(),
     private val writeTransaction: WriteTransaction = WriteTransaction(),
 ) : MpsAccess {
-    private val externalProjectRefresh = ExternalProjectRefresh(project)
+    private val externalProjectRefresh = ExternalProjectRefresh(project, logger)
     private val navigationTargets = NavigationTargetResolver(project, persistence)
 
     // An MpsRequestException is an expected client error, not a defect. Capture it inside the model action and rethrow
