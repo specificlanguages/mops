@@ -1,5 +1,7 @@
 package com.specificlanguages.mops.daemon
 
+import com.specificlanguages.mops.daemon.core.MpsErrorCode
+import com.specificlanguages.mops.daemon.core.MpsRequestException
 import jetbrains.mps.project.MPSProject
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SNode
@@ -150,11 +152,13 @@ internal class NavigationTargetResolver(
     }
 
     // A segment that is a Node Target written as one string resolves as `get node` resolves it, so a model name shared
-    // by several models fails as ambiguous there. Any other segment is not a node target and matches no node.
+    // by several models fails as ambiguous there. A segment that is not a node target, or names no model, matches no
+    // node.
     private fun matchingNodes(segment: String): List<SNode> =
         try {
             listOfNotNull(nodeTargets.findNode(project, segment))
-        } catch (_: IllegalArgumentException) {
+        } catch (failure: MpsRequestException) {
+            if (failure.code != MpsErrorCode.INVALID_REQUEST && failure.code != MpsErrorCode.MODEL_NOT_FOUND) throw failure
             emptyList()
         }
 

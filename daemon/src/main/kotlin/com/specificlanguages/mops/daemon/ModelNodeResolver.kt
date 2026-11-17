@@ -29,38 +29,38 @@ class ModelNodeResolver(
         when (target) {
             is NodeTarget.SingleString -> findNode(project, target.text)
 
-            is NodeTarget.InModel -> {
-                val model = findModelUnique(project, target.modelTarget)
-                    ?: throw MpsRequestException(
-                        code = MpsErrorCode.MODEL_NOT_FOUND,
-                        message = "model not found: ${target.modelTarget}",
-                    )
-                val nodeId = parseNodeIdOrNull(persistence, target.nodeId)
-                    ?: throw MpsRequestException(
-                        code = MpsErrorCode.INVALID_REQUEST,
-                        message = "could not parse node ID: ${target.nodeId}",
-                    )
-                model.getNode(nodeId)
-            }
+            is NodeTarget.InModel -> findNode(project, target.modelTarget, target.nodeId)
         }
 
     /**
-     * Resolves a **Node Target** written as one string (see [parseNodeTarget]). Returns null when the target is well
-     * formed but names no node. Throws [IllegalArgumentException] when the target is malformed, and
-     * [MpsRequestException] when its model name is ambiguous.
+     * Resolves a **Node Target** written as one string (see [parseNodeTarget]). Returns null when its model holds no
+     * such node. Fails like a model target and node ID given apart: with [MpsErrorCode.INVALID_REQUEST] when the target
+     * is malformed, [MpsErrorCode.MODEL_NOT_FOUND] when no model matches, and [MpsErrorCode.AMBIGUOUS_TARGET] when its
+     * model name matches several.
      */
     fun findNode(project: Project, target: String): SNode? = resolve(project, parseNodeTarget(persistence, target))
 
-    /** Like [findNode] with one string, for a node target whose model part and node ID come apart. */
+    /**
+     * Like [findNode] with one string, for a node target whose model target and node ID come apart: the two-token form of
+     * a command, a `{model, nodeId}` edit target, or an inline reference target.
+     */
     fun findNode(project: Project, model: String, nodeId: String): SNode? =
         resolve(project, parseNodeTarget(persistence, model, nodeId))
 
     private fun resolve(project: Project, target: ParsedNodeTarget): SNode? =
         when (target) {
-            is ParsedNodeTarget.Reference -> target.reference.resolve(project.repository)
+            is ParsedNodeTarget.Reference -> {
+                if (target.reference.modelReference?.resolve(project.repository) == null) throw modelNotFound(target.model)
+                target.reference.resolve(project.repository)
+            }
+
             // A model name names one model or fails as ambiguous, whether or not the other models hold the node.
-            is ParsedNodeTarget.InNamedModel -> findModelUnique(project, target.modelName)?.getNode(target.nodeId)
+            is ParsedNodeTarget.InNamedModel ->
+                (findModelUnique(project, target.modelName) ?: throw modelNotFound(target.modelName)).getNode(target.nodeId)
         }
+
+    private fun modelNotFound(modelTarget: String) =
+        MpsRequestException(code = MpsErrorCode.MODEL_NOT_FOUND, message = "model not found: $modelTarget")
 
     /**
      * Resolves a model target to a single model, failing with [MpsErrorCode.AMBIGUOUS_TARGET] when more than one model

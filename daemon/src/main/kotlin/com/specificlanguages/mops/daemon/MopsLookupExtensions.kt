@@ -33,7 +33,15 @@ object MopsLookupExtensions {
     @JvmStatic
     fun node(lookup: MopsLookup, target: String): SNode? {
         requireRead(lookup.mops, "mops.lookup.node")
-        return ModelNodeResolver(DaemonLogger()).findNode(lookup.mops.project, target)
+        return try {
+            ModelNodeResolver(DaemonLogger()).findNode(lookup.mops.project, target)
+        } catch (failure: MpsRequestException) {
+            when (failure.code) {
+                MpsErrorCode.MODEL_NOT_FOUND -> null
+                MpsErrorCode.INVALID_REQUEST -> throw IllegalArgumentException(failure.message, failure)
+                else -> throw failure
+            }
+        }
     }
 
     /** Resolves a concept name, returning null on a miss. Ambiguity and untrusted runtimes remain errors. Access: read. */

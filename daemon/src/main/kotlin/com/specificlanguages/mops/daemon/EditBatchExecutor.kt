@@ -74,7 +74,7 @@ class EditBatchExecutor(
             throw MpsRequestException(code = code, message = message)
 
         // Runs the node target lookup that operation [index] needs for [what]. A failed lookup keeps its error code, as
-        // the same lookup in a command does; any other failure, such as a malformed target, is TARGET_RESOLUTION_FAILED.
+        // the same lookup in a command does; any other failure is TARGET_RESOLUTION_FAILED.
         fun <T> lookUp(index: Int, what: String, lookup: () -> T): T =
             try {
                 lookup()
