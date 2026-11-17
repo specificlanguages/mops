@@ -10,15 +10,24 @@ import org.jetbrains.mps.openapi.model.SNode
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import java.nio.file.Path
 
+/**
+ * Logic. Looks up the model or node that a model target or a **Node Target** names in an **MPS Project**.
+ *
+ * Hides: which models a model target matches, and what zero or several matches mean. A model reference matches by
+ * model ID; a model name matches every model with that name, and more than one fails with
+ * [MpsErrorCode.AMBIGUOUS_TARGET].
+ *
+ * Exception to **`logic-no-io`**: when [findModelUnique] finds no model, it writes a diagnostic log line that lists the
+ * models it searched, and that line and the ambiguity message name each model's file, which reads the file system.
+ * Building that list belongs with the search, and a caller would have to repeat the scan to log it.
+ */
 class ModelNodeResolver(
     private val logger: DaemonLogger,
     private val persistence: PersistenceFacade = PersistenceFacade.getInstance(),
 ) {
     fun findNode(project: Project, target: NodeTarget): SNode? =
         when (target) {
-            is NodeTarget.SingleString -> persistence
-                .createNodeReference(normalizeNodeReferenceSpelling(persistence, target.text))
-                .resolve(project.repository)
+            is NodeTarget.SingleString -> findNode(project, target.text)
 
             is NodeTarget.InModel -> {
                 val model = findModelUnique(project, target.modelTarget)
@@ -33,6 +42,24 @@ class ModelNodeResolver(
                     )
                 model.getNode(nodeId)
             }
+        }
+
+    /**
+     * Resolves a **Node Target** written as one string (see [parseNodeTarget]). Returns null when the target is well
+     * formed but names no node. Throws [IllegalArgumentException] when the target is malformed, and
+     * [MpsRequestException] when its model name is ambiguous.
+     */
+    fun findNode(project: Project, target: String): SNode? = resolve(project, parseNodeTarget(persistence, target))
+
+    /** Like [findNode] with one string, for a node target whose model part and node ID come apart. */
+    fun findNode(project: Project, model: String, nodeId: String): SNode? =
+        resolve(project, parseNodeTarget(persistence, model, nodeId))
+
+    private fun resolve(project: Project, target: ParsedNodeTarget): SNode? =
+        when (target) {
+            is ParsedNodeTarget.Reference -> target.reference.resolve(project.repository)
+            // A model name names one model or fails as ambiguous, whether or not the other models hold the node.
+            is ParsedNodeTarget.InNamedModel -> findModelUnique(project, target.modelName)?.getNode(target.nodeId)
         }
 
     /**

@@ -17,3 +17,8 @@ sealed interface NodeTarget {
     @SerialName("nodeReference")
     data class SingleString(@SerialName("nodeReference") val text: String) : NodeTarget
 }
+
+/** The notations a **Node Target** written as one string may use, for help text and error messages. */
+const val NODE_TARGET_NOTATIONS =
+    "<model>/<node ID> (model name or serialized model reference; decimal or encoded node ID) " +
+        "or a serialized node reference"

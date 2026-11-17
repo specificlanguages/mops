@@ -2,15 +2,13 @@ package com.specificlanguages.mops.daemon
 
 import com.specificlanguages.mops.daemon.core.MpsErrorCode
 import com.specificlanguages.mops.daemon.core.MpsRequestException
+import com.specificlanguages.mops.protocol.NODE_TARGET_NOTATIONS
 import org.jetbrains.mps.openapi.language.SAbstractConcept
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SNode
 import org.jetbrains.mps.openapi.module.SModule
-import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 
 object MopsLookupExtensions {
-    private val persistence get() = PersistenceFacade.getInstance()
-
     /** Resolves a module name or serialized reference, returning null on a miss and rejecting ambiguity. Access: read. */
     @CodeModeExtension(MpsAccessLevel.READ)
     @JvmStatic
@@ -27,14 +25,15 @@ object MopsLookupExtensions {
         return ModelNodeResolver(DaemonLogger()).findModelUnique(lookup.mops.project, target)
     }
 
-    /** Resolves a node reference, returning null on a miss and rejecting malformed references. Access: read. */
+    /**
+     * Resolves a **Node Target** written as one string, in the notations of [NODE_TARGET_NOTATIONS]. Returns null on a
+     * miss and rejects malformed targets and ambiguous model names. Access: read.
+     */
     @CodeModeExtension(MpsAccessLevel.READ)
     @JvmStatic
-    fun node(lookup: MopsLookup, reference: String): SNode? {
+    fun node(lookup: MopsLookup, target: String): SNode? {
         requireRead(lookup.mops, "mops.lookup.node")
-        val parsed = runCatching { persistence.createNodeReference(reference) }.getOrNull()
-            ?: throw IllegalArgumentException("invalid node reference: $reference")
-        return parsed.resolve(lookup.mops.project.repository)
+        return ModelNodeResolver(DaemonLogger()).findNode(lookup.mops.project, target)
     }
 
     /** Resolves a concept name, returning null on a miss. Ambiguity and untrusted runtimes remain errors. Access: read. */
@@ -67,11 +66,12 @@ object MopsLookupExtensions {
     fun requireModel(lookup: MopsLookup, target: String): SModel =
         model(lookup, target) ?: throw IllegalArgumentException("model not found: $target")
 
-    /** Resolves exactly one node reference, throwing on a miss. Access: read. */
+    /** Resolves exactly one node, throwing on a miss. Accepts the same notations as [node]. Access: read. */
     @CodeModeExtension(MpsAccessLevel.READ)
     @JvmStatic
-    fun requireNode(lookup: MopsLookup, reference: String): SNode =
-        node(lookup, reference) ?: throw IllegalArgumentException("node not found: $reference")
+    fun requireNode(lookup: MopsLookup, target: String): SNode =
+        node(lookup, target)
+            ?: throw IllegalArgumentException("node not found: $target; accepted notations: $NODE_TARGET_NOTATIONS")
 
     /** Resolves exactly one concept name, throwing with diagnostics on a miss. Access: read. */
     @CodeModeExtension(MpsAccessLevel.READ)
