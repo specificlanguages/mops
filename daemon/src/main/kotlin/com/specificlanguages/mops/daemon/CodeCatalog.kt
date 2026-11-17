@@ -4,7 +4,16 @@ import com.specificlanguages.mops.protocol.CodeCatalogRequest
 import com.specificlanguages.mops.protocol.*
 
 object CodeCatalog {
-    internal data class Entry(val receiver: String, val name: String, val signature: String, val access: String, val summary: String) {
+    /** [readAccess] and [writeAccess] describe where an indexed accessor reads and writes; null for other entries. */
+    internal data class Entry(
+        val receiver: String,
+        val name: String,
+        val signature: String,
+        val access: String,
+        val summary: String,
+        val readAccess: String? = null,
+        val writeAccess: String? = null,
+    ) {
         val path get() = "$receiver.$name"
         fun documented(): CodeHelpEntry {
             val arguments = signature.substringAfter('(', "").substringBeforeLast(')', "")
@@ -17,8 +26,7 @@ object CodeCatalog {
             return CodeHelpEntry(path, signature, summary, if (path in listOf("Project.read", "Project.command")) "outside an access block [none]" else accessDescription(CodeHelpApi.access(receiver, name, access)), parameters,
                 result.removeSuffix("?"), result.endsWith("?"), options(path), examples(path),
                 listOf(result.removeSuffix("?").removePrefix("List<").removeSuffix(">")).filter { it !in listOf("T", "void", "String", "Class") },
-                if (name in listOf("properties", "child", "children", "references")) "inside project.read or project.command" else null,
-                if (name in listOf("properties", "child", "children", "references")) "inside project.command" else null)
+                readAccess, writeAccess)
         }
     }
     private val entries = (listOf(
