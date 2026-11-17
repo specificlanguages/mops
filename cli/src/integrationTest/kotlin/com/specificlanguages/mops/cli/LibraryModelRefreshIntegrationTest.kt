@@ -19,13 +19,25 @@ class LibraryModelRefreshIntegrationTest {
 
     @Test
     fun `external edits of a library model outside the project folder are visible in the same daemon and after a restart`() {
+        val project = prepareProject()
+        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
+        exerciseEdits(project, daemonHome) { args ->
+            runCommandLine(project, "--daemon-home", daemonHome.pathString, *javaAndMpsHomeArgs(), *args.toTypedArray())
+        }
+    }
+
+    /** Copies the library fixture and moves its library folder out of the project folder. */
+    private fun prepareProject(): Path {
         val project = copyTestProject("project-library", tempDir.resolve("project"))
-        val shared = Files.move(project.resolve("libs"), tempDir.resolve("shared"))
+        Files.move(project.resolve("libs"), tempDir.resolve("shared"))
         val libraries = project.resolve(".mps/libraries.xml")
         libraries.writeText(libraries.readText().replace("${'$'}PROJECT_DIR${'$'}/libs", "${'$'}PROJECT_DIR${'$'}/../shared"))
-        val libraryModel = shared.resolve("library/models/values.mps")
+        return project
+    }
+
+    private fun exerciseEdits(project: Path, daemonHome: Path, run: (List<String>) -> CliResult) {
+        val libraryModel = tempDir.resolve("shared/library/models/values.mps")
         val projectModel = project.resolve("solutions/tests/models/library@tests.mps")
-        val daemonHome = tempDir.resolve("daemon-home").createDirectories()
         val program = tempDir.resolve("names.groovy").also {
             it.writeText("""
                 project.read {
@@ -35,10 +47,8 @@ class LibraryModelRefreshIntegrationTest {
                 }
             """.trimIndent())
         }
-        fun run(vararg args: String): CliResult =
-            runCommandLine(project, "--daemon-home", daemonHome.pathString, *javaAndMpsHomeArgs(), *args)
         fun names(): String {
-            val result = run("code", "run", program.pathString)
+            val result = run(listOf("code", "run", program.pathString))
             assertEquals(0, result.exitCode, result.output)
             return result.stdout.trim()
         }
@@ -58,7 +68,7 @@ class LibraryModelRefreshIntegrationTest {
             rename(libraryModel, "LibraryValue", "LibraryValueEdited")
             assertEquals("LibraryValueEdited;LibraryPassEdited", names(), "library model edit in the same daemon")
 
-            assertEquals(0, run("daemon", "stop").exitCode)
+            assertEquals(0, run(listOf("daemon", "stop")).exitCode)
             rename(libraryModel, "LibraryValueEdited", "LibraryValueAfterRestart")
             assertEquals("LibraryValueAfterRestart;LibraryPassEdited", names(), "edit while the daemon was stopped")
         } finally {
