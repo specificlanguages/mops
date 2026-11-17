@@ -20,7 +20,6 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
-import kotlin.test.assertNotNull
 
 /**
  * A node target written as one string means the same on every supported MPS version, whether a node command or an edit
@@ -48,37 +47,41 @@ class NodeTargetNotationSemanticsTest {
     }
 
     @Test
-    fun `a single-token node target keeps the CLI's error codes`() {
+    fun `a single-token node target fails with the same error codes as a model target and node ID`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
-            val missingNode = assertFailsWith<MpsRequestException> {
-                mpsAccess.read { getNode(NodeTarget.SingleString("$STRUCTURE_MODEL_NAME/1")) }
-            }
-            assertEquals(MpsErrorCode.NODE_NOT_FOUND, missingNode.code)
+            fun failure(target: NodeTarget) =
+                assertFailsWith<MpsRequestException>(target.toString()) { mpsAccess.read { getNode(target) } }
 
-            val missingModel = assertFailsWith<MpsRequestException> {
-                mpsAccess.read { getNode(NodeTarget.SingleString("no.such.model/$JSON_FILE_ID")) }
-            }
-            assertEquals(MpsErrorCode.NODE_NOT_FOUND, missingModel.code)
+            listOf(
+                NodeTarget.SingleString("$STRUCTURE_MODEL_NAME/1"),
+                NodeTarget.InModel(modelTarget = STRUCTURE_MODEL_NAME, nodeId = "1"),
+                // "null" is a well-formed encoded node ID in both notations.
+                NodeTarget.SingleString("$STRUCTURE_MODEL_REFERENCE/null"),
+                NodeTarget.SingleString("$STRUCTURE_MODEL_NAME/null"),
+            ).forEach { assertEquals(MpsErrorCode.NODE_NOT_FOUND, failure(it).code, it.toString()) }
 
-            val missingModelReference = assertFailsWith<MpsRequestException> {
-                mpsAccess.read {
-                    getNode(NodeTarget.SingleString("r:00000000-0000-0000-0000-000000000000(no.such.model)/$JSON_FILE_ID"))
-                }
-            }
-            assertEquals(MpsErrorCode.NODE_NOT_FOUND, missingModelReference.code)
+            listOf(
+                NodeTarget.SingleString("no.such.model/$JSON_FILE_ID"),
+                NodeTarget.SingleString("$UNKNOWN_MODEL_REFERENCE/$JSON_FILE_ID"),
+                NodeTarget.InModel(modelTarget = "no.such.model", nodeId = JSON_FILE_ID),
+                NodeTarget.InModel(modelTarget = UNKNOWN_MODEL_REFERENCE, nodeId = JSON_FILE_ID),
+            ).forEach { assertEquals(MpsErrorCode.MODEL_NOT_FOUND, failure(it).code, it.toString()) }
 
-            // The daemon reports an IllegalArgumentException as GENERIC_FAILURE with its message.
-            listOf("malformed", "$STRUCTURE_MODEL_NAME/not-a-node-id").forEach { target ->
-                val malformed = assertFailsWith<IllegalArgumentException>(target) {
-                    mpsAccess.read { getNode(NodeTarget.SingleString(target)) }
-                }
-                assertContains(assertNotNull(malformed.message), "accepted notations: <model>/<node ID>", message = target)
-            }
+            // The node ID is checked before the model, so an unknown model with a malformed node ID is malformed.
+            listOf(
+                NodeTarget.SingleString("malformed"),
+                NodeTarget.SingleString("$STRUCTURE_MODEL_NAME/not-a-node-id"),
+                NodeTarget.InModel(modelTarget = STRUCTURE_MODEL_NAME, nodeId = "not-a-node-id"),
+                NodeTarget.SingleString("no.such.model/not-a-node-id"),
+                NodeTarget.InModel(modelTarget = "no.such.model", nodeId = "not-a-node-id"),
+                NodeTarget.SingleString("$STRUCTURE_MODEL_REFERENCE/not-a-node-id"),
+                NodeTarget.InModel(modelTarget = STRUCTURE_MODEL_REFERENCE, nodeId = "not-a-node-id"),
+            ).forEach { assertEquals(MpsErrorCode.INVALID_REQUEST, failure(it).code, it.toString()) }
 
-            val missingModelInModel = assertFailsWith<MpsRequestException> {
-                mpsAccess.read { getNode(NodeTarget.InModel(modelTarget = "no.such.model", nodeId = JSON_FILE_ID)) }
-            }
-            assertEquals(MpsErrorCode.MODEL_NOT_FOUND, missingModelInModel.code)
+            assertContains(
+                failure(NodeTarget.SingleString("malformed")).message,
+                "accepted notations: <model>/<node ID>",
+            )
         }
     }
 
@@ -187,7 +190,7 @@ class NodeTargetNotationSemanticsTest {
             assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, editTarget.code)
             assertContains(editTarget.message, "operation 0 target could not be resolved: ambiguous model target")
 
-            // A malformed target is not a lookup failure, so an edit reports it as TARGET_RESOLUTION_FAILED.
+            // A malformed target fails with INVALID_REQUEST, as in a command.
             val malformedInlineReference = assertFailsWith<MpsRequestException> {
                 mpsAccess.write {
                     modelEdit(
@@ -203,10 +206,10 @@ class NodeTargetNotationSemanticsTest {
                     )
                 }
             }
-            assertEquals(MpsErrorCode.TARGET_RESOLUTION_FAILED, malformedInlineReference.code)
+            assertEquals(MpsErrorCode.INVALID_REQUEST, malformedInlineReference.code)
             assertContains(
                 malformedInlineReference.message,
-                "operation 0 reference target could not be resolved: invalid node target",
+                "operation 0 reference target could not be resolved: could not parse node ID: not-a-node-id",
             )
         }
     }
@@ -233,6 +236,7 @@ class NodeTargetNotationSemanticsTest {
         const val STRUCTURE_MODEL_REFERENCE = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6($STRUCTURE_MODEL_NAME)"
         const val JSON_FILE_ID = "2110045694544566904"
         const val IJSON_VALUE_ID = "2110045694544566909"
+        const val UNKNOWN_MODEL_REFERENCE = "r:00000000-0000-4000-8000-000000000000(no.such.model)"
         const val STRUCTURE_MODEL_PATH =
             "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps"
         const val DUPLICATE_MODEL_REFERENCE = "r:11111111-2222-4333-8444-555555555555($STRUCTURE_MODEL_NAME)"

@@ -95,6 +95,8 @@ class CodeModeLookupTest {
                             assert mops.lookup.node(target).is(node): target
                         }
                         assert mops.lookup.node("${'$'}modelName/1") == null
+                        // An unknown model is a miss too.
+                        assert mops.lookup.node('no.such.model/1') == null
                         [
                             fails(IllegalArgumentException) { mops.lookup.node('invalid') },
                             fails(IllegalArgumentException) { mops.lookup.requireNode("${'$'}modelName/1") },
