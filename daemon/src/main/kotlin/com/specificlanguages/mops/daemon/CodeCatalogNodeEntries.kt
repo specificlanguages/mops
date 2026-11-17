@@ -34,13 +34,15 @@ internal object CodeCatalogNodeEntries {
             return "Names include inherited ${kind.plural}. Unknown ${kind.plural} fail on read and write, listing the " +
                 "known ones; a name that several inherited ${kind.plural} share fails, naming the concepts that declare " +
                 "them. Index with the $descriptor from node.concept instead of the name to pick one of them by its " +
-                "declaring concept; a descriptor that the node's concept does not have fails."
+                "declaring concept; a descriptor that the node's concept does not have fails. A node whose concept " +
+                "did not load fails with LANGUAGE_NOT_LOADED, naming the language to make."
         }
 
         private fun shadowing(): String? = shadowed?.let {
             val getter = "get${name.replaceFirstChar(Char::uppercase)}()"
             "Shadows native $getter, so an explicit $getter call returns this accessor; it iterates ${it.iterates} " +
-                "like the native collection, so collect, findAll, each, and size() work on it. ${it.nativeAlternatives}"
+                "like the native collection, so collect, findAll, each, and size() work on it. Other members fail " +
+                "with a message naming the native alternative. ${it.nativeAlternatives}"
         }
     }
 
@@ -48,8 +50,9 @@ internal object CodeCatalogNodeEntries {
     private fun featureAccess(kind: NodeFeatureKind): String = when (kind) {
         NodeFeatureKind.PROPERTY ->
             "Reads and writes invoke MPS property getter/setter handlers and use persisted string values, except for " +
-                "enumeration properties, which read as the literal name and accept a literal name or a presentation " +
-                "that only one literal has; any other enumeration value fails and lists the literals."
+                "enumeration properties, which read as the literal name (`_1`, not the persisted `fLJekj4/_1`) and " +
+                "accept a literal name or a presentation (such as `0..1`) that only one literal has; any other " +
+                "enumeration value fails and lists the literals."
         NodeFeatureKind.CHILD_ROLE ->
             "Child access uses native SNode operations; SNodeAccessUtil has no child APIs. Declared cardinality and " +
                 "containment constraints are not checked."
@@ -63,7 +66,7 @@ internal object CodeCatalogNodeEntries {
         IndexedAccessor(
             "child", "NodeChild", NodeFeatureKind.CHILD_ROLE,
             "child[role] returns one SNode or null, and throws for multiple children. Assignment replaces the role " +
-                "with one node; null clears it.",
+                "with one node, which must be detached or already a child in the role; null clears it.",
         ),
         IndexedAccessor(
             "children", "NodeChildren", NodeFeatureKind.CHILD_ROLE,

@@ -42,11 +42,12 @@ thread fails on `mops.*` and on access blocks, and it outlives the request insid
 Native nodes support indexed access by property name or link role, including inherited features. Reads require
 project.read or project.command; assignments require project.command:
 
-  node.properties['name']             // property value as a string, or null when unset
+  node.properties['name']             // property value as a string, or null
   node.child['role']                  // one child or null
   node.children['role']               // immutable list of current children
   node.references['role']             // native SReference or null
-  node.properties['name'] = 'NewName' // null clears; child, children, and references assign the same way
+  node.properties['name'] = 'NewName' // null clears; child and references assign the same way
+  node.children['role'] = [a, b]      // a list replaces the role; [] clears
 
 A name that several inherited features share fails. Index with the descriptor from node.concept (SProperty,
 SContainmentLink, or SReferenceLink) to pick one by the concept that declares it:
@@ -57,9 +58,8 @@ SContainmentLink, or SReferenceLink) to pick one by the concept that declares it
   node.properties[isDeprecated] = 'true'
 
 `mops code help SNode.properties` (or child, children, references) gives each accessor's values, failures, MPS hooks,
-and iteration. node.descendants and node.ancestors navigate containment; see `mops code help SNode.descendants`. A
-node whose concept did not load fails with LANGUAGE_NOT_LOADED naming the language to make. node.name is the native
-SNode.getName(): null, not a failure, for a concept without a name property.
+and iteration. node.descendants and node.ancestors navigate containment; see `mops code help SNode.descendants`.
+node.name is the native SNode.getName(): null, not a failure, for a concept without a name property.
 
 Compiled classes of a module — language runtime singletons, generated descriptors, plugin code — load through its class
 loader with mops.runtime.loadClass(module, className) (null for a missing class) or requireClass (throws), inside
