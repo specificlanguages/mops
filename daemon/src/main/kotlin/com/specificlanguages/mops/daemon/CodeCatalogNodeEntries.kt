@@ -78,8 +78,8 @@ internal object CodeCatalogNodeEntries {
         ),
         IndexedAccessor(
             "properties", "NodeProperties", NodeFeatureKind.PROPERTY,
-            "properties[name] returns the value as a string, or null when unset; unset values follow MPS getter and " +
-                "data type defaults. Assign a string, or null to request clearing through the setter.",
+            "properties[name] returns the value as a string, or null when there is no value; unset values follow MPS " +
+                "getter and data type defaults. Assign a string, or null to request clearing through the setter.",
             Shadowed(
                 "the SProperty descriptors of set properties",
                 "Declared descriptors are available through node.concept.properties.",
