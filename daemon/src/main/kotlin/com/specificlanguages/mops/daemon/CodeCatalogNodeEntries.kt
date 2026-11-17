@@ -1,7 +1,8 @@
 package com.specificlanguages.mops.daemon
 
 /**
- * Code Mode Reference entries for the `SNode` extensions: rendering, containment navigation, and indexed accessors.
+ * Logic. Code Mode Reference entries for the `SNode` extensions: rendering, containment navigation, and indexed
+ * accessors.
  *
  * Hides: how the help describes what the indexed accessors share — lookup by name and its failures, how
  * reads and writes of each feature kind reach MPS, the access they need, and how an accessor shadows a native getter.
