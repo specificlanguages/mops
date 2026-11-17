@@ -163,10 +163,13 @@ class NodeTargetNotationSemanticsTest {
                     )
                 }
             }
+            // An edit keeps the lookup's error code and names the operation.
             assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, inlineReference.code)
+            assertContains(
+                inlineReference.message,
+                "operation 0 reference target could not be resolved: ambiguous model target",
+            )
 
-            // An edit target reports every resolution failure as TARGET_RESOLUTION_FAILED and keeps the cause in the
-            // message.
             val editTarget = assertFailsWith<MpsRequestException> {
                 mpsAccess.write {
                     modelEdit(
@@ -181,12 +184,34 @@ class NodeTargetNotationSemanticsTest {
                     )
                 }
             }
-            assertEquals(MpsErrorCode.TARGET_RESOLUTION_FAILED, editTarget.code)
-            assertContains(editTarget.message, "ambiguous model target")
+            assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, editTarget.code)
+            assertContains(editTarget.message, "operation 0 target could not be resolved: ambiguous model target")
+
+            // A malformed target is not a lookup failure, so an edit reports it as TARGET_RESOLUTION_FAILED.
+            val malformedInlineReference = assertFailsWith<MpsRequestException> {
+                mpsAccess.write {
+                    modelEdit(
+                        EditBatch(
+                            listOf(
+                                addLink(
+                                    target = EditTarget.SingleString("$DUPLICATE_MODEL_REFERENCE/$JSON_FILE_ID"),
+                                    referenceModel = STRUCTURE_MODEL_NAME,
+                                    referenceNodeId = "not-a-node-id",
+                                ),
+                            ),
+                        ),
+                    )
+                }
+            }
+            assertEquals(MpsErrorCode.TARGET_RESOLUTION_FAILED, malformedInlineReference.code)
+            assertContains(
+                malformedInlineReference.message,
+                "operation 0 reference target could not be resolved: invalid node target",
+            )
         }
     }
 
-    private fun addLink(target: EditTarget, referenceModel: String) =
+    private fun addLink(target: EditTarget, referenceModel: String, referenceNodeId: String = IJSON_VALUE_ID) =
         EditOperation.AddChild(
             target = target,
             role = "linkDeclaration",
@@ -195,7 +220,7 @@ class NodeTargetNotationSemanticsTest {
             references = listOf(
                 InlineReference(
                     role = "target",
-                    target = MpsNodeReferenceTargetJson(model = referenceModel, node = IJSON_VALUE_ID),
+                    target = MpsNodeReferenceTargetJson(model = referenceModel, node = referenceNodeId),
                 ),
             ),
         )
