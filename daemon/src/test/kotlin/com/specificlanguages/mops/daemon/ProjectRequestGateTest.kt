@@ -9,13 +9,52 @@ import kotlin.test.*
 
 class ProjectRequestGateTest {
     @Test
-    fun `read batch shares refresh and exclusive work separates later readers`() {
-        val refreshing = CountDownLatch(1)
-        val finishRefresh = CountDownLatch(1)
+    fun `readers queued before a refresh share it and exclusive work separates later readers`() {
+        val exclusiveRunning = CountDownLatch(1)
+        val finishExclusive = CountDownLatch(1)
         val readers = CountDownLatch(2)
         val finishReads = CountDownLatch(1)
         val writing = CountDownLatch(1)
         val finishWrite = CountDownLatch(1)
+        val refreshes = AtomicInteger()
+        val gate = ProjectRequestGate { refreshes.incrementAndGet() }
+        val running = task { gate.run(false) { exclusiveRunning.countDown(); finishExclusive.awaitChecked() } }
+        try {
+            exclusiveRunning.awaitChecked()
+            val first = task { gate.run(true) { readers.countDown(); finishReads.awaitChecked() } }
+            first.awaitQueued()
+            val second = task { gate.run(true) { readers.countDown(); finishReads.awaitChecked() } }
+            second.awaitQueued()
+            val exclusive = task { gate.run(false) { writing.countDown(); finishWrite.awaitChecked() } }
+            exclusive.awaitQueued()
+            val later = task { gate.run(true) { refreshes.get() } }
+            later.awaitQueued()
+            finishExclusive.countDown()
+            readers.awaitChecked()
+            assertEquals(2, refreshes.get())
+            assertEquals(1, writing.count)
+            assertFalse(later.future.isDone)
+            finishReads.countDown()
+            writing.awaitChecked()
+            assertEquals(3, refreshes.get())
+            assertFalse(later.future.isDone)
+            finishWrite.countDown()
+            assertEquals(4, later.result())
+            running.result()
+            first.result()
+            second.result()
+            exclusive.result()
+        } finally {
+            finishExclusive.countDown()
+            finishReads.countDown()
+            finishWrite.countDown()
+        }
+    }
+
+    @Test
+    fun `a reader arriving during a refresh waits for its own refresh`() {
+        val refreshing = CountDownLatch(1)
+        val finishRefresh = CountDownLatch(1)
         val refreshes = AtomicInteger()
         val gate = ProjectRequestGate {
             if (refreshes.incrementAndGet() == 1) {
@@ -23,33 +62,16 @@ class ProjectRequestGateTest {
                 finishRefresh.awaitChecked()
             }
         }
-        val first = task { gate.run(true) { readers.countDown(); finishReads.awaitChecked() } }
+        val first = task { gate.run(true) { refreshes.get() } }
         try {
             refreshing.awaitChecked()
-            val second = task { gate.run(true) { readers.countDown(); finishReads.awaitChecked() } }
+            val second = task { gate.run(true) { refreshes.get() } }
             second.awaitQueued()
-            val exclusive = task { gate.run(false) { writing.countDown(); finishWrite.awaitChecked() } }
-            exclusive.awaitQueued()
-            val later = task { gate.run(true) { refreshes.get() } }
-            later.awaitQueued()
             finishRefresh.countDown()
-            readers.awaitChecked()
-            assertEquals(1, refreshes.get())
-            assertEquals(1, writing.count)
-            assertFalse(later.future.isDone)
-            finishReads.countDown()
-            writing.awaitChecked()
-            assertEquals(2, refreshes.get())
-            assertFalse(later.future.isDone)
-            finishWrite.countDown()
-            assertEquals(3, later.result())
-            first.result()
-            second.result()
-            exclusive.result()
+            assertEquals(1, first.result())
+            assertEquals(2, second.result())
         } finally {
             finishRefresh.countDown()
-            finishReads.countDown()
-            finishWrite.countDown()
         }
     }
 
@@ -75,31 +97,30 @@ class ProjectRequestGateTest {
 
     @Test
     fun `refresh failure is shared by its batch and releases admission`() {
-        val refreshing = CountDownLatch(1)
-        val finishRefresh = CountDownLatch(1)
+        val exclusiveRunning = CountDownLatch(1)
+        val finishExclusive = CountDownLatch(1)
         val refreshes = AtomicInteger()
         val failure = IllegalStateException("refresh failed")
         val gate = ProjectRequestGate {
-            if (refreshes.incrementAndGet() == 1) {
-                refreshing.countDown()
-                finishRefresh.awaitChecked()
-                throw failure
-            }
+            if (refreshes.incrementAndGet() == 2) throw failure
         }
-        val first = task { runCatching { gate.run(true) { fail("must not run") } }.exceptionOrNull() }
+        val running = task { gate.run(false) { exclusiveRunning.countDown(); finishExclusive.awaitChecked() } }
         try {
-            refreshing.awaitChecked()
+            exclusiveRunning.awaitChecked()
+            val first = task { runCatching { gate.run(true) { fail("must not run") } }.exceptionOrNull() }
+            first.awaitQueued()
             val second = task { runCatching { gate.run(true) { fail("must not run") } }.exceptionOrNull() }
             second.awaitQueued()
             val exclusive = task { gate.run(false) { "recovered" } }
             exclusive.awaitQueued()
-            finishRefresh.countDown()
+            finishExclusive.countDown()
+            running.result()
             assertSame(failure, first.result())
             assertSame(failure, second.result())
             assertEquals("recovered", exclusive.result())
-            assertEquals(2, refreshes.get())
+            assertEquals(3, refreshes.get())
         } finally {
-            finishRefresh.countDown()
+            finishExclusive.countDown()
         }
     }
 
