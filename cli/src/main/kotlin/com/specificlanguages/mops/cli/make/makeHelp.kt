@@ -6,10 +6,11 @@ internal const val MAKE_OUTPUT_HELP =
         "a one-line action report on stdout: `made <N> module(s): success`, `made <N> module(s): FAILED (<N> " +
         "error(s))`, or `nothing to generate`. The command exits non-zero when the make reports errors."
 
-/** What a make deletes, for the help footers of both make commands. */
+/** What a make generates and deletes, for the help footers of both make commands. */
 internal const val MAKE_CLEAN_HELP =
     "The make generates every model of the made modules and deletes files in their output folders that it no " +
-        "longer generates."
+        "longer generates. It leaves out the models of modules without generation-target facets, such as " +
+        "solutions created with the `not-generated` usage preset, and names each such module in a warning."
 
 /** How the generation options behave, for the help footers of both make commands. */
 internal const val MAKE_GENERATION_HELP =
