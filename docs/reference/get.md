@@ -21,13 +21,15 @@ Options:
 Export one MPS node as JSON.
 
 ```text
-Usage: mops get node [OPTIONS] NODE_REFERENCE
+Usage: mops get node [OPTIONS] NODE_TARGET
        mops get node [OPTIONS] MODEL_TARGET NODE_ID
 Export one MPS node as JSON.
 Parameters:
-      NODE_REFERENCE | MODEL_TARGET NODE_ID
-                            Serialized node reference, or model target followed
-                              by node ID.
+      NODE_TARGET | MODEL_TARGET NODE_ID
+                            Node target as one string: <model>/<node ID> (model
+                              name or serialized model reference; decimal or
+                              encoded node ID) or a serialized node reference.
+                              Or a model target followed by a node ID.
 Options:
       --ancestry            Nest `parent` recursively up to the root node,
                               giving the full containment chain, not just the
@@ -44,11 +46,12 @@ Options:
                               reference, parent, and the number of children per
                               role. Not allowed with --depth.
 
-An unresolved target fails with NODE_NOT_FOUND. The exported object carries the
-node's concept, id, properties, references, and child subtree, plus a `parent`
-object for its immediate containing node: the containment `role` by which the
-node sits in it, a `type` of `root` or `node`, and the parent's name, concept,
-and reference. A root node has no `parent`.
+A missing node fails with NODE_NOT_FOUND, a missing model with MODEL_NOT_FOUND,
+and a model name shared by several models with AMBIGUOUS_TARGET. The exported
+object carries the node's concept, id, properties, references, and child
+subtree, plus a `parent` object for its immediate containing node: the
+containment `role` by which the node sits in it, a `type` of `root` or `node`,
+and the parent's name, concept, and reference. A root node has no `parent`.
 
 Output is pretty-printed with `concept`, `id`, and `parent` ahead of
 `properties`, `references`, and `children`, so `head` shows the identifying

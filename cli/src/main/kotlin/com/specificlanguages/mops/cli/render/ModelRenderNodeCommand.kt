@@ -4,6 +4,7 @@ import com.specificlanguages.mops.cli.common.CliCommand
 import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
 import com.specificlanguages.mops.daemoncomms.DaemonClient
+import com.specificlanguages.mops.protocol.NODE_TARGET_NOTATIONS
 import com.specificlanguages.mops.protocol.NodeTarget
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
@@ -13,7 +14,7 @@ import picocli.CommandLine.Parameters
     name = "node",
     description = ["Render one MPS node as the plain text of its default editor."],
     customSynopsis = [
-        "\${COMMAND-FULL-NAME} [OPTIONS] NODE_REFERENCE",
+        "\${COMMAND-FULL-NAME} [OPTIONS] NODE_TARGET",
         "       \${COMMAND-FULL-NAME} [OPTIONS] MODEL_TARGET NODE_ID",
     ],
     footer = [
@@ -21,7 +22,7 @@ import picocli.CommandLine.Parameters
         "Prints the node the way it appears in the MPS editor, with the editor's line breaks and indentation and " +
             "trailing whitespace trimmed from each line. Any node is renderable, not only root nodes. The output is " +
             "a quick overview for reading, not a serialization that can be imported back. The target is addressed " +
-            "the same way as in `mops get node`; an unresolved target fails with NODE_NOT_FOUND.",
+            "the same way as in `mops get node`, and fails the same way when it does not resolve.",
         "",
         "If a concept in the node's subtree does not resolve because its language is not loaded, the command " +
             "fails with LANGUAGE_NOT_LOADED. It diagnoses each unloaded language the same way `find instances` " +
@@ -46,9 +47,9 @@ class ModelRenderNodeCommand(private val environment: CommandEnvironment) : CliC
     @Parameters(
         index = "0..1",
         arity = "1..2",
-        paramLabel = "NODE_REFERENCE | MODEL_TARGET NODE_ID",
+        paramLabel = "NODE_TARGET | MODEL_TARGET NODE_ID",
         hideParamSyntax = true,
-        description = ["Serialized node reference, or model target followed by node ID."],
+        description = ["Node target as one string: $NODE_TARGET_NOTATIONS. Or a model target followed by a node ID."],
     )
     lateinit var nodeTarget: Array<String>
 
@@ -57,7 +58,7 @@ class ModelRenderNodeCommand(private val environment: CommandEnvironment) : CliC
         val response = when (nodeTarget.size) {
             1 -> client.renderNode(NodeTarget.SingleString(nodeTarget[0]), allowReflective)
             2 -> client.renderNode(NodeTarget.InModel(modelTarget = nodeTarget[0], nodeId = nodeTarget[1]), allowReflective)
-            else -> error("expected one node reference or model target plus node ID")
+            else -> error("expected one node target or model target plus node ID")
         }
 
         println(response.text)

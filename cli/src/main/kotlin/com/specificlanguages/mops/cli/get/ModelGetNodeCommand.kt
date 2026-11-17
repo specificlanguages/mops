@@ -6,6 +6,7 @@ import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
 import com.specificlanguages.mops.cli.output.renderJson
 import com.specificlanguages.mops.daemoncomms.DaemonClient
 import com.specificlanguages.mops.protocol.MpsNodeJson
+import com.specificlanguages.mops.protocol.NODE_TARGET_NOTATIONS
 import com.specificlanguages.mops.protocol.NodeTarget
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
@@ -15,12 +16,13 @@ import picocli.CommandLine.Parameters
     name = "node",
     description = ["Export one MPS node as JSON."],
     customSynopsis = [
-        "\${COMMAND-FULL-NAME} [OPTIONS] NODE_REFERENCE",
+        "\${COMMAND-FULL-NAME} [OPTIONS] NODE_TARGET",
         "       \${COMMAND-FULL-NAME} [OPTIONS] MODEL_TARGET NODE_ID",
     ],
     footer = [
         "",
-        "An unresolved target fails with NODE_NOT_FOUND. The exported object carries the node's concept, id, " +
+        "A missing node fails with NODE_NOT_FOUND, a missing model with MODEL_NOT_FOUND, and a model name shared " +
+            "by several models with AMBIGUOUS_TARGET. The exported object carries the node's concept, id, " +
             "properties, references, and child subtree, plus a `parent` object for its immediate containing node: " +
             "the containment `role` by which the node sits in it, a `type` of `root` or `node`, and the parent's " +
             "name, concept, and reference. A root node has no `parent`.",
@@ -75,9 +77,9 @@ class ModelGetNodeCommand(private val environment: CommandEnvironment) : CliComm
     @Parameters(
         index = "0..1",
         arity = "1..2",
-        paramLabel = "NODE_REFERENCE | MODEL_TARGET NODE_ID",
+        paramLabel = "NODE_TARGET | MODEL_TARGET NODE_ID",
         hideParamSyntax = true,
-        description = ["Serialized node reference, or model target followed by node ID."],
+        description = ["Node target as one string: $NODE_TARGET_NOTATIONS. Or a model target followed by a node ID."],
     )
     lateinit var nodeTarget: Array<String>
 
@@ -88,7 +90,7 @@ class ModelGetNodeCommand(private val environment: CommandEnvironment) : CliComm
         val target = when (nodeTarget.size) {
             1 -> NodeTarget.SingleString(nodeTarget[0])
             2 -> NodeTarget.InModel(modelTarget = nodeTarget[0], nodeId = nodeTarget[1])
-            else -> error("expected one node reference or model target plus node ID")
+            else -> error("expected one node target or model target plus node ID")
         }
         val client = environment.daemon()
 

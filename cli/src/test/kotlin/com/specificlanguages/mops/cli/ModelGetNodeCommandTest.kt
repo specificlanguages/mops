@@ -34,7 +34,7 @@ class ModelGetNodeCommandTest {
 
         assertEquals(2, exitCode)
         assertContains(stderr, "Missing required parameter")
-        assertContains(stderr, "NODE_REFERENCE")
+        assertContains(stderr, "NODE_TARGET")
         assertContains(stderr, "MODEL_TARGET")
         assertContains(stderr, "NODE_ID")
     }

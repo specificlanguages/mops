@@ -27,7 +27,7 @@ class ModelRenderNodeCommandTest {
 
         assertEquals(2, exitCode)
         assertContains(stderr, "Missing required parameter")
-        assertContains(stderr, "NODE_REFERENCE")
+        assertContains(stderr, "NODE_TARGET")
     }
 
     @Test

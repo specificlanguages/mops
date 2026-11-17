@@ -111,7 +111,11 @@ reference when describing usage _Related_: Node Reference, Reference
 spellings identify the same node. _Related_: Node Reference
 
 **Node Reference**: A globally usable reference to an **MPS Node** that combines a **Model Reference** with a **Node
-ID**. _Related_: Node ID, path
+ID**. _Related_: Node ID, path, Node Target
+
+**Node Target**: The text that names one **MPS Node** in a command, Code Mode lookup, or edit: a model target and a
+**Node ID**. Written as one string, it is a serialized **Node Reference** or `<model name>/<node ID>`. _Related_: Node
+Reference, Node ID, Model Name
 
 **Module Reference**: A globally usable reference to an **MPS Module**. _Related_: module id
 

@@ -20,13 +20,15 @@ Options:
 Render one MPS node as the plain text of its default editor.
 
 ```text
-Usage: mops render node [OPTIONS] NODE_REFERENCE
+Usage: mops render node [OPTIONS] NODE_TARGET
        mops render node [OPTIONS] MODEL_TARGET NODE_ID
 Render one MPS node as the plain text of its default editor.
 Parameters:
-      NODE_REFERENCE | MODEL_TARGET NODE_ID
-                            Serialized node reference, or model target followed
-                              by node ID.
+      NODE_TARGET | MODEL_TARGET NODE_ID
+                            Node target as one string: <model>/<node ID> (model
+                              name or serialized model reference; decimal or
+                              encoded node ID) or a serialized node reference.
+                              Or a model target followed by a node ID.
 Options:
       --allow-reflective    Render MPS's generic reflective editor when the
                               node's language has not been made, instead of
@@ -37,7 +39,7 @@ Prints the node the way it appears in the MPS editor, with the editor's line
 breaks and indentation and trailing whitespace trimmed from each line. Any node
 is renderable, not only root nodes. The output is a quick overview for reading,
 not a serialization that can be imported back. The target is addressed the same
-way as in `mops get node`; an unresolved target fails with NODE_NOT_FOUND.
+way as in `mops get node`, and fails the same way when it does not resolve.
 
 If a concept in the node's subtree does not resolve because its language is not
 loaded, the command fails with LANGUAGE_NOT_LOADED. It diagnoses each unloaded

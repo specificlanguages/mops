@@ -122,15 +122,18 @@ Find references to one MPS node.
 
 ```text
 Usage: mops find usages [-h] [--full-concept] [--json] [--refs-only]
-                        [--limit=N] NODE_REFERENCE | MODEL_TARGET NODE_ID [in
+                        [--limit=N] NODE_TARGET | MODEL_TARGET NODE_ID [in
                         SCOPE_SEGMENT...]...
 Find references to one MPS node. Searches editable project sources by default;
 append `in <scope-segments>` to search a module, model, or subtree
 exhaustively, or `in /` for the whole repository. See `mops explain scope`.
 Parameters:
-      NODE_REFERENCE | MODEL_TARGET NODE_ID [in SCOPE_SEGMENT...]...
-                            Serialized node reference, or model target followed
-                              by node ID, then an optional `in` clause.
+      NODE_TARGET | MODEL_TARGET NODE_ID [in SCOPE_SEGMENT...]...
+                            Node target as one string: <model>/<node ID> (model
+                              name or serialized model reference; decimal or
+                              encoded node ID) or a serialized node reference.
+                              Or a model target followed by a node ID. Then an
+                              optional `in` clause.
 Options:
       --full-concept        Show fully qualified concept names in text output
                               instead of short names.
@@ -145,8 +148,8 @@ Options:
                               --json; truncation and an empty result are
                               reported on stderr.
 
-The target is addressed the same way as in `mops get node`; an unresolved
-target fails with NODE_NOT_FOUND.
+The target is addressed the same way as in `mops get node`, and fails the same
+way when it does not resolve.
 
 Text output is one tab-separated row per reference: `usage`, the reference
 role, and the owning node's name (or <unnamed>), concept, and reference. The
