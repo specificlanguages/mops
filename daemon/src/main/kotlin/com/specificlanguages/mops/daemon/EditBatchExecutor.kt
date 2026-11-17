@@ -73,6 +73,20 @@ class EditBatchExecutor(
         fun fail(code: MpsErrorCode, message: String): Nothing =
             throw MpsRequestException(code = code, message = message)
 
+        // Runs the node target lookup that operation [index] needs for [what]. A failed lookup keeps its error code, as
+        // the same lookup in a command does; any other failure, such as a malformed target, is TARGET_RESOLUTION_FAILED.
+        fun <T> lookUp(index: Int, what: String, lookup: () -> T): T =
+            try {
+                lookup()
+            } catch (exception: MpsRequestException) {
+                fail(exception.code, "operation $index $what could not be resolved: ${exception.message}")
+            } catch (exception: Exception) {
+                fail(
+                    MpsErrorCode.TARGET_RESOLUTION_FAILED,
+                    "operation $index $what could not be resolved: ${exception.message ?: exception.javaClass.name}",
+                )
+            }
+
         // Refuses to edit a model that imports a project language whose runtime is unbuilt or stale (built from older
         // sources than the files on disk): editing through such a runtime can resolve a concept or role to an identity
         // that contradicts the sources and write it into the model. Runs once, when a model first becomes affected —
@@ -129,14 +143,7 @@ class EditBatchExecutor(
                 }
                 return current
             }
-            val node = try {
-                resolveTarget(project, target)
-            } catch (exception: Exception) {
-                fail(
-                    MpsErrorCode.TARGET_RESOLUTION_FAILED,
-                    "operation $index target could not be resolved: ${exception.message ?: exception.javaClass.name}",
-                )
-            }
+            val node = lookUp(index, "target") { resolveTarget(project, target) }
             return node ?: fail(MpsErrorCode.NODE_NOT_FOUND, "operation $index target node not found")
         }
 
@@ -293,7 +300,7 @@ class EditBatchExecutor(
             val resolved = if (targetModel == null) {
                 parseNodeIdOrNull(persistence, nodeId)?.let(ownerModel::getNode)
             } else {
-                modelNodeResolver.findNode(project, targetModel, nodeId)
+                lookUp(index, "reference target") { modelNodeResolver.findNode(project, targetModel, nodeId) }
             }
             return resolved
                 ?: fail(
