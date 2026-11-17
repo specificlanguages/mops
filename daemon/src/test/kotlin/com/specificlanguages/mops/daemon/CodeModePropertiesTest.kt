@@ -214,6 +214,39 @@ class CodeModePropertiesTest {
         }
     }
 
+    @Test
+    fun `property indexing by descriptor picks one of several inherited properties that share a name`() {
+        SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
+            val response = CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform).execute(
+                CodeRunRequest("", """
+                    project.command {
+                        def model = mops.lookup.requireModel('com.specificlanguages.json.structure')
+                        def node = model.createNode(mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.ClassConcept'))
+                        def isDeprecated = node.concept.properties.find {
+                            it.name == 'isDeprecated' && it.owner.qualifiedName == 'jetbrains.mps.baseLanguage.structure.IBLDeprecatable'
+                        }
+                        node.properties[isDeprecated] = 'true'
+                        assert node.getProperty(isDeprecated) == 'true'
+                        assert node.properties[isDeprecated] == 'true'
+                        def rootable = mops.lookup.requireConceptByName('jetbrains.mps.lang.structure.ConceptDeclaration')
+                            .properties.find { it.name == 'rootable' }
+                        try {
+                            node.properties[rootable]
+                            assert false: 'A property of another concept must fail'
+                        } catch (com.specificlanguages.mops.daemon.core.MpsRequestException expected) {
+                            return expected.code.name() + ': ' + expected.message
+                        }
+                    }
+                """.trimIndent(), "property-descriptor.groovy"),
+            )
+            assertEquals(
+                "PROPERTY_NOT_FOUND: concept jetbrains.mps.baseLanguage.structure.ClassConcept has no property 'rootable' " +
+                    "declared by jetbrains.mps.lang.structure.structure.ConceptDeclaration",
+                response.output,
+            )
+        }
+    }
+
     private companion object {
         const val CONTENT_LINK_NODE_REFERENCE =
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566910"
