@@ -139,6 +139,9 @@ class DaemonWorkspace(val path: Path) {
     /** The IntelliJ system directory (VFS, indexes, caches) that the test worker keeps between test runs. */
     fun testWorkerSystemDir(): Path = path.resolve("test-worker-system")
 
+    /** The directory with the native file watcher executable that the daemon copies from the MPS distribution. */
+    val fileWatcherDir: Path = path.resolve("fsnotifier")
+
     fun createDirectories() {
         daemonWorkingDir().createDirectories()
         ideaConfigDir().createDirectories()

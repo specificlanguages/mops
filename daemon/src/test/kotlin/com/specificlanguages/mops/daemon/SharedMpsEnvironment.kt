@@ -2,6 +2,7 @@ package com.specificlanguages.mops.daemon
 
 import com.intellij.ide.GeneralSettings
 import com.specificlanguages.mops.daemon.core.MpsAccess
+import com.specificlanguages.mops.daemon.filewatcher.FileWatcherExecutable
 import com.specificlanguages.mops.launcher.MpsLaunchArgs
 import de.itemis.mps.gradle.project.loader.EnvironmentKind
 import de.itemis.mps.gradle.project.loader.Plugin
@@ -141,6 +142,11 @@ object SharedMpsEnvironment {
 
     private fun boot(): IdeaEnvironment {
         applyMpsSystemProperties()
+        FileWatcherExecutable.install(
+            requiredPathProperty("test.mpsHome"),
+            Files.createTempDirectory("mops-fsnotifier"),
+            DaemonLogger(),
+        )
 
         val handoff = SynchronousQueue<Any>()
         val environmentThread = Thread({

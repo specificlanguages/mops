@@ -85,6 +85,7 @@ holds:
   home, workspace path, and startup time.
 - `logs/daemon.log`: the daemon's startup and runtime log.
 - `daemon/config` and `daemon/system`: the isolated IDEA directories passed to the daemon JVM.
+- `fsnotifier/`: the native file watcher executable, copied from the MPS distribution.
 - `test-worker-system`: the IntelliJ system directory of the test worker.
 
 Only one daemon runs per project. When a command needs a daemon for another MPS home or build than the running one, mops
