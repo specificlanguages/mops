@@ -2,7 +2,7 @@
  * Logic. Decides which notation a **Node Target** written as one string uses.
  *
  * Hides: how the text of a one-string node target maps to a node reference or a model name with a node ID. Commands,
- * Code Mode lookups and edit batches parse a one-string node target only through here.
+ * Code Mode lookups, edit batches and navigation target segments parse a one-string node target only through here.
  */
 package com.specificlanguages.mops.daemon
 

@@ -38,7 +38,7 @@ class JetBrainsMpsAccess(
     private val writeTransaction: WriteTransaction = WriteTransaction(),
 ) : MpsAccess {
     private val externalProjectRefresh = ExternalProjectRefresh(project)
-    private val navigationTargets = NavigationTargetResolver(project, persistence)
+    private val navigationTargets = NavigationTargetResolver(project, modelNodeResolver, persistence)
 
     // An MpsRequestException is an expected client error, not a defect. Capture it inside the model action and rethrow
     // it on the calling thread once the action has returned: if it escaped the action directly, MPS's ActionDispatcher
@@ -418,7 +418,7 @@ class JetBrainsMpsAccess(
                 ?: throw MpsRequestException(MpsErrorCode.MODEL_NOT_FOUND, "model not found: $reference")
 
         private fun resolveSubtreeNode(reference: String): SNode =
-            navigationTargets.resolveNodeReference(reference)
+            modelNodeResolver.findNode(project, reference)
                 ?: throw MpsRequestException(MpsErrorCode.NODE_NOT_FOUND, "node not found: $reference")
 
         private fun resolveNode(target: NodeTarget): SNode =
