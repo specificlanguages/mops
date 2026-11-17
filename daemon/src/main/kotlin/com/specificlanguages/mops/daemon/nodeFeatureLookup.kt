@@ -2,8 +2,9 @@
  * Logic. Finds a property, child role or reference role of a node's concept by name, or checks that the concept has a
  * given feature descriptor. Code Mode accessors and edit batches both look up node features here.
  *
- * Hides: how a name selects a node feature (the exact name among the concept's own and inherited features), and the
- * unloaded-concept, not-found and ambiguous-name errors with their codes.
+ * Hides: how a name selects a node feature (the exact name among the concept's own and inherited features), that a
+ * descriptor must be one of those features, and the unloaded-concept, not-found and ambiguous-name errors with their
+ * codes.
  */
 package com.specificlanguages.mops.daemon
 
@@ -41,17 +42,24 @@ internal fun SNode.requireProperty(name: String): SProperty =
 /** [link] if it is one of this node's concept's child roles, including inherited roles. */
 @Suppress("DEPRECATION")
 internal fun SNode.requireContainmentLink(link: SContainmentLink): SContainmentLink =
-    requireNodeFeature(NodeFeatureKind.CHILD_ROLE, link, link.name, link.owner.qualifiedName) { concept.containmentLinks }
+    requireNodeFeature(NodeFeatureKind.CHILD_ROLE, NamedNodeFeature(link, link.name, link.owner.qualifiedName)) {
+        concept.containmentLinks
+    }
 
 /** [link] if it is one of this node's concept's reference roles, including inherited roles. */
 @Suppress("DEPRECATION")
 internal fun SNode.requireReferenceLink(link: SReferenceLink): SReferenceLink =
-    requireNodeFeature(NodeFeatureKind.REFERENCE_ROLE, link, link.name, link.owner.qualifiedName) { concept.referenceLinks }
+    requireNodeFeature(NodeFeatureKind.REFERENCE_ROLE, NamedNodeFeature(link, link.name, link.owner.qualifiedName)) {
+        concept.referenceLinks
+    }
 
 /** [property] if it is one of this node's concept's properties, including inherited properties. */
 @Suppress("DEPRECATION")
 internal fun SNode.requireProperty(property: SProperty): SProperty =
-    requireNodeFeature(NodeFeatureKind.PROPERTY, property, property.name, property.owner.qualifiedName) { concept.properties }
+    requireNodeFeature(
+        NodeFeatureKind.PROPERTY,
+        NamedNodeFeature(property, property.name, property.owner.qualifiedName),
+    ) { concept.properties }
 
 private fun <T> SNode.requireNodeFeature(
     kind: NodeFeatureKind,
@@ -64,19 +72,18 @@ private fun <T> SNode.requireNodeFeature(
 
 private fun <T> SNode.requireNodeFeature(
     kind: NodeFeatureKind,
-    feature: T,
-    name: String,
-    owner: String,
+    descriptor: NamedNodeFeature<T>,
     features: () -> Iterable<T>,
 ): T {
-    requireConceptLoaded(kind, name)
-    if (feature !in features()) {
+    requireConceptLoaded(kind, descriptor.name)
+    if (descriptor.feature !in features()) {
         throw MpsRequestException(
             kind.notFoundCode,
-            "concept ${concept.qualifiedName} has no ${kind.singular} '$name' declared by $owner",
+            "concept ${concept.qualifiedName} has no ${kind.singular} '${descriptor.name}' " +
+                "declared by ${descriptor.owner}",
         )
     }
-    return feature
+    return descriptor.feature
 }
 
 /**

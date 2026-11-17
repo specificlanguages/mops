@@ -1,9 +1,5 @@
 package com.specificlanguages.mops.daemon
 
-import org.jetbrains.mps.openapi.language.SContainmentLink
-import org.jetbrains.mps.openapi.language.SProperty
-import org.jetbrains.mps.openapi.language.SReferenceLink
-
 /**
  * Logic. Code Mode Reference entries for the `SNode` extensions: rendering, containment navigation, and indexed
  * accessors.
@@ -34,7 +30,7 @@ internal object CodeCatalogNodeEntries {
         )
 
         private fun lookup(): String {
-            val descriptor = descriptorType(kind)
+            val descriptor = kind.descriptor.simpleName
             return "Names include inherited ${kind.plural}. Unknown ${kind.plural} fail on read and write, listing the " +
                 "known ones; a name that several inherited ${kind.plural} share fails, naming the concepts that declare " +
                 "them. Index with the $descriptor from node.concept instead of the name to pick one of them by its " +
@@ -46,12 +42,6 @@ internal object CodeCatalogNodeEntries {
             "Shadows native $getter, so an explicit $getter call returns this accessor; it iterates ${it.iterates} " +
                 "like the native collection, so collect, findAll, each, and size() work on it. ${it.nativeAlternatives}"
         }
-    }
-
-    private fun descriptorType(kind: NodeFeatureKind): String = when (kind) {
-        NodeFeatureKind.PROPERTY -> SProperty::class.java.simpleName
-        NodeFeatureKind.CHILD_ROLE -> SContainmentLink::class.java.simpleName
-        NodeFeatureKind.REFERENCE_ROLE -> SReferenceLink::class.java.simpleName
     }
 
     /** How reads and writes of a feature kind reach MPS, which every accessor of that kind shares. */
