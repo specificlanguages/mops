@@ -55,7 +55,7 @@ class ModelRenderNodeCommand(private val environment: CommandEnvironment) : CliC
     override fun run() {
         val client = environment.daemon()
         val response = when (nodeTarget.size) {
-            1 -> client.renderNode(NodeTarget.NodeReference(nodeTarget[0]), allowReflective)
+            1 -> client.renderNode(NodeTarget.SingleString(nodeTarget[0]), allowReflective)
             2 -> client.renderNode(NodeTarget.InModel(modelTarget = nodeTarget[0], nodeId = nodeTarget[1]), allowReflective)
             else -> error("expected one node reference or model target plus node ID")
         }

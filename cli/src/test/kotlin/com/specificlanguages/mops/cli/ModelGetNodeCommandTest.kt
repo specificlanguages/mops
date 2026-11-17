@@ -83,7 +83,7 @@ class ModelGetNodeCommandTest {
     @Test
     fun `model get-node prints single-line json with --compact`() {
         val client = mock<DaemonClient>()
-        val target = NodeTarget.NodeReference(JSON_FILE_REFERENCE)
+        val target = NodeTarget.SingleString(JSON_FILE_REFERENCE)
         whenever(client.getNode(target)).thenReturn(ModelGetNodeResponse(node = jsonFileNode()))
         var exitCode = Int.MIN_VALUE
 
@@ -104,7 +104,7 @@ class ModelGetNodeCommandTest {
     @Test
     fun `model get-node passes the depth to the daemon and prints the truncation marker before the children`() {
         val client = mock<DaemonClient>()
-        val target = NodeTarget.NodeReference(JSON_FILE_REFERENCE)
+        val target = NodeTarget.SingleString(JSON_FILE_REFERENCE)
         whenever(client.getNode(target, false, 1)).thenReturn(
             ModelGetNodeResponse(
                 node = jsonFileNode().copy(
@@ -149,7 +149,7 @@ class ModelGetNodeCommandTest {
     @Test
     fun `model get-node requests the summary with --summary`() {
         val client = mock<DaemonClient>()
-        val target = NodeTarget.NodeReference(JSON_FILE_REFERENCE)
+        val target = NodeTarget.SingleString(JSON_FILE_REFERENCE)
         whenever(client.getNodeSummary(target, true)).thenReturn(
             ModelGetNodeSummaryResponse(
                 node = MpsNodeSummaryJson(
@@ -224,7 +224,7 @@ class ModelGetNodeCommandTest {
     @Test
     fun `model get-node points at --depth and --summary on stderr when an unbounded export is large`() {
         val client = mock<DaemonClient>()
-        val target = NodeTarget.NodeReference(JSON_FILE_REFERENCE)
+        val target = NodeTarget.SingleString(JSON_FILE_REFERENCE)
         whenever(client.getNode(target)).thenReturn(ModelGetNodeResponse(node = largeNode()))
         var exitCode = Int.MIN_VALUE
         var stdout = ""
@@ -247,7 +247,7 @@ class ModelGetNodeCommandTest {
     @Test
     fun `model get-node stays quiet about size once a depth was given`() {
         val client = mock<DaemonClient>()
-        val target = NodeTarget.NodeReference(JSON_FILE_REFERENCE)
+        val target = NodeTarget.SingleString(JSON_FILE_REFERENCE)
         whenever(client.getNode(target, false, 3)).thenReturn(ModelGetNodeResponse(node = largeNode().copy(truncatedAt = 3)))
         var exitCode = Int.MIN_VALUE
 
@@ -267,7 +267,7 @@ class ModelGetNodeCommandTest {
     fun `model get-node accepts a serialized node reference`() {
         val client = mock<DaemonClient>()
         val nodeReference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
-        val target = NodeTarget.NodeReference(nodeReference)
+        val target = NodeTarget.SingleString(nodeReference)
         whenever(client.getNode(target)).thenReturn(
             ModelGetNodeResponse(
                 node = MpsNodeJson(
@@ -314,7 +314,7 @@ class ModelGetNodeCommandTest {
     fun `model get-node passes the ancestry flag to the daemon`() {
         val client = mock<DaemonClient>()
         val nodeReference = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
-        val target = NodeTarget.NodeReference(nodeReference)
+        val target = NodeTarget.SingleString(nodeReference)
         whenever(client.getNode(target, true)).thenReturn(
             ModelGetNodeResponse(
                 node = MpsNodeJson(

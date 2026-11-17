@@ -94,9 +94,9 @@ class AutoImportEditSemanticsTest {
                 advisoryEdit(
                     batchOf(
                         EditOperation.SetReference(
-                            target = EditTarget.NodeReference("$STRUCTURE_MODEL/$JSON_STRING_VALUE_ID"),
+                            target = EditTarget.SingleString("$STRUCTURE_MODEL/$JSON_STRING_VALUE_ID"),
                             role = "dataType",
-                            to = EditTarget.NodeReference("$SANDBOX_MODEL/$SANDBOX_ROOT_ID"),
+                            to = EditTarget.SingleString("$SANDBOX_MODEL/$SANDBOX_ROOT_ID"),
                         ),
                     ),
                 )
@@ -218,7 +218,7 @@ class AutoImportEditSemanticsTest {
                 modelEdit(
                     batchOf(
                         EditOperation.AddChild(
-                            target = EditTarget.NodeReference("$STRUCTURE_MODEL/$JSON_ARRAY_ID"),
+                            target = EditTarget.SingleString("$STRUCTURE_MODEL/$JSON_ARRAY_ID"),
                             role = "propertyDeclaration",
                             concept = CLASS_CONCEPT,
                         ),

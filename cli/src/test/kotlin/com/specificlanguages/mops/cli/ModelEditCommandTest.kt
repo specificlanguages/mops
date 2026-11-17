@@ -148,18 +148,18 @@ class ModelEditCommandTest {
         val batch = EditBatch(
             operations = listOf(
                 EditOperation.AddChild(
-                    target = EditTarget.NodeReference("$model/1"),
+                    target = EditTarget.SingleString("$model/1"),
                     role = "propertyDeclaration",
                     concept = "jetbrains.mps.lang.structure.structure.PropertyDeclaration",
                     properties = listOf(MpsNodePropertyJson(name = "name", value = "added")),
                 ),
                 EditOperation.MoveAsChild(
-                    target = EditTarget.NodeReference("$model/2"),
-                    into = EditTarget.NodeReference("$model/3"),
+                    target = EditTarget.SingleString("$model/2"),
+                    into = EditTarget.SingleString("$model/3"),
                     role = "propertyDeclaration",
                     position = ChildPosition.First,
                 ),
-                EditOperation.Delete(target = EditTarget.NodeReference("$model/4")),
+                EditOperation.Delete(target = EditTarget.SingleString("$model/4")),
             ),
         )
         whenever(client.modelEdit(batch)).thenReturn(ModelEditResponse(created = emptyMap(), violations = emptyList()))
@@ -285,7 +285,7 @@ class ModelEditCommandTest {
         EditBatch(
             operations = listOf(
                 EditOperation.SetProperty(
-                    target = EditTarget.NodeReference(
+                    target = EditTarget.SingleString(
                         "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
                     ),
                     name = "name",

@@ -16,8 +16,8 @@ class ModelNodeResolver(
 ) {
     fun findNode(project: Project, target: NodeTarget): SNode? =
         when (target) {
-            is NodeTarget.NodeReference -> persistence
-                .createNodeReference(normalizeNodeReferenceSpelling(persistence, target.nodeReference))
+            is NodeTarget.SingleString -> persistence
+                .createNodeReference(normalizeNodeReferenceSpelling(persistence, target.text))
                 .resolve(project.repository)
 
             is NodeTarget.InModel -> {

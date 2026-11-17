@@ -102,7 +102,7 @@ class DaemonProtocolJsonTest {
         val nodeReferenceRequest = ProtocolJson.encodeRequest(
             ModelGetNodeRequest(
                 token = "secret",
-                target = NodeTarget.NodeReference(
+                target = NodeTarget.SingleString(
                     "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
                 ),
             ),
@@ -115,7 +115,7 @@ class DaemonProtocolJsonTest {
         assertEquals(
             ModelGetNodeRequest(
                 token = "secret",
-                target = NodeTarget.NodeReference(
+                target = NodeTarget.SingleString(
                     "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
                 ),
             ),
@@ -132,7 +132,7 @@ class DaemonProtocolJsonTest {
             batch = EditBatch(
                 operations = listOf(
                     EditOperation.SetProperty(
-                        target = EditTarget.NodeReference(nodeReference),
+                        target = EditTarget.SingleString(nodeReference),
                         name = "name",
                         value = "RenamedConcept",
                     ),
@@ -182,7 +182,7 @@ class DaemonProtocolJsonTest {
     @Test
     fun `model edit request JSON carries the constraint settings and defaults them to strict without ignoring`() {
         val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
-        val batch = EditBatch(operations = listOf(EditOperation.Delete(EditTarget.NodeReference("$model/1"))))
+        val batch = EditBatch(operations = listOf(EditOperation.Delete(EditTarget.SingleString("$model/1"))))
 
         val advisory = ProtocolJson.encodeRequest(
             ModelEditRequest(
@@ -299,7 +299,7 @@ class DaemonProtocolJsonTest {
 
     @Test
     fun `model get-node request carries the depth and omits it by default`() {
-        val target = NodeTarget.NodeReference("r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/300")
+        val target = NodeTarget.SingleString("r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/300")
 
         val unbounded = ProtocolJson.encodeRequest(ModelGetNodeRequest(token = "secret", target = target))
         assertFalse(unbounded.contains("depth"), unbounded)
@@ -341,7 +341,7 @@ class DaemonProtocolJsonTest {
     @Test
     fun `node summary request and response round-trip per-role child counts`() {
         val model = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
-        val target = NodeTarget.NodeReference("$model/300")
+        val target = NodeTarget.SingleString("$model/300")
         val request = ModelGetNodeSummaryRequest(token = "secret", target = target, ancestry = true)
         val encodedRequest = ProtocolJson.encodeRequest(request)
         assertContains(encodedRequest, """"type":"model-get-node-summary"""")
@@ -410,7 +410,7 @@ class DaemonProtocolJsonTest {
 
     @Test
     fun `model get-node request carries the ancestry flag and defaults it to false`() {
-        val target = NodeTarget.NodeReference(
+        val target = NodeTarget.SingleString(
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/300",
         )
         val withAncestry = ProtocolJson.encodeRequest(
@@ -437,7 +437,7 @@ class DaemonProtocolJsonTest {
             batch = EditBatch(
                 operations = listOf(
                     EditOperation.AddChild(
-                        target = EditTarget.NodeReference("$model/100"),
+                        target = EditTarget.SingleString("$model/100"),
                         role = "members",
                         concept = "com.acme.Block",
                         properties = listOf(MpsNodePropertyJson(name = "name", value = "b")),
@@ -457,13 +457,13 @@ class DaemonProtocolJsonTest {
                     ),
                     EditOperation.Delete(target = EditTarget.InModel(modelTarget = model, nodeId = "200")),
                     EditOperation.DeleteChild(
-                        target = EditTarget.NodeReference("$model/300"),
+                        target = EditTarget.SingleString("$model/300"),
                         role = "members",
                         position = ChildPosition.Index(2),
                     ),
                     EditOperation.MoveAsChild(
-                        target = EditTarget.NodeReference("$model/400"),
-                        into = EditTarget.NodeReference("$model/500"),
+                        target = EditTarget.SingleString("$model/400"),
+                        into = EditTarget.SingleString("$model/500"),
                         role = "members",
                         position = ChildPosition.First,
                     ),
@@ -490,9 +490,9 @@ class DaemonProtocolJsonTest {
             batch = EditBatch(
                 operations = listOf(
                     EditOperation.SetReference(
-                        target = EditTarget.NodeReference("$model/1"),
+                        target = EditTarget.SingleString("$model/1"),
                         role = "dataType",
-                        to = EditTarget.NodeReference("$model/2"),
+                        to = EditTarget.SingleString("$model/2"),
                     ),
                     EditOperation.SetReference(
                         target = EditTarget.InModel(modelTarget = model, nodeId = "3"),
@@ -500,8 +500,8 @@ class DaemonProtocolJsonTest {
                         to = null,
                     ),
                     EditOperation.CopyAsChild(
-                        target = EditTarget.NodeReference("$model/4"),
-                        source = EditTarget.NodeReference("$model/5"),
+                        target = EditTarget.SingleString("$model/4"),
+                        source = EditTarget.SingleString("$model/5"),
                         role = "propertyDeclaration",
                         position = ChildPosition.Last,
                     ),
@@ -526,14 +526,14 @@ class DaemonProtocolJsonTest {
             batch = EditBatch(
                 operations = listOf(
                     EditOperation.AddChild(
-                        target = EditTarget.NodeReference("$model/1"),
+                        target = EditTarget.SingleString("$model/1"),
                         role = "propertyDeclaration",
                         concept = "jetbrains.mps.lang.structure.structure.PropertyDeclaration",
                         alias = "\$p",
                     ),
                     EditOperation.SetProperty(target = EditTarget.Alias("\$p"), name = "name", value = "aliased"),
                     EditOperation.SetReference(
-                        target = EditTarget.NodeReference("$model/2"),
+                        target = EditTarget.SingleString("$model/2"),
                         role = "dataType",
                         to = EditTarget.Alias("\$p"),
                     ),
@@ -557,8 +557,8 @@ class DaemonProtocolJsonTest {
             batch = EditBatch(
                 operations = listOf(
                     EditOperation.CopyAsChild(
-                        target = EditTarget.NodeReference("$model/1"),
-                        source = EditTarget.NodeReference("$model/2"),
+                        target = EditTarget.SingleString("$model/1"),
+                        source = EditTarget.SingleString("$model/2"),
                         role = "members",
                         alias = "\$copy",
                     ),
@@ -624,7 +624,7 @@ class DaemonProtocolJsonTest {
                     ),
                     EditOperation.CopyAsRoot(
                         model = ModelDestination(model),
-                        source = EditTarget.NodeReference("$model/1"),
+                        source = EditTarget.SingleString("$model/1"),
                     ),
                     EditOperation.MoveAsRoot(
                         target = EditTarget.InModel(modelTarget = model, nodeId = "2"),
@@ -668,7 +668,7 @@ class DaemonProtocolJsonTest {
                 batch = EditBatch(
                     operations = listOf(
                         EditOperation.DeleteChild(
-                            target = EditTarget.NodeReference("$model/1"),
+                            target = EditTarget.SingleString("$model/1"),
                             role = "members",
                             position = position,
                         ),
@@ -983,7 +983,7 @@ class DaemonProtocolJsonTest {
 
     @Test
     fun `find-usages request and response JSON carry usage results`() {
-        val target = NodeTarget.NodeReference(
+        val target = NodeTarget.SingleString(
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
         )
         val request = FindUsagesRequest(token = "secret", target = target, limit = 100)
@@ -1135,7 +1135,7 @@ class DaemonProtocolJsonTest {
 
     @Test
     fun `find request JSON carries the scope segments and defaults them to absent`() {
-        val usagesTarget = NodeTarget.NodeReference(
+        val usagesTarget = NodeTarget.SingleString(
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
         )
         val scopedUsages = ProtocolJson.encodeRequest(

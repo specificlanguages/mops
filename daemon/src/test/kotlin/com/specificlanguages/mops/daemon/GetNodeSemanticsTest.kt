@@ -138,7 +138,7 @@ class GetNodeSemanticsTest {
 
     @Test
     fun `accepts serialized node reference`() {
-        val node = getNodeInSharedProject(NodeTarget.NodeReference(JSON_FILE_NODE_REFERENCE))
+        val node = getNodeInSharedProject(NodeTarget.SingleString(JSON_FILE_NODE_REFERENCE))
 
         assertEquals(JSON_FILE_NODE_ID, node.id)
         assertEquals("JsonFile", propertyValue(node, "name"))
@@ -146,7 +146,7 @@ class GetNodeSemanticsTest {
 
     @Test
     fun `resolves a node reference whose id uses the persisted spelling`() {
-        val node = getNodeInSharedProject(NodeTarget.NodeReference("$STRUCTURE_MODEL_REFERENCE/$JSON_FILE_ENCODED_NODE_ID"))
+        val node = getNodeInSharedProject(NodeTarget.SingleString("$STRUCTURE_MODEL_REFERENCE/$JSON_FILE_ENCODED_NODE_ID"))
 
         assertEquals(JSON_FILE_NODE_ID, node.id)
         assertEquals("JsonFile", propertyValue(node, "name"))

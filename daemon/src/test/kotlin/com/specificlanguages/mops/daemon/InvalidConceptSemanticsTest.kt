@@ -33,7 +33,7 @@ class InvalidConceptSemanticsTest {
             val access = SharedMpsEnvironment.mpsAccess(project)
             val reference = uncompiledNodeReference(project)
 
-            val node = access.read { getNode(NodeTarget.NodeReference(reference)) }
+            val node = access.read { getNode(NodeTarget.SingleString(reference)) }
 
             assertFalse(node.conceptValid)
             assertContains(node.concept, "com.example.uncompiled")
@@ -64,7 +64,7 @@ class InvalidConceptSemanticsTest {
 
             val exception = assertFailsWith<MpsRequestException> {
                 access.write {
-                    modelEdit(EditBatch(listOf(EditOperation.Delete(EditTarget.NodeReference(reference)))))
+                    modelEdit(EditBatch(listOf(EditOperation.Delete(EditTarget.SingleString(reference)))))
                 }
             }
 
@@ -90,7 +90,7 @@ class InvalidConceptSemanticsTest {
                             listOf(
                                 EditOperation.CopyAsChild(
                                     target = EditTarget.InModel(STRUCTURE_MODEL_NAME, JSON_FILE_NODE_ID),
-                                    source = EditTarget.NodeReference(reference),
+                                    source = EditTarget.SingleString(reference),
                                     role = "propertyDeclaration",
                                 ),
                             ),
@@ -116,7 +116,7 @@ class InvalidConceptSemanticsTest {
 
             val exception = assertFailsWith<MpsRequestException> {
                 access.write {
-                    advisoryEdit(EditBatch(listOf(EditOperation.Delete(EditTarget.NodeReference(reference)))))
+                    advisoryEdit(EditBatch(listOf(EditOperation.Delete(EditTarget.SingleString(reference)))))
                 }
             }
 
@@ -133,7 +133,7 @@ class InvalidConceptSemanticsTest {
 
             val response = access.write {
                 modelEdit(
-                    EditBatch(listOf(EditOperation.Delete(EditTarget.NodeReference(reference)))),
+                    EditBatch(listOf(EditOperation.Delete(EditTarget.SingleString(reference)))),
                     constraints = ConstraintPolicy(ignoreMissingLanguages = true),
                 )
             }

@@ -140,7 +140,7 @@ class WrapUnwrapEditSemanticsTest {
             }
             assertTrue(response.violations.isEmpty(), "expected no violations, got ${response.violations}")
 
-            val promoted = mpsAccess.read { getNode(NodeTarget.NodeReference("$SANDBOX_MODEL/$innerId")) }
+            val promoted = mpsAccess.read { getNode(NodeTarget.SingleString("$SANDBOX_MODEL/$innerId")) }
             assertNull(promoted.parent, "the kept node became a root of the same model")
             assertEquals(SANDBOX_MODEL, promoted.model)
             val roots = mpsAccess.read { list(listOf(SANDBOX_MODEL), depth = 1) }.children!!.mapNotNull { it.name }
@@ -170,7 +170,7 @@ class WrapUnwrapEditSemanticsTest {
             }
             assertTrue(response.violations.isEmpty(), "expected no violations, got ${response.violations}")
 
-            val outer = mpsAccess.read { getNode(NodeTarget.NodeReference(response.created.getValue("outer"))) }
+            val outer = mpsAccess.read { getNode(NodeTarget.SingleString(response.created.getValue("outer"))) }
             assertNull(outer.parent, "the wrapper is a root of the same model")
             assertEquals(SANDBOX_MODEL, outer.model)
             val nested = childrenInRole(outer, "member").single { it.id == calculatorId }
@@ -231,13 +231,13 @@ class WrapUnwrapEditSemanticsTest {
     private fun calculator(mpsAccess: MpsAccess): MpsNodeJson {
         val ref = mpsAccess.read { list(listOf(SANDBOX_MODEL), depth = 1) }
             .children!!.single { it.name == "Calculator" }.reference!!
-        return mpsAccess.read { getNode(NodeTarget.NodeReference(ref)) }
+        return mpsAccess.read { getNode(NodeTarget.SingleString(ref)) }
     }
 
     private fun member(mpsAccess: MpsAccess, name: String): MpsNodeJson =
         childrenInRole(calculator(mpsAccess), "member").single { propertyValueOrNull(it, "name") == name }
 
-    private fun ref(nodeId: String): EditTarget = EditTarget.NodeReference("$SANDBOX_MODEL/$nodeId")
+    private fun ref(nodeId: String): EditTarget = EditTarget.SingleString("$SANDBOX_MODEL/$nodeId")
 
     private fun nodeId(reference: String): String = reference.substringAfterLast('/')
 

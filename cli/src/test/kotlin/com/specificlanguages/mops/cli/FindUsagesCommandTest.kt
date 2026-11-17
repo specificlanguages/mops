@@ -28,7 +28,7 @@ class FindUsagesCommandTest {
             concept = "jetbrains.mps.lang.structure.structure.InterfaceConceptDeclaration",
             reference = TARGET_REFERENCE,
         )
-        whenever(client.findUsages(NodeTarget.NodeReference(TARGET_REFERENCE), listOf("JsonObject"), limit = 100))
+        whenever(client.findUsages(NodeTarget.SingleString(TARGET_REFERENCE), listOf("JsonObject"), limit = 100))
             .thenReturn(usagesResponse(owners = emptyList(), scope = subtree, target = target))
 
         val stdout = execute(client, "--full-concept", TARGET_REFERENCE, "in", "JsonObject")

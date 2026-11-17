@@ -94,7 +94,7 @@ class ReplaceEditSemanticsTest {
             }
             assertTrue(response.violations.isEmpty(), "expected no violations, got ${response.violations}")
 
-            val newCalc = mpsAccess.read { getNode(NodeTarget.NodeReference(response.created.getValue("calc"))) }
+            val newCalc = mpsAccess.read { getNode(NodeTarget.SingleString(response.created.getValue("calc"))) }
             // A root target yields a root of the same model: the replacement has no containing parent.
             assertNull(newCalc.parent, "the replacement of a root target must itself be a root")
             assertEquals(SANDBOX_MODEL, newCalc.model)
@@ -205,7 +205,7 @@ class ReplaceEditSemanticsTest {
     private fun calculator(mpsAccess: MpsAccess): MpsNodeJson {
         val ref = mpsAccess.read { list(listOf(SANDBOX_MODEL), depth = 1) }
             .children!!.single { it.name == "Calculator" }.reference!!
-        return mpsAccess.read { getNode(NodeTarget.NodeReference(ref)) }
+        return mpsAccess.read { getNode(NodeTarget.SingleString(ref)) }
     }
 
     private fun members(mpsAccess: MpsAccess): List<MpsNodeJson> = childrenInRole(calculator(mpsAccess), "member")
@@ -213,7 +213,7 @@ class ReplaceEditSemanticsTest {
     private fun member(mpsAccess: MpsAccess, name: String): MpsNodeJson =
         members(mpsAccess).single { propertyValueOrNull(it, "name") == name }
 
-    private fun ref(nodeId: String): EditTarget = EditTarget.NodeReference("$SANDBOX_MODEL/$nodeId")
+    private fun ref(nodeId: String): EditTarget = EditTarget.SingleString("$SANDBOX_MODEL/$nodeId")
 
     private fun nodeId(reference: String): String = reference.substringAfterLast('/')
 

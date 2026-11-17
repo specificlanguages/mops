@@ -47,7 +47,7 @@ class InlineLeafBaseLanguageSemanticsTest {
             assertTrue(response.violations.isEmpty(), "expected no violations, got ${response.violations}")
 
             // The moved method kept its identity under the new class, and left Calculator.
-            val calculator2 = mpsAccess.read { getNode(NodeTarget.NodeReference(response.created.getValue("c2"))) }
+            val calculator2 = mpsAccess.read { getNode(NodeTarget.SingleString(response.created.getValue("c2"))) }
             assertEquals("add", propertyValueOrNull(childrenInRole(calculator2, "member").single { it.id == addId }, "name"))
             assertTrue(childrenInRole(calculator(mpsAccess), "member").none { it.id == addId })
 
@@ -83,7 +83,7 @@ class InlineLeafBaseLanguageSemanticsTest {
             }
             assertTrue(response.violations.isEmpty(), "expected no violations, got ${response.violations}")
 
-            val copyClass = mpsAccess.read { getNode(NodeTarget.NodeReference(response.created.getValue("copy"))) }
+            val copyClass = mpsAccess.read { getNode(NodeTarget.SingleString(response.created.getValue("copy"))) }
             val clone = childrenInRole(copyClass, "member").single()
             assertEquals("add", propertyValueOrNull(clone, "name"))
             assertNotEquals(addId, clone.id, "the clone must receive a fresh node ID")
@@ -107,13 +107,13 @@ class InlineLeafBaseLanguageSemanticsTest {
     private fun calculator(mpsAccess: MpsAccess): MpsNodeJson {
         val ref = mpsAccess.read { list(listOf(SANDBOX_MODEL), depth = 1) }
             .children!!.single { it.name == "Calculator" }.reference!!
-        return mpsAccess.read { getNode(NodeTarget.NodeReference(ref)) }
+        return mpsAccess.read { getNode(NodeTarget.SingleString(ref)) }
     }
 
     private fun member(mpsAccess: MpsAccess, name: String): MpsNodeJson =
         childrenInRole(calculator(mpsAccess), "member").single { propertyValueOrNull(it, "name") == name }
 
-    private fun ref(nodeId: String): EditTarget = EditTarget.NodeReference("$SANDBOX_MODEL/$nodeId")
+    private fun ref(nodeId: String): EditTarget = EditTarget.SingleString("$SANDBOX_MODEL/$nodeId")
 
     private fun batchOf(vararg operations: EditOperation): EditBatch = EditBatch(operations.toList())
 

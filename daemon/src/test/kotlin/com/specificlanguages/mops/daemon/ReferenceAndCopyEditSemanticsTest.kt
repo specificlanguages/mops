@@ -28,15 +28,15 @@ class ReferenceAndCopyEditSemanticsTest {
                 modelEdit(
                     batchOf(
                         EditOperation.SetReference(
-                            target = EditTarget.NodeReference(JSON_STRING_VALUE_REF),
+                            target = EditTarget.SingleString(JSON_STRING_VALUE_REF),
                             role = "dataType",
-                            to = EditTarget.NodeReference("$STRUCTURE_MODEL/$datatypeId"),
+                            to = EditTarget.SingleString("$STRUCTURE_MODEL/$datatypeId"),
                         ),
                     ),
                 )
             }
 
-            val value = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_STRING_VALUE_REF)) }
+            val value = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_STRING_VALUE_REF)) }
             val dataType = value.references?.single { it.role == "dataType" }?.target
             assertNull(dataType?.model)
             assertEquals(datatypeId, dataType?.node)
@@ -51,7 +51,7 @@ class ReferenceAndCopyEditSemanticsTest {
                 modelEdit(
                     batchOf(
                         EditOperation.SetReference(
-                            target = EditTarget.NodeReference(JSON_STRING_VALUE_REF),
+                            target = EditTarget.SingleString(JSON_STRING_VALUE_REF),
                             role = "dataType",
                             to = null,
                         ),
@@ -59,7 +59,7 @@ class ReferenceAndCopyEditSemanticsTest {
                 )
             }
 
-            val value = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_STRING_VALUE_REF)) }
+            val value = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_STRING_VALUE_REF)) }
             assertNull(value.references?.firstOrNull { it.role == "dataType" })
         }
     }
@@ -67,7 +67,7 @@ class ReferenceAndCopyEditSemanticsTest {
     @Test
     fun `setReference supports a cross-model target`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
-            val original = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_STRING_VALUE_REF)) }
+            val original = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_STRING_VALUE_REF)) }
             val externalTarget = original.references!!.single { it.role == "dataType" }.target
             val externalModel = requireNotNull(externalTarget.model) { "expected a cross-model dataType target" }
             val externalReference = "$externalModel/${externalTarget.node}"
@@ -76,20 +76,20 @@ class ReferenceAndCopyEditSemanticsTest {
                 modelEdit(
                     batchOf(
                         EditOperation.SetReference(
-                            target = EditTarget.NodeReference(JSON_STRING_VALUE_REF),
+                            target = EditTarget.SingleString(JSON_STRING_VALUE_REF),
                             role = "dataType",
                             to = null,
                         ),
                         EditOperation.SetReference(
-                            target = EditTarget.NodeReference(JSON_STRING_VALUE_REF),
+                            target = EditTarget.SingleString(JSON_STRING_VALUE_REF),
                             role = "dataType",
-                            to = EditTarget.NodeReference(externalReference),
+                            to = EditTarget.SingleString(externalReference),
                         ),
                     ),
                 )
             }
 
-            val rewired = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_STRING_VALUE_REF)) }
+            val rewired = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_STRING_VALUE_REF)) }
             val target = rewired.references!!.single { it.role == "dataType" }.target
             assertEquals(externalModel, target.model)
             assertEquals(externalTarget.node, target.node)
@@ -105,20 +105,20 @@ class ReferenceAndCopyEditSemanticsTest {
                 modelEdit(
                     batchOf(
                         EditOperation.CopyAsChild(
-                            target = EditTarget.NodeReference(JSON_ARRAY_REF),
-                            source = EditTarget.NodeReference(JSON_STRING_VALUE_REF),
+                            target = EditTarget.SingleString(JSON_ARRAY_REF),
+                            source = EditTarget.SingleString(JSON_STRING_VALUE_REF),
                             role = "propertyDeclaration",
                         ),
                     ),
                 )
             }
 
-            val jsonArray = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_ARRAY_REF)) }
+            val jsonArray = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_ARRAY_REF)) }
             val copy = childrenInRole(jsonArray, "propertyDeclaration").single()
             assertEquals("value", propertyValueOrNull(copy, "name"))
             assertNotEquals(JSON_STRING_VALUE_ID, copy.id)
 
-            val source = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_STRING_VALUE_REF)) }
+            val source = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_STRING_VALUE_REF)) }
             assertEquals("value", propertyValueOrNull(source, "name"))
             assertEquals(propertyDeclarationsBefore + 1, propertyDeclarationCount(projectPath))
         }
@@ -134,13 +134,13 @@ class ReferenceAndCopyEditSemanticsTest {
                 modelEdit(
                     batchOf(
                         EditOperation.SetReference(
-                            target = EditTarget.NodeReference(JSON_ARRAY_ITEMS_LINK_REF),
+                            target = EditTarget.SingleString(JSON_ARRAY_ITEMS_LINK_REF),
                             role = "target",
-                            to = EditTarget.NodeReference(JSON_ARRAY_REF),
+                            to = EditTarget.SingleString(JSON_ARRAY_REF),
                         ),
                         EditOperation.CopyAsRoot(
                             model = ModelDestination(STRUCTURE_MODEL),
-                            source = EditTarget.NodeReference(JSON_ARRAY_REF),
+                            source = EditTarget.SingleString(JSON_ARRAY_REF),
                             alias = "\$copy",
                         ),
                     ),
@@ -148,7 +148,7 @@ class ReferenceAndCopyEditSemanticsTest {
             }
 
             val copyRef = response.created.getValue("copy")
-            val copy = mpsAccess.read { getNode(NodeTarget.NodeReference(copyRef)) }
+            val copy = mpsAccess.read { getNode(NodeTarget.SingleString(copyRef)) }
             val copiedLinkTarget = childrenInRole(copy, "linkDeclaration").single()
                 .references!!.single { it.role == "target" }.target
 
@@ -158,7 +158,7 @@ class ReferenceAndCopyEditSemanticsTest {
             assertNotEquals(JSON_ARRAY_ID, copiedLinkTarget.node, "the copy must not reference the original")
 
             // The original subtree is untouched: its link still points at the original array.
-            val source = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_ARRAY_REF)) }
+            val source = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_ARRAY_REF)) }
             val sourceLinkTarget = childrenInRole(source, "linkDeclaration").single()
                 .references!!.single { it.role == "target" }.target
             assertEquals(JSON_ARRAY_ID, sourceLinkTarget.node, "the original reference is unchanged")
@@ -174,9 +174,9 @@ class ReferenceAndCopyEditSemanticsTest {
                     modelEdit(
                         batchOf(
                             EditOperation.SetReference(
-                                target = EditTarget.NodeReference(JSON_STRING_VALUE_REF),
+                                target = EditTarget.SingleString(JSON_STRING_VALUE_REF),
                                 role = "noSuchReference",
-                                to = EditTarget.NodeReference(JSON_ARRAY_REF),
+                                to = EditTarget.SingleString(JSON_ARRAY_REF),
                             ),
                         ),
                     )
@@ -196,8 +196,8 @@ class ReferenceAndCopyEditSemanticsTest {
                     modelEdit(
                         batchOf(
                             EditOperation.CopyAsChild(
-                                target = EditTarget.NodeReference(JSON_ARRAY_REF),
-                                source = EditTarget.NodeReference("$STRUCTURE_MODEL/9999999999999999999"),
+                                target = EditTarget.SingleString(JSON_ARRAY_REF),
+                                source = EditTarget.SingleString("$STRUCTURE_MODEL/9999999999999999999"),
                                 role = "propertyDeclaration",
                             ),
                         ),
@@ -226,7 +226,7 @@ class ReferenceAndCopyEditSemanticsTest {
 
     // The datatype JsonNumber.value points at, read from the model rather than hard-coded from persistence ids.
     private fun numberDatatypeId(mpsAccess: com.specificlanguages.mops.daemon.core.MpsAccess): String {
-        val jsonNumber = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_NUMBER_REF)) }
+        val jsonNumber = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_NUMBER_REF)) }
         val value = childrenInRole(jsonNumber, "propertyDeclaration").single { propertyValueOrNull(it, "name") == "value" }
         return requireNotNull(value.references!!.single { it.role == "dataType" }.target.node)
     }

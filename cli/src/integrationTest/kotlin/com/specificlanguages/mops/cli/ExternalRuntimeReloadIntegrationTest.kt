@@ -29,7 +29,7 @@ class ExternalRuntimeReloadIntegrationTest {
         fun setProperty(name: String, value: String) {
             val batch = tempDir.resolve("property.json")
             batch.writeText(ProtocolJson.batch.encode(EditBatch(listOf(EditOperation.SetProperty(
-                target = EditTarget.NodeReference(
+                target = EditTarget.SingleString(
                     "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
                 ),
                 name = name, value = value,

@@ -86,7 +86,7 @@ class ModelGetNodeCommand(private val environment: CommandEnvironment) : CliComm
         require(!(summary && depth != null)) { "--summary cannot be combined with --depth" }
 
         val target = when (nodeTarget.size) {
-            1 -> NodeTarget.NodeReference(nodeTarget[0])
+            1 -> NodeTarget.SingleString(nodeTarget[0])
             2 -> NodeTarget.InModel(modelTarget = nodeTarget[0], nodeId = nodeTarget[1])
             else -> error("expected one node reference or model target plus node ID")
         }

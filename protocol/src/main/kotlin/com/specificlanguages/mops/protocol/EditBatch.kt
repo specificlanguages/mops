@@ -221,7 +221,8 @@ sealed interface ChildPosition {
  */
 @Serializable(with = EditTargetSerializer::class)
 sealed interface EditTarget {
-    data class NodeReference(val nodeReference: String) : EditTarget
+    /** A **Node Target** written as one string. */
+    data class SingleString(val text: String) : EditTarget
     data class InModel(val modelTarget: String, val nodeId: String) : EditTarget
     data class Alias(val alias: String) : EditTarget
 
@@ -299,7 +300,7 @@ internal object EditTargetSerializer : KSerializer<EditTarget> {
         val element = when (value) {
             is EditTarget.Alias -> JsonPrimitive(value.alias)
             is EditTarget.RelativeAlias -> JsonPrimitive(renderRelativeAlias(value))
-            is EditTarget.NodeReference -> JsonPrimitive(value.nodeReference)
+            is EditTarget.SingleString -> JsonPrimitive(value.text)
             is EditTarget.InModel -> JsonObject(
                 mapOf(
                     "model" to JsonPrimitive(value.modelTarget),
@@ -317,7 +318,7 @@ internal object EditTargetSerializer : KSerializer<EditTarget> {
 
         (element as? JsonPrimitive)?.takeIf { it.isString }?.let { primitive ->
             val value = primitive.content
-            if (!value.startsWith("$")) return EditTarget.NodeReference(value)
+            if (!value.startsWith("$")) return EditTarget.SingleString(value)
             // A '$'-prefixed string is an alias; a '/' after the alias name descends a role path into it.
             val slash = value.indexOf('/')
             return if (slash < 0) {
@@ -340,7 +341,7 @@ internal object EditTargetSerializer : KSerializer<EditTarget> {
 
         val nodeReference = targetObject.stringField("nodeReference")
         if (!nodeReference.isNullOrBlank()) {
-            return EditTarget.NodeReference(nodeReference)
+            return EditTarget.SingleString(nodeReference)
         }
 
         val modelTarget = targetObject.stringField("model") ?: targetObject.stringField("modelTarget")

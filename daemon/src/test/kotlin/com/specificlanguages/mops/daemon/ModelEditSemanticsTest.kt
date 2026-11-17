@@ -27,7 +27,7 @@ class ModelEditSemanticsTest {
                     EditBatch(
                         operations = listOf(
                             EditOperation.SetProperty(
-                                target = EditTarget.NodeReference(JSON_FILE_NODE_REFERENCE),
+                                target = EditTarget.SingleString(JSON_FILE_NODE_REFERENCE),
                                 name = "name",
                                 value = "RenamedJsonFile",
                             ),
@@ -37,7 +37,7 @@ class ModelEditSemanticsTest {
             }
 
             assertEquals(ModelEditResponse(created = emptyMap(), violations = emptyList()), response)
-            val node = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_NODE_REFERENCE)) }
+            val node = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_FILE_NODE_REFERENCE)) }
             assertEquals("RenamedJsonFile", propertyValue(node, "name"))
             assertContains(projectPath.resolve(STRUCTURE_MODEL_PATH).readText(), """value="RenamedJsonFile"""")
         }
@@ -51,7 +51,7 @@ class ModelEditSemanticsTest {
                     EditBatch(
                         operations = listOf(
                             EditOperation.SetProperty(
-                                target = EditTarget.NodeReference("$STRUCTURE_MODEL_REFERENCE/$JSON_FILE_ENCODED_NODE_ID"),
+                                target = EditTarget.SingleString("$STRUCTURE_MODEL_REFERENCE/$JSON_FILE_ENCODED_NODE_ID"),
                                 name = "name",
                                 value = "RenamedJsonFile",
                             ),
@@ -61,7 +61,7 @@ class ModelEditSemanticsTest {
             }
 
             assertEquals(ModelEditResponse(created = emptyMap(), violations = emptyList()), response)
-            val node = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_NODE_REFERENCE)) }
+            val node = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_FILE_NODE_REFERENCE)) }
             assertEquals("RenamedJsonFile", propertyValue(node, "name"))
         }
     }
@@ -87,7 +87,7 @@ class ModelEditSemanticsTest {
             }
 
             val createdRef = created.created.getValue("c")
-            val node = mpsAccess.read { getNode(NodeTarget.NodeReference(createdRef)) }
+            val node = mpsAccess.read { getNode(NodeTarget.SingleString(createdRef)) }
             assertEquals("true", propertyValue(node, "rootable"))
             // Persisted role for `rootable` is `19KtqR`; MPS stores boolean true as the literal string "true".
             assertContains(projectPath.resolve(STRUCTURE_MODEL_PATH).readText(), """<property role="19KtqR" value="true" />""")
@@ -102,7 +102,7 @@ class ModelEditSemanticsTest {
                     EditBatch(
                         operations = listOf(
                             EditOperation.SetProperty(
-                                target = EditTarget.NodeReference(CONTENT_LINK_NODE_REFERENCE),
+                                target = EditTarget.SingleString(CONTENT_LINK_NODE_REFERENCE),
                                 name = "sourceCardinality",
                                 value = "1..n",
                             ),
@@ -112,7 +112,7 @@ class ModelEditSemanticsTest {
             }
 
             assertEquals(ModelEditResponse(created = emptyMap(), violations = emptyList()), response)
-            val node = mpsAccess.read { getNode(NodeTarget.NodeReference(CONTENT_LINK_NODE_REFERENCE)) }
+            val node = mpsAccess.read { getNode(NodeTarget.SingleString(CONTENT_LINK_NODE_REFERENCE)) }
             assertEquals("_1__n", propertyValue(node, "sourceCardinality"))
             assertContains(projectPath.resolve(STRUCTURE_MODEL_PATH).readText(), """<property role="20lbJX" value="fLJekj6/_1__n" />""")
         }
@@ -122,7 +122,7 @@ class ModelEditSemanticsTest {
     fun `enumeration property value read from a node writes back unchanged`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
             val before = projectPath.resolve(STRUCTURE_MODEL_PATH).readText()
-            val node = mpsAccess.read { getNode(NodeTarget.NodeReference(CONTENT_LINK_NODE_REFERENCE)) }
+            val node = mpsAccess.read { getNode(NodeTarget.SingleString(CONTENT_LINK_NODE_REFERENCE)) }
             val value = propertyValue(node, "sourceCardinality")
             assertEquals("_1", value)
 
@@ -131,12 +131,12 @@ class ModelEditSemanticsTest {
                     EditBatch(
                         operations = listOf(
                             EditOperation.SetProperty(
-                                target = EditTarget.NodeReference(CONTENT_LINK_NODE_REFERENCE),
+                                target = EditTarget.SingleString(CONTENT_LINK_NODE_REFERENCE),
                                 name = "sourceCardinality",
                                 value = "_0__n",
                             ),
                             EditOperation.SetProperty(
-                                target = EditTarget.NodeReference(CONTENT_LINK_NODE_REFERENCE),
+                                target = EditTarget.SingleString(CONTENT_LINK_NODE_REFERENCE),
                                 name = "sourceCardinality",
                                 value = value,
                             ),
@@ -159,13 +159,13 @@ class ModelEditSemanticsTest {
                         EditBatch(
                             operations = listOf(
                                 EditOperation.AddChild(
-                                    target = EditTarget.NodeReference(JSON_FILE_NODE_REFERENCE),
+                                    target = EditTarget.SingleString(JSON_FILE_NODE_REFERENCE),
                                     role = "linkDeclaration",
                                     concept = "jetbrains.mps.lang.structure.structure.LinkDeclaration",
                                     properties = listOf(MpsNodePropertyJson(name = "sourceCardinality", value = "0..1")),
                                 ),
                                 EditOperation.SetProperty(
-                                    target = EditTarget.NodeReference(CONTENT_LINK_NODE_REFERENCE),
+                                    target = EditTarget.SingleString(CONTENT_LINK_NODE_REFERENCE),
                                     name = "sourceCardinality",
                                     value = "bogus",
                                 ),
@@ -220,12 +220,12 @@ class ModelEditSemanticsTest {
                         EditBatch(
                             operations = listOf(
                                 EditOperation.SetProperty(
-                                    target = EditTarget.NodeReference(JSON_FILE_NODE_REFERENCE),
+                                    target = EditTarget.SingleString(JSON_FILE_NODE_REFERENCE),
                                     name = "name",
                                     value = "ShouldRollback",
                                 ),
                                 EditOperation.SetProperty(
-                                    target = EditTarget.NodeReference(JSON_FILE_NODE_REFERENCE),
+                                    target = EditTarget.SingleString(JSON_FILE_NODE_REFERENCE),
                                     name = "doesNotExist",
                                     value = "boom",
                                 ),
@@ -237,7 +237,7 @@ class ModelEditSemanticsTest {
 
             assertEquals(MpsErrorCode.PROPERTY_NOT_FOUND, exception.code)
             assertContains(exception.message, "property not found: doesNotExist")
-            val node = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_NODE_REFERENCE)) }
+            val node = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_FILE_NODE_REFERENCE)) }
             assertEquals("JsonFile", propertyValue(node, "name"))
             assertFalse(projectPath.resolve(STRUCTURE_MODEL_PATH).readText().contains("ShouldRollback"))
         }
@@ -246,7 +246,7 @@ class ModelEditSemanticsTest {
     @Test
     fun `targeting non-editable model fails`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, _ ->
-            val existing = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_NODE_REFERENCE)) }
+            val existing = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_FILE_NODE_REFERENCE)) }
             val extendsTarget = requireNotNull(existing.references).single { it.role == "extends" }.target
             val libraryReference = "${extendsTarget.model}/${extendsTarget.node}"
 
@@ -256,7 +256,7 @@ class ModelEditSemanticsTest {
                         EditBatch(
                             operations = listOf(
                                 EditOperation.SetProperty(
-                                    target = EditTarget.NodeReference(libraryReference),
+                                    target = EditTarget.SingleString(libraryReference),
                                     name = "name",
                                     value = "EditedBaseConcept",
                                 ),
