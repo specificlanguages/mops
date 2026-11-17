@@ -50,9 +50,9 @@ internal object CodeCatalogNodeEntries {
     private fun featureAccess(kind: NodeFeatureKind): String = when (kind) {
         NodeFeatureKind.PROPERTY ->
             "Reads and writes invoke MPS property getter/setter handlers and use persisted string values, except for " +
-                "enumeration properties, which read as the literal name (`_1`, not the persisted `fLJekj4/_1`) and " +
-                "accept a literal name or a presentation (such as `0..1`) that only one literal has; any other " +
-                "enumeration value fails and lists the literals."
+                "enumeration properties, which read as the literal name (such as `_0__1`, not the persisted `id/name` " +
+                "form) and accept a literal name or a presentation (`0..1` for `_0__1`) that only one literal has; any " +
+                "other enumeration value fails and lists the literals."
         NodeFeatureKind.CHILD_ROLE ->
             "Child access uses native SNode operations; SNodeAccessUtil has no child APIs. Declared cardinality and " +
                 "containment constraints are not checked."
