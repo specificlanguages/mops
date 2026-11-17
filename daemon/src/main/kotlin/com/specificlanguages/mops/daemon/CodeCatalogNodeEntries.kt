@@ -1,10 +1,14 @@
 package com.specificlanguages.mops.daemon
 
+import org.jetbrains.mps.openapi.language.SContainmentLink
+import org.jetbrains.mps.openapi.language.SProperty
+import org.jetbrains.mps.openapi.language.SReferenceLink
+
 /**
  * Logic. Code Mode Reference entries for the `SNode` extensions: rendering, containment navigation, and indexed
  * accessors.
  *
- * Hides: how the help describes what the indexed accessors share — lookup by name and its failures, how
+ * Hides: how the help describes what the indexed accessors share — lookup by name or descriptor and its failures, how
  * reads and writes of each feature kind reach MPS, the access they need, and how an accessor shadows a native getter.
  */
 internal object CodeCatalogNodeEntries {
@@ -29,16 +33,25 @@ internal object CodeCatalogNodeEntries {
             writeAccess = "inside project.command",
         )
 
-        private fun lookup(): String =
-            "Names include inherited ${kind.plural}. Unknown ${kind.plural} fail on read and write, listing the " +
+        private fun lookup(): String {
+            val descriptor = descriptorType(kind)
+            return "Names include inherited ${kind.plural}. Unknown ${kind.plural} fail on read and write, listing the " +
                 "known ones; a name that several inherited ${kind.plural} share fails, naming the concepts that declare " +
-                "them."
+                "them. Index with the $descriptor from node.concept instead of the name to pick one of them by its " +
+                "declaring concept; a descriptor that the node's concept does not have fails."
+        }
 
         private fun shadowing(): String? = shadowed?.let {
             val getter = "get${name.replaceFirstChar(Char::uppercase)}()"
             "Shadows native $getter, so an explicit $getter call returns this accessor; it iterates ${it.iterates} " +
                 "like the native collection, so collect, findAll, each, and size() work on it. ${it.nativeAlternatives}"
         }
+    }
+
+    private fun descriptorType(kind: NodeFeatureKind): String = when (kind) {
+        NodeFeatureKind.PROPERTY -> SProperty::class.java.simpleName
+        NodeFeatureKind.CHILD_ROLE -> SContainmentLink::class.java.simpleName
+        NodeFeatureKind.REFERENCE_ROLE -> SReferenceLink::class.java.simpleName
     }
 
     /** How reads and writes of a feature kind reach MPS, which every accessor of that kind shares. */

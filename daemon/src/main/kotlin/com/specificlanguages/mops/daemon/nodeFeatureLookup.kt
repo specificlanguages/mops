@@ -1,6 +1,6 @@
 /**
- * Logic. Finds a property, child role or reference role of a node's concept by name. Code Mode accessors and edit
- * batches both look up node features here.
+ * Logic. Finds a property, child role or reference role of a node's concept by name, or checks that the concept has a
+ * given feature descriptor. Code Mode accessors and edit batches both look up node features here.
  *
  * Hides: how a name selects a node feature (the exact name among the concept's own and inherited features), and the
  * unloaded-concept, not-found and ambiguous-name errors with their codes.
@@ -38,23 +38,59 @@ internal fun SNode.requireProperty(name: String): SProperty =
         concept.properties.map { NamedNodeFeature(it, it.name, it.owner.qualifiedName) }
     }
 
-/**
- * An unresolved concept has no features at all, so it fails with the unloaded language instead of calling [name]
- * unknown.
- */
+/** [link] if it is one of this node's concept's child roles, including inherited roles. */
 @Suppress("DEPRECATION")
+internal fun SNode.requireContainmentLink(link: SContainmentLink): SContainmentLink =
+    requireNodeFeature(NodeFeatureKind.CHILD_ROLE, link, link.name, link.owner.qualifiedName) { concept.containmentLinks }
+
+/** [link] if it is one of this node's concept's reference roles, including inherited roles. */
+@Suppress("DEPRECATION")
+internal fun SNode.requireReferenceLink(link: SReferenceLink): SReferenceLink =
+    requireNodeFeature(NodeFeatureKind.REFERENCE_ROLE, link, link.name, link.owner.qualifiedName) { concept.referenceLinks }
+
+/** [property] if it is one of this node's concept's properties, including inherited properties. */
+@Suppress("DEPRECATION")
+internal fun SNode.requireProperty(property: SProperty): SProperty =
+    requireNodeFeature(NodeFeatureKind.PROPERTY, property, property.name, property.owner.qualifiedName) { concept.properties }
+
 private fun <T> SNode.requireNodeFeature(
     kind: NodeFeatureKind,
     name: String,
     features: () -> List<NamedNodeFeature<T>>,
 ): T {
+    requireConceptLoaded(kind, name)
+    return requireNamedNodeFeature(kind, concept.qualifiedName, name, features())
+}
+
+private fun <T> SNode.requireNodeFeature(
+    kind: NodeFeatureKind,
+    feature: T,
+    name: String,
+    owner: String,
+    features: () -> Iterable<T>,
+): T {
+    requireConceptLoaded(kind, name)
+    if (feature !in features()) {
+        throw MpsRequestException(
+            kind.notFoundCode,
+            "concept ${concept.qualifiedName} has no ${kind.singular} '$name' declared by $owner",
+        )
+    }
+    return feature
+}
+
+/**
+ * An unresolved concept has no features at all, so it fails with the unloaded language instead of calling [name]
+ * unknown.
+ */
+@Suppress("DEPRECATION")
+private fun SNode.requireConceptLoaded(kind: NodeFeatureKind, name: String) {
     if (!concept.isValid) {
         throw MpsRequestException(
             MpsErrorCode.LANGUAGE_NOT_LOADED,
             "cannot look up ${kind.singular} '$name': ${ConceptValidityGuard.notLoadedMessage(concept)}",
         )
     }
-    return requireNamedNodeFeature(kind, concept.qualifiedName, name, features())
 }
 
 /** The one feature among [features] named [name], or an [MpsRequestException] that lists the candidates. */
