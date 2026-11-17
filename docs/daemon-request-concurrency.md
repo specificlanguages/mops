@@ -4,9 +4,10 @@ The daemon accepts connections concurrently. Authenticated pings return daemon m
 admission, so a long build, test run, or Code Mode program does not block discovery pings.
 
 Domain requests enter a FIFO queue outside MPS model actions. With no active request, the first queued caller refreshes
-external changes exclusively. If it is a parallel reader, all consecutive readers queued when that refresh finishes
-share the refreshed state and run concurrently. The first exclusive request ends the batch. Requests arriving after
-admission wait for another refresh after the active batch finishes. There is no batching delay.
+external changes exclusively. If it is a parallel reader, the consecutive readers that were queued when that refresh
+started share the refreshed state and run concurrently. The batch ends at the first exclusive request or at the first
+request that arrived during the refresh, so every request sees the external changes made before it arrived. Later
+requests wait for another refresh after the active batch finishes. There is no batching delay.
 
 ```text
 refresh → [list, get-node, find] → refresh → edit → refresh → [list, find]
