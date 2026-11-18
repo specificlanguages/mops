@@ -36,7 +36,8 @@ Each class belongs to one **kind**. The kind sets what the class may do.
 Dependencies point inward: code that does I/O depends on code that does no I/O, never the other way. Each kind's section
 below lists what it may depend on.
 
-**`one-kind`**. Every class has exactly one kind. If one seems to need two, split it.
+**`one-kind`**. Every class has exactly one kind. If one seems to need two, split it. An Adapter with a cache
+(**`adapter-cache`**) is still one kind.
 
 **`kind-in-kdoc`**. Every class states its kind as the first word of its KDoc: `Value.`, `Logic.`, `Adapter.`,
 `Entry point.` or `State.` For a file of top-level functions, put the KDoc above the `package` line. A `@Serializable`
@@ -166,10 +167,21 @@ the external format leaves open, and fallbacks between ways to read it, are tran
 
 **`adapter-owns-format`**. Everything mops knows about one external format stays in one class, or in classes in one
 package that share a private representation. Reading and writing the format are done there. Code that encodes and
-decodes the format without I/O is Logic, and the Adapter that does the I/O uses it.
+decodes the format without I/O is Logic that the Adapter uses (**`adapter-deps`**).
 
-**`adapter-deps`**. Adapters depend on Values, the Kotlin interfaces they implement, external libraries, and narrower
-Adapters (an Ant runner may use a process launcher). Adapter dependencies form no cycles.
+**`adapter-deps`**. Adapters depend on Values, the Kotlin interfaces they implement, external libraries, narrower
+Adapters (an Ant runner may use a process launcher), and Logic about their own external thing (**`adapter-one-thing`**).
+Adapter dependencies form no cycles. That Logic hides an Environment decision (Part 3), for example decoding the format
+or deciding when a file's size and modification time prove that the file is unchanged. It lives in the Adapter's package
+(**`adapter-owns-format`**). Logic that hides a Behavior decision, such as which MPS Modules to skip, stays outside the
+Adapter (**`adapter-translates-only`**).
+
+**`adapter-cache`**. An Adapter may keep a private cache: in-memory data that only saves work. The test: if the Adapter
+dropped the cache before a call, that call would give the same results and behave the same for a user or client, only
+slower. Examples: content hashes of files; what archives looked like when they were last refreshed, so that only changed
+archives are refreshed again. Cache invalidation, deciding when cached data is still true, is Logic
+(**`adapter-deps`**). **`state-one-owner`** applies to the cache in the same way as to State. Other mutable state is
+State (**`state-justified`**).
 
 ### Entry point
 
@@ -217,8 +229,9 @@ Each design decision falls into one of three categories:
 | **Behavior**          | What mops is required to do.                      | What `check` reports; when a dependency counts as missing.                                      |
 | **Software decision** | Choices the developers made that users don't see. | The structure of the dependency graph; the algorithm for ordering MPS Modules.                  |
 
-The category usually predicts the kind: Environment decisions live in Adapters, Behavior and Software decisions in
-Logic. A Value's shape is not hidden: it is the interface that the classes using it share (**`connascence-in-types`**).
+The category usually predicts the kind: Environment decisions live in Adapters and in the Logic they use
+(**`adapter-deps`**), Behavior and Software decisions in Logic. A Value's shape is not hidden: it is the interface that
+the classes using it share (**`connascence-in-types`**).
 
 **`one-decision-per-class`**. Each class except a Value or an Entry point hides one design decision. If a class changes
 for unrelated reasons, that is **Divergent Change**. Split it.
