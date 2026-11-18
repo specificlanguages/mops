@@ -36,7 +36,8 @@ Each class belongs to one **kind**. The kind sets what the class may do.
 Dependencies point inward: code that does I/O depends on code that does no I/O, never the other way. Each kind's section
 below lists what it may depend on.
 
-**`one-kind`**. Every class has exactly one kind. If one seems to need two, split it.
+**`one-kind`**. Every class has exactly one kind. If one seems to need two, split it. An Adapter with a cache
+(**`adapter-cache`**) is still one kind.
 
 **`kind-in-kdoc`**. Every class states its kind as the first word of its KDoc: `Value.`, `Logic.`, `Adapter.`,
 `Entry point.` or `State.` For a file of top-level functions, put the KDoc above the `package` line. A `@Serializable`
@@ -166,10 +167,21 @@ the external format leaves open, and fallbacks between ways to read it, are tran
 
 **`adapter-owns-format`**. Everything mops knows about one external format stays in one class, or in classes in one
 package that share a private representation. Reading and writing the format are done there. Code that encodes and
-decodes the format without I/O is Logic, and the Adapter that does the I/O uses it.
+decodes the format without I/O is Logic that the Adapter uses (**`adapter-deps`**).
 
-**`adapter-deps`**. Adapters depend on Values, the Kotlin interfaces they implement, external libraries, and narrower
-Adapters (an Ant runner may use a process launcher). Adapter dependencies form no cycles.
+**`adapter-deps`**. Adapters depend on Values, the Kotlin interfaces they implement, external libraries, narrower
+Adapters (an Ant runner may use a process launcher), and Logic about their own external thing (**`adapter-one-thing`**).
+Adapter dependencies form no cycles. That Logic hides an Environment decision (Part 3), for example decoding the format
+or deciding when a file's size and modification time prove that the file is unchanged. It lives in the Adapter's package
+(**`adapter-owns-format`**). Logic that hides a Behavior decision, such as which MPS Modules to skip, stays outside the
+Adapter (**`adapter-translates-only`**).
+
+**`adapter-cache`**. An Adapter may keep a private cache: in-memory data that only saves work. The test: if the Adapter
+dropped the cache before a call, that call would give the same results and behave the same for a user or client, only
+slower. Examples: content hashes of files; what archives looked like when they were last refreshed, so that only changed
+archives are refreshed again. Cache invalidation, deciding when cached data is still true, is Logic
+(**`adapter-deps`**). **`state-one-owner`** applies to the cache in the same way as to State. Other mutable state is
+State (**`state-justified`**).
 
 ### Entry point
 
@@ -197,45 +209,10 @@ its KDoc says so.
 
 ## Part 2: Plan / Execute
 
-Plan/Execute applies to two types of operation:
-
-- a change that a user requests to their project or environment (creating MPS Modules, applying an edit batch, modifying
-  descriptors, running a migration, committing);
-- a planned query: a query where choosing how to run it is policy, for example which index answers a Repository Search
-  for Node Usages or Concept Instances.
-
-```text
-Planner (Logic) ──produces──▶ Plan (Value) ──consumed by──▶ Executor (Adapter)
-```
-
-A Plan is a request turned into an object, as in the **Command** pattern: a list of steps, each described as data. For a
-change, a step says what to write. For a query, a step says which source to search, such as an index or a scan of a set
-of MPS Models.
-
-**`plan-split`**. Every change and every planned query has a Planner, a Plan and an Executor. The Planner and Executor
-are separate classes. Special cases:
-
-- A write that only keeps mops's own records (test reports, caches, temporary folders, lock files) stays inside one
-  Adapter, with no Plan.
-- A query with only one way to run it has no Plan.
-- In an edit batch, the user writes the Plan. The Planner checks and resolves it before the first change.
-- Checks that MPS can only run on the changed MPS Model (constraints, cardinality, scopes) run after the Executor,
-  inside the same lock. Logic decides from the violations whether to keep the change or roll it back.
-- In Code Mode, each primitive that changes an MPS Model is an Executor step with no Planner.
-
-**`plan-complete`**. The Plan is a Value (all Value rules apply). It describes every step completely; the Executor needs
-no other input to carry it out. Two exceptions:
-
-- A step that refers to an MPS Node that an earlier step creates is resolved during execution.
-- A Plan made and executed inside one MPS lock may hold live MPS objects. Dry-run then renders or returns a Value copy
-  of it.
-
-**`executor-follows-plan`**. The Executor is mechanism. The Plan sets _what_ to change or _which_ source to search; the
-Executor may choose _how_, for example writing a temporary file and renaming it. If execution fails, it reports which
-step failed; it does not substitute a different step.
-
-**`dry-run-plans-only`**. Dry-run of a change is the Planner plus rendering of the Plan, with no Executor. If dry-run
-needs special-case code, one of the rules above is broken somewhere.
+A change that a user requests, and a query where choosing how to run it is policy, are divided into a Planner (Logic), a
+Plan (Value) and an Executor (Adapter). [Plan / Execute](plan-execute.md) holds these rules (**`plan-split`**,
+**`plan-complete`**, **`executor-follows-plan`**, **`dry-run-plans-only`**). Read it when you add or change such an
+operation.
 
 ## Part 3: Information hiding
 
@@ -252,8 +229,9 @@ Each design decision falls into one of three categories:
 | **Behavior**          | What mops is required to do.                      | What `check` reports; when a dependency counts as missing.                                      |
 | **Software decision** | Choices the developers made that users don't see. | The structure of the dependency graph; the algorithm for ordering MPS Modules.                  |
 
-The category usually predicts the kind: Environment decisions live in Adapters, Behavior and Software decisions in
-Logic. A Value's shape is not hidden: it is the interface that the classes using it share (**`connascence-in-types`**).
+The category usually predicts the kind: Environment decisions live in Adapters and in the Logic they use
+(**`adapter-deps`**), Behavior and Software decisions in Logic. A Value's shape is not hidden: it is the interface that
+the classes using it share (**`connascence-in-types`**).
 
 **`one-decision-per-class`**. Each class except a Value or an Entry point hides one design decision. If a class changes
 for unrelated reasons, that is **Divergent Change**. Split it.
