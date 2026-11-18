@@ -8,8 +8,6 @@ import jetbrains.mps.classloading.ClassLoaderManager
 import jetbrains.mps.ide.platform.watching.ReloadManager
 import jetbrains.mps.project.MPSProject
 import jetbrains.mps.project.Project
-import jetbrains.mps.project.facets.JavaModuleFacet
-import jetbrains.mps.project.dependency.GlobalModuleDependenciesManager
 import jetbrains.mps.util.PathManager
 import jetbrains.mps.vfs.refresh.DefaultCachingContext
 import kotlinx.coroutines.runBlocking
@@ -18,51 +16,54 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * Refreshes project files, the folders of source modules, and the archives of packaged modules, and replaces runtimes
- * whose Java classpath contents changed between requests.
+ * Adapter. Refreshes project files, the folders of source modules, and the archives of packaged modules, and replaces
+ * runtimes whose Java classpath contents changed between requests.
+ *
+ * Hides: how to make MPS see the changes that other programs made on disk to a project and the modules it loads.
+ *
+ * Keeps a cache (`adapter-cache`): the [RefreshBaseline] of the latest refresh that finished. Each refresh compares with
+ * it, and `externalChangePolicy.kt` decides what changed; without it, a refresh would refresh every archive, load the
+ * stored files of every folder, and replace every runtime. Not thread-safe: the request gate runs one refresh at a time.
  */
 internal class ExternalProjectRefresh(private val project: Project) {
     private val classPathFingerprints = ClassPathFingerprints()
-    private var outputs = snapshot()
-    private var archiveStamps: Map<Path, ArchiveStamp?>? = null
-    private val foldersWithStoredFilesLoaded = mutableSetOf<Path>()
+    private var baseline = RefreshBaseline(classPaths())
     private val mpsHome = Path.of(PathManager.getHomePath())
 
     fun refresh() {
         val mpsProject = project as MPSProject
+        val previous = baseline
         ApplicationManager.getApplication().invokeAndWait {
             val settings = Path.of(requireNotNull(mpsProject.project.basePath)).resolve(".mps")
             mpsProject.fileSystem.getFile(settings.toString()).refresh(DefaultCachingContext(true, true))
         }
         // The component store reloads project membership separately from MPS's model/module reload sessions.
         runBlocking { StoreReloadManager.getInstance(mpsProject.project).reloadChangedStorageFiles() }
+        lateinit var next: RefreshBaseline
         ApplicationManager.getApplication().invokeAndWait {
-            refreshModuleFolders()
-            refreshModuleArchives()
+            val loaded = refreshModuleFolders(previous.foldersWithStoredFilesLoaded)
+            val archiveStamps = refreshModuleArchives(previous.archiveStamps)
             ReloadManager.getInstance().flush()
-            val current = snapshot()
-            val changed = current.filter { (module, files) -> outputs[module] != files }.keys
-            if (changed.isNotEmpty()) {
-                project.modelAccess.runWriteAction {
-                    val modules = changed.mapNotNull { it.resolve(project.repository) }
-                    project.getComponent(ClassLoaderManager::class.java).reloadModules(modules)
-                }
-            }
-            outputs = current
+            val classPaths = replaceChangedRuntimes(previous.classPaths)
+            next = RefreshBaseline(classPaths, archiveStamps, loaded)
         }
+        baseline = next
     }
 
     /**
      * Refreshes the local folders that modules are loaded from: project modules and the modules of libraries that point
      * at source folders. The persistent VFS keeps records of these files across daemon restarts, so the first time a
      * folder is seen, the files the VFS has stored under it are loaded into memory before the refresh;
-     * docs/test-running-design.md explains why.
+     * docs/test-running-design.md explains why. Returns the folders whose stored files are loaded, [loaded] included.
      */
-    private fun refreshModuleFolders() {
+    private fun refreshModuleFolders(loaded: Set<Path>): Set<Path> {
         val folders = project.modelAccess.computeReadAction { moduleFolders(project, mpsHome) }
             .mapNotNull { LocalFileSystem.getInstance().findFileByNioFile(it) }
-        folders.filter { foldersWithStoredFilesLoaded.add(it.toNioPath()) }.forEach(::loadStoredFiles)
-        VfsUtil.markDirtyAndRefresh(false, true, true, *folders.toTypedArray())
+            .associateBy { it.toNioPath() }
+        val toLoad = foldersToLoad(loaded, folders.keys.toList())
+        toLoad.forEach { loadStoredFiles(folders.getValue(it)) }
+        VfsUtil.markDirtyAndRefresh(false, true, true, *folders.values.toTypedArray())
+        return loaded + toLoad
     }
 
     /**
@@ -70,43 +71,43 @@ internal class ExternalProjectRefresh(private val project: Project) {
      * archive with the deployment descriptor and the archives with the source descriptor and models, usually a
      * separate `-src.jar`. The persistent VFS keeps archive entries and their cached contents across daemon restarts,
      * and refreshing the archive file itself does not revalidate them, so a replaced archive keeps serving the old
-     * models until its archive root is refreshed. The first call refreshes every archive because the VFS may predate
-     * this daemon; later calls refresh only archives whose size or timestamp on disk changed since the previous call.
+     * models until its archive root is refreshed. [archivesToRefresh] decides which archives to refresh, comparing with
+     * the [previous] stamps. Returns the current stamps.
      */
-    private fun refreshModuleArchives() {
-        val current = project.modelAccess.computeReadAction { moduleArchives(project) }.associateWith(ArchiveStamp::of)
-        val previous = archiveStamps
-        val changed = if (previous == null) {
-            current.keys
-        } else {
-            current.filter { (archive, stamp) -> previous[archive] != stamp }.keys
-        }
-        changed.forEach(::refreshArchive)
-        archiveStamps = current
+    private fun refreshModuleArchives(previous: Map<Path, ArchiveStamp?>?): Map<Path, ArchiveStamp?> {
+        val current = project.modelAccess.computeReadAction { moduleArchives(project) }.associateWith(::archiveStamp)
+        archivesToRefresh(previous, current).forEach(::refreshArchive)
+        return current
     }
 
-    /** The size and timestamp of an archive on disk, or `null` for a missing archive. */
-    private data class ArchiveStamp(val modified: Long, val size: Long) {
-        companion object {
-            fun of(archive: Path): ArchiveStamp? =
-                if (Files.isRegularFile(archive)) {
-                    ArchiveStamp(Files.getLastModifiedTime(archive).toMillis(), Files.size(archive))
-                } else null
+    /** The size and timestamp of [archive] on disk, or `null` for a missing archive. */
+    private fun archiveStamp(archive: Path): ArchiveStamp? =
+        if (Files.isRegularFile(archive)) {
+            ArchiveStamp(Files.getLastModifiedTime(archive).toMillis(), Files.size(archive))
+        } else null
+
+    /**
+     * Replaces the runtimes of the modules that [modulesToReload] picks, comparing with the [previous] class paths.
+     * Returns the current class paths.
+     */
+    private fun replaceChangedRuntimes(
+        previous: Map<SModuleReference, List<ClassPathRoot>>,
+    ): Map<SModuleReference, List<ClassPathRoot>> {
+        val current = classPaths()
+        val changed = modulesToReload(previous, current)
+        if (changed.isNotEmpty()) {
+            project.modelAccess.runWriteAction {
+                val modules = changed.mapNotNull { it.resolve(project.repository) }
+                project.getComponent(ClassLoaderManager::class.java).reloadModules(modules)
+            }
         }
+        return current
     }
 
-    private fun snapshot(): Map<SModuleReference, List<Pair<Path, String>>> {
-        val classPaths = project.modelAccess.computeReadAction {
-            val modules = GlobalModuleDependenciesManager(project.projectModulesWithGenerators)
-                .getModules(GlobalModuleDependenciesManager.Deptype.EXECUTE)
-            modules.mapNotNull { module ->
-                val facet = module.getFacet(JavaModuleFacet::class.java)
-                if (facet == null || facet.loadClasses != JavaModuleFacet.LoadClasses.ManagedByMPS) return@mapNotNull null
-                // A nested archive entry is replaced when its containing archive changes.
-                module.moduleReference to facet.classPath.map { entry -> Path.of(entry.substringBefore("!/")) }
-            }.toMap()
-        }
+    /** The class path of each module whose classes MPS manages, with a fingerprint of each root. */
+    private fun classPaths(): Map<SModuleReference, List<ClassPathRoot>> {
+        val classPaths = project.modelAccess.computeReadAction { managedClassPaths(project) }
         val fingerprints = classPathFingerprints.compute(classPaths.values.flatten())
-        return classPaths.mapValues { (_, roots) -> roots.map { it to fingerprints.getValue(it) } }
+        return classPaths.mapValues { (_, roots) -> roots.map { ClassPathRoot(it, fingerprints.getValue(it)) } }
     }
 }
