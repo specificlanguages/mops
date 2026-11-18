@@ -2,7 +2,7 @@
 
 Rules for prose in this repo: Markdown docs, command descriptions and help text, `mops explain` topics, the `examples/`
 pages, and the `skills/mops/` skill. Agents read all of it, so these rules are about predictable agent behavior as much
-as human readability. For a skill or `AGENTS.md`, also use the `writing-for-agents` skill.
+as human readability. Use the `writing-for-agents` skill when you write or review anything that agents read.
 
 ## One source of truth
 
