@@ -12,6 +12,11 @@ import java.lang.foreign.MemoryLayout
 import java.lang.foreign.SymbolLookup
 import java.lang.foreign.ValueLayout.JAVA_INT
 
+/**
+ * Adapter. Detaches the daemon process from the console or process group that started it.
+ *
+ * Hides: which native API detaches a process on each operating system and Java version.
+ */
 internal object DaemonProcess {
     /**
      * Detach from the launching session or console before publishing readiness.
@@ -31,10 +36,33 @@ internal object DaemonProcess {
     }
 
     /**
-     * Runs [detachNatively], which detaches through the native API that [api] names. Warnings go to [warnings].
+     * Runs [detachNatively], which detaches through the native API that [api] names.
+     *
+     * When the native call cannot be set up, the daemon keeps running without detaching and writes a warning to
+     * [warnings]. These failures are:
+     * - [LinkageError]: JNA cannot load its native library or its classes.
+     * - [IllegalCallerException]: native access is not enabled for the Foreign Function API.
+     * - [UnsupportedOperationException]: the Foreign Function API has no native linker for this platform.
+     *
+     * Any other failure propagates.
      */
     internal fun detach(warnings: PrintStream, api: String, detachNatively: () -> Unit) {
-        detachNatively()
+        try {
+            detachNatively()
+        } catch (failure: LinkageError) {
+            warnNotDetached(warnings, api, failure)
+        } catch (failure: IllegalCallerException) {
+            warnNotDetached(warnings, api, failure)
+        } catch (failure: UnsupportedOperationException) {
+            warnNotDetached(warnings, api, failure)
+        }
+    }
+
+    private fun warnNotDetached(warnings: PrintStream, api: String, failure: Throwable) {
+        warnings.println(
+            "Warning: the daemon did not detach from the console or process group that started it, so closing that " +
+                "console or ending that process group may stop the daemon. Detaching through $api failed: $failure"
+        )
     }
 
     private const val FOREIGN_FUNCTION_API_JAVA_VERSION = 22
