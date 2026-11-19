@@ -95,7 +95,9 @@ Deleting a live daemon's record or cache does not stop it. Stale records are rem
 is no longer reachable. Commands reach the daemon over a loopback socket with a per-daemon token.
 
 Daemons detach from the launching command's session on Unix and from its console on Windows. Their stdout and stderr go
-to the daemon log, and stdin is closed. Filesystem and network sandbox restrictions still apply.
+to the daemon log, and stdin is closed. If the native call for detaching cannot be set up, the daemon keeps running
+attached and writes a warning to the daemon log; closing that console or session may then stop it. Filesystem and
+network sandbox restrictions still apply.
 
 Initial startup, including opening the MPS project, allows 300 seconds. For a project that needs longer, set
 `MOPS_DAEMON_STARTUP_TIMEOUT_SECONDS` to a positive whole number of seconds. This controls the wait for the daemon's

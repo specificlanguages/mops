@@ -4,6 +4,7 @@ import com.sun.jna.Library
 import com.sun.jna.Native
 import com.sun.jna.Platform
 import com.sun.jna.win32.StdCallLibrary
+import java.io.PrintStream
 import java.lang.foreign.Arena
 import java.lang.foreign.FunctionDescriptor
 import java.lang.foreign.Linker
@@ -11,9 +12,19 @@ import java.lang.foreign.MemoryLayout
 import java.lang.foreign.SymbolLookup
 import java.lang.foreign.ValueLayout.JAVA_INT
 
+/**
+ * Adapter. Detaches the daemon process from the console or process group that started it.
+ *
+ * Hides: which native API detaches a process on each operating system and Java version.
+ *
+ * Exception to `adapter-translates-only`: this class also decides that a native call that cannot be set up leaves the
+ * daemon running without detaching. Which failures mean "cannot be set up" depends on the native APIs, which this class
+ * hides.
+ */
 internal object DaemonProcess {
     /**
-     * Detach from the launching session or console before publishing readiness.
+     * Detach from the launching session or console before publishing readiness. When the native call cannot be set up,
+     * the daemon stays attached and writes a warning to stderr.
      *
      * Java 22 and newer use the Foreign Function API. Older JVMs use JNA from the MPS boot classpath. Starting with
      * MPS 2026.3, JNA is no longer on the boot classpath; it is in the `com.intellij.modules.jna` plugin.
@@ -22,10 +33,41 @@ internal object DaemonProcess {
         val windows = System.getProperty("os.name").startsWith("Windows")
         // Each implementation is a separate class, so the JVM loads only the API that is used.
         if (Runtime.version().feature() >= FOREIGN_FUNCTION_API_JAVA_VERSION) {
-            ForeignFunctionDetach.detach(windows)
+            detach(System.err, "the Foreign Function API") { ForeignFunctionDetach.detach(windows) }
         } else {
-            JnaDetach.detach(windows)
+            val bootLibraryPath = System.getProperty("jna.boot.library.path") ?: "(not set)"
+            detach(System.err, "JNA (jna.boot.library.path=$bootLibraryPath)") { JnaDetach.detach(windows) }
         }
+    }
+
+    /**
+     * Runs [detachNatively], which detaches through the native API that [apiDescription] names.
+     *
+     * When the native call cannot be set up, the daemon keeps running without detaching and writes a warning to
+     * [warnings]. These failures are:
+     * - [LinkageError]: JNA cannot load its native library or its classes.
+     * - [IllegalCallerException]: native access is not enabled for the Foreign Function API.
+     * - [UnsupportedOperationException]: the Foreign Function API has no native linker for this platform.
+     *
+     * Any other failure propagates.
+     */
+    internal fun detach(warnings: PrintStream, apiDescription: String, detachNatively: () -> Unit) {
+        try {
+            detachNatively()
+        } catch (failure: LinkageError) {
+            warnNotDetached(warnings, apiDescription, failure)
+        } catch (failure: IllegalCallerException) {
+            warnNotDetached(warnings, apiDescription, failure)
+        } catch (failure: UnsupportedOperationException) {
+            warnNotDetached(warnings, apiDescription, failure)
+        }
+    }
+
+    private fun warnNotDetached(warnings: PrintStream, apiDescription: String, failure: Throwable) {
+        warnings.println(
+            "Warning: the daemon did not detach from the console or process group that started it, so closing that " +
+                "console or ending that process group may stop the daemon. Detaching through $apiDescription failed: $failure"
+        )
     }
 
     private const val FOREIGN_FUNCTION_API_JAVA_VERSION = 22
