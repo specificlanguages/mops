@@ -16,10 +16,15 @@ import java.lang.foreign.ValueLayout.JAVA_INT
  * Adapter. Detaches the daemon process from the console or process group that started it.
  *
  * Hides: which native API detaches a process on each operating system and Java version.
+ *
+ * Exception to `adapter-translates-only`: this class also decides that a native call that cannot be set up leaves the
+ * daemon running without detaching. Which failures mean "cannot be set up" depends on the native APIs, which this class
+ * hides.
  */
 internal object DaemonProcess {
     /**
-     * Detach from the launching session or console before publishing readiness.
+     * Detach from the launching session or console before publishing readiness. When the native call cannot be set up,
+     * the daemon stays attached and writes a warning to stderr.
      *
      * Java 22 and newer use the Foreign Function API. Older JVMs use JNA from the MPS boot classpath. Starting with
      * MPS 2026.3, JNA is no longer on the boot classpath; it is in the `com.intellij.modules.jna` plugin.
@@ -36,7 +41,7 @@ internal object DaemonProcess {
     }
 
     /**
-     * Runs [detachNatively], which detaches through the native API that [api] names.
+     * Runs [detachNatively], which detaches through the native API that [apiDescription] names.
      *
      * When the native call cannot be set up, the daemon keeps running without detaching and writes a warning to
      * [warnings]. These failures are:
@@ -46,22 +51,22 @@ internal object DaemonProcess {
      *
      * Any other failure propagates.
      */
-    internal fun detach(warnings: PrintStream, api: String, detachNatively: () -> Unit) {
+    internal fun detach(warnings: PrintStream, apiDescription: String, detachNatively: () -> Unit) {
         try {
             detachNatively()
         } catch (failure: LinkageError) {
-            warnNotDetached(warnings, api, failure)
+            warnNotDetached(warnings, apiDescription, failure)
         } catch (failure: IllegalCallerException) {
-            warnNotDetached(warnings, api, failure)
+            warnNotDetached(warnings, apiDescription, failure)
         } catch (failure: UnsupportedOperationException) {
-            warnNotDetached(warnings, api, failure)
+            warnNotDetached(warnings, apiDescription, failure)
         }
     }
 
-    private fun warnNotDetached(warnings: PrintStream, api: String, failure: Throwable) {
+    private fun warnNotDetached(warnings: PrintStream, apiDescription: String, failure: Throwable) {
         warnings.println(
             "Warning: the daemon did not detach from the console or process group that started it, so closing that " +
-                "console or ending that process group may stop the daemon. Detaching through $api failed: $failure"
+                "console or ending that process group may stop the daemon. Detaching through $apiDescription failed: $failure"
         )
     }
 
