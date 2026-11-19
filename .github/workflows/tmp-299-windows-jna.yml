@@ -1,0 +1,151 @@
+# Temporary probe for issue #299 (Windows daemon fails to load the JNA native library on MPS 2024.1.x). Delete with
+# the branch.
+name: tmp-299 Windows JNA probe
+
+on:
+  push:
+    branches: [ci/299-windows-jna-probe]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generic-2024-1-6:
+    name: generic MPS 2024.1.6 + JBR 17
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
+      - name: Pass the JNA debug options to the daemons of the integration tests
+        shell: bash
+        run: |
+          sed -i 's/environment("MOPS_DAEMON_JAVA_OPTIONS", "-Xmx2g")/environment("MOPS_DAEMON_JAVA_OPTIONS", "-Xmx2g -Djna.debug_load.jna=true -Djna.debug_load=true")/' cli/build.gradle.kts
+          grep -n 'MOPS_DAEMON_JAVA_OPTIONS' cli/build.gradle.kts
+      - name: Run daemon startup and control integration tests on MPS 2024.1.6
+        id: tests
+        continue-on-error: true
+        shell: bash
+        run: >-
+          ./gradlew --continue :cli:integrationTestMps2024.1.6
+          --tests '*DaemonStartupIntegrationTest' --tests '*DaemonControlIntegrationTest'
+      - name: Probe the MPS home and JBR the tests used
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          $cache = Get-Item build\mps-platform-cache
+          Write-Host "platform cache: $($cache.FullName)"
+          Get-ChildItem -Directory "$($cache.FullName)\*" | ForEach-Object { $_.FullName }
+          $mps = Get-ChildItem -Directory "$($cache.FullName)\mps\*" | Where-Object Name -like '2024.1.6*' | Select-Object -First 1
+          $jbr = Get-ChildItem -Directory "$($cache.FullName)\jbr*\*" | Where-Object Name -like '17.*' | Select-Object -First 1
+          & .github\tmp-299\probe.ps1 -MpsHome $mps.FullName -JavaHome $jbr.FullName
+          "GENERIC_MPS_HOME=$($mps.FullName)" >> $env:GITHUB_ENV
+          "GENERIC_JBR_HOME=$($jbr.FullName)" >> $env:GITHUB_ENV
+      - name: Start a daemon directly on the generic MPS home with JBR 17
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        shell: pwsh
+        env:
+          MOPS_DAEMON_JAVA_OPTIONS: -Xmx2g -Djna.debug_load.jna=true -Djna.debug_load=true
+        run: '& .github\tmp-299\start-daemon.ps1 -Name generic -MpsHome $env:GENERIC_MPS_HOME -JavaHome $env:GENERIC_JBR_HOME'
+      - name: Collect daemon logs
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          $out = "$env:RUNNER_TEMP\logs"
+          New-Item -ItemType Directory -Force $out | Out-Null
+          $logs = Get-ChildItem -Recurse -Force -File -Include *.log -Path $env:TEMP, cli\build\tmp -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match 'junit' }
+          $i = 0
+          foreach ($log in $logs) {
+            $i++
+            Copy-Item $log.FullName "$out\$i-$($log.Name)"
+            Write-Host "===== $($log.FullName)"
+            Select-String -Path $log.FullName -Pattern 'jna|jnidispatch|UnsatisfiedLink|detach' -CaseSensitive:$false |
+              Select-Object -First 60 | ForEach-Object { $_.Line }
+          }
+          Write-Host "$i log files"
+      - name: Upload logs and test reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: generic-2024.1.6-logs
+          path: |
+            ${{ runner.temp }}/logs/
+            cli/build/test-results/
+            cli/build/reports/tests/
+      - name: Fail when the tests failed
+        if: steps.tests.outcome == 'failure'
+        run: exit 1
+
+  installer-2024-1-5:
+    name: Windows installer MPS 2024.1.5 + bundled JBR
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
+      - name: Build the mops CLI
+        shell: bash
+        run: ./gradlew :cli:installDist
+      - name: Download and extract the MPS 2024.1.5 Windows installer
+        shell: pwsh
+        run: |
+          $url = 'https://download.jetbrains.com/mps/2024.1/MPS-2024.1.5.exe'
+          $exe = "$env:RUNNER_TEMP\MPS-2024.1.5.exe"
+          curl.exe -fsSL -o $exe $url
+          $expected = (curl.exe -fsSL "$url.sha256").Trim().Split(' ')[0]
+          $actual = (Get-FileHash $exe -Algorithm SHA256).Hash
+          Write-Host "sha256 expected $expected actual $actual"
+          if ($expected -ne $actual) { throw 'checksum mismatch' }
+          $dest = "$env:RUNNER_TEMP\mps-2024.1.5"
+          7z x -y "-o$dest" $exe | Select-Object -Last 5
+          Get-ChildItem -Force $dest | ForEach-Object { $_.Name }
+          Get-ChildItem -Force "$dest\bin" | ForEach-Object { $_.Name }
+          $mpsHome = (Get-ChildItem -Recurse -Depth 1 -Filter build.txt $dest | Select-Object -First 1).DirectoryName
+          if (-not $mpsHome) { throw 'no build.txt in the extracted installer' }
+          Write-Host "MPS home: $mpsHome"
+          "MPS_HOME=$mpsHome" >> $env:GITHUB_ENV
+      - name: Probe the installer MPS home and its JBR
+        shell: pwsh
+        run: '& .github\tmp-299\probe.ps1 -MpsHome $env:MPS_HOME -JavaHome "$env:MPS_HOME\jbr"'
+      - name: Start the daemon with the default jna.boot.library.path
+        id: default
+        continue-on-error: true
+        shell: pwsh
+        env:
+          MOPS_DAEMON_JAVA_OPTIONS: -Xmx2g -Djna.debug_load.jna=true -Djna.debug_load=true
+        run: '& .github\tmp-299\start-daemon.ps1 -Name default -MpsHome $env:MPS_HOME -JavaHome "$env:MPS_HOME\jbr"'
+      - name: Start the daemon with jna.boot.library.path at the folder holding jnidispatch.dll
+        if: steps.default.outcome == 'failure'
+        id: override
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $dll = Get-ChildItem -Recurse -Force -Filter jnidispatch.dll $env:MPS_HOME | Select-Object -First 1
+          if (-not $dll) { Write-Host 'no jnidispatch.dll anywhere in the MPS home'; exit 1 }
+          $env:MOPS_DAEMON_JAVA_OPTIONS = "-Xmx2g -Djna.debug_load.jna=true -Djna.debug_load=true -Djna.boot.library.path=$($dll.DirectoryName)"
+          Write-Host "MOPS_DAEMON_JAVA_OPTIONS=$env:MOPS_DAEMON_JAVA_OPTIONS"
+          & .github\tmp-299\start-daemon.ps1 -Name override -MpsHome $env:MPS_HOME -JavaHome "$env:MPS_HOME\jbr"
+      - name: Upload logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: installer-2024.1.5-logs
+          path: ${{ runner.temp }}/logs/
+      - name: Fail when the daemon did not start with the default settings
+        if: steps.default.outcome == 'failure'
+        run: exit 1
