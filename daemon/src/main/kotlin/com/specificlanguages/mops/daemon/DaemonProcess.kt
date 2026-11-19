@@ -4,6 +4,7 @@ import com.sun.jna.Library
 import com.sun.jna.Native
 import com.sun.jna.Platform
 import com.sun.jna.win32.StdCallLibrary
+import java.io.PrintStream
 import java.lang.foreign.Arena
 import java.lang.foreign.FunctionDescriptor
 import java.lang.foreign.Linker
@@ -22,10 +23,18 @@ internal object DaemonProcess {
         val windows = System.getProperty("os.name").startsWith("Windows")
         // Each implementation is a separate class, so the JVM loads only the API that is used.
         if (Runtime.version().feature() >= FOREIGN_FUNCTION_API_JAVA_VERSION) {
-            ForeignFunctionDetach.detach(windows)
+            detach(System.err, "the Foreign Function API") { ForeignFunctionDetach.detach(windows) }
         } else {
-            JnaDetach.detach(windows)
+            val bootLibraryPath = System.getProperty("jna.boot.library.path") ?: "(not set)"
+            detach(System.err, "JNA (jna.boot.library.path=$bootLibraryPath)") { JnaDetach.detach(windows) }
         }
+    }
+
+    /**
+     * Runs [detachNatively], which detaches through the native API that [api] names. Warnings go to [warnings].
+     */
+    internal fun detach(warnings: PrintStream, api: String, detachNatively: () -> Unit) {
+        detachNatively()
     }
 
     private const val FOREIGN_FUNCTION_API_JAVA_VERSION = 22
