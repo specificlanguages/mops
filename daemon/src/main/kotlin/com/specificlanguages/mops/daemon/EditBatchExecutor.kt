@@ -329,9 +329,10 @@ class EditBatchExecutor(
             }
         }
 
-        // Sets properties and references on [node] and builds its nested children, recursively. Each child is a fresh
-        // node spec, a Move Leaf (adopting an existing node identity-preservingly), or a Copy Leaf (deep-copying with
-        // fresh IDs).
+        // Sets properties on [node] and builds its nested children, recursively. Each child is a fresh node spec, a Move
+        // Leaf (adopting an existing node identity-preservingly), or a Copy Leaf (deep-copying with fresh IDs). Returns
+        // the inline references of [node] and its fresh descendants, deepest first, for [setInlineReferences] to set
+        // once the new structure is in place.
         fun populate(
             index: Int,
             model: SModel,
@@ -339,15 +340,10 @@ class EditBatchExecutor(
             properties: List<MpsNodePropertyJson>?,
             references: List<InlineReference>?,
             children: List<InlineChild>?,
-        ) {
+        ): List<PendingReferences> {
+            val pending = mutableListOf<PendingReferences>()
             properties?.forEach { property ->
                 setPropertyOrFail(index, node, resolvePropertyOrFail(index, node, property.name), property.value)
-            }
-            references?.forEach { reference ->
-                val link = resolveReferenceLinkOrFail(index, node, reference.role)
-                val target = resolveReferenceTargetOrFail(index, model, reference)
-                node.setReferenceTarget(link, target)
-                referencePlacements.add(ReferencePlacement(index, node, link, target))
             }
             children?.forEach { child ->
                 val role = child.role
@@ -358,7 +354,7 @@ class EditBatchExecutor(
                         val childNode = model.createNode(resolveConceptOrFail(index, child.concept))
                         node.addChild(link, childNode)
                         placements.add(Placement(index, node, link, childNode))
-                        populate(index, model, childNode, child.properties, child.references, child.children)
+                        pending += populate(index, model, childNode, child.properties, child.references, child.children)
                     }
                     is InlineChild.Move -> {
                         val source = requireEditableNode(index, child.source)
@@ -370,6 +366,21 @@ class EditBatchExecutor(
                         node.addChild(link, copy)
                         placements.add(Placement(index, node, link, copy))
                     }
+                }
+            }
+            references?.let { pending += PendingReferences(node, it) }
+            return pending
+        }
+
+        // Sets inline references after the operation has put its new structure in place, so a reference set handler
+        // sees the node as the batch built it, the same as a setReference operation that follows.
+        fun setInlineReferences(index: Int, model: SModel, pending: List<PendingReferences>) {
+            for ((node, references) in pending) {
+                for (reference in references) {
+                    val link = resolveReferenceLinkOrFail(index, node, reference.role)
+                    val target = resolveReferenceTargetOrFail(index, model, reference)
+                    writeReferenceTarget(node, link, target)
+                    referencePlacements.add(ReferencePlacement(index, node, link, target))
                 }
             }
         }
@@ -442,7 +453,8 @@ class EditBatchExecutor(
                     val child = model.createNode(concept)
                     attach(index, node, link, child, operation.position)
                     placements.add(Placement(index, node, link, child))
-                    populate(index, model, child, operation.properties, operation.references, operation.children)
+                    val pending = populate(index, model, child, operation.properties, operation.references, operation.children)
+                    setInlineReferences(index, model, pending)
                     bindAlias(index, operation.alias, child)
                 }
 
@@ -460,7 +472,7 @@ class EditBatchExecutor(
                     val node = requireEditableNode(index, operation.target)
                     val link = resolveReferenceLinkOrFail(index, node, operation.role)
                     val to = operation.to?.let { resolveNode(index, it) }
-                    node.setReferenceTarget(link, to)
+                    writeReferenceTarget(node, link, to)
                     // Clearing a reference (to == null) cannot violate a scope; only a concrete target is checked.
                     if (to != null) {
                         referencePlacements.add(ReferencePlacement(index, node, link, to))
@@ -483,7 +495,8 @@ class EditBatchExecutor(
                     val root = model.createNode(concept)
                     model.addRootNode(root)
                     rootPlacements.add(RootPlacement(index, model, root))
-                    populate(index, model, root, operation.properties, operation.references, operation.children)
+                    val pending = populate(index, model, root, operation.properties, operation.references, operation.children)
+                    setInlineReferences(index, model, pending)
                     bindAlias(index, operation.alias, root)
                 }
 
@@ -509,11 +522,12 @@ class EditBatchExecutor(
                     val model = target.model!!
                     // Build the replacement while the target subtree is still attached, so a Move/Copy Leaf sourcing a
                     // node from inside the target can still be resolved and adopted before the remainder is dropped.
+                    var pending = emptyList<PendingReferences>()
                     val replacement = when (val with = operation.with) {
                         is InlineChild.Fresh -> {
                             val concept = resolveConceptOrFail(index, with.concept)
                             val node = model.createNode(concept)
-                            populate(index, model, node, with.properties, with.references, with.children)
+                            pending = populate(index, model, node, with.properties, with.references, with.children)
                             node
                         }
                         is InlineChild.Move -> {
@@ -529,6 +543,7 @@ class EditBatchExecutor(
                         }
                     }
                     replaceInPlace(index, target, replacement)
+                    setInlineReferences(index, model, pending)
                     bindAlias(index, operation.alias, replacement)
                 }
 
@@ -539,11 +554,12 @@ class EditBatchExecutor(
                     val wrapper = model.createNode(concept)
                     val link = resolveContainmentOrFail(index, wrapper, operation.role)
                     // Build the wrapper's other inline structure first, then swap it into the target's slot, then adopt
-                    // the target under the wrapper's role among any inline-built siblings.
-                    populate(index, model, wrapper, operation.properties, operation.references, operation.children)
+                    // the target under the wrapper's role among any inline-built siblings, then set inline references.
+                    val pending = populate(index, model, wrapper, operation.properties, operation.references, operation.children)
                     replaceInPlace(index, target, wrapper)
                     attach(index, wrapper, link, target, operation.position)
                     placements.add(Placement(index, wrapper, link, target))
+                    setInlineReferences(index, model, pending)
                     bindAlias(index, operation.alias, wrapper)
                 }
 
@@ -558,7 +574,12 @@ class EditBatchExecutor(
             }
         }
 
-        val violations = EditConstraintChecker(persistence).check(placements, rootPlacements, referencePlacements, uncheckable)
+        // Only what still holds at the end of the batch is checked and imported for.
+        val currentPlacements = placements.filter { it.isCurrent }
+        val currentRootPlacements = rootPlacements.filter { it.isCurrent }
+        val currentReferencePlacements = referencePlacements.filter { it.isCurrent }
+        val violations = EditConstraintChecker(persistence)
+            .check(currentPlacements, currentRootPlacements, currentReferencePlacements, uncheckable)
 
         // Unless missing languages are ignored, refuse to apply anything that could not be fully checked.
         if (!constraints.ignoreMissingLanguages && uncheckable.hasMissingLanguages) {
@@ -578,7 +599,7 @@ class EditBatchExecutor(
         // holds, so a headless edit does not leave a model using an undeclared language or referencing an unimported
         // model. This is reached only on a saving path — a batch that failed or was blocked left before here — so a
         // rejected edit adds no imports.
-        val notes = addMissingImports(affectedModels, placements, rootPlacements, referencePlacements)
+        val notes = addMissingImports(affectedModels, currentPlacements, currentRootPlacements, currentReferencePlacements)
 
         return when (val saveOutcome = writeScope.saveWithResolveInfo(affectedModels)) {
             SaveOutcome.Saved -> ModelEditResponse(
@@ -659,3 +680,6 @@ class EditBatchExecutor(
      */
     private fun aliasName(alias: String): String = alias.removePrefix("$")
 }
+
+/** The inline references of one node, set after the edit operation that built the node has put it in place. */
+private data class PendingReferences(val node: SNode, val references: List<InlineReference>)

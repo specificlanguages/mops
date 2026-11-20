@@ -2,7 +2,6 @@ package com.specificlanguages.mops.daemon
 
 import org.jetbrains.mps.openapi.language.SReferenceLink
 import org.jetbrains.mps.openapi.model.SNode
-import org.jetbrains.mps.openapi.model.SNodeAccessUtil
 import org.jetbrains.mps.openapi.model.SNodeReference
 import org.jetbrains.mps.openapi.model.SReference
 
@@ -26,7 +25,7 @@ class NodeReferences(private val node: SNode) : NodeAccessor<SReference>("refere
         return node.getReference(node.requireReferenceLink(link))
     }
 
-    /** Resolves and assigns a target through MPS reference setters, or clears it with null. */
+    /** Resolves and assigns a target through MPS reference setters, or clears it with null; see [writeReferenceTarget]. */
     fun putAt(role: String, value: Any?) {
         requireCommand("SNode.references[] assignment")
         write(node.requireReferenceLink(role), value)
@@ -49,6 +48,6 @@ class NodeReferences(private val node: SNode) : NodeAccessor<SReference>("refere
                 ?: throw IllegalArgumentException("unresolved reference target for role: $role")
             else -> throw IllegalArgumentException("reference must be a node, node reference, SReference, or null")
         }
-        SNodeAccessUtil.setReferenceTarget(node, link, target)
+        writeReferenceTarget(node, link, target)
     }
 }
