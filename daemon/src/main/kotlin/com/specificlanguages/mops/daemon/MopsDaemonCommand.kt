@@ -1,5 +1,6 @@
 package com.specificlanguages.mops.daemon
 
+import com.specificlanguages.mops.daemon.filewatcher.FileWatcherExecutable
 import com.specificlanguages.mops.launcher.MpsBuildProperties
 import com.specificlanguages.mops.protocol.*
 import de.itemis.mps.gradle.project.loader.EnvironmentKind
@@ -68,6 +69,7 @@ class MopsDaemonCommand : Runnable {
 
         val workspacePath = Path.of(workspacePath)
         val mpsPlugin = Path.of(mpsPlugin)
+        FileWatcherExecutable.install(mpsHome, DaemonWorkspace(workspacePath).fileWatcherDir, logger)
 
         DaemonRunner(
             projectPath = projectPath,
