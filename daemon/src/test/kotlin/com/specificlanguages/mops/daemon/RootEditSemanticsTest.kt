@@ -38,7 +38,7 @@ class RootEditSemanticsTest {
             }
 
             val createdRef = response.created.getValue("c")
-            val created = mpsAccess.read { getNode(NodeTarget.NodeReference(createdRef)) }
+            val created = mpsAccess.read { getNode(NodeTarget.SingleString(createdRef)) }
             assertEquals(CONCEPT_DECLARATION, created.concept)
             assertEquals("JsonComment", propertyValueOrNull(created, "name"))
             assertTrue(modelRootReferences(mpsAccess).contains(createdRef), "new root must appear in the model listing")
@@ -54,7 +54,7 @@ class RootEditSemanticsTest {
                     batchOf(
                         EditOperation.CopyAsRoot(
                             model = ModelDestination(STRUCTURE_MODEL),
-                            source = EditTarget.NodeReference(JSON_FILE_REF),
+                            source = EditTarget.SingleString(JSON_FILE_REF),
                             alias = "\$copy",
                         ),
                     ),
@@ -64,8 +64,8 @@ class RootEditSemanticsTest {
             val copyRef = response.created.getValue("copy")
             assertNotEquals(JSON_FILE_REF, copyRef, "the copy must receive a fresh node ID")
 
-            val copy = mpsAccess.read { getNode(NodeTarget.NodeReference(copyRef)) }
-            val source = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_REF)) }
+            val copy = mpsAccess.read { getNode(NodeTarget.SingleString(copyRef)) }
+            val source = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_FILE_REF)) }
             assertEquals(source.concept, copy.concept)
 
             val roots = modelRootReferences(mpsAccess)
@@ -83,14 +83,14 @@ class RootEditSemanticsTest {
                 advisoryEdit(
                     batchOf(
                         EditOperation.MoveAsRoot(
-                            target = EditTarget.NodeReference("$STRUCTURE_MODEL/$JSON_STRING_VALUE_ID"),
+                            target = EditTarget.SingleString("$STRUCTURE_MODEL/$JSON_STRING_VALUE_ID"),
                             model = ModelDestination(STRUCTURE_MODEL),
                         ),
                     ),
                 )
             }
 
-            val jsonString = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_STRING_REF)) }
+            val jsonString = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_STRING_REF)) }
             assertTrue(childrenInRole(jsonString, "propertyDeclaration").isEmpty(), "the child must leave its old parent")
             assertTrue(
                 modelRootReferences(mpsAccess).contains("$STRUCTURE_MODEL/$JSON_STRING_VALUE_ID"),
@@ -108,7 +108,7 @@ class RootEditSemanticsTest {
                 advisoryEdit(
                     batchOf(
                         EditOperation.MoveAsRoot(
-                            target = EditTarget.NodeReference("$STRUCTURE_MODEL/$JSON_STRING_VALUE_ID"),
+                            target = EditTarget.SingleString("$STRUCTURE_MODEL/$JSON_STRING_VALUE_ID"),
                             model = ModelDestination(STRUCTURE_MODEL),
                         ),
                     ),
@@ -119,8 +119,8 @@ class RootEditSemanticsTest {
                 modelEdit(
                     batchOf(
                         EditOperation.MoveAsChild(
-                            target = EditTarget.NodeReference("$STRUCTURE_MODEL/$JSON_STRING_VALUE_ID"),
-                            into = EditTarget.NodeReference(JSON_ARRAY_REF),
+                            target = EditTarget.SingleString("$STRUCTURE_MODEL/$JSON_STRING_VALUE_ID"),
+                            into = EditTarget.SingleString(JSON_ARRAY_REF),
                             role = "propertyDeclaration",
                         ),
                     ),
@@ -131,7 +131,7 @@ class RootEditSemanticsTest {
                 modelRootReferences(mpsAccess).none { it == "$STRUCTURE_MODEL/$JSON_STRING_VALUE_ID" },
                 "the node must no longer be a root",
             )
-            val jsonArray = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_ARRAY_REF)) }
+            val jsonArray = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_ARRAY_REF)) }
             assertEquals("value", propertyValueOrNull(childrenInRole(jsonArray, "propertyDeclaration").single(), "name"))
         }
     }
@@ -154,7 +154,7 @@ class RootEditSemanticsTest {
             }
 
             val createdRef = response.created.getValue("c")
-            val created = mpsAccess.read { getNode(NodeTarget.NodeReference(createdRef)) }
+            val created = mpsAccess.read { getNode(NodeTarget.SingleString(createdRef)) }
             assertEquals("Renamed", propertyValueOrNull(created, "name"))
         }
     }

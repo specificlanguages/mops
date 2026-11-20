@@ -42,14 +42,14 @@ class InlineLeafEditSemanticsTest {
             }
             assertTrue(response.violations.isEmpty(), "expected no violations, got ${response.violations}")
 
-            val holder = mpsAccess.read { getNode(NodeTarget.NodeReference(response.created.getValue("holder"))) }
+            val holder = mpsAccess.read { getNode(NodeTarget.SingleString(response.created.getValue("holder"))) }
             val moved = childrenInRole(holder, "propertyDeclaration").single()
             // Identity preserved: the adopted node keeps its exact node ID, so any inbound reference still resolves.
             assertEquals(JSON_STRING_VALUE_ID, moved.id)
             assertEquals("value", propertyValueOrNull(moved, "name"))
 
             // The source parent no longer holds it.
-            val jsonString = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_STRING_REF)) }
+            val jsonString = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_STRING_REF)) }
             assertTrue(childrenInRole(jsonString, "propertyDeclaration").none { it.id == JSON_STRING_VALUE_ID })
         }
     }
@@ -74,13 +74,13 @@ class InlineLeafEditSemanticsTest {
             }
             assertTrue(response.violations.isEmpty(), "expected no violations, got ${response.violations}")
 
-            val holder = mpsAccess.read { getNode(NodeTarget.NodeReference(response.created.getValue("holder"))) }
+            val holder = mpsAccess.read { getNode(NodeTarget.SingleString(response.created.getValue("holder"))) }
             val copy = childrenInRole(holder, "propertyDeclaration").single()
             assertEquals("value", propertyValueOrNull(copy, "name"))
             assertNotEquals(JSON_STRING_VALUE_ID, copy.id, "the copy must receive a fresh node ID")
 
             // The source is untouched.
-            val jsonString = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_STRING_REF)) }
+            val jsonString = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_STRING_REF)) }
             assertTrue(childrenInRole(jsonString, "propertyDeclaration").any { it.id == JSON_STRING_VALUE_ID })
         }
     }
@@ -88,7 +88,7 @@ class InlineLeafEditSemanticsTest {
     @Test
     fun `a move leaf with a read-only source fails like moveAsChild and changes nothing`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
-            val existing = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_REF)) }
+            val existing = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_FILE_REF)) }
             val extendsTarget = existing.references!!.single { it.role == "extends" }.target
             val readOnlyReference = "${extendsTarget.model}/${extendsTarget.node}"
             val before = structureModel(projectPath).readText()
@@ -148,14 +148,14 @@ class InlineLeafEditSemanticsTest {
                 modelEdit(
                     batchOf(
                         EditOperation.AddChild(
-                            target = EditTarget.NodeReference(JSON_FILE_REF),
+                            target = EditTarget.SingleString(JSON_FILE_REF),
                             role = "linkDeclaration",
                             concept = LINK_DECLARATION,
                             properties = listOf(MpsNodePropertyJson(name = "role", value = "viaTo")),
                             references = listOf(
                                 InlineReference(
                                     role = "target",
-                                    to = EditTarget.NodeReference("$STRUCTURE_MODEL/$IJSON_VALUE_ID"),
+                                    to = EditTarget.SingleString("$STRUCTURE_MODEL/$IJSON_VALUE_ID"),
                                 ),
                             ),
                         ),
@@ -164,7 +164,7 @@ class InlineLeafEditSemanticsTest {
             }
             assertTrue(response.violations.isEmpty(), "expected no violations, got ${response.violations}")
 
-            val jsonFile = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_REF)) }
+            val jsonFile = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_FILE_REF)) }
             val link = childrenInRole(jsonFile, "linkDeclaration").single { propertyValueOrNull(it, "role") == "viaTo" }
             assertEquals(IJSON_VALUE_ID, link.references?.single { it.role == "target" }?.target?.node)
         }
@@ -177,7 +177,7 @@ class InlineLeafEditSemanticsTest {
                 modelEdit(
                     batchOf(
                         EditOperation.AddChild(
-                            target = EditTarget.NodeReference(JSON_FILE_REF),
+                            target = EditTarget.SingleString(JSON_FILE_REF),
                             role = "linkDeclaration",
                             concept = LINK_DECLARATION,
                             properties = listOf(MpsNodePropertyJson(name = "role", value = "viaEncodedId")),
@@ -195,17 +195,17 @@ class InlineLeafEditSemanticsTest {
             }
             assertTrue(response.violations.isEmpty(), "expected no violations, got ${response.violations}")
 
-            val jsonFile = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_REF)) }
+            val jsonFile = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_FILE_REF)) }
             val link = childrenInRole(jsonFile, "linkDeclaration").single { propertyValueOrNull(it, "role") == "viaEncodedId" }
             assertEquals(IJSON_VALUE_ID, link.references?.single { it.role == "target" }?.target?.node)
         }
     }
 
     private fun moveLeaf(role: String, source: String): InlineChild =
-        InlineChild.Move(role = role, source = EditTarget.NodeReference(source))
+        InlineChild.Move(role = role, source = EditTarget.SingleString(source))
 
     private fun copyLeaf(role: String, source: String): InlineChild =
-        InlineChild.Copy(role = role, source = EditTarget.NodeReference(source))
+        InlineChild.Copy(role = role, source = EditTarget.SingleString(source))
 
     private fun batchOf(vararg operations: EditOperation): EditBatch = EditBatch(operations.toList())
 

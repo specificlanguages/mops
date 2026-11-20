@@ -50,7 +50,7 @@ class InlineSubtreeNotationTest {
 
         val move = assertIs<InlineChild.Move>(children[0])
         assertEquals("members", move.role)
-        assertEquals(EditTarget.NodeReference("m/10"), move.source)
+        assertEquals(EditTarget.SingleString("m/10"), move.source)
 
         val copy = assertIs<InlineChild.Copy>(children[1])
         assertEquals(EditTarget.InModel("m", "11"), copy.source)
@@ -74,7 +74,7 @@ class InlineSubtreeNotationTest {
         val sources = firstAddChild(batch).children!!.map { assertIs<InlineChild.Move>(it).source }
         assertEquals(
             listOf(
-                EditTarget.NodeReference("model/1"),
+                EditTarget.SingleString("model/1"),
                 EditTarget.InModel("model", "2"),
                 EditTarget.Alias("\$alias"),
             ),
@@ -107,7 +107,7 @@ class InlineSubtreeNotationTest {
         val batch = decodeSuccess(addChild(references = """[{"role":"type","to":"other/9"}]"""))
         val reference = firstAddChild(batch).references!!.single()
         assertEquals("type", reference.role)
-        assertEquals(EditTarget.NodeReference("other/9"), reference.to)
+        assertEquals(EditTarget.SingleString("other/9"), reference.to)
         assertNull(reference.target)
     }
 
@@ -139,10 +139,10 @@ class InlineSubtreeNotationTest {
         val batch = EditBatch(
             operations = listOf(
                 EditOperation.AddChild(
-                    target = EditTarget.NodeReference("m/1"),
+                    target = EditTarget.SingleString("m/1"),
                     role = "members",
                     concept = "C",
-                    references = listOf(InlineReference(role = "type", to = EditTarget.NodeReference("m/2"))),
+                    references = listOf(InlineReference(role = "type", to = EditTarget.SingleString("m/2"))),
                     children = listOf(
                         InlineChild.Move(role = "members", source = EditTarget.Alias("\$a")),
                         InlineChild.Copy(role = "members", source = EditTarget.InModel("m", "3")),

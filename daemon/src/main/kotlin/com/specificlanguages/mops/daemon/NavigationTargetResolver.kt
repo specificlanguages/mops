@@ -1,5 +1,7 @@
 package com.specificlanguages.mops.daemon
 
+import com.specificlanguages.mops.daemon.core.MpsErrorCode
+import com.specificlanguages.mops.daemon.core.MpsRequestException
 import jetbrains.mps.project.MPSProject
 import org.jetbrains.mps.openapi.model.SModel
 import org.jetbrains.mps.openapi.model.SNode
@@ -31,13 +33,24 @@ internal sealed interface NavigationTargetResolution {
 }
 
 /**
- * Resolves a **Navigation Target**, the path grammar of ADR-0002, against an **MPS Project**, and looks up the
- * serialized module, model, and node references the grammar accepts.
+ * Logic. Resolves a **Navigation Target**, the path grammar of ADR-0002, against an **MPS Project**, and looks up the
+ * serialized module and model references the grammar accepts. A single segment may also be a **Node Target** written as
+ * one string.
+ *
+ * Hides: what each segment of a navigation target may name, and what zero or several matches mean. A single segment
+ * counts every interpretation that matches, so a name shared by a module and a model, or by several project models,
+ * is ambiguous. A single segment that is a node target resolves through [nodeTargets], as in `get node`: a model name
+ * shared by several models fails there with [MpsErrorCode.AMBIGUOUS_TARGET] instead of resolving to
+ * [NavigationTargetResolution.Ambiguous].
+ *
+ * Exception to **`logic-no-io`**: [nodeTargets] may write its diagnostic log line for a model target that matches no
+ * model.
  *
  * Every function must be called inside a model read action.
  */
 internal class NavigationTargetResolver(
     private val project: MPSProject,
+    private val nodeTargets: ModelNodeResolver,
     private val persistence: PersistenceFacade = PersistenceFacade.getInstance(),
 ) {
     private val modules = ModuleTargetResolver(project, persistence)
@@ -72,11 +85,6 @@ internal class NavigationTargetResolver(
 
         return resolveModelPath(model, segments.drop(2))
     }
-
-    fun resolveNodeReference(target: String): SNode? =
-        runCatching {
-            persistence.createNodeReference(normalizeNodeReferenceSpelling(persistence, target)).resolve(project.repository)
-        }.getOrNull()
 
     fun resolveModelReference(target: String): SModel? =
         parseModelReferenceOrNull(persistence, target)?.resolve(project.repository)
@@ -122,7 +130,7 @@ internal class NavigationTargetResolver(
     private fun resolveSingleSegment(segment: String): NavigationTargetResolution {
         val candidates = LinkedHashMap<String, NavigationTarget>()
 
-        resolveNodeReference(segment)?.let {
+        matchingNodes(segment).forEach {
             candidates["node:${persistence.asString(it.reference)}"] = targetForNode(it)
         }
         resolveModelReference(segment)?.let {
@@ -142,6 +150,17 @@ internal class NavigationTargetResolver(
             else -> ambiguousSingleSegment(segment, targets)
         }
     }
+
+    // A segment that is a Node Target written as one string resolves as `get node` resolves it, so a model name shared
+    // by several models fails as ambiguous there. A segment that is not a node target, or names no model, matches no
+    // node.
+    private fun matchingNodes(segment: String): List<SNode> =
+        try {
+            listOfNotNull(nodeTargets.findNode(project, segment))
+        } catch (failure: MpsRequestException) {
+            if (failure.code != MpsErrorCode.INVALID_REQUEST && failure.code != MpsErrorCode.MODEL_NOT_FOUND) throw failure
+            emptyList()
+        }
 
     private fun matchingProjectModels(segment: String): List<SModel> =
         project.projectModulesWithGenerators

@@ -46,6 +46,8 @@ SEGMENTS
     <model-reference>        A model, by serialized model reference.
     <node-reference>         A root node or nested node subtree, by serialized
                              node reference.
+    <model-name>/<node-id>   A root node or nested node subtree, by model name
+                             and node ID (see node-ref).
     <module> <model> <node>...
                              A node subtree, addressed segment by segment by
                              node name or node ID.

@@ -10,30 +10,57 @@ import org.jetbrains.mps.openapi.model.SNode
 import org.jetbrains.mps.openapi.persistence.PersistenceFacade
 import java.nio.file.Path
 
+/**
+ * Logic. Looks up the model or node that a model target or a **Node Target** names in an **MPS Project**.
+ *
+ * Hides: which models a model target matches, and what zero or several matches mean. A model reference matches by
+ * model ID; a model name matches every model with that name, and more than one fails with
+ * [MpsErrorCode.AMBIGUOUS_TARGET].
+ *
+ * Exception to **`logic-no-io`**: when [findModelUnique] finds no model, it writes a diagnostic log line that lists the
+ * models it searched, and that line and the ambiguity message name each model's file, which reads the file system.
+ * Building that list belongs with the search, and a caller would have to repeat the scan to log it.
+ */
 class ModelNodeResolver(
     private val logger: DaemonLogger,
     private val persistence: PersistenceFacade = PersistenceFacade.getInstance(),
 ) {
     fun findNode(project: Project, target: NodeTarget): SNode? =
         when (target) {
-            is NodeTarget.NodeReference -> persistence
-                .createNodeReference(normalizeNodeReferenceSpelling(persistence, target.nodeReference))
-                .resolve(project.repository)
+            is NodeTarget.SingleString -> findNode(project, target.text)
 
-            is NodeTarget.InModel -> {
-                val model = findModelUnique(project, target.modelTarget)
-                    ?: throw MpsRequestException(
-                        code = MpsErrorCode.MODEL_NOT_FOUND,
-                        message = "model not found: ${target.modelTarget}",
-                    )
-                val nodeId = parseNodeIdOrNull(persistence, target.nodeId)
-                    ?: throw MpsRequestException(
-                        code = MpsErrorCode.INVALID_REQUEST,
-                        message = "could not parse node ID: ${target.nodeId}",
-                    )
-                model.getNode(nodeId)
-            }
+            is NodeTarget.InModel -> findNode(project, target.modelTarget, target.nodeId)
         }
+
+    /**
+     * Resolves a **Node Target** written as one string (see [parseNodeTarget]). Returns null when its model holds no
+     * such node. Fails like a model target and node ID given apart: with [MpsErrorCode.INVALID_REQUEST] when the target
+     * is malformed, [MpsErrorCode.MODEL_NOT_FOUND] when no model matches, and [MpsErrorCode.AMBIGUOUS_TARGET] when its
+     * model name matches several.
+     */
+    fun findNode(project: Project, target: String): SNode? = resolve(project, parseNodeTarget(persistence, target))
+
+    /**
+     * Like [findNode] with one string, for a node target whose model target and node ID come apart: the two-token form of
+     * a command, a `{model, nodeId}` edit target, or an inline reference target.
+     */
+    fun findNode(project: Project, model: String, nodeId: String): SNode? =
+        resolve(project, parseNodeTarget(persistence, model, nodeId))
+
+    private fun resolve(project: Project, target: ParsedNodeTarget): SNode? =
+        when (target) {
+            is ParsedNodeTarget.Reference -> {
+                if (target.reference.modelReference?.resolve(project.repository) == null) throw modelNotFound(target.model)
+                target.reference.resolve(project.repository)
+            }
+
+            // A model name names one model or fails as ambiguous, whether or not the other models hold the node.
+            is ParsedNodeTarget.InNamedModel ->
+                (findModelUnique(project, target.modelName) ?: throw modelNotFound(target.modelName)).getNode(target.nodeId)
+        }
+
+    private fun modelNotFound(modelTarget: String) =
+        MpsRequestException(code = MpsErrorCode.MODEL_NOT_FOUND, message = "model not found: $modelTarget")
 
     /**
      * Resolves a model target to a single model, failing with [MpsErrorCode.AMBIGUOUS_TARGET] when more than one model

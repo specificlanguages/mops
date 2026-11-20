@@ -113,12 +113,12 @@ class CliSmokeTest {
                 EditBatch(
                     operations = listOf(
                         EditOperation.SetProperty(
-                            target = EditTarget.NodeReference(targetReference),
+                            target = EditTarget.SingleString(targetReference),
                             name = "name",
                             value = "ShouldRollback",
                         ),
                         EditOperation.SetProperty(
-                            target = EditTarget.NodeReference(targetReference),
+                            target = EditTarget.SingleString(targetReference),
                             name = "doesNotExist",
                             value = "boom",
                         ),
@@ -147,7 +147,7 @@ class CliSmokeTest {
                 EditBatch(
                     operations = listOf(
                         EditOperation.SetProperty(
-                            target = EditTarget.NodeReference(
+                            target = EditTarget.SingleString(
                                 "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566910",
                             ),
                             name = "sourceCardinality",

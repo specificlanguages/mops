@@ -26,7 +26,7 @@ class AliasEditSemanticsTest {
                 modelEdit(
                     batchOf(
                         EditOperation.AddChild(
-                            target = EditTarget.NodeReference(JSON_FILE_REF),
+                            target = EditTarget.SingleString(JSON_FILE_REF),
                             role = "propertyDeclaration",
                             concept = PROPERTY_DECLARATION,
                             alias = "\$p",
@@ -37,10 +37,10 @@ class AliasEditSemanticsTest {
             }
 
             val createdReference = assertNotNull(response.created["p"])
-            val added = mpsAccess.read { getNode(NodeTarget.NodeReference(createdReference)) }
+            val added = mpsAccess.read { getNode(NodeTarget.SingleString(createdReference)) }
             assertEquals("aliased", propertyValueOrNull(added, "name"))
 
-            val jsonFile = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_REF)) }
+            val jsonFile = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_FILE_REF)) }
             assertNotNull(childrenInRole(jsonFile, "propertyDeclaration").singleOrNull { propertyValueOrNull(it, "name") == "aliased" })
             // The alias is batch-local: it is never written as a persisted attribute value. (A raw substring search
             // would be flaky, since MPS's random base-encoded node IDs can contain "$p" by chance.)
@@ -56,7 +56,7 @@ class AliasEditSemanticsTest {
                     batchOf(
                         // The '$' is the reference sigil, not part of the name: bound bare here, targeted as "$p".
                         EditOperation.AddChild(
-                            target = EditTarget.NodeReference(JSON_FILE_REF),
+                            target = EditTarget.SingleString(JSON_FILE_REF),
                             role = "propertyDeclaration",
                             concept = PROPERTY_DECLARATION,
                             alias = "p",
@@ -67,7 +67,7 @@ class AliasEditSemanticsTest {
             }
 
             val createdReference = assertNotNull(response.created["p"])
-            val added = mpsAccess.read { getNode(NodeTarget.NodeReference(createdReference)) }
+            val added = mpsAccess.read { getNode(NodeTarget.SingleString(createdReference)) }
             assertEquals("aliased", propertyValueOrNull(added, "name"))
         }
     }
@@ -87,7 +87,7 @@ class AliasEditSemanticsTest {
                             alias = "\$c",
                         ),
                         EditOperation.AddChild(
-                            target = EditTarget.NodeReference(JSON_FILE_REF),
+                            target = EditTarget.SingleString(JSON_FILE_REF),
                             role = "linkDeclaration",
                             concept = LINK_DECLARATION,
                             properties = listOf(MpsNodePropertyJson(name = "role", value = "link")),
@@ -103,7 +103,7 @@ class AliasEditSemanticsTest {
             }
 
             val conceptId = assertNotNull(response.created["c"]).substringAfterLast("/")
-            val jsonFile = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_REF)) }
+            val jsonFile = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_FILE_REF)) }
             val link = childrenInRole(jsonFile, "linkDeclaration").single { propertyValueOrNull(it, "role") == "link" }
             val linkTarget = link.references?.single { it.role == "target" }?.target
             assertEquals(conceptId, linkTarget?.node)
@@ -120,7 +120,7 @@ class AliasEditSemanticsTest {
                         batchOf(
                             EditOperation.SetProperty(target = EditTarget.Alias("\$p"), name = "name", value = "early"),
                             EditOperation.AddChild(
-                                target = EditTarget.NodeReference(JSON_FILE_REF),
+                                target = EditTarget.SingleString(JSON_FILE_REF),
                                 role = "propertyDeclaration",
                                 concept = PROPERTY_DECLARATION,
                                 alias = "\$p",
@@ -143,13 +143,13 @@ class AliasEditSemanticsTest {
                     modelEdit(
                         batchOf(
                             EditOperation.AddChild(
-                                target = EditTarget.NodeReference(JSON_FILE_REF),
+                                target = EditTarget.SingleString(JSON_FILE_REF),
                                 role = "propertyDeclaration",
                                 concept = PROPERTY_DECLARATION,
                                 alias = "\$p",
                             ),
                             EditOperation.AddChild(
-                                target = EditTarget.NodeReference(JSON_FILE_REF),
+                                target = EditTarget.SingleString(JSON_FILE_REF),
                                 role = "propertyDeclaration",
                                 concept = PROPERTY_DECLARATION,
                                 alias = "\$p",
@@ -172,13 +172,13 @@ class AliasEditSemanticsTest {
                     modelEdit(
                         batchOf(
                             EditOperation.AddChild(
-                                target = EditTarget.NodeReference(JSON_FILE_REF),
+                                target = EditTarget.SingleString(JSON_FILE_REF),
                                 role = "propertyDeclaration",
                                 concept = PROPERTY_DECLARATION,
                                 alias = "\$p",
                             ),
                             EditOperation.AddChild(
-                                target = EditTarget.NodeReference(JSON_FILE_REF),
+                                target = EditTarget.SingleString(JSON_FILE_REF),
                                 role = "propertyDeclaration",
                                 concept = PROPERTY_DECLARATION,
                                 alias = "p",

@@ -26,7 +26,7 @@ class ConstraintEditSemanticsTest {
                 modelEdit(
                     batchOf(
                         EditOperation.AddChild(
-                            target = EditTarget.NodeReference(JSON_FILE_REF),
+                            target = EditTarget.SingleString(JSON_FILE_REF),
                             role = "propertyDeclaration",
                             concept = LINK_DECLARATION,
                         ),
@@ -36,7 +36,7 @@ class ConstraintEditSemanticsTest {
 
             assertTrue(response.violations.any { it.constraint == "containment" && it.operation == 0 })
             assertTrue(response.created.isEmpty())
-            val jsonFile = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_REF)) }
+            val jsonFile = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_FILE_REF)) }
             assertTrue(childrenInRole(jsonFile, "propertyDeclaration").isEmpty())
             assertEquals(before, structureModel(projectPath).readText())
         }
@@ -49,7 +49,7 @@ class ConstraintEditSemanticsTest {
                 advisoryEdit(
                     batchOf(
                         EditOperation.AddChild(
-                            target = EditTarget.NodeReference(JSON_FILE_REF),
+                            target = EditTarget.SingleString(JSON_FILE_REF),
                             role = "propertyDeclaration",
                             concept = LINK_DECLARATION,
                             properties = listOf(MpsNodePropertyJson(name = "role", value = "forced")),
@@ -59,7 +59,7 @@ class ConstraintEditSemanticsTest {
             }
 
             assertTrue(response.violations.any { it.constraint == "containment" })
-            val jsonFile = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_REF)) }
+            val jsonFile = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_FILE_REF)) }
             val added = childrenInRole(jsonFile, "propertyDeclaration").single()
             assertEquals(LINK_DECLARATION, added.concept)
             assertTrue(structureModel(projectPath).readText().contains("""value="forced""""))
@@ -75,12 +75,12 @@ class ConstraintEditSemanticsTest {
                 modelEdit(
                     batchOf(
                         EditOperation.AddChild(
-                            target = EditTarget.NodeReference(JSON_FILE_REF),
+                            target = EditTarget.SingleString(JSON_FILE_REF),
                             role = "helpURL",
                             concept = HELP_URL,
                         ),
                         EditOperation.AddChild(
-                            target = EditTarget.NodeReference(JSON_FILE_REF),
+                            target = EditTarget.SingleString(JSON_FILE_REF),
                             role = "helpURL",
                             concept = HELP_URL,
                         ),
@@ -90,7 +90,7 @@ class ConstraintEditSemanticsTest {
 
             assertTrue(response.violations.any { it.constraint == "cardinality" })
             assertTrue(response.created.isEmpty())
-            val jsonFile = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_REF)) }
+            val jsonFile = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_FILE_REF)) }
             assertTrue(childrenInRole(jsonFile, "helpURL").isEmpty())
             assertEquals(before, structureModel(projectPath).readText())
         }
@@ -103,7 +103,7 @@ class ConstraintEditSemanticsTest {
                 modelEdit(
                     batchOf(
                         EditOperation.AddChild(
-                            target = EditTarget.NodeReference(JSON_FILE_REF),
+                            target = EditTarget.SingleString(JSON_FILE_REF),
                             role = "propertyDeclaration",
                             concept = PROPERTY_DECLARATION,
                             properties = listOf(MpsNodePropertyJson(name = "name", value = "ok")),
@@ -113,7 +113,7 @@ class ConstraintEditSemanticsTest {
             }
 
             assertTrue(response.violations.isEmpty())
-            val jsonFile = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_REF)) }
+            val jsonFile = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_FILE_REF)) }
             assertEquals("ok", propertyValueOrNull(childrenInRole(jsonFile, "propertyDeclaration").single(), "name"))
             assertTrue(structureModel(projectPath).readText().contains("""value="ok""""))
         }
@@ -130,9 +130,9 @@ class ConstraintEditSemanticsTest {
                 modelEdit(
                     batchOf(
                         EditOperation.SetReference(
-                            target = EditTarget.NodeReference(JSON_FILE_REF),
+                            target = EditTarget.SingleString(JSON_FILE_REF),
                             role = "extends",
-                            to = EditTarget.NodeReference(JSON_FILE_REF),
+                            to = EditTarget.SingleString(JSON_FILE_REF),
                         ),
                     ),
                 )
@@ -150,16 +150,16 @@ class ConstraintEditSemanticsTest {
                 advisoryEdit(
                     batchOf(
                         EditOperation.SetReference(
-                            target = EditTarget.NodeReference(JSON_FILE_REF),
+                            target = EditTarget.SingleString(JSON_FILE_REF),
                             role = "extends",
-                            to = EditTarget.NodeReference(JSON_FILE_REF),
+                            to = EditTarget.SingleString(JSON_FILE_REF),
                         ),
                     ),
                 )
             }
 
             assertTrue(response.violations.any { it.constraint == "referenceScope" })
-            val jsonFile = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_REF)) }
+            val jsonFile = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_FILE_REF)) }
             val extendsReference = jsonFile.references.orEmpty().single { it.role == "extends" }
             assertEquals("JsonFile", extendsReference.target.name)
         }

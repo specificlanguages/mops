@@ -150,6 +150,13 @@ class ScopeResolutionTest {
             assertContains(exception.message, STRUCTURE_MODEL_REFERENCE)
             assertContains(exception.message, duplicateReference)
             assertContains(exception.message, "mops explain scope")
+
+            // A model name and node ID fails as ambiguous, as in get node.
+            val node = assertFailsWith<MpsRequestException> {
+                mpsAccess.read { resolveScope(listOf("$STRUCTURE_MODEL/$JSON_FILE_NODE_ID")) }
+            }
+            assertEquals(MpsErrorCode.AMBIGUOUS_TARGET, node.code)
+            assertContains(node.message, "ambiguous model target $STRUCTURE_MODEL")
         }
     }
 
@@ -164,6 +171,17 @@ class ScopeResolutionTest {
 
         assertEquals(ResolvedScope.Subtree(JSON_FILE_NODE_REFERENCE), byPath)
         assertEquals(ResolvedScope.Subtree(JSON_FILE_NODE_REFERENCE), byReference)
+    }
+
+    @Test
+    fun `resolves a model name and node ID as one segment to a subtree scope, like get node`() {
+        listOf("$STRUCTURE_MODEL/$JSON_FILE_NODE_ID", "$STRUCTURE_MODEL/$JSON_FILE_ENCODED_NODE_ID").forEach { segment ->
+            assertEquals(
+                ResolvedScope.Subtree(JSON_FILE_NODE_REFERENCE),
+                SharedMpsEnvironment.sharedMpsAccess.read { resolveScope(listOf(segment)) },
+                segment,
+            )
+        }
     }
 
     @Test
@@ -220,7 +238,10 @@ class ScopeResolutionTest {
         const val STRUCTURE_MODEL = "com.specificlanguages.json.structure"
         const val STRUCTURE_MODEL_REFERENCE = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
         const val STRUCTURE_MODEL_PATH = "languages/com.specificlanguages.json/models/com.specificlanguages.json.structure.mps"
-        const val JSON_FILE_NODE_REFERENCE = "$STRUCTURE_MODEL_REFERENCE/2110045694544566904"
+        const val JSON_FILE_NODE_ID = "2110045694544566904"
+        // The same node ID in the encoded spelling MPS persists in .mps files.
+        const val JSON_FILE_ENCODED_NODE_ID = "1P8oQ4NaXDS"
+        const val JSON_FILE_NODE_REFERENCE = "$STRUCTURE_MODEL_REFERENCE/$JSON_FILE_NODE_ID"
         // The build solution's module and its main model share this name — a natural module/model collision.
         const val BUILD_MODULE = "com.specificlanguages.json.build"
         const val BUILD_MODULE_REFERENCE = "84f0ad52-c7ca-45dd-99c5-9605c96bf808(com.specificlanguages.json.build)"

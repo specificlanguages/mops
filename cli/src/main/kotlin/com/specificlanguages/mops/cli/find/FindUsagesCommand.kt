@@ -4,6 +4,7 @@ import com.specificlanguages.mops.cli.common.CommandEnvironment
 import com.specificlanguages.mops.cli.common.DaemonClientCommandEnvironment
 import com.specificlanguages.mops.cli.output.displayConcept
 import com.specificlanguages.mops.daemoncomms.DaemonClient
+import com.specificlanguages.mops.protocol.NODE_TARGET_NOTATIONS
 import com.specificlanguages.mops.protocol.NodeTarget
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
@@ -18,8 +19,8 @@ import picocli.CommandLine.Parameters
     ],
     footer = [
         "",
-        "The target is addressed the same way as in `mops get node`; an unresolved target fails with " +
-            "NODE_NOT_FOUND.",
+        "The target is addressed the same way as in `mops get node`, and fails the same way when it does not " +
+            "resolve.",
         "",
         "Text output is one tab-separated row per reference: `usage`, the reference role, and the owning node's " +
             "name (or <unnamed>), concept, and reference. The owner is typed `root` or `node` by its position in its " +
@@ -35,8 +36,11 @@ class FindUsagesCommand(environment: CommandEnvironment) : SearchCommand(environ
 
     @Parameters(
         arity = "1..*",
-        paramLabel = "NODE_REFERENCE | MODEL_TARGET NODE_ID [in SCOPE_SEGMENT...]",
-        description = ["Serialized node reference, or model target followed by node ID, then an optional `in` clause."],
+        paramLabel = "NODE_TARGET | MODEL_TARGET NODE_ID [in SCOPE_SEGMENT...]",
+        description = [
+            "Node target as one string: $NODE_TARGET_NOTATIONS. Or a model target followed by a node ID. " +
+                "Then an optional `in` clause.",
+        ],
     )
     lateinit var arguments: Array<String>
 
@@ -58,9 +62,9 @@ class FindUsagesCommand(environment: CommandEnvironment) : SearchCommand(environ
 
     private fun nodeTarget(targetTokens: List<String>): NodeTarget =
         when (targetTokens.size) {
-            1 -> NodeTarget.NodeReference(targetTokens[0])
+            1 -> NodeTarget.SingleString(targetTokens[0])
             2 -> NodeTarget.InModel(modelTarget = targetTokens[0], nodeId = targetTokens[1])
-            else -> error("expected one node reference or model target plus node ID, optionally followed by `in <scope>`")
+            else -> error("expected one node target or model target plus node ID, optionally followed by `in <scope>`")
         }
 
 }

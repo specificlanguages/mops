@@ -27,7 +27,7 @@ class ModelRenderNodeCommandTest {
 
         assertEquals(2, exitCode)
         assertContains(stderr, "Missing required parameter")
-        assertContains(stderr, "NODE_REFERENCE")
+        assertContains(stderr, "NODE_TARGET")
     }
 
     @Test
@@ -52,7 +52,7 @@ class ModelRenderNodeCommandTest {
     fun `model render-node passes the allow-reflective flag to the daemon`() {
         val client = mock<DaemonClient>()
         val nodeReference = "r:94e02c28-012c-4f06-a2fd-926432934072(json.sandbox)/4Twci\$d7zxq"
-        val target = NodeTarget.NodeReference(nodeReference)
+        val target = NodeTarget.SingleString(nodeReference)
         whenever(client.renderNode(target, true)).thenReturn(ModelRenderNodeResponse("json object { }"))
         var exitCode = Int.MIN_VALUE
 

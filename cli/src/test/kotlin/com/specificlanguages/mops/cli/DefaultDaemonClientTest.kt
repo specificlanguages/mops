@@ -71,7 +71,7 @@ class DefaultDaemonClientTest {
         val daemon = startPrerecordedDaemon(response)
 
         val actual = DefaultDaemonClient(daemon.port, "secret").getNodeSummary(
-            NodeTarget.NodeReference("r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"),
+            NodeTarget.SingleString("r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"),
             ancestry = true,
         )
 
@@ -173,7 +173,7 @@ class DefaultDaemonClientTest {
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
 
         val actual = DefaultDaemonClient(daemon.port, "secret").findUsages(
-            target = NodeTarget.NodeReference(nodeReference),
+            target = NodeTarget.SingleString(nodeReference),
             limit = 100,
         )
 
@@ -222,7 +222,7 @@ class DefaultDaemonClientTest {
             "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904"
 
         DefaultDaemonClient(usagesDaemon.port, "secret").findUsages(
-            target = NodeTarget.NodeReference(nodeReference),
+            target = NodeTarget.SingleString(nodeReference),
             limit = 100,
             scope = listOf("/"),
         )
@@ -294,7 +294,7 @@ class DefaultDaemonClientTest {
         val batch = EditBatch(
             operations = listOf(
                 EditOperation.SetProperty(
-                    target = EditTarget.NodeReference(
+                    target = EditTarget.SingleString(
                         "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)/2110045694544566904",
                     ),
                     name = "name",

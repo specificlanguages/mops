@@ -31,7 +31,7 @@ class StructuralEditSemanticsTest {
                 modelEdit(
                     batchOf(
                         EditOperation.AddChild(
-                            target = EditTarget.NodeReference(JSON_FILE_REF),
+                            target = EditTarget.SingleString(JSON_FILE_REF),
                             role = "propertyDeclaration",
                             concept = PROPERTY_DECLARATION,
                             properties = listOf(MpsNodePropertyJson(name = "name", value = "active")),
@@ -40,7 +40,7 @@ class StructuralEditSemanticsTest {
                 )
             }
 
-            val jsonFile = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_REF)) }
+            val jsonFile = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_FILE_REF)) }
             val added = childrenInRole(jsonFile, "propertyDeclaration").single { propertyValueOrNull(it, "name") == "active" }
             assertEquals(PROPERTY_DECLARATION, added.concept)
             assertContains(structureModel(projectPath).readText(), """value="active"""")
@@ -54,7 +54,7 @@ class StructuralEditSemanticsTest {
                 modelEdit(
                     batchOf(
                         EditOperation.AddChild(
-                            target = EditTarget.NodeReference(JSON_FILE_REF),
+                            target = EditTarget.SingleString(JSON_FILE_REF),
                             role = "linkDeclaration",
                             concept = LINK_DECLARATION,
                             properties = listOf(MpsNodePropertyJson(name = "role", value = "extraLink")),
@@ -69,7 +69,7 @@ class StructuralEditSemanticsTest {
                 )
             }
 
-            val jsonFile = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_REF)) }
+            val jsonFile = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_FILE_REF)) }
             val link = childrenInRole(jsonFile, "linkDeclaration").single { propertyValueOrNull(it, "role") == "extraLink" }
             val target = link.references?.single { it.role == "target" }?.target?.node
             assertEquals(IJSON_VALUE_ID, target)
@@ -82,11 +82,11 @@ class StructuralEditSemanticsTest {
     fun `deleteNode removes a node and persists`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
             mpsAccess.write {
-                modelEdit(batchOf(EditOperation.Delete(target = EditTarget.NodeReference(JSON_NULL_REF))))
+                modelEdit(batchOf(EditOperation.Delete(target = EditTarget.SingleString(JSON_NULL_REF))))
             }
 
             val exception = assertFailsWith<MpsRequestException> {
-                mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_NULL_REF)) }
+                mpsAccess.read { getNode(NodeTarget.SingleString(JSON_NULL_REF)) }
             }
             assertEquals(MpsErrorCode.NODE_NOT_FOUND, exception.code)
             assertFalse(structureModel(projectPath).readText().contains("JsonNull"))
@@ -100,7 +100,7 @@ class StructuralEditSemanticsTest {
                 modelEdit(
                     batchOf(
                         EditOperation.DeleteChild(
-                            target = EditTarget.NodeReference(JSON_STRING_REF),
+                            target = EditTarget.SingleString(JSON_STRING_REF),
                             role = "propertyDeclaration",
                             position = ChildPosition.Only,
                         ),
@@ -108,7 +108,7 @@ class StructuralEditSemanticsTest {
                 )
             }
 
-            val jsonString = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_STRING_REF)) }
+            val jsonString = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_STRING_REF)) }
             assertTrue(childrenInRole(jsonString, "propertyDeclaration").isEmpty())
             assertFalse(structureModel(projectPath).readText().contains("""value="2110045694544569338""""))
         }
@@ -122,15 +122,15 @@ class StructuralEditSemanticsTest {
                     batchOf(
                         EditOperation.MoveAsChild(
                             target = EditTarget.InModel(modelTarget = STRUCTURE_MODEL, nodeId = JSON_STRING_VALUE_ID),
-                            into = EditTarget.NodeReference(JSON_ARRAY_REF),
+                            into = EditTarget.SingleString(JSON_ARRAY_REF),
                             role = "propertyDeclaration",
                         ),
                     ),
                 )
             }
 
-            val jsonString = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_STRING_REF)) }
-            val jsonArray = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_ARRAY_REF)) }
+            val jsonString = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_STRING_REF)) }
+            val jsonArray = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_ARRAY_REF)) }
             assertTrue(childrenInRole(jsonString, "propertyDeclaration").isEmpty())
             val moved = childrenInRole(jsonArray, "propertyDeclaration").single()
             assertEquals("value", propertyValueOrNull(moved, "name"))
@@ -146,7 +146,7 @@ class StructuralEditSemanticsTest {
                     modelEdit(
                         batchOf(
                             EditOperation.AddChild(
-                                target = EditTarget.NodeReference(JSON_FILE_REF),
+                                target = EditTarget.SingleString(JSON_FILE_REF),
                                 role = "propertyDeclaration",
                                 concept = "com.does.not.Exist",
                             ),
@@ -172,7 +172,7 @@ class StructuralEditSemanticsTest {
                     modelEdit(
                         batchOf(
                             EditOperation.AddChild(
-                                target = EditTarget.NodeReference(JSON_FILE_REF),
+                                target = EditTarget.SingleString(JSON_FILE_REF),
                                 role = "propertyDeclaration",
                                 concept = "jetbrains.mps.lang.structure.structure.PropertyDeclaratn",
                             ),
@@ -197,7 +197,7 @@ class StructuralEditSemanticsTest {
                     modelEdit(
                         batchOf(
                             EditOperation.AddChild(
-                                target = EditTarget.NodeReference(JSON_FILE_REF),
+                                target = EditTarget.SingleString(JSON_FILE_REF),
                                 role = "noSuchRole",
                                 concept = PROPERTY_DECLARATION,
                             ),
@@ -219,8 +219,8 @@ class StructuralEditSemanticsTest {
                     modelEdit(
                         batchOf(
                             EditOperation.MoveAsChild(
-                                target = EditTarget.NodeReference(JSON_FILE_REF),
-                                into = EditTarget.NodeReference(JSON_FILE_REF),
+                                target = EditTarget.SingleString(JSON_FILE_REF),
+                                into = EditTarget.SingleString(JSON_FILE_REF),
                                 role = "implements",
                             ),
                         ),
@@ -241,13 +241,13 @@ class StructuralEditSemanticsTest {
                     modelEdit(
                         batchOf(
                             EditOperation.AddChild(
-                                target = EditTarget.NodeReference(JSON_FILE_REF),
+                                target = EditTarget.SingleString(JSON_FILE_REF),
                                 role = "propertyDeclaration",
                                 concept = PROPERTY_DECLARATION,
                                 properties = listOf(MpsNodePropertyJson(name = "name", value = "ephemeral")),
                             ),
                             EditOperation.AddChild(
-                                target = EditTarget.NodeReference(JSON_STRING_REF),
+                                target = EditTarget.SingleString(JSON_STRING_REF),
                                 role = "noSuchRole",
                                 concept = PROPERTY_DECLARATION,
                             ),
@@ -257,7 +257,7 @@ class StructuralEditSemanticsTest {
             }
             assertEquals(MpsErrorCode.ROLE_NOT_FOUND, exception.code)
 
-            val jsonFile = mpsAccess.read { getNode(NodeTarget.NodeReference(JSON_FILE_REF)) }
+            val jsonFile = mpsAccess.read { getNode(NodeTarget.SingleString(JSON_FILE_REF)) }
             assertNull(childrenInRole(jsonFile, "propertyDeclaration").firstOrNull { propertyValueOrNull(it, "name") == "ephemeral" })
             assertEquals(before, structureModel(projectPath).readText())
         }

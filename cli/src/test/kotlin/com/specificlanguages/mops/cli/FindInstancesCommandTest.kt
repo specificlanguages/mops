@@ -162,7 +162,7 @@ class FindInstancesCommandTest {
         val reference = execute(findClient, "--refs-only", CONCEPT).trim()
 
         val getNodeClient = mock<DaemonClient>()
-        val target = NodeTarget.NodeReference(reference)
+        val target = NodeTarget.SingleString(reference)
         whenever(getNodeClient.getNode(target)).thenReturn(
             ModelGetNodeResponse(
                 node = MpsNodeJson(model = TEST_MODEL, concept = testNode.concept, id = "2110045694544566905"),

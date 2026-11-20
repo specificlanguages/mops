@@ -63,12 +63,12 @@ class RelativeAliasEditSemanticsTest {
             assertTrue(response.violations.isEmpty(), "expected no violations, got ${response.violations}")
 
             // The copy's add-parameter took the new name...
-            val copy = mpsAccess.read { getNode(NodeTarget.NodeReference(response.created.getValue("copy"))) }
+            val copy = mpsAccess.read { getNode(NodeTarget.SingleString(response.created.getValue("copy"))) }
             val copiedAdd = childrenInRole(copy, "member").single { propertyValueOrNull(it, "name") == "add" }
             assertEquals("renamed", propertyValueOrNull(childrenInRole(copiedAdd, "parameter").first(), "name"))
 
             // ...and the original is untouched: relative addressing reached only the copy.
-            val original = mpsAccess.read { getNode(NodeTarget.NodeReference("$SANDBOX_MODEL/$calculatorId")) }
+            val original = mpsAccess.read { getNode(NodeTarget.SingleString("$SANDBOX_MODEL/$calculatorId")) }
             val originalAdd = childrenInRole(original, "member").single { propertyValueOrNull(it, "name") == "add" }
             assertEquals(
                 originalFirstParamName,
@@ -115,10 +115,10 @@ class RelativeAliasEditSemanticsTest {
     private fun calculator(mpsAccess: MpsAccess): MpsNodeJson {
         val reference = mpsAccess.read { list(listOf(SANDBOX_MODEL), depth = 1) }
             .children!!.single { it.name == "Calculator" }.reference!!
-        return mpsAccess.read { getNode(NodeTarget.NodeReference(reference)) }
+        return mpsAccess.read { getNode(NodeTarget.SingleString(reference)) }
     }
 
-    private fun ref(nodeId: String): EditTarget = EditTarget.NodeReference("$SANDBOX_MODEL/$nodeId")
+    private fun ref(nodeId: String): EditTarget = EditTarget.SingleString("$SANDBOX_MODEL/$nodeId")
 
     private fun batchOf(vararg operations: EditOperation): EditBatch = EditBatch(operations.toList())
 

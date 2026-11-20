@@ -10,6 +10,8 @@ FORMS
   1. node reference string:
        "r:<model-id>(<model-name>)/<node-id>"
      Anatomy: the r: tag, the model ID, the (model name), a slash, the node ID.
+     The same string may name the model by its full name instead:
+       "<model-name>/<node-id>" (see node-ref)
   2. Model plus node ID object:
        {"model": "<model name or reference>", "nodeId": "<node-id>"}
   3. Batch-local alias:

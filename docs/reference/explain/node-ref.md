@@ -23,6 +23,10 @@ FORMS
   It is half-opaque: read the parts to understand what you are looking at, but
   copy a node reference WHOLE from mops output. Never construct one from pieces.
 
+  Where mops takes a node, it also takes <model-name>/<node-id>: the model's
+  full name instead of its reference. That form fails as ambiguous when several
+  models share the name.
+
 EXAMPLE
 {
   "operations": [

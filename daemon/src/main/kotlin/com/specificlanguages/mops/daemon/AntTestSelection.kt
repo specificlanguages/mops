@@ -91,7 +91,7 @@ data class AntTestSelection(
          */
         fun select(project: MPSProject, target: List<String>): Any {
             if (target.isEmpty()) return project
-            return when (val resolution = NavigationTargetResolver(project).resolve(target)) {
+            return when (val resolution = NavigationTargetResolver(project, ModelNodeResolver(DaemonLogger())).resolve(target)) {
                 is NavigationTargetResolution.Found -> when (val selected = resolution.target) {
                     is NavigationTarget.Module -> selected.module
                     is NavigationTarget.Model -> selected.model

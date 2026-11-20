@@ -213,7 +213,7 @@ class OutdatedLanguageSemanticsTest {
             // Delete the concept's declaration from the sources. The compiled runtime still
             // registers StaleWidget, so its structure model is now stale relative to disk.
             access.write {
-                modelEdit(EditBatch(listOf(EditOperation.Delete(EditTarget.NodeReference(widgetDeclaration)))))
+                modelEdit(EditBatch(listOf(EditOperation.Delete(EditTarget.SingleString(widgetDeclaration)))))
             }
 
             // find instances by FQN is refused as stale, not answered with a silent empty result from the runtime.

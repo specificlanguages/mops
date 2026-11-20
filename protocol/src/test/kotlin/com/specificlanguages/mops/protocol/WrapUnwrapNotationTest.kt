@@ -35,12 +35,12 @@ class WrapUnwrapNotationTest {
                "children":[{"role":"operand","copy":"m/2"}],"as":"w"}]}""",
         )
         val wrap = assertIs<EditOperation.Wrap>(singleOp(batch))
-        assertEquals(EditTarget.NodeReference("m/1"), wrap.target)
+        assertEquals(EditTarget.SingleString("m/1"), wrap.target)
         assertEquals("W", wrap.concept)
         assertEquals("operand", wrap.role)
         assertEquals(ChildPosition.First, wrap.position)
         assertEquals("w", wrap.alias)
-        assertEquals(EditTarget.NodeReference("m/2"), assertIs<InlineChild.Copy>(wrap.children!!.single()).source)
+        assertEquals(EditTarget.SingleString("m/2"), assertIs<InlineChild.Copy>(wrap.children!!.single()).source)
     }
 
     @Test
@@ -57,7 +57,7 @@ class WrapUnwrapNotationTest {
         val unwrap = assertIs<EditOperation.Unwrap>(
             singleOp(decodeSuccess("""{"operations":[{"op":"unwrap","target":"m/1","keep":{"model":"m","nodeId":"2"}}]}""")),
         )
-        assertEquals(EditTarget.NodeReference("m/1"), unwrap.target)
+        assertEquals(EditTarget.SingleString("m/1"), unwrap.target)
         assertEquals(EditTarget.InModel("m", "2"), unwrap.keep)
     }
 
@@ -88,7 +88,7 @@ class WrapUnwrapNotationTest {
         val batch = EditBatch(
             operations = listOf(
                 EditOperation.Wrap(
-                    target = EditTarget.NodeReference("m/1"),
+                    target = EditTarget.SingleString("m/1"),
                     concept = "W",
                     role = "operand",
                     children = listOf(InlineChild.Fresh(role = "operand", concept = "C")),

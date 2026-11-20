@@ -205,7 +205,7 @@ class ExplainCommandTest {
             }
         }
 
-        assertEquals(setOf("NodeReference", "InModel", "Alias", "RelativeAlias"), targetForms)
+        assertEquals(setOf("SingleString", "InModel", "Alias", "RelativeAlias"), targetForms)
         assertEquals(setOf("First", "Last", "Only", "Index"), positionForms)
     }
 

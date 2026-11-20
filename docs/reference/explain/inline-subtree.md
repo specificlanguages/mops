@@ -32,7 +32,7 @@ CHILDREN
 
   A position holds one form only: a spec that also carries "move"/"copy", or a leaf
   that carries both "move" and "copy", is rejected. <target> is any edit target (a
-  node reference, a {model, nodeId} object, or a $alias) — see target.
+  node target string, a {model, nodeId} object, or a $alias) — see target.
 
   Move preserves identity; copy mints a new one. Reach for a move leaf when anything
   references the node (rebuilding it from scratch would orphan those references);

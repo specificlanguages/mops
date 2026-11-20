@@ -372,7 +372,7 @@ class SearchCommandTest {
         private const val CONCEPT = "ConceptDeclaration"
         private const val ID = "2110045694544566904"
         private const val PATTERN = "Json"
-        private val TARGET = NodeTarget.NodeReference(testUsagesTarget.reference)
+        private val TARGET = NodeTarget.SingleString(testUsagesTarget.reference)
 
         @JvmStatic
         fun subcommands(): List<SearchSubcommand> = listOf(

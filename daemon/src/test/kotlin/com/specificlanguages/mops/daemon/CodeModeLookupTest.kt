@@ -61,4 +61,54 @@ class CodeModeLookupTest {
             assertEquals("ok", response.output)
         }
     }
+
+    @Test
+    fun `node lookup accepts the node target notations of the CLI in either node ID spelling`() {
+        SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
+            val response = CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform).execute(
+                CodeRunRequest("", """
+                    def fails = { Class type, Closure action ->
+                        try { action() } catch (Exception failure) { assert type.isInstance(failure): failure; return failure }
+                        assert false: 'Expected ' + type.name
+                    }
+                    def node = project.command {
+                        def model = mops.lookup.requireModel('com.specificlanguages.json.structure')
+                        def created = model.createNode(mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.ClassConcept'))
+                        model.addRootNode(created)
+                        created
+                    }
+                    project.read {
+                        def modelName = node.model.name.value
+                        def modelReference = node.model.reference.toString()
+                        def decimalId = node.nodeId.toString()
+                        def encodedId = new jetbrains.mps.smodel.persistence.def.v9.IdEncoder().toText(node.nodeId)
+                        assert encodedId != decimalId
+                        [
+                            "${'$'}modelName/${'$'}decimalId",
+                            "${'$'}modelName/${'$'}encodedId",
+                            "${'$'}modelReference/${'$'}decimalId",
+                            "${'$'}modelReference/${'$'}encodedId",
+                            // A serialized node reference resolves by model ID, so a stale name part does not matter.
+                            "${'$'}{modelReference.replaceFirst(/\(.*\)${'$'}/, '(stale.name)')}/${'$'}encodedId",
+                        ].each { target ->
+                            assert mops.lookup.requireNode(target).is(node): target
+                            assert mops.lookup.node(target).is(node): target
+                        }
+                        assert mops.lookup.node("${'$'}modelName/1") == null
+                        // An unknown model is a miss too.
+                        assert mops.lookup.node('no.such.model/1') == null
+                        [
+                            fails(IllegalArgumentException) { mops.lookup.node('invalid') },
+                            fails(IllegalArgumentException) { mops.lookup.requireNode("${'$'}modelName/1") },
+                        ].each { failure ->
+                            assert failure.message.contains('<model>/<node ID>'): failure.message
+                            assert failure.message.contains('serialized node reference'): failure.message
+                        }
+                    }
+                    return 'ok'
+                """.trimIndent(), "lookup-node-notations.groovy"),
+            )
+            assertEquals("ok", response.output)
+        }
+    }
 }

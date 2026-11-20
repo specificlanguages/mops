@@ -65,7 +65,7 @@ class DomainRequestHandlerTest {
     @Test
     fun `get-node reads and wraps the exported node`() {
         val node = MpsNodeJson(concept = "SomeConcept", id = "42")
-        val target = NodeTarget.NodeReference("r:model/1")
+        val target = NodeTarget.SingleString("r:model/1")
         whenever(operations.getNode(target)).thenReturn(node)
 
         val response = handler.handleDomainRequest(ModelGetNodeRequest(TOKEN, target))
@@ -78,7 +78,7 @@ class DomainRequestHandlerTest {
     @Test
     fun `get-node passes the depth through to the export`() {
         val node = MpsNodeJson(concept = "SomeConcept", id = "42", truncatedAt = 1)
-        val target = NodeTarget.NodeReference("r:model/1")
+        val target = NodeTarget.SingleString("r:model/1")
         whenever(operations.getNode(target, ancestry = false, depth = 1)).thenReturn(node)
 
         val response = handler.handleDomainRequest(ModelGetNodeRequest(TOKEN, target, depth = 1))
@@ -91,7 +91,7 @@ class DomainRequestHandlerTest {
     @Test
     fun `get-node-summary reads and wraps the node summary`() {
         val summary = MpsNodeSummaryJson(type = "node", name = "n", concept = "SomeConcept", reference = "r:model/1")
-        val target = NodeTarget.NodeReference("r:model/1")
+        val target = NodeTarget.SingleString("r:model/1")
         whenever(operations.getNodeSummary(target, ancestry = true)).thenReturn(summary)
 
         val response = handler.handleDomainRequest(ModelGetNodeSummaryRequest(TOKEN, target, ancestry = true))
@@ -103,7 +103,7 @@ class DomainRequestHandlerTest {
 
     @Test
     fun `render-node renders and wraps the rendered text`() {
-        val target = NodeTarget.NodeReference("r:model/1")
+        val target = NodeTarget.SingleString("r:model/1")
         whenever(extra.renderNode(target, false)).thenReturn("{\n  \"foo\"\n}")
 
         val response = handler.handleDomainRequest(ModelRenderNodeRequest(TOKEN, target))
@@ -115,7 +115,7 @@ class DomainRequestHandlerTest {
 
     @Test
     fun `render-node forwards the allow-reflective flag`() {
-        val target = NodeTarget.NodeReference("r:model/1")
+        val target = NodeTarget.SingleString("r:model/1")
         whenever(extra.renderNode(target, true)).thenReturn("reflective text")
 
         val response = handler.handleDomainRequest(ModelRenderNodeRequest(TOKEN, target, allowReflective = true))
@@ -375,7 +375,7 @@ class DomainRequestHandlerTest {
 
     @Test
     fun `an unexpected failure maps to a generic failure carrying its message`() {
-        val target = NodeTarget.NodeReference("r:model/1")
+        val target = NodeTarget.SingleString("r:model/1")
         whenever(operations.getNode(target)).thenThrow(IllegalStateException("boom"))
 
         val response = handler.handleDomainRequest(ModelGetNodeRequest(TOKEN, target))
@@ -385,7 +385,7 @@ class DomainRequestHandlerTest {
 
     @Test
     fun `an unexpected failure without a message falls back to the exception class name`() {
-        val target = NodeTarget.NodeReference("r:model/1")
+        val target = NodeTarget.SingleString("r:model/1")
         whenever(operations.getNode(target)).thenThrow(RuntimeException())
 
         val response = handler.handleDomainRequest(ModelGetNodeRequest(TOKEN, target))

@@ -39,7 +39,7 @@ class ReplaceNotationTest {
         assertEquals("C", freshWith.concept)
 
         val move = firstReplace(decodeSuccess(replace("""{"move":"m/9"}""")))
-        assertEquals(EditTarget.NodeReference("m/9"), assertIs<InlineChild.Move>(move.with).source)
+        assertEquals(EditTarget.SingleString("m/9"), assertIs<InlineChild.Move>(move.with).source)
 
         val copy = firstReplace(decodeSuccess(replace("""{"copy":{"model":"m","nodeId":"9"}}""")))
         assertEquals(EditTarget.InModel("m", "9"), assertIs<InlineChild.Copy>(copy.with).source)
@@ -75,7 +75,7 @@ class ReplaceNotationTest {
         val batch = EditBatch(
             operations = listOf(
                 EditOperation.Replace(
-                    target = EditTarget.NodeReference("m/1"),
+                    target = EditTarget.SingleString("m/1"),
                     with = InlineChild.Fresh(
                         concept = "C",
                         children = listOf(InlineChild.Move(role = "operand", source = EditTarget.Alias("\$a"))),
