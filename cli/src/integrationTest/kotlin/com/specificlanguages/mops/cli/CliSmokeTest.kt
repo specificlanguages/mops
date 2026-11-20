@@ -130,7 +130,7 @@ class CliSmokeTest {
         val result = project.run("edit", "model", "--file", batchFile.pathString)
 
         assertEquals(1, result.exitCode, result.output)
-        assertContains(result.stderr, "property not found: doesNotExist")
+        assertContains(result.stderr, "has no property 'doesNotExist'; its properties: ")
         assertEquals(original, model.readText())
     }
 

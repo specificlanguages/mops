@@ -19,7 +19,7 @@ class CodeModeLinksTest {
                     }
                     def unknown = { String kind, String known, Closure action ->
                         try { action(); assert false: 'Expected unknown ' + kind }
-                        catch (IllegalArgumentException failure) {
+                        catch (com.specificlanguages.mops.daemon.core.MpsRequestException failure) {
                             assert failure.message.contains('jetbrains.mps.lang.structure.structure.ConceptDeclaration'): failure.message
                             assert failure.message.contains('no ' + kind + " 'missing'"): failure.message
                             assert failure.message.contains(known): failure.message
@@ -119,6 +119,48 @@ class CodeModeLinksTest {
                     }
                     return 'ok'
                 """.trimIndent(), "indexed-links.groovy"),
+            )
+            assertEquals("ok", response.output)
+        }
+    }
+
+    @Test
+    fun `link accessors take link descriptors in place of role names`() {
+        SharedMpsEnvironment.withOpenProjectCopy { project, _ ->
+            val response = CodeModeExecutor(SharedMpsEnvironment.mpsAccess(project), project, SharedMpsEnvironment.platform).execute(
+                CodeRunRequest("", """
+                    def notFound = { Closure action ->
+                        try { action(); assert false: 'Expected ROLE_NOT_FOUND' }
+                        catch (com.specificlanguages.mops.daemon.core.MpsRequestException failure) {
+                            assert failure.code.name() == 'ROLE_NOT_FOUND': failure.message
+                            assert failure.message.contains('declared by'): failure.message
+                        }
+                    }
+                    project.command {
+                        def node = mops.lookup.requireModel('com.specificlanguages.json.structure').rootNodes.find {
+                            it.properties['name'] == 'JsonFile'
+                        }
+                        def implementsLink = node.concept.containmentLinks.find { it.name == 'implements' }
+                        def extendsLink = node.concept.referenceLinks.find { it.name == 'extends' }
+                        assert node.children[implementsLink] == node.children['implements']
+                        assert node.child[implementsLink].is(node.child['implements'])
+                        assert node.references[extendsLink].targetNode.is(node.references['extends'].targetNode)
+                        node.child[implementsLink] = null
+                        assert node.children['implements'] == []
+                        node.references[extendsLink] = null
+                        assert node.references['extends'] == null
+
+                        def classConcept = mops.lookup.requireConceptByName('jetbrains.mps.baseLanguage.ClassConcept')
+                        def member = classConcept.containmentLinks.find { it.name == 'member' }
+                        def dataType = mops.lookup.requireConceptByName('jetbrains.mps.lang.structure.PropertyDeclaration')
+                            .referenceLinks.find { it.name == 'dataType' }
+                        notFound { node.children[member] }
+                        notFound { node.child[member] = null }
+                        notFound { node.references[dataType] }
+                        notFound { node.references[dataType] = null }
+                    }
+                    return 'ok'
+                """.trimIndent(), "link-descriptors.groovy"),
             )
             assertEquals("ok", response.output)
         }

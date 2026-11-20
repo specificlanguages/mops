@@ -21,12 +21,9 @@ object ConceptValidityGuard {
             notCompiledHint(node.concept)
     }
 
-    /** Fails with the unloaded language when [concept] did not resolve; [lookup] names what could not be looked up. */
-    fun requireValid(concept: SConcept, lookup: String) {
-        check(concept.isValid) {
-            "cannot look up $lookup: concept ${concept.qualifiedName} is not loaded; ${notCompiledHint(concept)}"
-        }
-    }
+    /** Says that [concept] did not resolve and names its unloaded language. */
+    fun notLoadedMessage(concept: SConcept): String =
+        "concept ${concept.qualifiedName} is not loaded; ${notCompiledHint(concept)}"
 
     private fun notCompiledHint(concept: SConcept): String {
         val language = languageName(concept)

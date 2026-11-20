@@ -4,7 +4,7 @@ package com.specificlanguages.mops.daemon
  * Logic. Code Mode Reference entries for the `SNode` extensions: rendering, containment navigation, and indexed
  * accessors.
  *
- * Hides: how the help describes what the indexed accessors share — lookup by name and its failures, how
+ * Hides: how the help describes what the indexed accessors share — lookup by name or descriptor and its failures, how
  * reads and writes of each feature kind reach MPS, the access they need, and how an accessor shadows a native getter.
  */
 internal object CodeCatalogNodeEntries {
@@ -29,13 +29,20 @@ internal object CodeCatalogNodeEntries {
             writeAccess = "inside project.command",
         )
 
-        private fun lookup(): String =
-            "Names include inherited ${kind.plural}. Unknown ${kind.plural} fail on read and write, listing the known ones."
+        private fun lookup(): String {
+            val descriptor = kind.descriptor.simpleName
+            return "Names include inherited ${kind.plural}. Unknown ${kind.plural} fail on read and write, listing the " +
+                "known ones; a name that several inherited ${kind.plural} share fails, naming the concepts that declare " +
+                "them. Index with the $descriptor from node.concept instead of the name to pick one of them by its " +
+                "declaring concept; a descriptor that the node's concept does not have fails. A node whose concept " +
+                "did not load fails with LANGUAGE_NOT_LOADED, naming the language to make."
+        }
 
         private fun shadowing(): String? = shadowed?.let {
             val getter = "get${name.replaceFirstChar(Char::uppercase)}()"
             "Shadows native $getter, so an explicit $getter call returns this accessor; it iterates ${it.iterates} " +
-                "like the native collection, so collect, findAll, each, and size() work on it. ${it.nativeAlternatives}"
+                "like the native collection, so collect, findAll, each, and size() work on it. Other members fail " +
+                "with a message naming the native alternative. ${it.nativeAlternatives}"
         }
     }
 
@@ -43,8 +50,9 @@ internal object CodeCatalogNodeEntries {
     private fun featureAccess(kind: NodeFeatureKind): String = when (kind) {
         NodeFeatureKind.PROPERTY ->
             "Reads and writes invoke MPS property getter/setter handlers and use persisted string values, except for " +
-                "enumeration properties, which read as the literal name and accept a literal name or a presentation " +
-                "that only one literal has; any other enumeration value fails and lists the literals."
+                "enumeration properties, which read as the literal name (such as `_0__1`, not the persisted `id/name` " +
+                "form) and accept a literal name or a presentation (`0..1` for `_0__1`) that only one literal has; any " +
+                "other enumeration value fails and lists the literals."
         NodeFeatureKind.CHILD_ROLE ->
             "Child access uses native SNode operations; SNodeAccessUtil has no child APIs. Declared cardinality and " +
                 "containment constraints are not checked."
@@ -58,7 +66,7 @@ internal object CodeCatalogNodeEntries {
         IndexedAccessor(
             "child", "NodeChild", NodeFeatureKind.CHILD_ROLE,
             "child[role] returns one SNode or null, and throws for multiple children. Assignment replaces the role " +
-                "with one node; null clears it.",
+                "with one node, which must be detached or already a child in the role; null clears it.",
         ),
         IndexedAccessor(
             "children", "NodeChildren", NodeFeatureKind.CHILD_ROLE,

@@ -211,6 +211,28 @@ class StructuralEditSemanticsTest {
     }
 
     @Test
+    fun `deleting a child in an unknown role fails as an unknown role`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
+            val before = structureModel(projectPath).readText()
+            val exception = assertFailsWith<MpsRequestException> {
+                mpsAccess.write {
+                    modelEdit(
+                        batchOf(
+                            EditOperation.DeleteChild(
+                                target = EditTarget.NodeReference(JSON_FILE_REF),
+                                role = "noSuchRole",
+                            ),
+                        ),
+                    )
+                }
+            }
+            assertEquals(MpsErrorCode.ROLE_NOT_FOUND, exception.code)
+            assertContains(exception.message, "has no child role 'noSuchRole'; its child roles: ")
+            assertEquals(before, structureModel(projectPath).readText())
+        }
+    }
+
+    @Test
     fun `moving a node into itself fails and changes nothing`() {
         SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
             val before = structureModel(projectPath).readText()

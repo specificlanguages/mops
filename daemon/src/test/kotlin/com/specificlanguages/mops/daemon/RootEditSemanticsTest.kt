@@ -234,6 +234,36 @@ class RootEditSemanticsTest {
 
     private fun editorModel(projectPath: Path): Path = projectPath.resolve(EDITOR_MODEL_PATH)
 
+    @Test
+    fun `an inline property name that several inherited properties share fails and names the declaring concepts`() {
+        SharedMpsEnvironment.withProjectCopy { mpsAccess, projectPath ->
+            val before = projectPath.resolve(STRUCTURE_MODEL_PATH).readText()
+            val exception = assertFailsWith<MpsRequestException> {
+                mpsAccess.write {
+                    modelEdit(
+                        EditBatch(
+                            operations = listOf(
+                                EditOperation.AddRoot(
+                                    model = ModelDestination(STRUCTURE_MODEL),
+                                    concept = "jetbrains.mps.baseLanguage.structure.ClassConcept",
+                                    properties = listOf(MpsNodePropertyJson(name = "isDeprecated", value = "true")),
+                                ),
+                            ),
+                        ),
+                    )
+                }
+            }
+            assertEquals(MpsErrorCode.AMBIGUOUS_PROPERTY, exception.code)
+            assertEquals(
+                "operation 0: concept jetbrains.mps.baseLanguage.structure.ClassConcept has 2 properties named " +
+                    "'isDeprecated', declared by jetbrains.mps.baseLanguage.structure.Classifier, " +
+                    "jetbrains.mps.baseLanguage.structure.IBLDeprecatable",
+                exception.message,
+            )
+            assertEquals(before, projectPath.resolve(STRUCTURE_MODEL_PATH).readText())
+        }
+    }
+
     private companion object {
         const val STRUCTURE_MODEL = "r:fd752404-89d3-4ffe-bc3a-7fb7a27c63b6(com.specificlanguages.json.structure)"
         const val STRUCTURE_MODEL_PATH =
