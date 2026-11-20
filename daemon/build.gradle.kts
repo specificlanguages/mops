@@ -81,6 +81,8 @@ dependencies {
             include("lib/util_rt.jar")
             include("lib/testFramework.jar")
             include("lib/app.jar")
+            // NameUtil (Go-to-Node name matching). MPS 2026.2 moved it here from app.jar.
+            include("lib/intellij.platform.util.text.matching.jar")
             // ArchiveFileSystem and VfsUtil, to refresh replaced module archives (see ExternalProjectRefresh).
             include("lib/intellij.platform.analysis.jar")
             include("lib/intellij.platform.core.jar")
