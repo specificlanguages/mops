@@ -3,6 +3,6 @@ plugins {
 }
 
 dependencies {
-    implementation(libs.kotlin.gradle.plugin.marker)
-    implementation(libs.detekt.gradle.plugin.marker)
+    implementation(libs.kotlin.gradle.plugin)
+    implementation(libs.detekt.gradle.plugin)
 }
